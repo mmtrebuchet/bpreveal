@@ -1,0 +1,238 @@
+\documentclass{article}
+\usepackage{listings}
+
+\begin{document}
+
+\section{Purpose}
+Chrombpnet-heavy is an expansion of the chrombpnet-lite repository, designed to allow for more flexibility. 
+The two main changes are the addition of multi-task models, and a generalization of the regression step. 
+The general workflow is the following:
+
+\begin{enumerate}
+    \item Prepare bigwig tracks and select the regions you are interested in. 
+    \item Train a bias model. 
+    \item Train a regression layer to match the bias model to the experimental data. 
+    \item Train the full chrombpnet model on experimental data. 
+    \item Measure the performance of the full model. 
+    \item Make predictions from the full model. 
+    \item Generate importance scores from the full model, either one-dimensionally, as is usual, or by making two-dimensional PISA plots. 
+    \item Run MoDISco. 
+\end{enumerate}
+
+\section{Philosophy}
+These are the guidelines for code design in chrombpnet-heavy:
+
+\begin{itemize}
+    \item Make each program do one thing well. To do a new job, build afresh rather than complicate old programs by adding new features.
+    \item Expect the output of every program to become the input to another, as yet unknown, program. Don't clutter the output with extraneous information. Don't insist on interactive input. 
+    \item Explicit is better than implicit. Wherever possible, do not allow for defaults when a value is not specified. 
+    \item Flat is better than nested. Write code that has minimal architectural overhead. 
+    \item Errors should never pass silently.
+    \item If the implementation is hard to explain, it's a bad idea.
+    \item The API should mirror the CLI. 
+\end{itemize}
+
+
+\section{Programs}
+chrombpnet-heavy includes the following utilities:
+\begin{description}
+    \item [train-bias-model] Takes in a bias training input configuration and trains up a seqmodel to predict the bias track. Saves the seqmodel to disk, along with information from the training phase. 
+    \item [regress-bias-model] Takes in a bias model and the actual experimental data. Derives a relation to best fit the bias profile onto the experimental data. Saves a new model to disk, adding a simple layer or two to do the regression. 
+    \item [train-chrombpnet-model] Takes a regressed bias model and experimental data and builds a seqmodel to explain the residuals. Saves the model to disk. 
+    \item [make-predictions] Takes a trained chrombpnet model and predicts over the given regions. 
+    \item [interpret] Generates shap scores of the same type as BPNet - hypothetical contributions for each base are written to a modisco-compatible h5. 
+    \item [run-modisco] Runs modisco on the importance score h5 file. 
+    \item [metrics] Generates a suite of metrics about how good the model's predictions are. 
+    \item [interpret-pisa] Runs an all-to-all shap analysis on the given regions. 
+    \item [shap-h5-to-bw] Converts a shap hdf5 file into a bigwig track for visualization. 
+\end{description}
+
+
+\section{Input specification}
+In this section, I will provide detailed specifications for all of the input files, with particular emphasis on configuration json files.
+
+\subsection{Bias training input configuration}
+A bias training input configuration file is a JSON file that specifies what data should be used to train up the bias model.
+It shall contain exactly one regions section, and one input track section for each task that the bias model is being trained on. 
+
+\begin{lstlisting}
+<bias-training-input-configuration> ::= 
+   {<bias-settings-section> , <beds-section>, 
+     <head-section>}
+
+<bias-settings-section> ::= 
+    "settings" : {<bias-settings-contents>}
+
+<beds-section> ::= 
+    "regions" : [<individual-bed-list>]
+
+<individual-bed-list> ::= 
+    <individual-bed> 
+  | <individual-bed>, <individual-bed-list>
+
+<individual-bed> ::= 
+    {"bed-file" : <file-name>,
+     "split" : <splits>,
+     <sampling-settings>
+     "max-jitter" : <integer>}
+
+<sampling-settings> ::= <empty>
+  | "absolute-sampling-weight" : <number>,
+  | "relative-sampling-weight" : <number>,
+
+<splits> ::= "train"
+  |  "val" 
+  |  "test"
+
+<chromosome-list> ::= <empty> 
+  | <string> <chromosome-list>
+
+<head-section> ::= 
+  "heads" : [<head-list>]
+
+<head-list> ::= 
+    <individual-head>
+  | <individual-head>, <head-list>
+
+<individual-head> ::=
+    {
+      "data" : [<bigwig-list>],
+      "profile-loss-weight" : <number>,
+      "counts-loss-weight" : <number>
+      "head-name" : <string>
+    }
+
+<bigwig-list> ::=
+    <file-name> 
+  | <file-name>, <bigwig-list>
+
+<bias-settings-contents> ::= 
+    {"genome" : <file-name>, 
+     "output-prefix" : <string>, 
+     "epochs" : <integer>, 
+     "early-stopping-patience" : <integer>, 
+     "batch-size" : <integer>, 
+     "learning-rate" : <number>, 
+     "architecture" : <bias-architecture-specification> } 
+
+<bias-architecture-specification> ::= 
+    {"input-length" : <integer>, 
+    "output-length" : <integer>,
+    "model-name" : <string>,
+    "model-args" : <string>,
+    "filters" : <integer>,
+    "layers" : <integer>,
+    "input-filter-width" : <integer>,
+    "output-filter-width" : <integer>}
+\end{lstlisting}
+                    
+
+\subsection{Bias regression input configuration}
+The regression input file is a JSON file that names the bias model and gives the experimental data that it should be fit to. 
+
+\begin{lstlisting}
+<regression-input-configuration> ::=
+    {<regression-settings-section>, <beds-section>, 
+        <head-section>}
+
+<regression-settings-section> ::=
+    { "output-directory" : "<string>", 
+      "epochs" : <integer>, 
+      "early-stopping-patience" : <integer>, 
+      "batch-size" : <integer>, 
+      "learning-rate" : <number>, 
+      "genome" : <file-name>
+      "bias-model-file" : <file-name>,
+      "bias-input-length" : <integer>    
+      "architecture" : <regression-architecture-specification> } 
+
+<regression-architecture-specification> ::= 
+    { "input-length" : <integer> ,
+      "output-length" : <integer>,
+      "model-name" : <string>, 
+      "model-args" : <string>}
+
+
+
+\end{lstlisting}
+
+This code does not support using an experimental bias track as the input to the regression - it must be a Model that uses sequence as input.
+
+\subsection{Model training input configuration}
+The full chrombpnet model is specified by a JSON file, much like the bias file.
+
+\begin{lstlisting}
+
+<model-training-input-configuration> ::= 
+   {<model-settings-section> , <beds-section>, 
+     <head-section>}
+
+<model-settings-section> ::= 
+    "settings" : {<model-settings-contents>}
+
+<model-settings-contents> ::= 
+    {"genome" : <file-name>, 
+     "output-directory" : "<string>", 
+     "epochs" : <integer>, 
+     "early-stopping-patience" : <integer>, 
+     "batch-size" : <integer>, 
+     "learning-rate" : <number>, 
+     "regression-model" : <model-regression-settings>,
+     "architecture" : <model-architecture-specification> } 
+
+<model-regression-settings> ::= 
+   { "regression-model-file" : <file-name>, 
+     "input-length" : <integer>
+  }
+
+<model-architecture-specification> ::= 
+    {"input-length" : <number>, 
+    "output-length" : <number>,
+    "model-name" : <string>,
+    "model-args" : <string>,
+    "filters" : <number>,
+    "layers" : <number>}
+\end{lstlisting}
+
+\subsection{Prediction input configuration}
+This is the JSON file given to the prediction script. It names the model to use and the predictions to make. 
+
+\begin{lstlisting}
+<prediction-input-configuration>::=
+    {<prediction-settings-section>, <predict-bed-section>}
+
+<prediction-settings-section> ::= "settings" : {
+    "tracks" : [<list-of-output-tasks>],
+    "genome" : <file-name>,
+    "batch-size" : <integer>,
+    "chrom-sizes" : <file-name>,
+    "architecture" : <predict-model-settings> }
+
+<list-of-output-tasks> ::= <output-task> 
+  | <output-task>, <list-of-output-tasks>
+
+<output-task> ::= {
+    "head-id" : <integer>,
+    "head-name" : <string>,
+    "task-id" : <integer>,
+    "logits-bw" : <file-name>, 
+    "counts-bw" : <file-name>
+    }
+
+<predict-bed-section> ::=
+    "bed-file" : <file-name>
+
+<predict-model-settings> ::={
+    "model-file" : <file-name>,
+    "input-length" : <integer>,
+    "heads" : <integer>,
+    "output-length" : <integer> }
+\end{lstlisting}
+
+
+\section{Model architectures}
+
+
+
+
+\end{document}
