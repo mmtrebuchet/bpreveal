@@ -6,15 +6,15 @@ import json
 import utils
 import tensorflow as tf
 utils.setMemoryGrowth()
+
 from tensorflow import keras
-from tensorflow.keras.backend import int_shape
 from keras.models import load_model
 import generators
 import losses
+import layers
 from callbacks import getCallbacks
 import models
-
-
+import logging
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix):
     callbacks = getCallbacks(earlyStop, outputPrefix)
@@ -25,20 +25,19 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 def main(configJsonFname):
     with open(configJsonFname, "r") as configFp:
         config = json.load(configFp)
-    inputLength = config["settings"]["architecture"]["input-length"]
-    outputLength = config["settings"]["architecture"]["output-length"]
+    inputLength = config["settings"]["sequence-input-length"]
+    outputLength = config["settings"]["output-length"]
     genomeFname = config["settings"]["genome"]
     numHeads = len(config["heads"]) 
-    regressionModel = load_model(config["settings"]["transformation-model"]["transformation-model-file"], 
+    soloModel = load_model(config["settings"]["solo-model-file"], 
             custom_objects = {'multinomialNll' : losses.multinomialNll})
-    regressionModel.trainable = False
 
-    combinedModel, residualModel = models.combinedModel(inputLength, outputLength,
-            config["settings"]["architecture"]["filters"],
-            config["settings"]["architecture"]["layers"],
-            config["settings"]["architecture"]["input-filter-width"],
-            config["settings"]["architecture"]["output-filter-width"],
-            config["heads"], regressionModel)
+    soloModel.trainable=False #We're in the regression phase, no training the bias model!
+
+    model = models.transformationModel(soloModel,
+            config["settings"]["profile-architecture"],
+            config["settings"]["counts-architecture"],
+            config["heads"])
 
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = ['mse'] * numHeads
@@ -47,18 +46,14 @@ def main(configJsonFname):
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
         countsWeights.append(head["counts-loss-weight"])
-    #profileLosses = losses.multinomialLoss(config["heads"])
     
-    #countsLosses = losses.countsLoss(config["heads"])
 
-    residualModel.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
             #run_eagerly=True,
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
-    combinedModel.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
-            #run_eagerly=True,
-            loss=profileLosses + countsLosses,
-            loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
+    logging.info(model.summary())
+    logging.info(model.outputs)
     #variables = [(v.name, v.shape, v.trainable) for v in model.variables]
     #for v in variables:
     #    print(v)
@@ -70,11 +65,10 @@ def main(configJsonFname):
             inputLength, outputLength, config["settings"]["batch-size"])
     valGenerator = generators.BatchGenerator(valBeds, config["heads"], genomeFname, 
             inputLength, outputLength, config["settings"]["batch-size"])
-    history = trainModel(combinedModel, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
+    history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"])
-    combinedModel.save(config["settings"]["output-prefix"] + "_combined"+ ".model")
-    residualModel.save(config["settings"]["output-prefix"] + "_residual"+ ".model")
+    model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii = False, indent = 4)
 

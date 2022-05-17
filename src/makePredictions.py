@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '3'
 import json
 import tensorflow as tf
+import utils
+utils.setMemoryGrowth()
 from tensorflow import keras
 import generators
 from utils import loadChromSizes
@@ -13,6 +15,7 @@ import numpy as np
 import pyBigWig
 import pysam
 from keras.models import load_model
+import h5py
 import tqdm
 import losses
 #Generate a simple sequence model taking one-hot encoded input and producing a logits profile and a log(counts) scalar. 
@@ -40,10 +43,8 @@ def main(configJsonFname):
         seqs[i] = generators.oneHotEncode(curSeq)
     
     model = load_model(config["settings"]["architecture"]["model-file"], custom_objects = {'multinomialNll' : losses.multinomialNll})
-    print(model.summary())
-    print(model.outputs)
     preds = model.predict(seqs, batch_size=batchSize, verbose=True)
-    
+     
     writePreds(regions, preds, config["settings"]["tracks"], numHeads, chromSizes)
 
 def writePreds(regions, preds, outputTrackList, numHeads, chromSizes):
@@ -52,9 +53,8 @@ def writePreds(regions, preds, outputTrackList, numHeads, chromSizes):
     outputTrackList is straight from the json file. 
     numheads is the number of output heads. 
     chromSizes is a dict mapping chromosome names to size. """
-    #get the sparse scale array and a list of write blocks. 
-    scales, blocks = getScaling(regions, chromSizes)
 
+    progressBar = tqdm.tqdm(total=len(outputTrackList) * len(regions))
     for task in outputTrackList:
         headProfile = preds[task["head-id"]]
         #Since the heads are organized as (profile1, profile2, ..., head1, head2...)
@@ -63,7 +63,38 @@ def writePreds(regions, preds, outputTrackList, numHeads, chromSizes):
         #A head may have multiple tasks in it, so slice out the appropriate data. 
         taskProfile = headProfile[:,:,task["task-id"]]
         taskCounts = headCounts[:,task["task-id"]]
-        writeBigWig(regions, taskProfile, taskCounts, task, chromSizes, scales, blocks)
+        writeH5(regions, taskProfile, taskCounts, task, chromSizes, progressBar)
+
+def writeH5(regions, profileValues, countsValues, task, chromSizes, progressBar):
+    outFile = h5py.File(task["output-h5"], "w")
+    outFile.attrs['head-id'] = task['head-id']
+    outFile.attrs['head-name'] = task['head-name']
+    outFile.attrs['task-id'] = task['task-id']
+    #First, create the chromosome size entry. 
+    stringDtype = h5py.string_dtype(encoding='utf-8')
+    outFile.create_dataset('chrom_names', (len(chromSizes.keys()),), dtype=stringDtype)
+    outFile.create_dataset('chrom_sizes', (len(chromSizes.keys()),), dtype='u4')
+    chromNameToIndex = dict()
+    for i, chromName in enumerate(chromSizes.keys()):
+        outFile['chrom_names'][i] = chromName
+        chromNameToIndex[chromName] = i
+        outFile['chrom_sizes'][i] = chromSizes[chromName]
+    #Build a table of chromosome numbers. For space savings, only store the
+    #index into the chrom_names table.
+    outFile.create_dataset('coords_chrom', (len(regions),), dtype='u1')
+    outFile.create_dataset('coords_start', (len(regions),), dtype='u4')
+    outFile.create_dataset('coords_stop',  (len(regions),), dtype='u4')
+    for i, r in enumerate(regions):
+        progressBar.update()
+        outFile['coords_chrom'][i] = chromNameToIndex[r.chrom]
+        outFile['coords_start'][i] = r.start
+        outFile['coords_stop'][i]  = r.stop
+    outFile.create_dataset('logits', data=profileValues)
+    outFile.create_dataset('counts', data=countsValues)
+    outFile.close()
+
+
+
 
 def writeBigWig(regions, profileValues, countsValues, task, chromSizes, scales, writeBlocks):
     """Open up the logits and counts bigwigs and write the given values.

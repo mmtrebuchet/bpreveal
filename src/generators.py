@@ -5,15 +5,16 @@ import pyBigWig
 from tensorflow import keras
 import numpy as np
 import math
+import logging
 
 def oneHotEncode(sequence):
     ret = np.empty((len(sequence),4), dtype='int8')
     ordSeq = np.fromstring(sequence, np.int8)
-    ret[:,0] = ordSeq == ord("A")
-    ret[:,1] = ordSeq == ord("C")
-    ret[:,2] = ordSeq == ord("G")
-    ret[:,3] = ordSeq == ord("T")
-    assert (np.sum(ret) == len(sequence))
+    ret[:,0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
+    ret[:,1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
+    ret[:,2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
+    ret[:,3] = (ordSeq == ord("T")) + (ordSeq == ord('t'))
+    assert (np.sum(ret) == len(sequence)), (sorted(sequence), sorted(ret.sum(axis=1)))
     return ret
 
 class Region:
@@ -57,10 +58,8 @@ class OneBedRegions:
         for line in pybedtools.BedTool(individualBed["bed-file"]):
             self.regions.append(Region(line, bigwigFileList, 
                 genome, inputLength, outputLength, individualBed["max-jitter"]))
-        if(individualBed["absolute-sampling-weight"] != 1):
-            self.numSamples = len(self.regions) * individualBed["absolute-sampling-weight"]
-        else:
-            self.numSamples = len(self.regions)
+        self.numSamples = int(len(self.regions) * individualBed["absolute-sampling-weight"])
+
     def get(self):
         regionIds = random.sample(range(len(self.regions)), self.numSamples)
         return [self.regions[i].get() for i in regionIds]
@@ -78,6 +77,8 @@ class BatchGenerator(keras.utils.Sequence):
         maxJitter is the maximum tolerated shift of the frame for each region. 
         Unless you're doing something really weird, maxJitter should be 0 for predicting. 
         """
+        logging.info("Loading data for batch generator.")
+        
         bigwigList = []
         self.headIndexes = []
         curBwIdx = 0
@@ -92,7 +93,6 @@ class BatchGenerator(keras.utils.Sequence):
         self.length = 0
         self.batchSize = batchSize
         for individualBw in self.bigwigList:
-            print(individualBw)
             bigwigFiles.append(pyBigWig.open(individualBw, "r"))
         
         for individualBed in individualBedList:
@@ -107,6 +107,7 @@ class BatchGenerator(keras.utils.Sequence):
         self.values = np.empty((self.length, outputLength, len(bigwigList)))
         self.logcounts = np.empty((self.length, len(bigwigList)))
         self.loadData()
+        logging.info("Batch generator initalized.")
 
     def __len__(self):
         return math.ceil(self.length / self.batchSize)

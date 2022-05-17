@@ -2,21 +2,41 @@ import json
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
+import layers
 
-#Generate a simple sequence model taking one-hot encoded input and producing a logits profile and a log(counts) scalar. 
+def biasModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList):
+    """Generates a classic BPNet-style model. 
+    inputLength is the length of the one-hot encoded DNA sequence. 
+    outputLength is the width of the predicted profile. 
+    numFilters is the number of convolutional filters used at each layer. 
+    numLayers is the number of dilated convolutions. 
+    inputFilterWidth is the width of the first convolutional layer, the one looking for motifs. 
+    outputFilterWidth is the width of the profile head convolutional filter at the very bottom of the network.
+    taskInfo is taken directly from a <bigwig-list> in the configuration JSON.
 
-def _biasModelHead(dilateOutput, individualHead, outputFilterWidth):
+    Returns a Keras Model where: 
+    Input to this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA.
+    Output is a list of (profilePreds, profilePreds, profilePreds,... , countPreds, countPreds, countPreds...)
+    profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the 
+    logits of the profile values for each task. 
+    countsPreds is a tensor of shape (batch x numTasks) containing the log counts for each task. 
+
+    It is an error to call this function with an inconsistent network structure, such as an input that is too long.
+    """
+    return _bpnetModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, "bias")
+
+def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
     numOutputs = len(individualHead["data"])
-    profile = keras.layers.Conv1D(numOutputs, outputFilterWidth, padding='valid', name='biasProfile_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
-    countsGap = keras.layers.GlobalAveragePooling1D(name='biasCountsGap_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
-    counts = keras.layers.Dense(numOutputs, name='biasLogcounts_{0:s}'.format(individualHead["head-name"]))(countsGap)
+    profile = keras.layers.Conv1D(numOutputs, outputFilterWidth, padding='valid', name='solo_profile_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
+    countsGap = keras.layers.GlobalAveragePooling1D(name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
+    counts = keras.layers.Dense(numOutputs, name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))(countsGap)
     #tf.print(profile)
     #tf.print(counts)
     return (profile, counts)
 
 
 
-def biasModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList):
+def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, modelName):
     """This is the classic BPNet architecture.
     inputLength is the length of the one-hot encoded DNA sequence. 
     outputLength is the width of the predicted profile. 
@@ -28,7 +48,7 @@ def biasModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
 
     Returns the TF model where: 
     Input to this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA.
-    Output is a list of (profilePreds, countPreds)
+    Output is a list of (profilePreds, profilePreds, profilePreds,... , countPreds, countPreds, countPreds...)
     profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the 
     logits of the profile values for each task. 
     countsPreds is a tensor of shape (batch x numTasks) containing the log counts for each task. 
@@ -36,31 +56,31 @@ def biasModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
     It is an error to call this function with an inconsistent network structure, such as an input that is too long.
     """
 
-    inputLayer = keras.Input((inputLength, 4), name='bias_input')
+    inputLayer = keras.Input((inputLength, 4), name=modelName + '_input')
 
     initialConv = keras.layers.Conv1D(numFilters, kernel_size=inputFilterWidth, padding='valid',
-            activation='relu', name="bias_initial_conv")(inputLayer)
+            activation='relu', name=modelName +"_initial_conv")(inputLayer)
     prevLayer = initialConv
     for i in range(numLayers):
         newConv = keras.layers.Conv1D(numFilters, kernel_size=3, padding='valid',
-                activation='relu', dilation_rate=2**(i+1), name='bias_conv_{0:d}'.format(i))(prevLayer)
+                activation='relu', dilation_rate=2**(i+1), name = modelName + '_conv_{0:d}'.format(i))(prevLayer)
         prevLength = int_shape(prevLayer)[1]
         newLength = int_shape(newConv)[1]
         newCrop = keras.layers.Cropping1D((prevLength - newLength) //2, 
-                name='bias_crop{0:d}'.format(i))(prevLayer)
-        prevLayer = keras.layers.add([newConv, newCrop], name='bias_add{0:d}'.format(i))
+                name=modelName + '_crop{0:d}'.format(i))(prevLayer)
+        prevLayer = keras.layers.add([newConv, newCrop], name=modelName + '_add{0:d}'.format(i))
     countsOutputs = []
     profileOutputs = []
     for individualHead in headList:
-        h = _biasModelHead(prevLayer, individualHead, outputFilterWidth)
+        h = _soloModelHead(prevLayer, individualHead, outputFilterWidth)
         countsOutputs.append(h[1])
         profileOutputs.append(h[0])
-    m = keras.Model(inputs=inputLayer, outputs = profileOutputs + countsOutputs, name="bias_model")
+    m = keras.Model(inputs=inputLayer, outputs = profileOutputs + countsOutputs, name=modelName + "_model")
     return m
 
 
 
-def _buildSimpleRegressionModel(architectureSpecification, inputShape, headName, inputLayer):
+def _buildSimpleTransformationModel(architectureSpecification, headName, inputLayer):
     activationLayers = []
     for layerType in architectureSpecification["types"]:
         match layerType:
@@ -71,6 +91,11 @@ def _buildSimpleRegressionModel(architectureSpecification, inputShape, headName,
                 sigmoided = keras.layers.Activation(activation=keras.activations.sigmoid, name='sigmoid_activation_{0:s}'.format(headName))(inputLinear)
                 outputLinear = layers.LinearRegression(name='sigmoid_out_linear_{0:s}'.format(headName))(sigmoided)
                 activationLayers.append(outputLinear)
+            case 'relu':
+                inputLinear = layers.LinearRegression(name='relu_in_linear_{0:s}'.format(headName))(inputLayer)
+                sigmoided = keras.layers.Activation(activation=keras.activations.relu, name='relu_activation_{0:s}'.format(headName))(inputLinear)
+                outputLinear = layers.LinearRegression(name='relu_out_linear_{0:s}'.format(headName))(sigmoided)
+                activationLayers.append(outputLinear)
             case _:
                 raise ValueError("The simple layer type you gave ({0:s}) is not supported".format(layerType))
     if(len(activationLayers) > 1):
@@ -80,66 +105,79 @@ def _buildSimpleRegressionModel(architectureSpecification, inputShape, headName,
     return sumLayer
 
 
-def _regressionHead(biasProfile, biasCounts, individualHead, architectureSpecification):
+def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitectureSpecification, countsArchitectureSpecification):
     numOutputs = len(individualHead["data"])
-    match architectureSpecification["name"]:
+    match profileArchitectureSpecification["name"]:
         case 'simple':
-            profileRegression = _buildSimpleRegressionModel(architectureSpecification, 
-                    (architectureSpecification['output-length'], numOutputs), 
+            profileTransformation = _buildSimpleTransformationModel(profileArchitectureSpecification, 
+                    #(profileArchitectureSpecification['output-length'], numOutputs), 
                     individualHead["head-name"] + "_profile",
-                    biasProfile)
-            countsRegression = _buildSimpleRegressionModel(architectureSpecification, 
-                    (numOutputs,),
-                    individualHead["head-name"] + "_counts",
-                    biasCounts)
+                    soloProfile)
+        case "passthrough":
+            profileTransformation = soloProfile
         case _:
             raise ValueError("Currently, only simple regression is supported.")
 
+    match countsArchitectureSpecification["name"]:
+        case "simple":
+            countsTransformation = _buildSimpleTransformationModel(countsArchitectureSpecification, 
+                    #(numOutputs,),
+                    individualHead["head-name"] + "_counts",
+                    soloCounts)
+        case "passthrough":
+            countsTransformation = soloCounts
+        case _:
+            raise ValueError("Currently, only simple regression is supported.")
 
-    return (profileRegression, countsRegression)
+    return (profileTransformation, countsTransformation)
 
 
 
-def regressionModel(biasModel, architectureSpecification, headList):
-    """Given a Keras model for the bias, generate a simple network that can be used to transform the bias into the experimental data.
+def transformationModel(soloModel, profileArchitectureSpecification, countsArchitectureSpecification, headList):
+    """Given a solo model (typically representing bias), generate a simple network that 
+    can be used to transform the solo model's output into the experimental data.
     That is, 
     experimental = f(bias)
     and f is a simple function like y=mx+b or something.
     When you train the model returned by this function, you are training the m and b parameters of that function.
-    Note that this function sets the bias model to non-trainable, since you're not trying to make the bias model better, you're
-    trying to transform the bias to look like experimental data."""
+    Note that this function sets the solo model to non-trainable, since you're not trying to make the bias model better, you're
+    trying to transform the solo model's output to look like experimental data."""
 
-    biasModel.trainable=False
+    soloModel.trainable=False
     profileOutputs = []
     countsOutputs = []
     numHeads = len(headList)
     for i, individualHead in enumerate(headList):
-        profileHead, countsHead = _regressionHead(
-                biasModel.outputs[i], 
-                biasModel.outputs[i+numHeads],
+        profileHead, countsHead = _transformationHead(
+                soloModel.outputs[i], 
+                soloModel.outputs[i+numHeads],
                 individualHead,
-                architectureSpecification)
+                profileArchitectureSpecification,
+                countsArchitectureSpecification)
         profileOutputs.append(profileHead)
         countsOutputs.append(countsHead)
-    m = keras.Model(inputs=biasModel.input, outputs = profileOutputs + countsOutputs, name="regression_model")
+    m = keras.Model(inputs=soloModel.input, outputs = profileOutputs + countsOutputs, name="transformation_model")
     return m
 
-def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, regressionModel):
+
+
+
+def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, biasModel):
     """This builds a standard bpnet model, but then adds in the bias at the very end: 
             ,-----------------SEQUENCE------------------,
             V                                           V
         _____________                           _________________
-        | BIAS MODEL|                           | RESIDUAL MODEL|
+        | SOLO MODEL|                           | RESIDUAL MODEL|
         |___________|                           |_______________|
              |                                          |
         _____V_______          _______                  |
-        |REGRESSION |--------> | ADD |<-----------------'
+        | TRANSFORM |--------> | ADD |<-----------------'
         |___________|          |_____|
                                   |
                              _____V_____
                              |COMBINED |
                              |_________|
-    Since you'll usually want to isolate the bias-free model, that is returned separately. 
+    Since you'll usually want to isolate the bias-free model (AKA residual model), that is returned separately. 
     Parameters:
     inputLength is the length of the one-hot encoded DNA sequence (which must be the same for the bias model and the residual model). 
     outputLength is the width of the predicted profile. 
@@ -147,11 +185,13 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
     numLayers is the number of dilated convolutions in the residual model. 
     inputFilterWidth is the width of the first convolutional layer in the residual model, the one looking for motifs. 
     outputFilterWidth is the width of the profile head convolutional filter in the residual model at the very bottom of the network.
-    taskInfo is taken directly from a <bigwig-list> in the configuration JSON.
+    headList is taken straight from the config json. 
+    biasModel is a keras model that goes from sequence to transformed bias. This is the file that is saved when you generate the
+    transformation model, and internally comprises both the solo model and a transformation. 
 
     Returns two Keras models. The first is the combined output, i.e., the COMBINED node in the graph above.  
     Input to this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA.
-    Output is a list of (profilePreds, countPreds)
+    Output is a list of (profilePreds, profilePreds, profilePreds,... , countPreds, countPreds, countPreds...)
     profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the 
     logits of the profile values for each task. 
     countsPreds is a tensor of shape (batch x numTasks) containing the log counts for each task. 
@@ -160,38 +200,42 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
 
     It is an error to call this function with an inconsistent network structure, such as an input that is too long.
     """
-    regressionModel.trainable=False
-    inputLayer = keras.Input((inputLength, 4), name='residual_input')
-
-    initialConv = keras.layers.Conv1D(numFilters, kernel_size=inputFilterWidth, padding='valid',
-            activation='relu', name="residual_initial_conv")(inputLayer)
-    prevLayer = initialConv
-    for i in range(numLayers):
-        newConv = keras.layers.Conv1D(numFilters, kernel_size=3, padding='valid',
-                activation='relu', dilation_rate=2**(i+1), name='residual_conv_{0:d}'.format(i))(prevLayer)
-        prevLength = int_shape(prevLayer)[1]
-        newLength = int_shape(newConv)[1]
-        newCrop = keras.layers.Cropping1D((prevLength - newLength) //2, 
-                name='residual_crop{0:d}'.format(i))(prevLayer)
-        prevLayer = keras.layers.add([newConv, newCrop], name='residual_add{0:d}'.format(i))
-    countsOutputs = []
-    profileOutputs = []
-    for individualHead in headList:
-        h = _biasModelHead(prevLayer, individualHead, outputFilterWidth)
-        countsOutputs.append(h[1])
-        profileOutputs.append(h[0])
-    bpnetModel = keras.Model(inputs=inputLayer, outputs = profileOutputs + countsOutputs, name="residual_model")
-    readyRegressionModel = regressionModel(inputLayer)
+    biasModel.trainable=False
+    residualModel = soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, "residual")
+    inputLayer = residualModel.inputs
+    readyBiasHeads = biasModel(inputLayer)
     
+    
+    #Build up the output heads. Note that the residual model also has the standard array of output heads, this next step is to 
+    #combine the residual and regression models to generate the combined model.
     combinedProfileHeads = []
     combinedCountsHeads = []
     numHeads = len(headList)
     for i, individualHead in enumerate(headList):
-        addProfile = keras.layers.Add(name='combined_add_profile_{0:s}'.formatindividualHead["head-name"])([readyRegressionModel.outputs[i], bpnetModel.outputs[i]])
-        addCounts = keras.layers.Add(name='combined_add_counts_{0:s}'.formatindividualHead["head-name"])([readyRegressionModel.outputs[i+numHeads], bpnetModel.outputs[i + numHeads]])
+        #Just straight-up add the logit tensors. 
+        addProfile = keras.layers.Add(name='combined_add_profile_{0:s}'.format(individualHead["head-name"]))([readyBiasHeads[i], residualModel.outputs[i]])
+        if(individualHead["use-bias-counts"]):
+            #While we add logits, we have to convert from log space to linear space
+            #This is because we want to model
+            #counts = biasCounts + residualCounts
+            #but the counts in bpnet are log-counts.
+            #TODO: Rewrite this using tf.math.reduce_logsumexp, since it would avoid some numerical stability problems. 
+            absBiasCounts = keras.layers.Activation(tf.math.exp, name='combined_exponentiate_bias_{0:s}'.format(individualHead["head-name"]))\
+                    (readyBiasHeads[i+numHeads])
+            absResidualCounts = keras.layers.Activation(tf.math.exp, name='combined_exponentiate_residual_{0:s}'.format(individualHead["head-name"])) \
+                    (residualModel.outputs[i+numHeads])
+            absCombinedCounts = keras.layers.Add(name='combined_add_counts_{0:s}'.format(individualHead["head-name"])) \
+                    ([absBiasCounts, absResidualCounts])
+            addCounts = keras.layers.Activation(tf.math.log, name='combined_log_counts_{0:s}'.format(individualHead["head-name"]))\
+                    (absCombinedCounts)
+            #addCounts = keras.layers.Add(name='combined_multiply_counts_{0:s}'.format(individualHead["head-name"]))([readyRegressionHeads[i+numHeads], residualModel.outputs[i + numHeads]])
+        else:
+            #The user doesn't want the counts value from the regression used, just the profile part. 
+            #This is useful when the concept of a "negative peak set" is meaningless, like in MNase. 
+            addCounts = residualModel.outputs[i + numHeads]
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
     combinedModel = keras.Model(inputs=inputLayer, outputs = combinedProfileHeads + combinedCountsHeads, name='combined_model')
-    return (combinedModel, bpnetModel)
+    return (combinedModel, residualModel)
 
 
