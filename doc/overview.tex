@@ -78,7 +78,6 @@ It shall contain exactly one regions section, and one input track section for ea
 
 <sampling-settings> ::= <empty>
   | "absolute-sampling-weight" : <number>,
-  | "relative-sampling-weight" : <number>,
 
 <splits> ::= "train"
   |  "val" 
@@ -94,9 +93,9 @@ It shall contain exactly one regions section, and one input track section for ea
 
 <individual-head> ::=
     {
-      "bigwig-file" : [<bigwig-list>],
+      "bigwig-files" : [<bigwig-list>],
       "profile-loss-weight" : <number>,
-      "counts-loss-weight" : <number>
+      "counts-loss-weight" : <number>,
       "head-name" : <string>
     }
 
@@ -188,9 +187,9 @@ much like the bias file.
 
 <combined-individual-head> ::=
     {
-      "data" : [<bigwig-list>],
+      "bigwig-files" : [<bigwig-list>],
       "profile-loss-weight" : <number>,
-      "counts-loss-weight" : <number>
+      "counts-loss-weight" : <number>,
       "head-name" : <string>,
       "use-bias-counts" : <boolean>
 }
@@ -230,21 +229,22 @@ This is the JSON file given to the prediction script. It names the model to use 
     {<prediction-settings-section>, <prediction-bed-section>}
 
 <prediction-settings-section> ::= "settings" : {
-    "tracks" : [<list-of-output-tasks>],
+    "output-h5" : <file-name>,
     "genome" : <file-name>,
     "batch-size" : <integer>,
-    "chrom-sizes" : <file-name>,
+    "heads" : [<list-of-prediction-heads>],
     "architecture" : <prediction-model-settings> }
 
-<list-of-output-tasks> ::= <output-task> 
-  | <output-task>, <list-of-output-tasks>
 
-<output-task> ::= {
+<list-of-prediction-heads> ::=
+    <prediction-head> 
+  | <prediction-head>, <list-of-prediction-heads>
+
+
+<prediction-head> ::= {
     "head-id" : <integer>,
-    "head-name" : <string>,
-    "task-id" : <integer>,
-    "output-h5" : <file-name>
-    }
+    "num-tasks" : <integer>
+}
 
 <prediction-bed-section> ::=
     "bed-file" : <file-name>
@@ -252,9 +252,30 @@ This is the JSON file given to the prediction script. It names the model to use 
 <prediction-model-settings> ::={
     "model-file" : <file-name>,
     "input-length" : <integer>,
-    "heads" : <integer>,
     "output-length" : <integer> }
 \end{lstlisting}
+
+\subsection{Prediction to bigwig configuration}
+This is the JSON file that specifies how the hdf5-format file from the prediction tool should be rendered to bigwigs. 
+
+\begin{lstlisting}
+<prediction-to-bigwig-configuration} ::= {
+    "input-h5" : <file-name>,
+    "heads" : [<list-of-prediction-to-bigwig-heads>]
+}
+
+<list-of-prediction-to-bigwig-heads> ::=
+    <prediction-to-bigwig-head>
+  | <prediction-to-bigwig-head>, <list-of-prediction-to-bigwig-heads>
+
+<prediction-to-bigwig-head> ::= {
+    "head-id" : <integer>,
+    "bigwig-files" : [<bigwig-list>],
+}
+
+
+\end{lstlisting}
+
 
 
 \subsection{Interpret PISA configuration}

@@ -2,6 +2,7 @@
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
+#os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()
 import utils
@@ -20,8 +21,11 @@ RANDOM_SEED=355687
 def shuffleGenerator(numShuffles):
     def generateShuffles(model_inputs):
         rng = np.random.RandomState(RANDOM_SEED)
+        #print(model_inputs[0].shape)
         shuffles = [rng.permutation(model_inputs[0]) for x in range(numShuffles)]
-        return np.array(shuffles)
+        shuffles = np.array(shuffles)
+        #print(shuffles.shape)
+        return [shuffles]
     return generateShuffles
 
 
@@ -30,6 +34,7 @@ def shuffleGenerator(numShuffles):
 def main(jsonFname):
     with open(jsonFname, "r") as configFp:
         config = json.load(configFp)
+    utils.setVerbosity(config["verbosity"])
     model = load_model(config["model-file"], 
                        custom_objects = {'multinomialNll' : losses.multinomialNll})
     genome = pysam.FastaFile(config["genome"])
@@ -56,9 +61,18 @@ def main(jsonFname):
         oneHotSequences[i] = oneHot
     
     shuffler = shuffleGenerator(config["num-shuffles"])
-
-    profileExplainer = shap.TFDeepExplainer( (model.input, model.outputs[config["head-id"]][0,:1,config["task-id"]]), 
-                                    shuffler)
+    shuffles = shuffler(oneHotSequences[:1])
+    sar = np.array(shuffles)
+    #print(sar.shape)
+    #print(np.sum(np.array(shuffles), axis=1))
+    #                                      Keep the first dimension so it seems like a batch size of one.v    
+    #                                       Leftmost base in output v                                    |
+    #                            All of the samples in this batch v |     Sum samples in batch. v        |
+    #Oh boy, this slice.                      |--Current head---| V V  |current task----|       V        V
+    outputTarget = tf.reduce_sum(model.outputs[config["head-id"]][:,0, config["task-id"]], axis=0, keepdims=True)
+    #print(model.outputs[0])
+    profileExplainer = shap.TFDeepExplainer( (model.input, outputTarget), 
+                                    shuffles)
     profileShapScores = profileExplainer.shap_values([oneHotSequences])
 
     outputFile = h5py.File(config["output-h5"], 'w')

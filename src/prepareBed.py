@@ -6,7 +6,7 @@ import numpy as np
 import json
 import logging
 import sys
-
+import util
 
 class Region:
     def __init__(self, line):
@@ -158,19 +158,28 @@ def prepareBeds(config):
     genome = pysam.FastaFile(config["genome"])
     (trainRegions, valRegions,testRegions) = loadRegions(config)
     totalLength = len(trainRegions) + len(valRegions) + len(testRegions)
-    pbar = tqdm.tqdm(total=totalLength)
+    if(config["verbose"] in ["INFO", "DEBUG"]):
+        pbar = tqdm.tqdm(total=totalLength)
+    else:
+        pbar = None
     if("output-prefix" in config):
         outputTrainFname = config["output-prefix"] + "_train.bed"
         outputValFname = config["output-prefix"] + "_val.bed"
         outputTestFname = config["output-prefix"] + "_test.bed"
+        outputAllFname = config["output-prefix"] + "_all.bed"
     else:
         outputTrainFname = config["output-train"]
         outputValFname = config["output-val"]
         outputTestFname = config["output-test"]
+        outputAllFname = config["output-all"]
     countsDict = [dict() for x in bigwigs] #For each bigwig, generate a dictionary of counts. 
-    writeRegions(config, trainRegions, outputTrainFname, genome, bigwigs, pbar, countsDict)
-    writeRegions(config, valRegions, outputValFname, genome, bigwigs, pbar, countsDict)
-    writeRegions(config, testRegions, outputTestFname, genome, bigwigs, pbar, countsDict)
+    validTrain = validateRegions(config, trainRegions, genome, bigwigs, pbar, countsDict)
+    validVal = validateRegions(config, valRegions, genome, bigwigs, pbar, countsDict)
+    validTest = validateRegions(config, testRegions, genome, bigwigs, pbar, countsDict)
+    writeRegions(validTrain, outputTrainFname)
+    writeRegions(validVal, outputValFname)
+    writeRegions(validTest, outputTestFname)
+    writeRegions(validTrain + validVal + validTest, outputAllFname)
     for f in bigwigs:
         f.close()
     if("write-counts-to" in config):
@@ -190,11 +199,12 @@ def prepareBeds(config):
 
 
 
-def writeRegions(config, regions, outFname, genome, bigwigs, pbar, countsDict):
+def validateRegions(config, regions, genome, bigwigs, pbar, countsDict):
     #First, resize the regions. 
     padding = (config["input-width"] - config["output-width"])//2
     for r in regions:
-        pbar.update()
+        if(pbar is not None):
+            pbar.update()
         r.resize(config["resize-mode"], config["output-width"], config["max-jitter"], genome, padding)
         if(not r.valid):
             continue
@@ -218,6 +228,9 @@ def writeRegions(config, regions, outFname, genome, bigwigs, pbar, countsDict):
     #Okay, so they're all now the right size. 
     #Okay, all the checks are done. 
     validRegions = [r for r in regions if r.valid]
+    return validRegions
+
+def writeRegions(validRegions, outFname):
     validRegions.sort(key=lambda r: (r.chrom, r.start))
     with open(outFname, "w") as fp:
         for r in validRegions:
@@ -229,71 +242,3 @@ if(__name__ == "__main__"):
     prepareBeds(config)
 
 
-"""
-
-genome = pysam.FastaFile("/n/data1/genomes/Mus_musculus/mm10/all_chr.fa")
-def writeFile(bedFname, outPrefix, bigwigName):
-    bigwigFile = pyBigWig.open(bigwigName) 
-    numRejected = 0
-    numTest = 0
-    numVal = 0
-    numTrain = 0
-    bf = list(open(bedFname))
-    outTrain = open(outPrefix + "_train.bed", "w")
-    outVal = open(outPrefix + "_val.bed", "w")
-    outTest = open(outPrefix + "_test.bed", "w")
-    outCounts = open(outPrefix + "_counts.dat", "w")
-    regions = []
-    for entry in tqdm.tqdm(bf):
-        rejectSequence = False
-        lsp = entry.split()
-        chrom = lsp[0]
-        start = int(lsp[1])
-        stop = int(lsp[2])
-
-        center = (start + stop)//2
-        start = center - 500
-        stop = start + 1000
-        padding = (3138-1000)//2 + 101 #Add 100 for jitter.
-        #Make sure we're not right next to a chromosome boundary.
-        if(start - padding < 1000):
-            numRejected += 1
-            continue
-        if(stop + padding > genome.get_reference_length(chrom) - 1000):
-            numRejected += 1
-            continue
-        seq = genome.fetch(chrom, start-padding, stop+padding)
-        if(len(seq.upper().lstrip('ACGT')) == 0):
-            regionValues = np.nan_to_num(bigwigFile.values(chrom, start+100, stop-100)) #Just look at the center, to account for jitter.
-            regionSum = np.sum(regionValues)
-            if(regionSum > 0):
-                outCounts.write("{0:f}\n".format(regionSum))
-                regions.append((chrom, start, stop))
-            else:
-                numRejected += 1
-        else:
-            numRejected += 1
-        #for c in seq.upper():
-        #    if c not in "ACGT":
-        #        numRejected += 1
-        #        rejectSequence = True
-        #        break
-    regions.sort(key = lambda x: (x[0], x[1]))
-    for region in tqdm.tqdm(regions):
-        chrom, start, stop = region
-        outLine = "{0:s}\t{1:d}\t{2:d}\t.\t1000\n".format(chrom, start, stop)
-        match chrom:
-            case "chr1":
-                outTest.write(outLine)
-                numTest += 1
-            case "chr2":
-                outVal.write(outLine)
-                numVal += 1
-            case _:
-                outTrain.write(outLine)
-                numTrain += 1
-    print("Rejected {0:d} test {1:d} val {2:d} train {3:d}".format(numRejected, numTest, numVal, numTrain))
-
-writeFile("mesc_atac_peaks.narrowPeak", "bed/peaks", "mesc_native_atac_combined_cutsites.bw")
-writeFile("mesc_null_regions.narrowpeak", "bed/nonpeaks", "mesc_native_atac_combined_cutsites.bw")
-"""

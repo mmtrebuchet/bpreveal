@@ -1,0 +1,6 @@
+**/.ipynb*
+tmp
+test
+scratch
+.snakemake
+src/__pycache__

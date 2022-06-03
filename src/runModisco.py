@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # adapted from mtbatchgen by Zahoor
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
+#os.environ["TF_NUM_INTEROP_THREADS"] = "2"
+#os.environ["TF_NUM_INTRAOP_THREADS"] = "40"
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
 from collections import OrderedDict
 import modisco.visualization
 from modisco.visualization import viz_sequence

@@ -39,8 +39,15 @@ def combineMultAndDiffref(mult, orig_inp, bg_data):
     return [np.mean(projected_hypothetical_contribs, axis=0)]
 
 
-def weightedMeannormLogits(model, headId, taskId):
-    logits = model.outputs[headId][:,:,taskId]
+def weightedMeannormLogits(model, headId, taskIds):
+    profileOutput = model.outputs[headId]
+    stackedLogits = tf.stack([profileOutput[:,:,x] for x in taskIds], axis=2)
+    inputShape = stackedLogits.shape
+    numBatches = inputShape[0]
+    numSamples = inputShape[1] * inputShape[2]
+    logits = tf.reshape(stackedLogits, [-1, numSamples])
+
+    #logits = tf.unstack(stackedLogits, axis=2)
     meannormedLogits = logits - tf.reduce_mean(logits, axis=1)[:,None]
 
     stopgradMeannormedLogits = tf.stop_gradient(meannormedLogits)
@@ -63,30 +70,16 @@ def writeHdf5(shapTargets, oneHotSequences, shapScores, outputFname, genome):
     outputFile.create_dataset("coords_chrom", data=[x[0] for x in shapTargets])
     outputFile.create_dataset("coords_start", data=[x[1] for x in shapTargets])
     outputFile.create_dataset("coords_end", data=[x[2] for x in shapTargets])
-    #Now to actually write the data in the modisco format. 
-    #Modisco requires 
-    # {'raw'           : {'seq' : (numRegions x 4 x inputLength)}, 
-    #  'shap'          : {'seq' : (numRegions x 4 x inputLength)}, 
-    #  'projected_shap': {'seq' : (numRegions x 4 x inputLength)}}
-    #where 'raw' is the one-hot encoded sequence, 'shap' is the hypothetical shap scores
-    #and 'projected_shap' is sequence * hypothetical scores.
-    rawGroup = outputFile.create_group('raw')
-    shapGroup = outputFile.create_group('shap')
-    projectedGroup = outputFile.create_group('projected_shap')
 
-    #In order to rearrange the data to make Modisco happy, I have to do a very ugly transpose:
-    transposedSequences = np.transpose(oneHotSequences, (0,2,1))
-    transposedScores = np.transpose(shapScores, (0,2,1))
-
-    rawGroup.create_dataset('seq', data=transposedSequences)
-    shapGroup.create_dataset('seq', data=transposedScores)
-    projectedGroup.create_dataset('seq', data=transposedSequences * transposedScores)
+    outputFile.create_dataset('hyp_scores', data=shapScores)
+    outputFile.create_dataset('input_seqs', data=oneHotSequences)
     outputFile.close()
 
 
 def main(jsonFname):
     with open(jsonFname, "r") as configFp:
         config = json.load(configFp)
+    utils.setVerbosity(config["verbosity"])
     model = load_model(config["model-file"], 
                        custom_objects = {'multinomialNll' : losses.multinomialNll})
     genome = pysam.FastaFile(config["genome"])
@@ -117,7 +110,7 @@ def main(jsonFname):
     shuffler = shuffleGenerator(config["num-shuffles"])
     
     
-    profileMetric = weightedMeannormLogits(model, config["head-id"], config["task-id"])
+    profileMetric = weightedMeannormLogits(model, config["head-id"], config["profile-task-ids"])
     profileExplainer = shap.TFDeepExplainer( (model.input, profileMetric), 
                                     shuffler,
                                     combine_mult_and_diffref = combineMultAndDiffref)
@@ -125,7 +118,9 @@ def main(jsonFname):
     writeHdf5(shapTargets, oneHotSequences, profileShapScores, config["profile-h5"], genome)
 
 
-    countsMetric = model.outputs[config["heads"] + config["head-id"]][:,config["task-id"]]
+    countsMetric = model.outputs[config["heads"] + config["head-id"]][:,0]
+    print(countsMetric)
+    print(countsMetric.shape)
     countsExplainer = shap.TFDeepExplainer( (model.input, countsMetric), 
                                     shuffler,
                                     combine_mult_and_diffref = combineMultAndDiffref)

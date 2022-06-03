@@ -3,25 +3,26 @@ import h5py
 import pyBigWig
 import numpy as np
 import argparse
-
+import logging
+import tqdm
 def writeBigWig(inH5, outFname):
     bwHeader = []
     for i, name in enumerate(inH5["chrom_names"].asstr()):
         bwHeader.append(("{0:s}".format(name), inH5['chrom_sizes'][i]))
     outBw = pyBigWig.open(outFname, 'w')
-    outBw.addHeader(bwHeader)
-
+    outBw.addHeader(sorted(bwHeader))
+    logging.info("Bigwig header" + str((sorted(bwHeader))))
     numRegions = inH5['coords_chrom'].shape[0]
     #Sort the regions. 
-    regionOrder = sorted(range(numRegions), key = lambda x: (inH5['coords_chrom'][i], inH5['coords_start'][i]))
+    regionOrder = sorted(range(numRegions), key = lambda x: (inH5['coords_chrom'][x], inH5['coords_start'][x]))
     startWritingAt = 0
     regionID = regionOrder[0]
     regionChrom = inH5['coords_chrom'][regionID].decode('utf-8')
     curChrom = regionChrom
     regionStart = inH5['coords_start'][regionID]
     regionStop = inH5['coords_end'][regionID]
-
-    for regionNumber in range(numRegions):
+    logging.info("Files opened; writing regions")
+    for regionNumber in tqdm.tqdm(range(numRegions)):
         #Extract the appropriate region from the sorted list. 
 
         if(regionChrom != curChrom):
@@ -48,8 +49,10 @@ def writeBigWig(inH5, outFname):
         dataSliceStop = stopWritingAt - regionStart
         
         #Okay, now it's time to actually do the thing to the data! 
-        importances = inH5["projected_shap"]['seq'][regionID]
-        profile = np.sum(importances, axis=0) #Add up all the bases to get a vector of projected importances. 
+        importances = inH5["hyp_scores"][regionID]
+        seq = inH5["input_seqs"][regionID]
+        projected = np.array(importances) * np.array(seq)
+        profile = np.sum(projected, axis=1) #Add up all the bases to get a vector of projected importances. 
         #print("Adding at {0:d} - {1:d} ({2:d} - {3:d})".format(startWritingAt, stopWritingAt, dataSliceStart, dataSliceStop))
         vals = [float(x) for x in profile[dataSliceStart:dataSliceStop]]
         outBw.addEntries(regionChrom, 
@@ -64,6 +67,8 @@ def writeBigWig(inH5, outFname):
         regionChrom = nextChrom
         regionStart = nextStart
         regionStop = nextStop
+
+    logging.info("Regions written; closing bigwig.")
     outBw.close()
 
 def main():

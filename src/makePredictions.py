@@ -18,6 +18,8 @@ from keras.models import load_model
 import h5py
 import tqdm
 import losses
+import logging
+logging.basicConfig(level=logging.INFO)
 #Generate a simple sequence model taking one-hot encoded input and producing a logits profile and a log(counts) scalar. 
 
 
@@ -25,17 +27,17 @@ import losses
 def main(configJsonFname):
     with open(configJsonFname, "r") as configFp:
         config = json.load(configFp)
+    utils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     batchSize = config["settings"]["batch-size"]
     genomeFname = config["settings"]["genome"]
-    numHeads = config["settings"]["architecture"]["heads"] 
+    numHeads = config["settings"]["heads"]
 
     regions = pybedtools.BedTool(config["bed-file"])
     seqs = np.zeros((len(regions), inputLength, 4))
     genome = pysam.FastaFile(genomeFname)
     padding = (inputLength - outputLength) // 2
-    chromSizes = loadChromSizes(config["settings"]["chrom-sizes"])
 
 
     for i, region in enumerate(regions):
@@ -45,16 +47,46 @@ def main(configJsonFname):
     model = load_model(config["settings"]["architecture"]["model-file"], custom_objects = {'multinomialNll' : losses.multinomialNll})
     preds = model.predict(seqs, batch_size=batchSize, verbose=True)
      
-    writePreds(regions, preds, config["settings"]["tracks"], numHeads, chromSizes)
+    writePreds(regions, preds, config["settings"]["output-h5"], numHeads, genome)
 
-def writePreds(regions, preds, outputTrackList, numHeads, chromSizes):
+def writePreds(regions, preds, outputFname, numHeads, genome):
     """Regions is the BedTool taken from the config's bed file. 
     preds is the output of the model's predict function, no transformations.
     outputTrackList is straight from the json file. 
     numheads is the number of output heads. 
     chromSizes is a dict mapping chromosome names to size. """
+    logging.info("Writing predictions")
+    outFile = h5py.File(outputFname, "w")
+    stringDtype = h5py.string_dtype(encoding='utf-8')
+    outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
+    outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u4')
+    chromNameToIndex = dict()
+    for i, chromName in enumerate(genome.references):
+        outFile['chrom_names'][i] = chromName
+        chromNameToIndex[chromName] = i
+        outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
+    #Build a table of chromosome numbers. For space savings, only store the
+    #index into the chrom_names table.
+    outFile.create_dataset('coords_chrom', (len(regions),), dtype='u1')
+    outFile.create_dataset('coords_start', (len(regions),), dtype='u4')
+    outFile.create_dataset('coords_stop',  (len(regions),), dtype='u4')
+    logging.info("Datasets created. Populating regions.")
+    for i, r in tqdm.tqdm(enumerate(regions)):
+        outFile['coords_chrom'][i] = chromNameToIndex[r.chrom]
+        outFile['coords_start'][i] = r.start
+        outFile['coords_stop'][i]  = r.stop
+    logging.info("Writing predictions.")
+    for headId in tqdm.tqdm(range(numHeads)):
+        headGroup = outFile.create_group("head_{0:d}".format(headId))
+        headGroup.create_dataset("logcounts", data=preds[numHeads+headId])
+        headGroup.create_dataset("logits", data=preds[headId])
+    outFile.close()
 
-    progressBar = tqdm.tqdm(total=len(outputTrackList) * len(regions))
+        
+        
+
+"""
+
     for task in outputTrackList:
         headProfile = preds[task["head-id"]]
         #Since the heads are organized as (profile1, profile2, ..., head1, head2...)
@@ -65,34 +97,14 @@ def writePreds(regions, preds, outputTrackList, numHeads, chromSizes):
         taskCounts = headCounts[:,task["task-id"]]
         writeH5(regions, taskProfile, taskCounts, task, chromSizes, progressBar)
 
-def writeH5(regions, profileValues, countsValues, task, chromSizes, progressBar):
+def writeH5(regions, preds, chromSizes, progressBar):
     outFile = h5py.File(task["output-h5"], "w")
-    outFile.attrs['head-id'] = task['head-id']
-    outFile.attrs['head-name'] = task['head-name']
-    outFile.attrs['task-id'] = task['task-id']
     #First, create the chromosome size entry. 
-    stringDtype = h5py.string_dtype(encoding='utf-8')
-    outFile.create_dataset('chrom_names', (len(chromSizes.keys()),), dtype=stringDtype)
-    outFile.create_dataset('chrom_sizes', (len(chromSizes.keys()),), dtype='u4')
-    chromNameToIndex = dict()
-    for i, chromName in enumerate(chromSizes.keys()):
-        outFile['chrom_names'][i] = chromName
-        chromNameToIndex[chromName] = i
-        outFile['chrom_sizes'][i] = chromSizes[chromName]
-    #Build a table of chromosome numbers. For space savings, only store the
-    #index into the chrom_names table.
-    outFile.create_dataset('coords_chrom', (len(regions),), dtype='u1')
-    outFile.create_dataset('coords_start', (len(regions),), dtype='u4')
-    outFile.create_dataset('coords_stop',  (len(regions),), dtype='u4')
-    for i, r in enumerate(regions):
-        progressBar.update()
-        outFile['coords_chrom'][i] = chromNameToIndex[r.chrom]
-        outFile['coords_start'][i] = r.start
-        outFile['coords_stop'][i]  = r.stop
+
     outFile.create_dataset('logits', data=profileValues)
     outFile.create_dataset('counts', data=countsValues)
     outFile.close()
-
+"""
 
 
 

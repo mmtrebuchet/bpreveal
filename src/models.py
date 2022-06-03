@@ -26,10 +26,10 @@ def biasModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
     return _bpnetModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, "bias")
 
 def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
-    numOutputs = len(individualHead["data"])
+    numOutputs = len(individualHead["bigwig-files"])
     profile = keras.layers.Conv1D(numOutputs, outputFilterWidth, padding='valid', name='solo_profile_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
     countsGap = keras.layers.GlobalAveragePooling1D(name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
-    counts = keras.layers.Dense(numOutputs, name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))(countsGap)
+    counts = keras.layers.Dense(1, name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))(countsGap)
     #tf.print(profile)
     #tf.print(counts)
     return (profile, counts)
@@ -106,7 +106,7 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
 
 
 def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitectureSpecification, countsArchitectureSpecification):
-    numOutputs = len(individualHead["data"])
+    numOutputs = len(individualHead["bigwig-files"])
     match profileArchitectureSpecification["name"]:
         case 'simple':
             profileTransformation = _buildSimpleTransformationModel(profileArchitectureSpecification, 

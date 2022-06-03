@@ -49,7 +49,7 @@ class Region:
             if(random.randint(0,1)):
                 vals = np.flip(vals, axis=0)
                 seq = np.flip(seq, axis=0)
-        return (seq, vals, np.log(np.sum(vals, axis=0)))
+        return (seq, vals, np.sum(vals, axis=0))
         
 
 class OneBedRegions:
@@ -83,8 +83,8 @@ class BatchGenerator(keras.utils.Sequence):
         self.headIndexes = []
         curBwIdx = 0
         for head in headList:
-            bigwigList.extend(head["data"])
-            self.headIndexes.append(range(curBwIdx, curBwIdx + len(head["data"])))
+            bigwigList.extend(head["bigwig-files"])
+            self.headIndexes.append(range(curBwIdx, curBwIdx + len(head["bigwig-files"])))
 
         self.bedsWithRegions = []
         genome = pysam.FastaFile(genomeFname)
@@ -105,7 +105,7 @@ class BatchGenerator(keras.utils.Sequence):
         
         self.sequences = np.empty((self.length, inputLength, 4))
         self.values = np.empty((self.length, outputLength, len(bigwigList)))
-        self.logcounts = np.empty((self.length, len(bigwigList)))
+        self.counts = np.empty((self.length, len(bigwigList)))
         self.loadData()
         logging.info("Batch generator initalized.")
 
@@ -115,12 +115,13 @@ class BatchGenerator(keras.utils.Sequence):
     def __getitem__(self, idx):
         seqs = self.sequences[idx*self.batchSize : (idx + 1) * self.batchSize]
         vals = self.values[idx*self.batchSize : (idx+1) * self.batchSize]
-        logcounts = self.logcounts[idx*self.batchSize : (idx+1) * self.batchSize]
+        counts = self.counts[idx*self.batchSize : (idx+1) * self.batchSize]
         retVals = []
         retCounts = []
         for h in self.headIndexes:
             retVals.append(vals[:,:,h])
-            retCounts.append(logcounts[:,h])
+            curHeadCounts = counts[:,h]
+            retCounts.append(np.log(np.sum(curHeadCounts, axis=1)))
         return (seqs, (retVals + retCounts))
 
 
@@ -130,7 +131,7 @@ class BatchGenerator(keras.utils.Sequence):
             for region in bwr.get():
                 self.sequences[i] = region[0]
                 self.values[i] = region[1]
-                self.logcounts[i] = region[2]
+                self.counts[i] = region[2]
                 i += 1
         assert i == self.length
 
