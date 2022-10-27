@@ -8,10 +8,8 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 import sys
 
-#sys.path.insert(0, f'/n/projects/mw2098/shared_code/bpnet/hit_scoring')
 from run_tfmodisco import *
 
-#import click
 
 """def import_tfmodisco_hits(hits_bed):
     ""
@@ -310,6 +308,8 @@ if __name__ == "__main__":
     import sys
     import json
     config = json.load(open(sys.argv[1]))
+    import utils
+    utils.setVerbosity(config["verbosity"])
     outdir = config["output-directory"]
     centerCutSize = config["center-cut-size"]
     minIc = config["min-ic"]
@@ -325,4 +325,3 @@ if __name__ == "__main__":
     main(
     shapScoresPath, modiscoResultsPath, peakBedPath, outdir,
     centerCutSize, minIc, metaclusterIndex, patternIndexes, inputLength)
-    #main()

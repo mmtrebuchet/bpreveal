@@ -5,7 +5,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()
 import utils
-utils.setMemoryGrowth()
 import json
 import pysam
 import numpy as np
@@ -47,7 +46,6 @@ def weightedMeannormLogits(model, headId, taskIds):
     numSamples = inputShape[1] * inputShape[2]
     logits = tf.reshape(stackedLogits, [-1, numSamples])
 
-    #logits = tf.unstack(stackedLogits, axis=2)
     meannormedLogits = logits - tf.reduce_mean(logits, axis=1)[:,None]
 
     stopgradMeannormedLogits = tf.stop_gradient(meannormedLogits)
@@ -76,10 +74,9 @@ def writeHdf5(shapTargets, oneHotSequences, shapScores, outputFname, genome):
     outputFile.close()
 
 
-def main(jsonFname):
-    with open(jsonFname, "r") as configFp:
-        config = json.load(configFp)
+def main(config):
     utils.setVerbosity(config["verbosity"])
+    utils.setMemoryGrowth()
     model = load_model(config["model-file"], 
                        custom_objects = {'multinomialNll' : losses.multinomialNll})
     genome = pysam.FastaFile(config["genome"])
@@ -131,7 +128,9 @@ def main(jsonFname):
 
 if (__name__ == "__main__"):
     import sys
-    main(sys.argv[1])
+    with open(sys.argv[1], "r") as configFp:
+        config = json.load(configFp)
+    main(config)
 
 
 

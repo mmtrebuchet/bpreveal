@@ -5,8 +5,8 @@ import pyBigWig
 import numpy as np
 import json
 import logging
+import utils
 import sys
-import util
 
 class Region:
     def __init__(self, line):
@@ -154,11 +154,14 @@ def loadRegions(config):
 
 
 def prepareBeds(config):
+    logging.info("Starting bed file generation.")
     bigwigs = [pyBigWig.open(f) for f in config["bigwigs"]]
     genome = pysam.FastaFile(config["genome"])
     (trainRegions, valRegions,testRegions) = loadRegions(config)
+    logging.info("Regions loaded.")
     totalLength = len(trainRegions) + len(valRegions) + len(testRegions)
-    if(config["verbose"] in ["INFO", "DEBUG"]):
+    logging.info("Validating regions.")
+    if(config["verbosity"] in ["INFO", "DEBUG"]):
         pbar = tqdm.tqdm(total=totalLength)
     else:
         pbar = None
@@ -176,13 +179,16 @@ def prepareBeds(config):
     validTrain = validateRegions(config, trainRegions, genome, bigwigs, pbar, countsDict)
     validVal = validateRegions(config, valRegions, genome, bigwigs, pbar, countsDict)
     validTest = validateRegions(config, testRegions, genome, bigwigs, pbar, countsDict)
+    logging.info("Regions validated. Writing to disk.")
     writeRegions(validTrain, outputTrainFname)
     writeRegions(validVal, outputValFname)
     writeRegions(validTest, outputTestFname)
     writeRegions(validTrain + validVal + validTest, outputAllFname)
+    logging.info("Regions saved.")
     for f in bigwigs:
         f.close()
     if("write-counts-to" in config):
+        logging.info("Writing statistics.")
         with open(config["write-counts-to"], "w") as fp:
             for i, bwName in enumerate(config["bigwigs"]):
                 #Get the mean counts, while we're at it.
@@ -193,6 +199,7 @@ def prepareBeds(config):
                     totalRegions += countsDict[i][countsValue]
 
                 fp.write("{0:s}\t{1:f}\n".format(bwName, totalCounts / totalRegions))
+                fp.write("counts\ttimes\n")
                 countsVals = sorted(countsDict[i].keys())
                 for countsKey in countsVals:
                     fp.write("{0:d}\t{1:d}\n".format(int(countsKey), countsDict[i][countsKey]))
@@ -232,13 +239,23 @@ def validateRegions(config, regions, genome, bigwigs, pbar, countsDict):
 
 def writeRegions(validRegions, outFname):
     validRegions.sort(key=lambda r: (r.chrom, r.start))
+    prevChrom = ""
+    prevStop = 0
     with open(outFname, "w") as fp:
         for r in validRegions:
+            if(r.chrom == prevChrom):
+                if(r.start < prevStop):
+                    continue
+                prevStop = r.stop
+            else:
+                prevChrom = r.chrom
+                prevStop = 0
             fp.write(str(r) + '\n')
     
 
 if(__name__ == "__main__"):
     config = json.load(open(sys.argv[1]))
+    utils.setVerbosity(config["verbosity"])
     prepareBeds(config)
 
 

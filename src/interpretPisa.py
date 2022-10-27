@@ -2,11 +2,9 @@
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-#os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()
 import utils
-utils.setMemoryGrowth()
 import json
 import pysam
 import numpy as np
@@ -16,25 +14,23 @@ from keras.models import load_model
 import losses
 import generators
 import h5py
+import logging
 #Randomly chosen by /dev/urandom
 RANDOM_SEED=355687
 def shuffleGenerator(numShuffles):
     def generateShuffles(model_inputs):
         rng = np.random.RandomState(RANDOM_SEED)
-        #print(model_inputs[0].shape)
         shuffles = [rng.permutation(model_inputs[0]) for x in range(numShuffles)]
         shuffles = np.array(shuffles)
-        #print(shuffles.shape)
         return [shuffles]
     return generateShuffles
 
 
 
 
-def main(jsonFname):
-    with open(jsonFname, "r") as configFp:
-        config = json.load(configFp)
+def main(config):
     utils.setVerbosity(config["verbosity"])
+    utils.setMemoryGrowth()
     model = load_model(config["model-file"], 
                        custom_objects = {'multinomialNll' : losses.multinomialNll})
     genome = pysam.FastaFile(config["genome"])
@@ -63,14 +59,11 @@ def main(jsonFname):
     shuffler = shuffleGenerator(config["num-shuffles"])
     shuffles = shuffler(oneHotSequences[:1])
     sar = np.array(shuffles)
-    #print(sar.shape)
-    #print(np.sum(np.array(shuffles), axis=1))
     #                                      Keep the first dimension so it seems like a batch size of one.v    
     #                                       Leftmost base in output v                                    |
     #                            All of the samples in this batch v |     Sum samples in batch. v        |
     #Oh boy, this slice.                      |--Current head---| V V  |current task----|       V        V
     outputTarget = tf.reduce_sum(model.outputs[config["head-id"]][:,0, config["task-id"]], axis=0, keepdims=True)
-    #print(model.outputs[0])
     profileExplainer = shap.TFDeepExplainer( (model.input, outputTarget), 
                                     shuffles)
     profileShapScores = profileExplainer.shap_values([oneHotSequences])
@@ -101,4 +94,6 @@ def main(jsonFname):
 
 if (__name__ == "__main__"):
     import sys
-    main(sys.argv[1])
+    with open(sys.argv[1], "r") as configFp:
+        config = json.load(configFp)
+    main(config)

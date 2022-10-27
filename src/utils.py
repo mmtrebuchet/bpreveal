@@ -1,11 +1,13 @@
+import logging
+
 def setMemoryGrowth():
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
-        print("GPU memory growth enabled.")
+        logging.info("GPU memory growth enabled.")
     except:
-        print("Not using GPU")
+        logging.info(print("Not using GPU"))
         pass
 
 def loadChromSizes(fname):
@@ -17,8 +19,9 @@ def loadChromSizes(fname):
                 chrom, size = line.split()
                 ret[chrom] = int(size)
     return ret
+
+
 def setVerbosity(userLevel):
-    import logging
     levelMap = {"CRITICAL" : logging.CRITICAL,  
                 "ERROR" : logging.ERROR,
                 "WARNING" : logging.WARNING,

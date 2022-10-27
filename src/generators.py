@@ -6,6 +6,8 @@ from tensorflow import keras
 import numpy as np
 import math
 import logging
+import time
+import tqdm
 
 def oneHotEncode(sequence):
     ret = np.empty((len(sequence),4), dtype='int8')
@@ -55,7 +57,11 @@ class Region:
 class OneBedRegions:
     def __init__(self, individualBed, bigwigFileList, genome, inputLength, outputLength):
         self.regions = []
-        for line in pybedtools.BedTool(individualBed["bed-file"]):
+        bt = pybedtools.BedTool(individualBed["bed-file"])
+        if(logging.getLogger().isEnabledFor(logging.INFO)):
+            bt = tqdm.tqdm(bt)
+
+        for line in bt:
             self.regions.append(Region(line, bigwigFileList, 
                 genome, inputLength, outputLength, individualBed["max-jitter"]))
         self.numSamples = int(len(self.regions) * individualBed["absolute-sampling-weight"])
@@ -85,7 +91,7 @@ class BatchGenerator(keras.utils.Sequence):
         for head in headList:
             bigwigList.extend(head["bigwig-files"])
             self.headIndexes.append(range(curBwIdx, curBwIdx + len(head["bigwig-files"])))
-
+            curBwIdx += len(head["bigwig-files"])
         self.bedsWithRegions = []
         genome = pysam.FastaFile(genomeFname)
         self.bigwigList = bigwigList
@@ -94,11 +100,15 @@ class BatchGenerator(keras.utils.Sequence):
         self.batchSize = batchSize
         for individualBw in self.bigwigList:
             bigwigFiles.append(pyBigWig.open(individualBw, "r"))
-        
+        startTime = time.perf_counter() 
         for individualBed in individualBedList:
+            logging.info("Loading bed file {0:s}".format(str(individualBed)))
             newBed = OneBedRegions(individualBed, bigwigFiles, genome, inputLength, outputLength)
+            logging.debug("oneBedRegions created.")
             self.bedsWithRegions.append(newBed)
             self.length += newBed.numSamples
+        stopTime = time.perf_counter()
+        logging.debug("Loaded regions in {0:f} seconds".format(stopTime - startTime))
 
         for bwf in bigwigFiles:
             bwf.close()
@@ -106,6 +116,7 @@ class BatchGenerator(keras.utils.Sequence):
         self.sequences = np.empty((self.length, inputLength, 4))
         self.values = np.empty((self.length, outputLength, len(bigwigList)))
         self.counts = np.empty((self.length, len(bigwigList)))
+        logging.debug("Storage allocated.")
         self.loadData()
         logging.info("Batch generator initalized.")
 
@@ -126,6 +137,7 @@ class BatchGenerator(keras.utils.Sequence):
 
 
     def loadData(self):
+        startTime = time.perf_counter()
         i = 0
         for bwr in self.bedsWithRegions:
             for region in bwr.get():
@@ -134,6 +146,9 @@ class BatchGenerator(keras.utils.Sequence):
                 self.counts[i] = region[2]
                 i += 1
         assert i == self.length
+        stopTime = time.perf_counter()
+        Δt = stopTime - startTime
+        logging.debug("Loaded new batch in {0:5f} seconds.".format(Δt))
 
     def on_epoch_end(self):
         self.loadData()

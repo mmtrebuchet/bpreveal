@@ -12,7 +12,7 @@ import numpy as np
 def generateTilingRegions(genome, inputWidth, outputWidth, jitter, edgeBoundary, minSpacing, allowChroms):
     regions = dict()
     numSpaces = 0
-    print("Preparing progress bar")
+    logging.debug("Preparing progress bar")
     for chrom in genome.references:
         if(chrom not in allowChroms):
             continue
@@ -22,7 +22,7 @@ def generateTilingRegions(genome, inputWidth, outputWidth, jitter, edgeBoundary,
         chromSize = genome.get_reference_length(chrom)
         stopPos = chromSize - (edgeBoundary + minSpacing + jitter + padding + outputWidth)
         numSpaces += (stopPos - startPos) / (inputWidth + jitter + minSpacing)
-    print("Generating candidate regions.")
+    logging.info("Generating candidate regions.")
     pbar = tqdm.tqdm(total=numSpaces)
     for chrom in genome.references:
         if(chrom not in allowChroms):
@@ -43,29 +43,43 @@ def generateTilingRegions(genome, inputWidth, outputWidth, jitter, edgeBoundary,
                 regions[chrom].append(seqStart)
             startPos += inputWidth + jitter + minSpacing
     pbar.close()
-    print("Candidate regions generated.")
+    logging.info("Candidate regions generated.")
     return regions
 
 def generateCountsSums(regions, outputWidth, jitter, headBigwigs):
     numRegions = sum([len(x) for x in regions.values()])
-    pbar = tqdm.tqdm(total=numRegions)
-    countsSums = np.zeros((numRegions,len(headBigwigs)))
+    countsSumsHigh = np.zeros((numRegions,len(headBigwigs)))
+    countsSumsLow = np.zeros((numRegions,len(headBigwigs)))
     curIdx = 0
-    print("Generating counts sums")
+    logging.info("Generating counts sums")
+    pbar = tqdm.tqdm(total=numRegions)
     for chrom in sorted(regions.keys()):
         for pos in regions[chrom]:
             for i, head in enumerate(headBigwigs):
+                maxCount = None
+                minCount = None
                 for bwFile in head:
-                    totalCounts = np.abs(np.sum(np.nan_to_num(bwFile.values(chrom, pos+jitter, pos + outputWidth - jitter))))
-                    countsSums[curIdx, i] += totalCounts
+                    region = np.nan_to_num(bwFile.values(chrom, pos-jitter, pos+outputWidth+jitter))
+                    totalCountsLow = np.abs(np.sum(region[jitter*2:-jitter*2]))
+                    totalCountsHigh = np.abs(np.sum(region))
+                    if(maxCount is None):
+                        maxCount = totalCountsHigh
+                    else:
+                        maxCount = max(totalCountsHigh, maxCount)
+                    if(minCount is None):
+                        minCount = totalCountsLow
+                    else:
+                        minCount = min(totalCountsLow, minCount)
+                countsSumsHigh[curIdx, i] = maxCount
+                countsSumsLow[curIdx, i] = minCount
             curIdx += 1
             pbar.update()
-    return countsSums
+    return countsSumsHigh, countsSumsLow
 
 
 def loadRegions(bedFnames):
     regions = dict()
-    print("Loading peaks from bed files")
+    logging.info("Loading peaks from bed files")
     for bedFname in bedFnames:
         with open(bedFname, "r") as bedFile:
             for line in bedFile:
@@ -75,7 +89,7 @@ def loadRegions(bedFnames):
                 if(chrom not in regions):
                     regions[chrom] = []
                 regions[chrom].append(start)
-    print("Sorting previous regions")
+    logging.info("Sorting previous regions")
     sortRegions = dict()
     for chrom in regions.keys():
         sortRegions[chrom] = sorted(list(set(regions[chrom])))
@@ -85,7 +99,7 @@ def removeOverlaps(peaksRegions, backgroundRegions, inputWidth, outputWidth, max
     leftPadding = (inputWidth - outputWidth) //2 + maxJitter
     rightPadding = leftPadding + outputWidth
     numRegions = sum([len(x) for x in backgroundRegions.values()])
-    print("Removing overlaps.")
+    logging.info("Removing overlaps.")
     pbar = tqdm.tqdm(total=numRegions)
     ret = dict()
     for chrom in backgroundRegions.keys():
@@ -115,50 +129,59 @@ def removeOverlaps(peaksRegions, backgroundRegions, inputWidth, outputWidth, max
     return ret
 
         
-def printQuantiles(countsSums, bigwigNames):
-    print(countsSums.shape)
+def printQuantiles(countsSumsHigh, countsSumsLow, bigwigNames):
+    print(countsSumsHigh.shape)
     for i, bwName in enumerate(bigwigNames):
         print(bwName)
-        counts = countsSums[:,i]
+        countsHigh = countsSumsHigh[:,i]
+        countsLow = countsSumsLow[:,i]
         quantileCutoffs = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         header = "".join(["{0:10.2f} ".format(qc) for qc in quantileCutoffs])
-        quantiles = np.quantile(counts, quantileCutoffs)
-        dats = "".join(["{0:10.2f} ".format(q) for q in quantiles])
-        print(header)
-        print(dats)
+        quantilesHigh = np.quantile(countsHigh, quantileCutoffs)
+        quantilesLow = np.quantile(countsLow, quantileCutoffs)
+        datsHigh = "".join(["{0:10.2f} ".format(q) for q in quantilesHigh])
+        datsLow = "".join(["{0:10.2f} ".format(q) for q in quantilesLow])
+        print("{0:6s}".format("Pad")  + header)
+        print("{0:6s}".format("High") + datsHigh)
+        print("{0:6s}".format("Low")  + datsLow)
 
 
-def boundsValid(counts, bounds):
-    for i in range(len(counts)):
-        cv = counts[i]
-        if(cv < bounds[i][0] or cv > bounds[i][1]):
+def boundsValid(countsHigh, countsLow, bounds):
+    for i in range(len(countsHigh)):
+        cvh = countsHigh[i]
+        cvl = countsLow[i]
+        if(cvl < bounds[i][0] or cvh > bounds[i][1]):
             return False
     return True
 
-def filterQuantiles(regions, countsSums, quantileBounds):
+def filterQuantiles(regions, countsSumsHigh, countsSumsLow, quantileBounds):
     countsBounds = []
     for i, quantileBound in enumerate(quantileBounds):
-        quantiles = np.quantile(countsSums[:,i], quantileBound)
-        countsBounds.append(quantiles)
+        quantileHigh = np.quantile(countsSumsHigh[:,i], quantileBound[1])
+        quantileLow = np.quantile(countsSumsLow[:,i], quantileBound[0])
+        countsBounds.append((quantileLow, quantileHigh))
+    logging.info("Quantiles are {0:s}".format(str(countsBounds)))
     curIdx = 0
     ret = dict()
     for chrom in sorted(regions.keys()):
         ret[chrom] = []
         for pos in regions[chrom]:
-            if(boundsValid(countsSums[curIdx], countsBounds)):
+            if(boundsValid(countsSumsHigh[curIdx], countsSumsLow[curIdx], countsBounds)):
                 ret[chrom].append(pos)
             curIdx += 1
     return ret
 
 def writeBed(regions, outputWidth, bedFname):
+    logging.info("Writing {0:d} regions.".format(sum([len(regions[x]) for x in regions.keys()])))
     with open(bedFname, "w") as fp:
         for chrom in sorted(regions.keys()):
             for pos in regions[chrom]:
                 fp.write("{0:s}\t{1:d}\t{2:d}\n".format(chrom, pos, pos+outputWidth))
+    logging.info("Output saved.")
 
 
 
-def generateBackground(config, showQuantiles):
+def generateBackground(config):
     #First, get a list of candidate regions.
     genome = pysam.FastaFile(config["genome"])
 
@@ -172,12 +195,13 @@ def generateBackground(config, showQuantiles):
     dataRegions = loadRegions(config["bed-files"])
     nonOverlapRegions = removeOverlaps(dataRegions, tilingRegions, config["input-width"], config["output-width"], config["max-jitter"] )
 
-    countsSums = generateCountsSums(nonOverlapRegions, config["output-width"], config["max-jitter"], bigwigs)
-    if(showQuantiles):
-        printQuantiles(countsSums, config["head-bigwigs"])
-    else:
-        filteredRegions = filterQuantiles (nonOverlapRegions, countsSums, config["quantile-bounds"])
+    countsSumsHigh, countsSumsLow = generateCountsSums(nonOverlapRegions, config["output-width"], config["max-jitter"], bigwigs)
+    printQuantiles(countsSumsHigh, countsSumsLow, config["head-bigwigs"])
+    if('quantile-bounds' in config):
+        filteredRegions = filterQuantiles (nonOverlapRegions, countsSumsHigh, countsSumsLow, config["quantile-bounds"])
         writeBed(filteredRegions, config["output-width"], config["output-bed"])
+    else:
+        logging.warn("No quantile bounds was specified in your input json. No files have been written.")
 
 
 
@@ -186,12 +210,10 @@ def generateBackground(config, showQuantiles):
 def main():
     parser = argparse.ArgumentParser(description="Read in a json file and generate background regions for training the bias model.")
     parser.add_argument("json", help="The JSON-format config file.")
-    parser.add_argument("--show-quantiles", action='store_true', help="Instead of writing the regions that fall in the specified quantiles," +\
-            "show the counts quantiles in background regions.", dest='showQuantiles')
     args = parser.parse_args()
     config = json.load(open(args.json))
     utils.setVerbosity(config["verbosity"])
-    generateBackground(config, args.showQuantiles)
+    generateBackground(config)
 
 if(__name__ == "__main__"):
     main()

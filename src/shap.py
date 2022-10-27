@@ -1,6 +1,7 @@
 import numpy as np
-import warnings
+#import warnings
 import sys
+import logging
 import tqdm
 keras = None
 tf = None
@@ -168,7 +169,7 @@ class TFDeepExplainer:
             self.expected_value = None
         else:
             if self.data[0].shape[0] > 5000:
-                warnings.warn("You have provided over 5k background samples! For better performance consider using smaller random sample.")
+                logging.warning("You have provided over 5k background samples! For better performance consider using smaller random sample.")
             self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         # find all the operations in the graph between our inputs and outputs
@@ -188,7 +189,7 @@ class TFDeepExplainer:
         self.used_types = {}
         for op in self.between_ops:
             if (op.type not in op_handlers and op.type not in self.used_types):
-                print("Warning: ",op.type,"used in model but handling of op"
+                logging.info(str(op.type) + "used in model but handling of op"
                       +" is not specified by shap; will use original "
                       +" gradients")
             self.used_types[op.type] = True

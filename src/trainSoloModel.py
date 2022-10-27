@@ -5,7 +5,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import json
 import utils
 import tensorflow as tf
-utils.setMemoryGrowth()
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
 import generators
@@ -16,15 +15,18 @@ import models
 
 
 
-def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix):
-    callbacks = getCallbacks(earlyStop, outputPrefix)
+def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience):
+    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
     history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks)
+    #Turn the learning rate data into python floats, since they come as numpy floats and those are not serializable.
+    history.history['lr'] = [float(x) for x in history.history["lr"]]
     return history
 
 
-def main(configJsonFname):
-    with open(configJsonFname, "r") as configFp:
-        config = json.load(configFp)
+def main(config):
+    utils.setVerbosity(config["verbosity"])
+    logging.info("Initializing")
+    utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     genomeFname = config["settings"]["genome"]
@@ -36,7 +38,7 @@ def main(configJsonFname):
             config["settings"]["architecture"]["input-filter-width"],
             config["settings"]["architecture"]["output-filter-width"],
             config["heads"], "solo")
-
+    logging.info("Model built.")
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = ['mse'] * numHeads
     profileWeights = []
@@ -52,11 +54,10 @@ def main(configJsonFname):
     
 
     model.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
-            #run_eagerly=True,
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
-    logging.info(model.summary())
-    logging.info(model.outputs)
+    logging.info("Model compiled.")
+    logging.debug(model.summary())
     
     trainBeds = [x for x in config["regions"] if x["split"] == "train"]
     valBeds = [x for x in config["regions"] if x["split"] == "val"]
@@ -65,9 +66,12 @@ def main(configJsonFname):
             inputLength, outputLength, config["settings"]["batch-size"])
     valGenerator = generators.BatchGenerator(valBeds, config["heads"], genomeFname, 
             inputLength, outputLength, config["settings"]["batch-size"])
+    logging.info("Generators initialized.")
     history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
-                         config["settings"]["output-prefix"])
+                         config["settings"]["output-prefix"],
+                         config["settings"]["learning-rate-plateau-patience"])
+    logging.info("Model trained. Saving.")
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii = False, indent = 4)
@@ -76,6 +80,8 @@ def main(configJsonFname):
 
 if (__name__ == "__main__"):
     import sys
-    main(sys.argv[1])
+    with open(sys.argv[1], "r") as configFp:
+        config = json.load(configFp)
+    main(config)
 
 

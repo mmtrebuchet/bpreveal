@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
-
+import logging
 def multinomialNll(trueCounts, logits):
     inputShape = tf.shape(trueCounts)
     numBatches = inputShape[0] 
@@ -12,9 +12,8 @@ def multinomialNll(trueCounts, logits):
     distribution = tfp.distributions.Multinomial(total_count = totalCounts, 
             logits = flatLogits)
     logprobs = distribution.log_prob(flatCounts)
-    batchSize = tf.shape(totalCounts)[0]
+    batchSize = tf.shape(trueCounts)[0]
     sumProbs = tf.reduce_sum(logprobs)
     curLoss = -sumProbs / tf.cast(batchSize, dtype=tf.float32)
-    #tf.print("loss ", totalLoss)
     return curLoss
 
