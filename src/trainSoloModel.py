@@ -4,6 +4,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import json
 import utils
+import h5py
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
@@ -29,7 +30,6 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    genomeFname = config["settings"]["genome"]
     numHeads = len(config["heads"]) 
 
     model = models.soloModel(inputLength, outputLength,
@@ -59,13 +59,13 @@ def main(config):
     logging.info("Model compiled.")
     logging.debug(model.summary())
     
-    trainBeds = [x for x in config["regions"] if x["split"] == "train"]
-    valBeds = [x for x in config["regions"] if x["split"] == "val"]
+    trainH5 = h5py.File(config["train-data"], "r")
+    valH5 = h5py.File(config["val-data"], "r")
     
-    trainGenerator = generators.BatchGenerator(trainBeds, config["heads"], genomeFname, 
-            inputLength, outputLength, config["settings"]["batch-size"])
-    valGenerator = generators.BatchGenerator(valBeds, config["heads"], genomeFname, 
-            inputLength, outputLength, config["settings"]["batch-size"])
+    trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5, 
+            inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
+    valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
+            inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized.")
     history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 

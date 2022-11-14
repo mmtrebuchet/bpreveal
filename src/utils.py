@@ -28,5 +28,15 @@ def setVerbosity(userLevel):
                 "INFO" : logging.INFO,
                 "DEBUG" : logging.DEBUG}
     logging.basicConfig(level=levelMap[userLevel])
-    
+
+def oneHotEncode(sequence):
+    ret = np.empty((len(sequence),4), dtype='int8')
+    ordSeq = np.fromstring(sequence, np.int8)
+    ret[:,0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
+    ret[:,1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
+    ret[:,2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
+    ret[:,3] = (ordSeq == ord("T")) + (ordSeq == ord('t'))
+    assert (np.sum(ret) == len(sequence)), (sorted(sequence), sorted(ret.sum(axis=1)))
+    return ret
+
 

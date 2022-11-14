@@ -19,7 +19,7 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
         The counts layer is a (batch x 1) scalar-valued layer containing the total counts for the current head. 
     """
     logging.debug("Initializing head {0:s}".format(individualHead["head-name"]))
-    numOutputs = len(individualHead["bigwig-files"])
+    numOutputs = individualHead["num-tasks"]
     profile = keras.layers.Conv1D(numOutputs, outputFilterWidth, padding='valid', name='solo_profile_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
     countsGap = keras.layers.GlobalAveragePooling1D(name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))(dilateOutput)
     counts = keras.layers.Dense(1, name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))(countsGap)
@@ -118,7 +118,7 @@ def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitec
 
     """
     logging.debug("Building transformation head {0:s}".format(individualHead["head-name"]))
-    numOutputs = len(individualHead["bigwig-files"])
+    numOutputs = individualHead["num-tasks"]
     match profileArchitectureSpecification["name"]:
         case 'simple':
             profileTransformation = _buildSimpleTransformationModel(profileArchitectureSpecification, 

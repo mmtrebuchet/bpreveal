@@ -28,7 +28,7 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    genomeFname = config["settings"]["genome"]
+    #genomeFname = config["settings"]["genome"]
     numHeads = len(config["heads"]) 
     regressionModel = load_model(config["settings"]["transformation-model"]["transformation-model-file"], 
             custom_objects = {'multinomialNll' : losses.multinomialNll})
@@ -57,13 +57,15 @@ def main(config):
             jit_compile=True,
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
-    trainBeds = [x for x in config["regions"] if x["split"] == "train"]
-    valBeds = [x for x in config["regions"] if x["split"] == "val"]
+    trainH5 = h5py.File(config["train-data"], "r")
+    valH5 = h5py.File(config["val-data"], "r")
+
     
-    trainGenerator = generators.BatchGenerator(trainBeds, config["heads"], genomeFname, 
-            inputLength, outputLength, config["settings"]["batch-size"])
-    valGenerator = generators.BatchGenerator(valBeds, config["heads"], genomeFname, 
-            inputLength, outputLength, config["settings"]["batch-size"])
+    trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5, 
+            inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
+    valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
+            inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
+
     history = trainModel(combinedModel, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"],

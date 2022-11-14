@@ -8,7 +8,6 @@ import json
 import tensorflow as tf
 import utils
 from tensorflow import keras
-import generators
 import pybedtools
 import numpy as np
 import pyBigWig
@@ -40,7 +39,7 @@ def main(config):
     logging.info("Loading regions")
     for i, region in enumerate(regions):
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
-        seqs[i] = generators.oneHotEncode(curSeq)
+        seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
     model = load_model(config["settings"]["architecture"]["model-file"], custom_objects = {'multinomialNll' : losses.multinomialNll})
     logging.info("Model loaded. Predicting.")

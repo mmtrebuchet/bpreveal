@@ -27,7 +27,7 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["sequence-input-length"]
     outputLength = config["settings"]["output-length"]
-    genomeFname = config["settings"]["genome"]
+    #genomeFname = config["settings"]["genome"]
     numHeads = len(config["heads"]) 
     soloModel = load_model(config["settings"]["solo-model-file"], 
             custom_objects = {'multinomialNll' : losses.multinomialNll})
@@ -53,17 +53,18 @@ def main(config):
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
     logging.info(model.summary())
     logging.info(model.outputs)
-    trainBeds = [x for x in config["regions"] if x["split"] == "train"]
-    valBeds = [x for x in config["regions"] if x["split"] == "val"]
+    trainH5 = h5py.File(config["train-data"], "r")
+    valH5 = h5py.File(config["val-data", "r")
     
-    trainGenerator = generators.BatchGenerator(trainBeds, config["heads"], genomeFname, 
-            inputLength, outputLength, config["settings"]["batch-size"])
-    valGenerator = generators.BatchGenerator(valBeds, config["heads"], genomeFname, 
-            inputLength, outputLength, config["settings"]["batch-size"])
+    trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5, 
+            inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
+    valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
+            inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
     history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"], 
                          config["settings"]["learning-rate-plateau-patience"])
+    
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii = False, indent = 4)

@@ -12,7 +12,6 @@ import numpy as np
 import shap
 from keras.models import load_model
 import losses
-import generators
 import h5py
 import logging
 #Randomly chosen by /dev/urandom
@@ -53,7 +52,7 @@ def main(config):
         startPos = target[1] - padding
         stopPos = startPos + config["input-length"]
         seq = genome.fetch(target[0], startPos, stopPos)
-        oneHot = generators.oneHotEncode(seq)
+        oneHot = utils.oneHotEncode(seq)
         oneHotSequences[i] = oneHot
     
     shuffler = shuffleGenerator(config["num-shuffles"])

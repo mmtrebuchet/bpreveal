@@ -12,7 +12,6 @@ import tqdm
 import shap
 from keras.models import load_model
 import losses
-import generators
 import h5py
 import logging
 #Randomly chosen by /dev/urandom
@@ -79,7 +78,7 @@ def main(config):
     oneHotSequences = np.zeros((len(shapTargets), len(shapTargets[0][1]), 4), dtype='float64')
     for i, target in enumerate(shapTargets):
         #I need to generate a one-hot encoded sequence that has the current base on its left-most side. 
-        oneHot = generators.oneHotEncode(target[1])
+        oneHot = utils.oneHotEncode(target[1])
         oneHotSequences[i] = oneHot
     
     shuffler = shuffleGenerator(config["num-shuffles"])

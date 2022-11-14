@@ -8,7 +8,6 @@ import json
 import tensorflow as tf
 import utils
 from tensorflow import keras
-import generators
 import pybedtools
 import numpy as np
 import pyBigWig
@@ -62,7 +61,7 @@ def main(config):
     sequences, descriptions = loadFasta(fastaFname)
     seqs = np.zeros((len(sequences), inputLength, 4))
     for i, seq in enumerate(sequences):
-        seqs[i] = generators.oneHotEncode(seq)
+        seqs[i] = utils.oneHotEncode(seq)
     logging.info("Input prepared. Loading model.")
     model = load_model(config["settings"]["architecture"]["model-file"], custom_objects = {'multinomialNll' : losses.multinomialNll})
     logging.info("Model loaded. Predicting.")

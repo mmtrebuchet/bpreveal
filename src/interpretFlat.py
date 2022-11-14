@@ -100,7 +100,7 @@ def main(config):
         startPos = target[1]
         stopPos = target[2]
         seq = genome.fetch(target[0], startPos, stopPos)
-        oneHot = generators.oneHotEncode(seq)
+        oneHot = utils.oneHotEncode(seq)
         oneHotSequences[i] = oneHot
 
     
