@@ -9,14 +9,9 @@ tf_ops = None
 tf_gradients_impl = None
 
 def standard_combine_mult_and_diffref(mult, orig_inp, bg_data):
-    #print(np.array(bg_data).shape)
     diffref_input = [orig_inp[l] - bg_data[l] for l in range(len(orig_inp))]
-    #print(np.array(diffref_input).shape)
-    #print(np.sum(np.array(diffref_input), axis=1))
     to_return = [(mult[l] * (diffref_input[l])).mean(0)
             for l in range(len(orig_inp))]
-    #print(np.array(mult).shape)
-    #print(np.array(mult))
 
     return to_return
 

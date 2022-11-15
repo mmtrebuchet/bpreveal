@@ -5,6 +5,7 @@ import h5py
 import pyBigWig
 import json
 import pysam
+import logging
 import pybedtools
 import utils
 
@@ -40,10 +41,11 @@ def writeH5(config):
     outFile = h5py.File(config["output-h5"], "w")
     seqs = getSequences(regions, genome, outputLength, inputLength, jitter)
     outFile.create_dataset("sequence", data=seqs)
-
+    logging.debug("Sequence dataset created.")
     for i, head in enumerate(config["heads"]):
         headVals = getHead(regions, head["bigwig-files"], outputLength, jitter)
         outFile.create_dataset("head_{0:d}".format(i), data=headVals)
+        logging.debug("Added data for head {0:d}".format(i))
     outFile.close()
 
 

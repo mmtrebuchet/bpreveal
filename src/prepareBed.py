@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #This file contains several helper functions for dealing with bed files. 
 
 
@@ -8,6 +9,7 @@ import tqdm
 import logging
 import utils
 import numpy as np
+import pybedtools
 
 def resize(interval, mode, width, genome):
     start = interval.start
@@ -31,8 +33,7 @@ def resize(interval, mode, width, genome):
 
 def getCounts(interval, bigwig):
     vals = np.nan_to_num(bigwig.values(interval.chrom, interval.start, interval.end))
-    counts = np.sum(vals)
-    return counts
+    return np.sum(vals)
 
 def sequenceChecker(interval, genome):
     seq = genome.fetch(interval.chrom, interval.start, interval.end)
@@ -40,7 +41,6 @@ def sequenceChecker(interval, genome):
         #There were letters that aren't regular bases. (probably Ns)
         return False
     return True
-        return ret
 
 
 
@@ -60,15 +60,11 @@ def generateTilingRegions(genome, width, chromEdgeBoundary, spaceBetween, allowC
     windows = pybedtools.window_maker(b=pybedtools.BedTool(chromRegions), w=width, s=spaceBetween + width)
     return windows
 
-def getCountsQuantiles(bed, quantiles):
-    counts = [getCounts(r, bigwig) for r in bed]
-    return np.quantile(counts, quantiles)
-
 
 def stripCountsBelow(bed, cutoff, bigwig):
-    return bed.filter(lambda interval : getCounts(interval, bigwig) >= cutoff)
+    return bed.filter(lambda interval : getCounts(interval, bigwig) >= cutoff).saveas()
 def stripCountsAbove(bed, cutoff, bigwig):
-    return bed.filter(lambda interval : getCounts(interval, bigwig) <= cutoff)
+    return bed.filter(lambda interval : getCounts(interval, bigwig) <= cutoff).saveas()
 
 
 def lineToInterval(line):
@@ -134,35 +130,73 @@ def loadRegions(config):
 
 def validateRegions(config, regions, genome, bigwigs):
     #First, resize the regions to their biggest size.
-    bigRegions = regions.each(resize, config["resize-mode"], config["input-length"] + config["max-jitter"]*2, genome)
-    bigRegions = bigRegions.filter(sequenceChecker, genome)
+    bigRegions = regions.each(resize, config["resize-mode"], config["input-length"] + config["max-jitter"]*2, genome).saveas()
+    logging.info("Resized sequences. {0:d} remain.".format(bigRegions.count()))
+    bigRegions = bigRegions.filter(sequenceChecker, genome).saveas()
+    logging.info("Filtered sequences. {0:d} remain.".format(bigRegions.count()))
     #Now, we have the possible regions. Get their counts values.
     validRegions = np.ones((len(bigRegions),))
+    countsStats = dict()
+    pbar = tqdm.tqdm(total=bigRegions.count() * len(bigwigs)) 
     for i, bwSpec in enumerate(config["bigwigs"]):
-        bigCounts = getCounts(bigRegions, bigwigs[i])
+        if("max-quantile" in bwSpec):
+            if(bwSpec["max-quantile"] == 1):
+                countsStats[bwSpec["file-name"]] = [-1,-2]
+                continue
+        bigCounts = np.zeros((bigRegions.count(),))
+        for j, r in enumerate(bigRegions):
+            bigCounts[j] = getCounts(r, bigwigs[i])
+            pbar.update()
         if("max-counts" in bwSpec):
             maxCounts = bwSpec["max-counts"]
         else:
-            maxCounts = np.quantile(bigCounts, bwSpec["max-quantile"]);
+            maxCounts = np.quantile(bigCounts, [bwSpec["max-quantile"]]);
+        logging.debug("Max counts: {0:s}, file {1:s}".format(str(maxCounts), bwSpec["file-name"]))
+        countsStats[bwSpec["file-name"]] = [maxCounts[0], -2]
+        numReject = 0
         for regionIdx in range(len(bigRegions)):
-            if(bigCounts[i] > maxCounts):
-                validRegions[i] = 0
+            if(bigCounts[regionIdx] > maxCounts[0]):
+                numReject += 1
+                validRegions[regionIdx] = 0
+        logging.debug("Rejected {0:f}% of big regions.".format(numReject*100./len(bigRegions)))
+    pbar.close()
     #We've now validated that the regions don't have too many counts when you inflate them. We also need to check that the regions won't 
     #have too few counts in the output. 
-    smallRegions = bigRegions.each(resize, 'center', config["output-length"] - config["max-jitter"] * 2, genome)
+    logging.info("Validated inflated regions. Surviving regions: {0:d}".format(int(np.sum(validRegions))))
+    pbar = tqdm.tqdm(total=bigRegions.count() * len(bigwigs)) 
+    smallRegions = bigRegions.each(resize, 'center', config["output-length"] - config["max-jitter"] * 2, genome).saveas()
     for i, bwSpec in enumerate(config["bigwigs"]):
-        smallCounts = getCounts(smallRegions, bigwigs[i])
+        #Since this is a slow step, check to see if the min counts is zero. If so, no need to filter.
+        if("min-quantile" in bwSpec):
+            if(bwSpec["min-quantile"] == 0):
+                countsStats[bwSpec["file-name"]][1] = -1
+                continue
+        smallCounts = np.zeros((bigRegions.count(),))
+        for j, r in enumerate(smallRegions):
+            smallCounts[j] = getCounts(r, bigwigs[i])
+            pbar.update()
         if("min-counts" in bwSpec):
             minCounts = bwSpec["min-counts"]
         else:
-            minCounts = np.quantile(bigCounts, bwSpec["min-quantile"]);
+            minCounts = np.quantile(smallCounts, [bwSpec["min-quantile"]]);
+        logging.debug("Min counts: {0:s}, file {1:s}".format(str(minCounts), bwSpec["file-name"]))
+        countsStats[bwSpec["file-name"]][1] = minCounts[0]
+        numReject = 0
         for regionIdx in range(len(bigRegions)): #within len(bigRegions) in case a region was lost during the resize - we want that to crash
                                                  #because resizing down should never invalidate a region due to sequence problems. 
-            if(smallCounts[i] < minCounts):
-                validRegions[i] = 0
+            if(smallCounts[regionIdx] < minCounts[0]):
+                numReject += 1
+                validRegions[regionIdx] = 0
+        logging.debug("Rejected {0:f}% of small regions.".format(numReject*100./len(bigRegions)))
+    pbar.close()
+    logging.info("Validated small regions. Surviving regions: {0:d}".format(int(np.sum(validRegions))))
     #Now we resize to the final output size.
-    outRegions = smallRegions.each(resize, 'center', config["output-length"], genome)
+    outRegions = smallRegions.each(resize, 'center', config["output-length"], genome).saveas()
     #Since we kept the array of valid regions separately, we now have to create the result manually. 
+    logging.info("Counts statistics. Name, max-counts, min-counts.")
+    for k in countsStats.keys():
+        logging.info("{0:50s}\t{1:f}\t{2:f}".format(k, float(countsStats[k][0]), float(countsStats[k][1])))
+        
     filteredRegions = []
     for i, r in enumerate(outRegions):
         if(validRegions[i] == 1):
@@ -173,11 +207,10 @@ def validateRegions(config, regions, genome, bigwigs):
 
 def prepareBeds(config):
     logging.info("Starting bed file generation.")
-    bigwigs = [pyBigWig.open(f) for f in config["bigwigs"]]
+    bigwigs = [pyBigWig.open(f["file-name"]) for f in config["bigwigs"]]
     genome = pysam.FastaFile(config["genome"])
     (trainRegions, valRegions,testRegions) = loadRegions(config)
     logging.info("Regions loaded.")
-    logging.info("Validating regions.")
     if("output-prefix" in config):
         outputTrainFname = config["output-prefix"] + "_train.bed"
         outputValFname = config["output-prefix"] + "_val.bed"
@@ -188,9 +221,11 @@ def prepareBeds(config):
         outputValFname = config["output-val"]
         outputTestFname = config["output-test"]
         outputAllFname = config["output-all"]
-
+    logging.info("Validating training regions.")
     validTrain = validateRegions(config, trainRegions, genome, bigwigs) 
+    logging.info("Validating validation regions.")
     validVal = validateRegions(config, valRegions, genome, bigwigs) 
+    logging.info("Validating testing regions.")
     validTest = validateRegions(config, testRegions, genome, bigwigs) 
     validTrain.saveas( outputTrainFname)
     validVal.saveas( outputValFname)
@@ -202,13 +237,9 @@ def prepareBeds(config):
         f.close()
 
 
-
-
-
-
 if(__name__ == "__main__"):
+    import sys
     config = json.load(open(sys.argv[1]))
     utils.setVerbosity(config["verbosity"])
     prepareBeds(config)
-
 

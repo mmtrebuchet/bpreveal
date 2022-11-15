@@ -1,5 +1,5 @@
 import logging
-
+import numpy as np
 def setMemoryGrowth():
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
@@ -7,7 +7,7 @@ def setMemoryGrowth():
         tf.config.experimental.set_memory_growth(gpus[0], True)
         logging.info("GPU memory growth enabled.")
     except:
-        logging.info(print("Not using GPU"))
+        logging.warning("Not using GPU")
         pass
 
 def loadChromSizes(fname):

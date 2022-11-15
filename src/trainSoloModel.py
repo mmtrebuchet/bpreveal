@@ -18,7 +18,7 @@ import models
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
-    history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks)
+    history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks, verbose=2)
     #Turn the learning rate data into python floats, since they come as numpy floats and those are not serializable.
     history.history['lr'] = [float(x) for x in history.history["lr"]]
     return history
@@ -43,21 +43,16 @@ def main(config):
     countsLosses = ['mse'] * numHeads
     profileWeights = []
     countsWeights = []
-    logging.info(profileLosses)
-    logging.info(countsLosses)
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
         countsWeights.append(head["counts-loss-weight"])
-    
-    logging.info(profileWeights)
-    logging.info(countsWeights)
     
 
     model.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
     logging.info("Model compiled.")
-    logging.debug(model.summary())
+    model.summary(print_fn=logging.debug)
     
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
