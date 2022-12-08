@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import utils
 import h5py
@@ -18,7 +18,7 @@ import models
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
-    history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks, verbose=2)
+    history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks)
     #Turn the learning rate data into python floats, since they come as numpy floats and those are not serializable.
     history.history['lr'] = [float(x) for x in history.history["lr"]]
     return history
@@ -26,7 +26,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    logging.info("Initializing")
+    logging.debug("Initializing")
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
@@ -38,7 +38,7 @@ def main(config):
             config["settings"]["architecture"]["input-filter-width"],
             config["settings"]["architecture"]["output-filter-width"],
             config["heads"], "solo")
-    logging.info("Model built.")
+    logging.debug("Model built.")
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = ['mse'] * numHeads
     profileWeights = []
@@ -66,7 +66,7 @@ def main(config):
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"])
-    logging.info("Model trained. Saving.")
+    logging.debug("Model trained. Saving.")
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii = False, indent = 4)

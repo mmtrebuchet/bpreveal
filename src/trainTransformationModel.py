@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import utils
 import tensorflow as tf
-
+import h5py
 from tensorflow import keras
 from keras.models import load_model
 import generators
@@ -27,7 +27,6 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["sequence-input-length"]
     outputLength = config["settings"]["output-length"]
-    #genomeFname = config["settings"]["genome"]
     numHeads = len(config["heads"]) 
     soloModel = load_model(config["settings"]["solo-model-file"], 
             custom_objects = {'multinomialNll' : losses.multinomialNll})
@@ -51,15 +50,15 @@ def main(config):
     model.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
-    logging.info(model.summary())
-    logging.info(model.outputs)
+    model.summary(print_fn=logging.debug)
     trainH5 = h5py.File(config["train-data"], "r")
-    valH5 = h5py.File(config["val-data", "r")
+    valH5 = h5py.File(config["val-data"], "r")
     
     trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5, 
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
     valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
+    logging.info("Generators initialized. Training.")
     history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"], 

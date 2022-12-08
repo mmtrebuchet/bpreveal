@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import os
 #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import utils
+import h5py
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
@@ -12,6 +13,7 @@ import generators
 import losses
 from callbacks import getCallbacks
 import models
+import logging
 
 
 
@@ -28,19 +30,18 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    #genomeFname = config["settings"]["genome"]
     numHeads = len(config["heads"]) 
     regressionModel = load_model(config["settings"]["transformation-model"]["transformation-model-file"], 
             custom_objects = {'multinomialNll' : losses.multinomialNll})
     regressionModel.trainable = False
-     
+    logging.debug("Loaded regression model.")
     combinedModel, residualModel, transformationModel = models.combinedModel(inputLength, outputLength,
             config["settings"]["architecture"]["filters"],
             config["settings"]["architecture"]["layers"],
             config["settings"]["architecture"]["input-filter-width"],
             config["settings"]["architecture"]["output-filter-width"],
             config["heads"], regressionModel)
-
+    logging.debug("Created combined model.")
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = ['mse'] * numHeads
     profileWeights = []
@@ -54,9 +55,10 @@ def main(config):
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
     combinedModel.compile(optimizer=keras.optimizers.Adam(learning_rate = config["settings"]["learning-rate"]),
-            jit_compile=True,
+            jit_compile=False,
             loss=profileLosses + countsLosses,
             loss_weights = profileWeights + countsWeights) #+ is list concatenation, not addition!
+    logging.debug("Models compiled.")
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
 
@@ -65,7 +67,7 @@ def main(config):
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
     valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
-
+    logging.info("Generators initialized. Training.")
     history = trainModel(combinedModel, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"],

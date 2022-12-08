@@ -46,7 +46,7 @@ def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
 
     It is an error to call this function with an inconsistent network structure, such as an input that is too long.
     """
-    logging.info("Building solo model")
+    logging.debug("Building solo model")
     inputLayer = keras.Input((inputLength, 4), name=modelName + '_input')
 
     initialConv = keras.layers.Conv1D(numFilters, kernel_size=inputFilterWidth, padding='valid',
@@ -81,7 +81,7 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
         Returns: 
             A keras Layer that transforms the solo predictions.
     """
-    logging.info("Building transformation model.")
+    logging.debug("Building transformation model.")
     activationLayers = []
     for layerType in architectureSpecification["types"]:
         match layerType:
@@ -125,6 +125,10 @@ def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitec
                     #(profileArchitectureSpecification['output-length'], numOutputs), 
                     individualHead["head-name"] + "_profile",
                     soloProfile)
+        case 'cropdown':
+            toCrop = keras.layers.Cropping1D(cropping=profileArchitectureSpecification["bases-to-trim"], 
+                    name="cropdown_{0:s}".format(individualHead["head-name"]))
+            profileTransformation = toCrop
         case "passthrough":
             profileTransformation = soloProfile
         case _:
@@ -138,6 +142,8 @@ def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitec
                     soloCounts)
         case "passthrough":
             countsTransformation = soloCounts
+        case "cropdown":
+            raise ValueError("You cannot crop down the counts head - it's already a scalar!")
         case _:
             raise ValueError("Currently, only simple regression is supported.")
 
@@ -212,7 +218,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
 
     It is an error to call this function with an inconsistent network structure, such as an input that is too long.
     """
-    logging.info("Building combined model.")
+    logging.debug("Building combined model.")
     biasModel.trainable=False
     residualModel = soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth, outputFilterWidth, headList, "residual")
     inputLayer = residualModel.inputs
@@ -252,7 +258,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
     combinedModel = keras.Model(inputs=inputLayer, outputs = combinedProfileHeads + combinedCountsHeads, name='combined_model')
-    logging.info("Model built")
+    logging.debug("Model built")
     return (combinedModel, residualModel, readyBiasHeads)
 
 
