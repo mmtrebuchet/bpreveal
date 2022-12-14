@@ -12,7 +12,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     bwHeader = []
     nameToNum = dict()
     for i, name in enumerate(inH5["chrom_names"].asstr()):
-        bwHeader.append(("{0:s}".format(name), inH5['chrom_sizes'][i]))
+        bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
     outBw = pyBigWig.open(outFname, 'w')
 
     outBw.addHeader(bwHeader)
