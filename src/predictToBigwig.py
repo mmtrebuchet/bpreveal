@@ -109,7 +109,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
             if(startWritingAt == 0):
                 raise RuntimeError()
             outBw.addEntries(bwHeader[regionChrom][0], 
-                    startWritingAt,
+                    int(startWritingAt),
                     values = vals,
                     span=1, step=1)
         except RuntimeError as e:
