@@ -8,7 +8,7 @@ import tqdm
 def writeBigWig(inH5, outFname, verbose):
     bwHeader = []
     for i, name in enumerate(inH5["chrom_names"].asstr()):
-        bwHeader.append(("{0:s}".format(name), inH5['chrom_sizes'][i]))
+        bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
     outBw = pyBigWig.open(outFname, 'w')
     outBw.addHeader(sorted(bwHeader))
     logging.info("Bigwig header" + str((sorted(bwHeader))))
@@ -63,7 +63,7 @@ def writeBigWig(inH5, outFname, verbose):
         profile = np.sum(projected, axis=1) #Add up all the bases to get a vector of projected importances. 
         vals = [float(x) for x in profile[dataSliceStart:dataSliceStop]]
         outBw.addEntries(regionChrom, 
-                startWritingAt,
+                int(startWritingAt),
                 values = vals,
                 span=1, step=1)
 
