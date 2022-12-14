@@ -103,8 +103,8 @@ def main(config):
     
     stringDtype = h5py.string_dtype(encoding='utf-8')
     outputFile.create_dataset('descriptions', (len(shapTargets),), dtype=stringDtype)
-    outputFile.create_dataset('sequence', data=oneHotSequences[:,:-config['output-length'],:])
-    outputFile.create_dataset('shap', data=profileShapScores[:,:-config['output-length'],:])
+    outputFile.create_dataset('sequence', data=oneHotSequences[:,:1-config['output-length'],:])
+    outputFile.create_dataset('shap', data=profileShapScores[:,:1-config['output-length'],:])
     if(config["make-predictions"]):
         outputFile.create_dataset('input_predictions', data=refs[0])
         outputFile.create_dataset('shuffle_predictions', data=refs[1])

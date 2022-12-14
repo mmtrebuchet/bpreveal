@@ -1,0 +1,9 @@
+#I was getting some version incompatibilities if I used TF 2.9.x, so I've frozen this version. 
+#I recommend relaxing this in 2023, once it's stabilized a bit.
+tensorflow==2.8.0
+modisco-lite
+pybigwig
+pysam
+pybedtools
+tensorflow-probability
+tqdm
