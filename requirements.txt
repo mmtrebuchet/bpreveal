@@ -7,5 +7,5 @@ modisco-lite
 pybigwig
 pysam
 pybedtools
-tensorflow-probability
+tensorflow-probability==0.16
 tqdm
