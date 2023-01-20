@@ -58,17 +58,23 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
     outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u4')
     chromNameToIndex = dict()
+    assert len(genome.references) > 65535, "The genome has more than 2^16 chromosomes, and cannot be saved using the current hdf5 format. Increase the width of the coords_chrom dataset to fix."
+
+        
     for i, chromName in enumerate(genome.references):
         outFile['chrom_names'][i] = chromName
         chromNameToIndex[chromName] = i
+        refLen = genome.get_reference_length(chromName)
+        assert refLen < (2**32-1), "The genome contains a chromosome that is over four billion bases long. This will overflow the coords_start and coords_stop fields in the output file. Widen the data type of these fields to fix."
         outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
+
     #Build a table of chromosome numbers. For space savings, only store the
     #index into the chrom_names table.
     chromDset = [chromNameToIndex[r.chrom] for r in regions]
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]
     logging.info("Datasets created. Populating regions.")
-    outFile.create_dataset('coords_chrom', dtype='u1', data=chromDset)
+    outFile.create_dataset('coords_chrom', dtype='u2', data=chromDset)
     outFile.create_dataset('coords_start', dtype='u4', data=startDset)
     outFile.create_dataset('coords_stop',  dtype='u4', data=stopDset)
     logging.info("Writing predictions.")

@@ -9,3 +9,6 @@ pysam
 pybedtools
 tensorflow-probability==0.16
 tqdm
+#makeLossPlots.py is the only script to require matplotlib, so it's optional. 
+#Then again, matplotlib is useful in general. 
+matplotlib
