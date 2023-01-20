@@ -58,7 +58,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
     outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u4')
     chromNameToIndex = dict()
-    assert len(genome.references) > 65535, "The genome has more than 2^16 chromosomes, and cannot be saved using the current hdf5 format. Increase the width of the coords_chrom dataset to fix."
+    assert len(genome.references) < 65535, "The genome has more than 2^16 chromosomes, and cannot be saved using the current hdf5 format. Increase the width of the coords_chrom dataset to fix."
 
         
     for i, chromName in enumerate(genome.references):
