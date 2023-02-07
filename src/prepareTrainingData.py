@@ -9,19 +9,41 @@ import logging
 import pybedtools
 import utils
 
-def getSequences(bed, genome, outputLength, inputLength, jitter):
-    seqs = np.zeros((bed.count(), inputLength + 2*jitter, 4), dtype=np.int8)
+def revcompSeq(oneHotSeq):
+    #Since the order of the one-hot encoding is ACGT, if we flip the array 
+    #up-down, we complement the sequence, and if we flip it left-right, we 
+    #reverse it. So reverse complement of the one hot sequence is just:
+    return np.flip(oneHotSeq)
+
+
+def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
+    numSequences = bed.count()
+    if(not revcomp):
+        seqs = np.zeros((numSequences, inputLength + 2*jitter, 4), dtype=np.int8)
+    else:
+        seqs = np.zeros((numSequences*2, inputLength + 2*jitter, 4), dtype=np.int8)
     padding = ((inputLength + 2 * jitter) - outputLength)//2
     for i, region in enumerate(bed):
         chrom = region.chrom
         start = region.start - padding
         stop = region.stop + padding
         seq = genome.fetch(chrom, start, stop)
-        seqs[i] = utils.oneHotEncode(seq)
+        if (not revcomp):
+            seqs[i] = utils.oneHotEncode(seq)
+        else:
+            sret = utils.oneHotEncode(seq)
+            seqs[i*2] = sret
+            seqs[i*2+1] = revcompSeq(sret)
     return seqs
 
-def getHead(bed, bigwigFnames, outputLength, jitter):
-    headVals = np.zeros((bed.count(), outputLength + 2*jitter, len(bigwigFnames)))
+def getHead(bed, bigwigFnames, outputLength, jitter, revcomp):
+    #Note that revcomp should be either False or the task-order array (which is truthy).
+    numSequences = bed.count()
+    if (not revcomp):
+        headVals = np.zeros((numSequences, outputLength + 2*jitter, len(bigwigFnames)))
+    else:
+        headVals = np.zeros((numSequences*2, outputLength + 2*jitter, len(bigwigFnames)))
+
     for i,bwFname in enumerate(bigwigFnames):
         with pyBigWig.open(bwFname, "r") as fp:
             for j,region in enumerate(bed):
@@ -29,7 +51,11 @@ def getHead(bed, bigwigFnames, outputLength, jitter):
                 start = region.start - jitter
                 stop = region.stop + jitter
                 bwVals = np.nan_to_num(fp.values(chrom, start, stop))
-                headVals[j, :,i] = bwVals
+                if(not revcomp):
+                    headVals[j    ,:, i        ] = bwVals
+                else:
+                    headVals[j*2  ,:, i        ] = bwVals
+                    headVals[j*2+1,:,revcomp[i]] = np.flip(bwVals)
     return headVals
 
 def writeH5(config):
@@ -39,11 +65,16 @@ def writeH5(config):
     jitter = config["max-jitter"]
     genome = pysam.FastaFile(config["genome"])
     outFile = h5py.File(config["output-h5"], "w")
-    seqs = getSequences(regions, genome, outputLength, inputLength, jitter)
+    seqs = getSequences(regions, genome, outputLength, inputLength, jitter, config["reverse-complement"])
+        
     outFile.create_dataset("sequence", data=seqs, dtype='i1', compression='gzip')
     logging.debug("Sequence dataset created.")
     for i, head in enumerate(config["heads"]):
-        headVals = getHead(regions, head["bigwig-files"], outputLength, jitter)
+        if(config["reverse-complement"]):
+            revcomp = head["revcomp-task-order"]
+        else:
+            revcomp = False
+        headVals = getHead(regions, head["bigwig-files"], outputLength, jitter, revcomp)
         outFile.create_dataset("head_{0:d}".format(i), data=headVals, dtype='f4', compression='gzip')
         logging.debug("Added data for head {0:d}".format(i))
     outFile.close()
