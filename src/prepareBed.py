@@ -45,22 +45,6 @@ def sequenceChecker(interval, genome):
 
 
 
-def generateTilingRegions(genome, width, chromEdgeBoundary, spaceBetween, allowChroms):
-    chromRegions = []
-    numRegions = 0
-    #To use window_maker from pybedtools, I first need to create a bed containing the chromosomes where I want regions made. 
-    for chrom in genome.references:
-        if(chrom not in allowChroms):
-            continue
-        
-        startPos = chromEdgeBoundary
-        chromSize = genome.get_reference_length(chrom)
-        stopPos = chromSize - chromEdgeBoundary
-        chromRegions.append(pybedtools.Interval(chrom, startPos, stopPos))
-    
-    windows = pybedtools.window_maker(b=pybedtools.BedTool(chromRegions), w=width, s=spaceBetween + width)
-    return windows
-
 
 def stripCountsBelow(bed, cutoff, bigwig):
     return bed.filter(lambda interval : getCounts(interval, bigwig) >= cutoff).saveas()
