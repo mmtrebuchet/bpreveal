@@ -1,0 +1,25 @@
+Version 2.0.0, 2023-02-07
+
+	BREAKING CHANGES:
+
+	* Added a reverse-complement flag to prepareTrainingData.py. If this is	set
+	to true, then you must specify strand mappings to each of the heads in
+	that file. If you want your code to behave like before, just set
+	"reverse-complement" to false in the json file for prepareTrainingData.py.
+
+	ENHANCEMENTS:
+	* Reverse complement support added, see overview.tex in the section on
+	prepareTrainingData.py. (Charles McAnany)
+
+	BUG FIXES:
+	* none
+
+	CONTRIBUTORS:
+	Charles McAnany. 
+
+PREVIOUS VERSIONS:
+	Versions of BPReveal before 2.0.0 are not recorded here, but the software
+	would not have been completed without help from Julia Zeitlinger, Anshul
+	Kundaje, and Melanie Weilert. 
+
+
