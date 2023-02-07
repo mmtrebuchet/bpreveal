@@ -3,4 +3,8 @@ tmp
 test
 scratch
 .snakemake
+doc/overview.aux
+doc/overview.log
 src/__pycache__
+doc/img
+**/*.bw
