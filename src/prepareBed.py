@@ -30,7 +30,7 @@ def resize(interval, mode, width, genome):
             assert False, "Unsupported resize mode: {0:s}".format(mode)
     if(start <=0 or end>=genome.get_reference_length(interval.chrom)):
         return False #We're off the edge of the chromosome.
-    return pybedtools.Interval(interval.chrom, start, end, name=interval.name)
+    return pybedtools.Interval(interval.chrom, start, end, name=interval.name, score=interval.score, strand=interval.strand)
 
 def getCounts(interval, bigwig):
     vals = np.nan_to_num(bigwig.values(interval.chrom, interval.start, interval.end))
@@ -54,7 +54,7 @@ def stripCountsAbove(bed, cutoff, bigwig):
 
 def lineToInterval(line):
     initInterval =  pybedtools.cbedtools.create_interval_from_list(line.split())
-    return pybedtools.Interval(initInterval.chrom, initInterval.start, initInterval.end, name="V")
+    return initInterval
 
 def loadRegions(config):
     trainRegions = [] 
@@ -75,7 +75,6 @@ def loadRegions(config):
                         testRegions.append(r)
                     else:
                         numRejected += 1
-                        r.name = 'RLO'
                         rejectRegions.append(r)
         case {"train-regions" : trainRegionFnames, "val-regions" : valRegionFnames, "test-regions" : testRegionFnames}:
             for trainBedFile in trainRegionFnames:
@@ -110,7 +109,6 @@ def loadRegions(config):
                         testRegions.append(r)
                     if(not (foundTrain or foundVal or foundTest)):
                         numRejected += 1
-                        r.name = 'RLO'
                         rejectRegions.append(r)
         case _:
             assert False, "Config invalid: {0:s}".format(str(config["splits"]))
@@ -147,7 +145,6 @@ def removeOverlaps(config, regions, genome):
             if(i == selectedIdx):
                 ret.append(elem)
             else:
-                elem.name = "ROL"
                 rejects.append(elem)
 
     return (pybedtools.BedTool(ret), pybedtools.BedTool(rejects))
@@ -192,7 +189,6 @@ def validateRegions(config, regions, genome, bigwigs):
             if(bigCounts[regionIdx] > maxCounts[0]):
                 numReject += 1
                 validRegions[regionIdx] = 0
-                bigRegionsList[regionIdx].name += "RB{0:d}".format(i)
         logging.debug("Rejected {0:f}% of big regions.".format(numReject*100./len(bigRegionsList)))
     pbar.close()
     #We've now validated that the regions don't have too many counts when you inflate them. We also need to check that the regions won't 
@@ -223,7 +219,6 @@ def validateRegions(config, regions, genome, bigwigs):
             if(smallCounts[regionIdx] < minCounts[0]):
                 numReject += 1
                 validRegions[regionIdx] = 0
-                smallRegionsList[regionIdx].name += "RS{0:d}".format(i)
         logging.debug("Rejected {0:f}% of small regions.".format(numReject*100./len(bigRegionsList)))
     pbar.close()
     logging.debug("Validated small regions. Surviving regions: {0:d}".format(int(np.sum(validRegions))))
