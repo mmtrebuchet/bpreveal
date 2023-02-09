@@ -1,3 +1,12 @@
+Version 2.0.1, 2023-02-09
+	ENHANCEMENTS:
+	* prepareBed.py will no longer replace the names in your bed files; the
+	generated files will have the same names as the input beds. 
+
+	CONTRIBUTORS:
+	Melanie Weilert, Charles McAnany
+
+
 Version 2.0.0, 2023-02-07
 
 	BREAKING CHANGES:
