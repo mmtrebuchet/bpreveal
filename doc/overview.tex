@@ -1,6 +1,11 @@
 \documentclass{article}
 \usepackage{listings}
 \usepackage{fullpage}
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    columns=fixed
+}
 
 \begin{document}
 
@@ -36,6 +41,8 @@ If you do have strong experimental biases, you will need to regress them out. In
     \item Use hitscoring to map the discovered motifs back to the genome.
 \end{enumerate}
 
+\newpage
+
 \section{Philosophy}
 
 These are the guidelines for code design in chrombpnet-heavy:
@@ -51,6 +58,7 @@ These are the guidelines for code design in chrombpnet-heavy:
     \item The API should mirror the CLI. 
 \end{itemize}
 
+\newpage
 
 \section{Programs}
 
@@ -80,6 +88,8 @@ And the following utilities:
     \item [showModel.py] Make a pretty picture of your model.
 \end{description}
 
+\newpage
+
 \section{Setup}
 
 BPReveal requires just a few libraries, and I use conda to manage my environment. You can also install these with pip. 
@@ -101,17 +111,14 @@ I'm fond of \texttt{jupyter lab} for doing analysis.
 I found that I also needed to install a \texttt{cudatoolkit} package to get everything compatible, but this may not be necessary on your system. 
 
 
+\newpage
 
 \section{Programs}
 
 In this section, I will provide detailed specifications for all of the input files, with particular emphasis on configuration json files.
 
 
-
-
-
-
-\subsection{Training a solo model}
+\subsection{Training a solo model: \texttt{trainSoloModel.py}}
 
 This program generates a neural network that maps genomic sequence to experimental readout. 
 In cases where you don't need to regress out a bias track, this is the only training program you'll use. 
@@ -129,7 +136,7 @@ The program will produce two outputs, one being a Keras model. This model will b
 A solo training input configuration file is a JSON file that specifies what data should be used to train up the solo model.
 It shall contain exactly one settings section, one data section, one heads section, and one verbosity section. 
 
-\begin{lstlisting}
+\begin{lstlisting}[language=python]
 <solo-training-input-configuration> ::= 
    {<solo-settings-section> , <data-section>, 
      <head-section>, <verbosity-section>}
@@ -210,7 +217,9 @@ It shall contain exactly one settings section, one data section, one heads secti
     \item \texttt{max-jitter} is the maximum allowed shifting of the regions. This random shifting is applied during training, and helps to create some variety in the counts values to prevent over-fitting. Note that you must use the same jitter you used when you created your training data file - if you want to try a different jitter, you need to re-generate your data hdf5 files. 
 \end{itemize}
 
-\subsection{Training a transformation model}
+\newpage
+
+\subsection{Training a transformation model: \texttt{trainTransformationModel.py}}
 
 The transformation input file is a JSON file that names a solo model and gives the experimental data that it should be fit to. 
 Note that it may occasionally be appropriate to chain several transformation models together.
@@ -276,7 +285,10 @@ transformation - it must be a solo model that uses sequence as input.
 \end{enumerate}
 
 
-\subsection{Combined training}
+
+\newpage
+
+\subsection{Combined training: \texttt{trainCombinedModel.py}}
 
 The full model, known as a combined model is specified by a JSON file, much like the bias file.
 
@@ -345,9 +357,9 @@ The full model, known as a combined model is specified by a JSON file, much like
 
 
 
+\newpage
 
-
-\subsection{Prediction from bed regions}
+\subsection{Prediction from bed regions: \texttt{makePredictionsBed.py}}
 
 This is the JSON file given to makePredictionsBed. It names the model to use and the predictions to make. 
 
@@ -398,7 +410,10 @@ This program will produce an hdf5-format file containing the predicted values. I
 
 \end{itemize}
 
-\subsection{Prediction from fasta}
+
+\newpage
+
+\subsection{Prediction from fasta: \texttt{makePredictionsFasta.py}}
 
 This is the JSON file given to the prediction from fasta script. It names the model to use and the file that contains the sequences to run predictions on.
 
@@ -436,8 +451,9 @@ It is structured so:
 
 
 
+\newpage
 
-\subsection{Interpret flat}
+\subsection{Interpret flat: \texttt{interpretFlat.py}}
 
 This is the configuration file that is passed to interpretFlat.py, that lists the regions of the genome where classical importance scores should be calculated. It is structured as follows:
 
@@ -491,7 +507,8 @@ It will produce an hdf5-format file structured as follows:
 
 
 
-\subsection{Interpret PISA from bed regions}
+\newpage
+\subsection{Interpret PISA from bed regions: \texttt{interpretPisaBed.py}}
 
 This is the JSON file given to the PISA interpretation tool. 
 
@@ -531,8 +548,9 @@ It produces an hdf5 format which is organized as follows:
 
 
 
+\newpage
 
-\subsection{Interpret PISA from fasta}
+\subsection{Interpret PISA from fasta: \texttt{interpetPisaFasta.py}}
 
 This is the JSON file given to the PISA fasta tool, instead of fetching sequences based on a bed file and a genome, you supply the sequences directly. 
 Since PISA calculates shap scores for a single base, this tool always calculates the pisa scores for the \emph{leftmost} base in the output window. 
@@ -573,7 +591,8 @@ It produces an hdf5 format file which is organized as follows:
 
 
 
-\subsection{Prepare training data}
+\newpage
+\subsection{Prepare training data: \texttt{prepareTrainingData.py}}
 
 This program reads in a genome file, a list of regions in bed format, and a set of bigwig files containing the profiles. 
 It generates an hdf5-format file that is used during training. 
@@ -637,7 +656,9 @@ It will generate a file that is organized as follows:
 
 
 
-\subsection{Preparing bed files}
+\newpage
+
+\subsection{Preparing bed files: \texttt{prepareBed.py}}
 
 This is the JSON file given to the input preparation script. It splits your regions into 
 test, train, and validation regions, and optionally applies some filtering. 
@@ -732,7 +753,7 @@ Conversely, for minimum counts, the counts within the output-length - jitter wil
 
 
 
-
+\newpage
 \section{Model architectures}\label{sec:modelArchitectures}
 
 The precise details of the model architectures can be found in models.py, but they share some common themes. 
