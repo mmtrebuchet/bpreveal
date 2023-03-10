@@ -246,7 +246,7 @@ class TFDeepExplainer:
         return self.phi_symbolics[i]
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max",
-                             progress_message=None):
+                             progress_message=False):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -279,7 +279,10 @@ class TFDeepExplainer:
             phis = []
             for k in range(len(X)):
                 phis.append(np.zeros(X[k].shape))
-            for j in tqdm.tqdm(range(X[0].shape[0])):
+            pbar = range(X[0].shape[0])
+            if(progress_message):
+                pbar = tqdm.tqdm(pbar)
+            for j in pbar:
                 if (hasattr(self.data, '__call__')):
                     bg_data = self.data([X[l][j] for l in range(len(X))])
                     if type(bg_data) != list:
