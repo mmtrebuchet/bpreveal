@@ -25,7 +25,9 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 def main(config):
     utils.setVerbosity(config["verbosity"])
     utils.setMemoryGrowth()
-    inputLength = config["settings"]["sequence-input-length"]
+    if("sequence-input-length" in config):
+        assert False, "Sequence-input-length has been renamed input-length in transformation config files."
+    inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]
     numHeads = len(config["heads"]) 
     soloModel = load_model(config["settings"]["solo-model-file"], 

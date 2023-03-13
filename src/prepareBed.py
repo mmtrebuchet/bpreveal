@@ -122,7 +122,7 @@ def loadRegions(config):
 def removeOverlaps(config, regions, genome):
     """Takes in the list of regions, resizes each to the minimum size, and if there are overlaps, randomly chooses one of the overlapping regions."""
     #Resize the regions down to the minimum size.
-    resizedRegions = regions.each(resize, config['resize-mode'], config['output-length'] - config['max-jitter'] * 2, genome).saveas()
+    resizedRegions = regions.each(resize, config['resize-mode'], config["overlap-max-distance"], genome).saveas()
     #The algorithm here requires that the regions be sorted.
     sortedRegions = resizedRegions.sort()
     piles = []
@@ -155,13 +155,19 @@ def validateRegions(config, regions, genome, bigwigs):
     
     #First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of the regions to the minimum size, 
     #then sort them and remove overlaps. 
-    
-    noOverlapRegions, initialRejects = removeOverlaps(config, regions, genome)
-    noOverlapRegions = noOverlapRegions.saveas()
-    initialRejects = initialRejects.saveas()
-    logging.debug("Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))
+    if(config["remove-overlaps"]):
+
+        noOverlapRegions, initialRejects = removeOverlaps(config, regions, genome)
+        noOverlapRegions = noOverlapRegions.saveas()
+        initialRejects = initialRejects.saveas()
+        logging.debug("Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))
+    else:
+        initialRegions = regions
+        if("overlap-max-distance" in config):
+            logging.warning("You have set remove-overlaps to false, but you still provided an overlap-max-distance parameter. This parameter is meaningless.")
+        logging.debug("Skipping region overlap removal.")
     #Second, resize the regions to their biggest size.
-    unfilteredBigRegions = noOverlapRegions.each(resize, config["resize-mode"], config["input-length"] + config["max-jitter"]*2, genome).saveas()
+    unfilteredBigRegions = initialRegions.each(resize, config["resize-mode"], config["input-length"] + config["max-jitter"]*2, genome).saveas()
     logging.debug("Resized sequences. {0:d} remain.".format(unfilteredBigRegions.count()))
     bigRegionsList = list(unfilteredBigRegions.filter(sequenceChecker, genome).saveas())
     logging.debug("Filtered sequences. {0:d} remain.".format(len(bigRegionsList)))
@@ -238,7 +244,11 @@ def validateRegions(config, regions, genome, bigwigs):
         else:
             rejectedRegions.append(r)
     logging.info("Total surviving regions: {0:d}".format(len(filteredRegions)))
-    return (pybedtools.BedTool(filteredRegions), initialRejects.cat(pybedtools.BedTool(rejectedRegions), postmerge=False))
+    if(config["remove-overlaps"]):
+        rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions, postmerge=False))
+    else:
+        rejects = pybedtools.BedTool(rejectedRegions)
+    return (pybedtools.BedTool(filteredRegions), rejects)
 
 
 

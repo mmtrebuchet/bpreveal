@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 import logging
 import tqdm
+import utils
 def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     inH5 = h5py.File(inH5Fname, "r")
     logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headId, taskId))
@@ -84,12 +85,8 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
                 logits = headLogits[regionID]
                 #Logits will have shape (output-width x numTasks)
                 logCounts = headLogcounts[regionID]
-                if(np.any(logCounts > 100)):
-                    logging.warn("log counts shape: "+ str(  logCounts.shape))
-                    logging.warn("Log counts > 100, something is fishy. Region start {0:d}, stop {1:d}, logcounts {2:s}".format(regionStart, regionStop, str(logCounts)))
-                profileProb = scipy.special.softmax(logits)
-                profile = profileProb * np.exp(logCounts)
-                taskProfile = profile[:,taskId]
+                headProfile = utils.logitsToProfile(logits, logCounts)
+                taskProfile = headProfile[:,taskId]
                 profile = taskProfile
             case 'logits':
                 profile = headLogits[regionID, :, taskId]

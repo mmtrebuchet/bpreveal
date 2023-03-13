@@ -111,7 +111,7 @@ def main(config):
     profileExplainer = shap.TFDeepExplainer( (model.input, profileMetric), 
                                     shuffler,
                                     combine_mult_and_diffref = combineMultAndDiffref)
-    profileShapScores = profileExplainer.shap_values([oneHotSequences])
+    profileShapScores = profileExplainer.shap_values([oneHotSequences], progress_message=True)
     writeHdf5(shapTargets, oneHotSequences, profileShapScores, config["profile-h5"], genome)
 
 
@@ -121,7 +121,7 @@ def main(config):
     countsExplainer = shap.TFDeepExplainer( (model.input, countsMetric), 
                                     shuffler,
                                     combine_mult_and_diffref = combineMultAndDiffref)
-    countsShapScores = countsExplainer.shap_values([oneHotSequences])
+    countsShapScores = countsExplainer.shap_values([oneHotSequences], progress_message=True)
     writeHdf5(shapTargets, oneHotSequences, countsShapScores, config["counts-h5"], genome)
 
 

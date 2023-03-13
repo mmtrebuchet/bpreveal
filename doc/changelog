@@ -1,3 +1,34 @@
+Version 3.0.0, 2023-03-10
+	BREAKING CHANGES:
+	* There is a new "remove-overlaps" field that is mandatory in
+	prepareBed.py json files. If set to true, then you can set how close two
+	peaks must be before they are considered overlapping. (Thanks to Melanie
+	Weilert for the implementation.)
+	* On discussion with Melanie, it occurred that the cropdown feature of the
+	transformation model is never appropriate. Therefore, this feature has
+	been removed.  Instead, in a future version, there will be a feature to 
+	crop down the input sequence to the solo model during training the
+	combined model. (Charles McAnany) 
+	* Since there is no cropping, it was silly to call the input-length
+	"sequence-input-length" inside the transformation config json. It is now
+	sensibly called "input-length". 
+
+	ENHANCEMENTS:
+	* The PISA code was totally rewritten; it now uses a streaming 
+	architecture so that loading the data, calculating shap scores, and saving
+	data are done by different threads. This cuts way down on memory use, and
+	makes it possible to run pisa over an entire genome. (generating 100 GiB
+	per megabase or so.) (Charles McAnany)
+
+	BUG FIXES:
+	* In the combined config, the documentation called a parameter
+	"output-directory", but the code expected "output-prefix". The
+	documentation has been corrected. (Charles McAnany)
+
+
+	CONTRIBUTORS:
+	Melanie Weilert, Charles McAnany. 
+
 Version 2.0.2, 2023-02-17
 	ENHANCEMENTS:
 	* interpretPisaBed.py will now include predictions and reference

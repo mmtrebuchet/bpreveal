@@ -236,6 +236,7 @@ class FastaGenerator(Generator):
         self.fastaFname = fastaFname
         self.nowStop = False
         numRegions = 0
+
         with open(fastaFname, "r") as fp:
             for line in fp:
                 if(len(line) > 0 and line[0] == ">"):

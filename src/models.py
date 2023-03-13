@@ -125,10 +125,6 @@ def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitec
                     #(profileArchitectureSpecification['output-length'], numOutputs), 
                     individualHead["head-name"] + "_profile",
                     soloProfile)
-        case 'cropdown':
-            toCrop = keras.layers.Cropping1D(cropping=profileArchitectureSpecification["bases-to-trim"], 
-                    name="cropdown_{0:s}".format(individualHead["head-name"]))
-            profileTransformation = toCrop
         case "passthrough":
             profileTransformation = soloProfile
         case _:
@@ -142,8 +138,6 @@ def _transformationHead(soloProfile, soloCounts, individualHead, profileArchitec
                     soloCounts)
         case "passthrough":
             countsTransformation = soloCounts
-        case "cropdown":
-            raise ValueError("You cannot crop down the counts head - it's already a scalar!")
         case _:
             raise ValueError("Currently, only simple regression is supported.")
 

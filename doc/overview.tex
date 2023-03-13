@@ -242,7 +242,7 @@ for the second transformation. A better way to do it would be to write your own 
       "learning-rate" : <number>,
       "learning-rate-plateau-patience" : <integer> 
       "solo-model-file" : <file-name>,
-      "sequence-input-length" : <integer>,
+      "input-length" : <integer>,
       "output-length" : <integer>,
       "max-jitter" : <integer>,
       "profile-architecture" : <transformation-architecture-specification>, 
@@ -250,16 +250,11 @@ for the second transformation. A better way to do it would be to write your own 
 
 <transformation-architecture-specification> ::= 
     <simple-transformation-architecture-specification>
-  | <cropdown-transformation-architecture-specification>
   | "name" : "passthrough"
 
 <simple-transformation-architecture-specification> ::= 
     "name" : "simple",
     "types" : [<list-of-simple-transformation-types>]
-
-<cropdown-transformation-architecture-specification> ::=
-    "name" : "cropdown", 
-    "bases-to-trim" : <integer>
 
 <list-of-simple-transformation-types> ::= 
     <simple-transformation-type>
@@ -281,7 +276,6 @@ transformation - it must be a solo model that uses sequence as input.
     \item \texttt{solo-model-file} is the name of the file (or directory, since that's how keras likes to save models) that contains the solo model. 
     \item A \texttt{passthrough} transformation does nothing to the solo model, it doesn't regress anything. 
     \item A \texttt{simple} transformation applies the specified functions to the output of the solo model, and adjusts the parameters to best fit the experimental data. A linear model applies y=mx+b to the solo predictions (which, remember, are in log-space), a sigmoid applies y = m1 *sigmoid(m2x+b2) + b1, and a relu applies y = m1 * relu(m2x+b2) + b1. In other words, there's a linear model both before and after the sigmoid or relu activation. Generally, you need to use these more complex functions when the solo model is not a great fit for the experimental bias. 
-    \item A \texttt{cropdown} transformation takes the output from the solo model, and deletes the \texttt{bases-to-trim} bases on the left and right flanks of the solo model's prediction. (That is, 2*\texttt{bases-to-trim} bases are removed in total.)
 \end{enumerate}
 
 
@@ -320,7 +314,7 @@ The full model, known as a combined model is specified by a JSON file, much like
     "settings" : {<combined-settings-contents>}
 
 <combined-settings-contents> ::= 
-    {"output-directory" : "<string>",
+    {"output-prefix" : "<string>",
      "epochs" : <integer>, 
      "early-stopping-patience" : <integer>, 
      "batch-size" : <integer>, 
@@ -511,6 +505,9 @@ It will produce an hdf5-format file structured as follows:
 \subsection{Interpret PISA from bed regions: \texttt{interpretPisaBed.py}}
 
 This is the JSON file given to the PISA interpretation tool. 
+This tool wants a bed file, but this file represents the *individual bases* that should be shapped. 
+There is no restriction on the number of regions, nor on their length. If you are interested in the effects of a particular motif, 
+then you'd put the region surrounding that motif in the bed file, making it as large as you want to see the interactions you're interested in. 
 
 \subsubsection{Input specification}
 
@@ -541,6 +538,8 @@ It produces an hdf5 format which is organized as follows:
     \item "chrom\_sizes", a list of integers giving the size of each chromosome. This is mostly here as a handy reference when you want to make a bigwig file. 
     \item "coords\_base", the center point for each of the regions in the table of PISA values. 
     \item "coords\_chrom", the chromosome on which each PISA vector is found. 
+    \item "input\_predictions", a (numSamples,) array of the logit value of the target base when that sequence is run through the network.
+    \item "shuffle\_predictions", a (numSamples,numShuffles) array of the logits of the target base in the shuffled reference sequences.
     \item "sequence", a one-hot encoded array representing the sequence under each PISA value. The shape is (num regions * receptive-field * 4). Note that this is receptive field, not input width, since each base being shapped will only be affected by bases in its receptive field, and there's no reason to store the noise. 
     \item "shap", a table of the shap scores. The shape is the same as the sequence table, and each position in the shap table represents the corresponding base in the sequence table. These values are contribution scores to the difference-from-reference of the logit at this base. 
 
@@ -569,7 +568,7 @@ So, for each input sequence, this program will assign shap scores to the 1046th 
     "task-id" : <integer>,
     "output-h5" : <file-name>,
     "output-length" : <integer>,
-    "make-predictions" : <boolean>,
+    "input-length" : <integer>,
     <verbosity-section>
 }
 \end{lstlisting}
@@ -585,7 +584,7 @@ It produces an hdf5 format file which is organized as follows:
     \item "sequence", the one-hot encoded input sequences. Note that these only cover the receptive field of the model, so they are not as wide as the input. This will have shape (numSamples x receptiveField x 4).
     \item "input\_predictions", the logit predicted for the base being shapped. This will have shape (numSamples).
     \item "shap", the shap scores. This will have shape (numSamples x receptiveField x 4). 
-    \item "shuffle\_predictions", the average predicted logit of the target base on the shuffled input sequences. This will have shape (numSamples). 
+    \item "shuffle\_predictions", the predicted logit of the target base on the shuffled input sequences. This will have shape (numSamples, numShuffles). 
 \end{itemize}
 
 
@@ -675,8 +674,14 @@ test, train, and validation regions, and optionally applies some filtering.
     "max-jitter" : <integer>,
     <output-file-name-section>,
     "resize-mode" : <resize-mode>,
+    <overlaps-section>
     <verbosity-section>
     }
+
+<overlap-section> ::=
+    "remove-overlaps" : true,
+    "overlap-max-distance" : <integer>,
+  | "remove-overlaps" : false,
 
 <bigwig-preparation-list> ::=
     <individual-preparation-bigwig> 
@@ -742,6 +747,7 @@ test, train, and validation regions, and optionally applies some filtering.
     \item The max and min quantile values, if provided, will be used to threshold which regions are included in the output. First, all of the counts in the given regions are computed (which takes a while!), and then the given quantile is computed. All regions exceeding that value are not included in the output files. 
     \item Similarly, if max and min counts are given, all regions having more (or fewer) reads than the given number will be excluded. 
     \item If you use regexes to make your splits, then the \texttt{name} entry of the bed files will be compared against each regex. On a match, that region will be included in that split. 
+    \item The \texttt{remove-overlaps} flag can be set to \texttt{true} if you'd like to exclude overlapping regions. This is done by resizing all regions down to \texttt{overlap-max-distance}, and then, if multiple regions have an overlap, one is deleted at random. If \texttt{remove-overlaps} is \texttt{false}, then \texttt{overlap-max-distance} does not need to be set.  
 \end{itemize}
 
 I should mention that the maximum and minimum counts are not compared across the same window. 
