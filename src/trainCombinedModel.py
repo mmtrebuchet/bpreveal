@@ -30,8 +30,8 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    numHeads = len(config["heads"]) 
-    regressionModel = load_model(config["settings"]["transformation-model"]["transformation-model-file"], 
+    numHeads = len(config["heads"])
+    regressionModel = load_model(config["settings"]["transformation-model"]["transformation-model-file"],
             custom_objects = {'multinomialNll' : losses.multinomialNll})
     regressionModel.trainable = False
     logging.debug("Loaded regression model.")
@@ -62,14 +62,14 @@ def main(config):
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
 
-    
-    trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5, 
+
+    trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5,
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
-    valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
+    valGenerator = generators.H5BatchGenerator(config["heads"], valH5,
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized. Training.")
-    history = trainModel(combinedModel, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
-                         config["settings"]["early-stopping-patience"], 
+    history = trainModel(combinedModel, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"],
+                         config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"])
     combinedModel.save(config["settings"]["output-prefix"] + "_combined"+ ".model")
@@ -84,5 +84,3 @@ if (__name__ == "__main__"):
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
     main(config)
-
-

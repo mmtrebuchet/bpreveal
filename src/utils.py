@@ -22,7 +22,7 @@ def loadChromSizes(fname):
 
 
 def setVerbosity(userLevel):
-    levelMap = {"CRITICAL" : logging.CRITICAL,  
+    levelMap = {"CRITICAL" : logging.CRITICAL,
                 "ERROR" : logging.ERROR,
                 "WARNING" : logging.WARNING,
                 "INFO" : logging.INFO,
@@ -39,4 +39,14 @@ def oneHotEncode(sequence):
     assert (np.sum(ret) == len(sequence)), (sorted(sequence), sorted(ret.sum(axis=1)))
     return ret
 
+def logitsToProfile(logitsAcrossSingleRegion, logCountsAcrossSingleRegion):
+    """
+    Purpose: Given a single task and region sequence prediction (position x channels),
+        convert output logits/logcounts to human-readable representation of profile prediction.
+    """
+    assert len(logitsAcrossSingleRegion.shape)==2 #Logits will have shape (output-width x numTasks)
+    assert len(logCountsAcrossSingleRegion.shape)==1 #Logits will be a scalar value
 
+    profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
+    profile = profileProb * np.exp(logCountsAcrossSingleRegion)
+    return profile
