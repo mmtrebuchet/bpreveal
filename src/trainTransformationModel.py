@@ -14,8 +14,11 @@ from callbacks import getCallbacks
 import models
 import logging
 
-def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience):
+def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience, tensorboardDir= None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
+    if(tensorboardDir is not None):
+        from callbacks import tensorboardCallback
+        callbacks.append(tensorboardCallback(tensorboardDir))
     history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks)
     #Turn the learning rates into python floats for json serialization. 
     history.history['lr'] = [float(x) for x in history.history['lr']]
@@ -61,10 +64,15 @@ def main(config):
     valGenerator = generators.H5BatchGenerator(config["heads"], valH5, 
             inputLength, outputLength, config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized. Training.")
+    tensorboardDir = None
+    if("tensorboard-log-dir" in config):
+        tensorboardDir = config["tensorboard-log-dir"]
+
     history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, config["settings"]["epochs"], 
                          config["settings"]["early-stopping-patience"], 
                          config["settings"]["output-prefix"], 
-                         config["settings"]["learning-rate-plateau-patience"])
+                         config["settings"]["learning-rate-plateau-patience"],
+                         tensorboardDir)
     
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:

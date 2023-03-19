@@ -94,7 +94,7 @@ def main(config):
     
 
     #Now build up the array of one-hot encoded sequences.
-    oneHotSequences = np.zeros((len(shapTargets), config["input-length"], 4), dtype='float64')
+    oneHotSequences = np.zeros((len(shapTargets), config["input-length"], 4), dtype=np.int8)
     for i, target in enumerate(shapTargets):
         #I need to generate a one-hot encoded sequence that has the current base on its left-most side. 
         startPos = target[1]

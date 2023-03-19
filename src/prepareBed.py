@@ -156,11 +156,12 @@ def validateRegions(config, regions, genome, bigwigs):
     #First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of the regions to the minimum size, 
     #then sort them and remove overlaps. 
     if(config["remove-overlaps"]):
-
+        
         noOverlapRegions, initialRejects = removeOverlaps(config, regions, genome)
         noOverlapRegions = noOverlapRegions.saveas()
         initialRejects = initialRejects.saveas()
-        logging.debug("Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))
+        initialRegions = noOverlapRegions
+        logging.debug("Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))a
     else:
         initialRegions = regions
         if("overlap-max-distance" in config):
