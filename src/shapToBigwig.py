@@ -11,7 +11,7 @@ def writeBigWig(inH5, outFname, verbose):
         bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
     outBw = pyBigWig.open(outFname, 'w')
     outBw.addHeader(sorted(bwHeader))
-    logging.info("Bigwig header" + str((sorted(bwHeader))))
+    logging.debug("Bigwig header" + str((sorted(bwHeader))))
     numRegions = inH5['coords_chrom'].shape[0]
     #Sort the regions. 
     coordsChrom = np.array(inH5['coords_chrom'])

@@ -78,13 +78,13 @@ def writePreds(descriptions, preds, outFile, numHeads):
     stringDtype = h5py.string_dtype(encoding='utf-8')
     outFile.create_dataset("descriptions", dtype=stringDtype, data=descriptions)
     logging.info("Saved fasta description lines.")
-    logging.info("Writing predictions.")
+    logging.debug("Writing predictions.")
     for headId in tqdm.tqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headId))
         headGroup.create_dataset("logcounts", data=preds[numHeads+headId])
         headGroup.create_dataset("logits", data=preds[headId])
-    logging.info("File saved.")
     outFile.close()
+    logging.info("File saved.")
 
 
 if (__name__ == "__main__"):

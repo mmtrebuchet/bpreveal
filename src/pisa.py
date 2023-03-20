@@ -133,7 +133,7 @@ class H5Saver(Saver):
         of the organism. If provided, then chromosome name and size information will be 
         included in the output, and, additionally, 
         two other datasets will be created: coords_chrom, and coords_base. """
-        logging.debug("Initializing saver.")
+        logging.info("Initializing saver.")
         self._outFile = h5py.File(outputFname, "w")
         self.numSamples = numSamples
         self.numShuffles = numShuffles
@@ -232,7 +232,7 @@ class Generator:
 
 class FastaGenerator(Generator):
     def __init__(self, fastaFname):
-        logging.debug("Creating fasta generator.")
+        logging.info("Creating fasta generator.")
         self.fastaFname = fastaFname
         self.nowStop = False
         numRegions = 0
@@ -248,12 +248,12 @@ class FastaGenerator(Generator):
     
     def construct(self):
 
-        logging.debug("Constructing fasta generator.")
+        logging.info("Constructing fasta generator in its thread.")
         self.fastaFile = open(self.fastaFname, "r")
         self.nextSequenceID = self.fastaFile.readline()[1:].strip() #[1:] to get rid of the '>'. 
         logging.debug("Initial sequence to read: {0:s}".format(self.nextSequenceID))
     def done(self):
-        logging.debug("Closing fasta generator.")
+        logging.info("Closing fasta generator.")
         self.fastaFile.close()
     def __iter__(self):
         logging.debug("Creating fasta iterator.")
@@ -298,11 +298,11 @@ class BedGenerator(Generator):
                 stop = int(lsp[2])
                 numRegions += (stop - start)
         self.numRegions = numRegions
-        logging.debug("Bed generator initialized with {0:d} regions".format(self.numRegions))
+        logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
     def construct(self):
         #We create a list of all the regions now, but we'll look up the sequences and stuff on the fly. 
-        logging.debug("Constructing bed generator.")
+        logging.info("Constructing bed generator it its thread.")
         self.shapTargets = []
         self.genome = pysam.FastaFile(self.genomeFname)
         self.readHead = 0
@@ -388,7 +388,7 @@ class _Batcher:
     """The workhorse of this stack, it accepts queries until its internal storage is full, 
     then predicts them all at once, and runs shap."""
     def __init__(self, modelFname, batchSize, outQueue, headId, taskId, numShuffles, receptiveField):
-        logging.debug("Initializing batcher.")
+        logging.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
         import shap
@@ -420,7 +420,7 @@ class _Batcher:
         #                                                head   V V    V           |             |
         outputTarget = tf.reduce_sum(self.model.outputs[headId][:,0, taskId], axis=0, keepdims=True)
         self.profileExplainer = shap.TFDeepExplainer((self.model.input, outputTarget), self.generateShuffles)
-        logging.debug("Explainer initialized. Ready for Queries to explain.")
+        logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, model_inputs):
         rng = np.random.default_rng(seed=355687)

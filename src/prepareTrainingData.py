@@ -64,7 +64,9 @@ def writeH5(config):
     inputLength = config["input-length"]
     jitter = config["max-jitter"]
     genome = pysam.FastaFile(config["genome"])
+    logging.debug("Opening ouptut file.")
     outFile = h5py.File(config["output-h5"], "w")
+    logging.debug("Loading sequence information.")
     seqs = getSequences(regions, genome, outputLength, inputLength, jitter, config["reverse-complement"])
         
     outFile.create_dataset("sequence", data=seqs, dtype='i1', compression='gzip')
@@ -78,6 +80,7 @@ def writeH5(config):
         outFile.create_dataset("head_{0:d}".format(i), data=headVals, dtype='f4', compression='gzip')
         logging.debug("Added data for head {0:d}".format(i))
     outFile.close()
+    logging.info("File created; closing.")
 
 
 if __name__ == "__main__":

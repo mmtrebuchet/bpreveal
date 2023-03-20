@@ -22,11 +22,11 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     numRegions = inH5['coords_chrom'].shape[0]
 
     #Sort the regions. 
-    logging.info("Loading coordinate data")
+    logging.debug("Loading coordinate data")
     coordsChrom = list(inH5['coords_chrom'])
     coordsStart = np.array(inH5['coords_start'])
     coordsStop = np.array(inH5['coords_stop'])
-    logging.info("Region data loaded. Sorting.")
+    logging.debug("Region data loaded. Sorting.")
     regionList = []
     if(verbose):
         regionRange = tqdm.tqdm(range(numRegions))
@@ -34,7 +34,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
         regionRange = range(numRegions)
     for regionNumber in regionRange:
         regionList.append((coordsChrom[regionNumber], coordsStart[regionNumber]))
-    logging.info("Generated list of regions to sort.")
+    logging.debug("Generated list of regions to sort.")
     regionOrder = sorted(range(numRegions), key = lambda x: regionList[x])
     logging.info("Region order calculated.")
     curChrom = 0
@@ -130,7 +130,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
         regionChrom = nextChrom
         regionStart = nextStart
         regionStop = nextStop
-    logging.info("Closing bigwig.")
+    logging.debug("Closing bigwig.")
     outBw.close()
     logging.info("Bigwig closed.")
 

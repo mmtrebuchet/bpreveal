@@ -58,7 +58,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
     outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u4')
     chromNameToIndex = dict()
-    assert len(genome.references) < 65535, "The genome has more than 2^16 chromosomes, and cannot be saved using the current hdf5 format. Increase the width of the coords_chrom dataset to fix."
+    assert len(genome.references) < 65535, "The genome has more than 2^16 chromosomes, and cannot be saved using the current hdf5 format. Increase the width of the coords_chrom dataset to fix. Alternatively, consider predicting from a fasta file, which lets you use arbitrary names for each sequence."
 
         
     for i, chromName in enumerate(genome.references):
@@ -73,17 +73,17 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     chromDset = [chromNameToIndex[r.chrom] for r in regions]
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]
-    logging.info("Datasets created. Populating regions.")
+    logging.debug("Datasets created. Populating regions.")
     outFile.create_dataset('coords_chrom', dtype='u2', data=chromDset)
     outFile.create_dataset('coords_start', dtype='u4', data=startDset)
     outFile.create_dataset('coords_stop',  dtype='u4', data=stopDset)
-    logging.info("Writing predictions.")
+    logging.debug("Writing predictions.")
     for headId in tqdm.tqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headId))
         headGroup.create_dataset("logcounts", data=preds[numHeads+headId])
         headGroup.create_dataset("logits", data=preds[headId])
-    logging.info("File saved.")
     outFile.close()
+    logging.info("File saved.")
 
 
 if (__name__ == "__main__"):

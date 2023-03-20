@@ -31,6 +31,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         for i, h in enumerate(headList):
             self.fullData.append(np.array(dataH5["head_{0:d}".format(i)]))
         self.loadData()
+        logging.info("Batch generator initialized.")
 
     def __len__(self):
         return math.ceil(self.numRegions / self.batchSize)

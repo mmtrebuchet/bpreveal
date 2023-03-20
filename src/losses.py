@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import logging
 def multinomialNll(trueCounts, logits):
+    logging.debug("Creating multinomial NLL.")
     inputShape = tf.shape(trueCounts)
     numBatches = inputShape[0] 
     numSamples = inputShape[1] * inputShape[2] #output length * num_tasks 

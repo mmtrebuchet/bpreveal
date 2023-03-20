@@ -19,7 +19,7 @@ import models
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience, tensorboardDir=None):
     
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
-    if(tensorBoardDir is not None):
+    if(tensorboardDir is not None):
         from callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
     history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen, callbacks=callbacks)

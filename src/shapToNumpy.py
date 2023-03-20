@@ -29,6 +29,8 @@ def main():
     inFile = h5py.File(args.h5, "r")
     if(args.seqs is not None):
         flipAndSave(inFile["input_seqs"], args.seqs, np.int8)
+        logging.info("Saved sequences.")
+    logging.info("Saving scores.")
     flipAndSave(inFile["hyp_scores"], args.scores, np.float32)
     logging.info("Done.")
 
