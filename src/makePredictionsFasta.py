@@ -26,11 +26,11 @@ def loadFasta(fastaFname):
     titles = []
     with open(fastaFname, "r") as fp:
         for line in fp:
-            line = line.strip() # Get rid of newlines.
-            if(len(line) == 0):
-                continue #There is a blank line. Ignore it.
-            elif(line[0] == '>'):
-                if(len(curSeq)):
+            line = line.strip()  # Get rid of newlines.
+            if (len(line) == 0):
+                continue  # There is a blank line. Ignore it.
+            elif (line[0] == '>'):
+                if (len(curSeq)):
                     sequences.append(curSeq)
                     titles.append(curTitle)
                     curSeq = ""
@@ -38,7 +38,7 @@ def loadFasta(fastaFname):
             else:
                 curSeq = curSeq + line
         else:
-            if(len(curSeq)):
+            if (len(curSeq)):
                 #Add the last sequence in the fasta.
                 sequences.append(curSeq)
                 titles.append(curTitle)
@@ -56,18 +56,21 @@ def main(config):
     logging.debug("Opening output hdf5 file.")
     outFile = h5py.File(config["settings"]["output-h5"], "w")
     padding = (inputLength - outputLength) // 2
-    
+
     logging.info("Loading regions")
     sequences, descriptions = loadFasta(fastaFname)
     seqs = np.zeros((len(sequences), inputLength, 4))
     for i, seq in enumerate(sequences):
         seqs[i] = utils.oneHotEncode(seq)
     logging.info("Input prepared. Loading model.")
-    model = load_model(config["settings"]["architecture"]["model-file"], custom_objects = {'multinomialNll' : losses.multinomialNll})
+    model = load_model(config["settings"]["architecture"]["model-file"], 
+                       custom_objects={'multinomialNll': losses.multinomialNll})
     logging.info("Model loaded. Predicting.")
-    preds = model.predict(seqs, batch_size=batchSize, verbose=True, workers=10, use_multiprocessing=True)
+    preds = model.predict(seqs, batch_size=batchSize, verbose=True,
+                          workers=10, use_multiprocessing=True)
     logging.info("Predictions complete. Writing hdf5.")
     writePreds(descriptions, preds, outFile, numHeads)
+
 
 def writePreds(descriptions, preds, outFile, numHeads):
     """descriptions is a list of strings, the '>' line of each entry in the input fasta. 
@@ -81,7 +84,7 @@ def writePreds(descriptions, preds, outFile, numHeads):
     logging.debug("Writing predictions.")
     for headId in tqdm.tqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headId))
-        headGroup.create_dataset("logcounts", data=preds[numHeads+headId])
+        headGroup.create_dataset("logcounts", data=preds[numHeads + headId])
         headGroup.create_dataset("logits", data=preds[headId])
     outFile.close()
     logging.info("File saved.")
@@ -92,5 +95,3 @@ if (__name__ == "__main__"):
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
     main(config)
-
-

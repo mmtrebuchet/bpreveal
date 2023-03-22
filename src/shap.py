@@ -8,12 +8,14 @@ tf = None
 tf_ops = None
 tf_gradients_impl = None
 
+
 def standard_combine_mult_and_diffref(mult, orig_inp, bg_data):
-    diffref_input = [orig_inp[l] - bg_data[l] for l in range(len(orig_inp))]
-    to_return = [(mult[l] * (diffref_input[l])).mean(0)
-            for l in range(len(orig_inp))]
+    diffref_input = [orig_inp[x] - bg_data[x] for x in range(len(orig_inp))]
+    to_return = [(mult[x] * (diffref_input[x])).mean(0)
+            for x in range(len(orig_inp))]
 
     return to_return
+
 
 class TFDeepExplainer:
     """
