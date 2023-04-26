@@ -66,7 +66,7 @@ def main(config):
     model = load_model(config["settings"]["architecture"]["model-file"], 
                        custom_objects={'multinomialNll': losses.multinomialNll})
     logging.info("Model loaded. Predicting.")
-    preds = model.predict(seqs, batch_size=batchSize, verbose=True,
+    preds = model.predict(seqs, batch_size=batchSize, verbose=(config["verbosity"] in ["INFO", "DEBUG"]),
                           workers=10, use_multiprocessing=True)
     logging.info("Predictions complete. Writing hdf5.")
     writePreds(descriptions, preds, outFile, numHeads)

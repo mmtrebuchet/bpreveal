@@ -278,7 +278,7 @@ def validateRegions(config, regions, genome, bigwigs):
             rejectedRegions.append(r)
     logging.info("Total surviving regions: {0:d}".format(len(filteredRegions)))
     if (config["remove-overlaps"]):
-        rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions, postmerge=False))
+        rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions), postmerge=False)
     else:
         rejects = pybedtools.BedTool(rejectedRegions)
     return (pybedtools.BedTool(filteredRegions), rejects)
