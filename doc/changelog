@@ -1,3 +1,11 @@
+Version 3.0.1, 2023-04-26
+	ENHANCEMENTS:
+	* Formatted the code throughout the repository to more closely comply with
+	PEP8.
+
+	BUG FIXES:
+	* Fixed a bug in argument order for deduplicating in prepareBed.py
+
 Version 3.0.0, 2023-03-10
 	BREAKING CHANGES:
 	* There is a new "remove-overlaps" field that is mandatory in
