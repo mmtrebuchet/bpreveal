@@ -5,7 +5,6 @@ import argparse
 import logging
 import scipy.stats
 import scipy.spatial.distance
-import sys
 import tqdm
 from multiprocessing import Process, Queue
 

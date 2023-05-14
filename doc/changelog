@@ -1,3 +1,17 @@
+Version 3.1.0, 2023-05-14
+	NEW FEATURES:
+	* Added an automatic reverse complement strand selection feature. Instead
+	of saying '"revcomp-task-order" : [1,0]', you can now say
+	'"revcomp-task-order":"auto"' when you have one or two tasks in a head.
+
+	ENHANCEMENTS:
+	* Code cleanup in general, such as removing unused imports and tidying up
+	formatting.
+
+	BUG FIXES:
+	* Fixed a missing import in prepareBed.py that broke the regex mode. 
+
+
 Version 3.0.1, 2023-04-26
 	ENHANCEMENTS:
 	* Formatted the code throughout the repository to more closely comply with

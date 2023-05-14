@@ -14,28 +14,35 @@
 
 #I need to source my .shrc to get conda on the path. 
 #You may need to change this to your own shell rc file, or it may
-#work without this line for you. 
+#work without this line for you.
+source /home/cm2363/.bashrc
 source /home/cm2363/.zshrc
 
 #Obviously, change the name of the environment to whatever you want.
-conda create --yes -n bpreveal-cerebro python=3.10
+conda create --yes -n bpreveal-testing python=3.10
 
-conda activate bpreveal-cerebro
-#Mamba isn't strictly necessary, but it's a lot faster than conda
-#when installing lots of packages (looking at you, TensorFlow!). 
-#If you don't choose to install mamba, then replace `mamba` in the
-#following commands with `conda`. 
-conda install -c conda-forge --yes mamba
+conda activate bpreveal-testing
 
-mamba install --yes -c nvidia cuda-toolkit
-mamba install -c conda-forge --yes tensorflow
-mamba install -c bioconda --yes pybigwig
-mamba install --yes tensorflow-probability
-mamba install -c conda-forge --yes matplotlib
+conda install --yes -c conda-forge cudatoolkit=11.8.0
+pip install --no-input nvidia-cudnn-cu11==8.6.0.163
+#This garbage is from the Tensorflow install guide. It should put the nvidia libraries on your path, so Tensorflow can find them.
+CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib
+mkdir -p $CONDA_PREFIX/etc/conda/activate.d
+echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+
+#Tensorflow expressly advises against installing with conda. 
+pip install --no-input tensorflow
+
+#Reinstalling cuda-toolkit from the nvidia channel gives you ptxas. 
+conda install --yes -c nvidia cuda-toolkit=11.8
+conda install --yes tensorflow-probability
+conda install --yes matplotlib
 
 #pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
 #in the conda repositories. So install them through pip. 
-pip install --no-input pysam pybedtools
+pip install --no-input pysam pybedtools pybigwig
 
 #Modisco-lite isn't in conda as of 2023-03-23. 
 pip install --no-input modisco-lite

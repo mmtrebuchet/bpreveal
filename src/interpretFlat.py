@@ -12,7 +12,6 @@ import numpy as np
 import shap
 from keras.models import load_model
 import losses
-import generators
 import h5py
 
 
@@ -46,7 +45,6 @@ def weightedMeannormLogits(model, headId, taskIds):
     profileOutput = model.outputs[headId]
     stackedLogits = tf.stack([profileOutput[:, :, x] for x in taskIds], axis=2)
     inputShape = stackedLogits.shape
-    numBatches = inputShape[0]
     numSamples = inputShape[1] * inputShape[2]
     logits = tf.reshape(stackedLogits, [-1, numSamples])
 

@@ -5,13 +5,8 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
-import tensorflow as tf
 import utils
-from tensorflow import keras
-import pybedtools
 import numpy as np
-import pyBigWig
-import pysam
 from keras.models import load_model
 import h5py
 import tqdm
@@ -49,13 +44,11 @@ def main(config):
     utils.setVerbosity(config["verbosity"])
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
-    outputLength = config["settings"]["architecture"]["output-length"]
     fastaFname = config["fasta-file"]
     batchSize = config["settings"]["batch-size"]
     numHeads = config["settings"]["heads"]
     logging.debug("Opening output hdf5 file.")
     outFile = h5py.File(config["settings"]["output-h5"], "w")
-    padding = (inputLength - outputLength) // 2
 
     logging.info("Loading regions")
     sequences, descriptions = loadFasta(fastaFname)

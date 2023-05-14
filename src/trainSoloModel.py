@@ -5,7 +5,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import utils
 import h5py
-import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
 import generators

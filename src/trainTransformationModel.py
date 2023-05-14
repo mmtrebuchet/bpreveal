@@ -3,13 +3,11 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import utils
-import tensorflow as tf
 import h5py
 from tensorflow import keras
 from keras.models import load_model
 import generators
 import losses
-import layers
 from callbacks import getCallbacks
 import models
 import logging

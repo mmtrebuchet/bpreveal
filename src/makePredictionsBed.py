@@ -5,12 +5,9 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
-import tensorflow as tf
 import utils
-from tensorflow import keras
 import pybedtools
 import numpy as np
-import pyBigWig
 import pysam
 from keras.models import load_model
 import h5py

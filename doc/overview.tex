@@ -628,6 +628,7 @@ This way, if you want to train on a custom genome, or you don't have a meaningfu
 
 <revcomp-head-section> ::= 
     <empty>
+  | "revcomp-task-order" : "auto",
   | "revcomp-task-order" : [<list-of-integers>],
 
 <list-of-bigwig-file-names> ::= 
@@ -639,7 +640,13 @@ This way, if you want to train on a custom genome, or you don't have a meaningfu
 \subsubsection{Parameter notes}
 \begin{itemize}
     \item The \texttt{reverse-complement} flag sets whether the data files will include reverse-complement augmentation. If this is set to \texttt{true} then you must include \texttt{revcomp-task-order} in every head section.
-    \item The \texttt{revcomp-task-order} is a list specifying which tasks in the forward sample should map to the tasks in the reverse sample. For example, if the two tasks represent reads on the plus and minus strand, then when you create a reverse-complemented training example, the minus strand becomes the plus strand, and vice versa. So you'd set this parameter to \texttt{[1,0]} to indicate that the data for the two tasks should be swapped (in addition to reversed 5' to 3', of course). If you only have one task in a head, you should set this to \texttt{[0]}, to indicate that there is no swapping. If you have multiple tasks, say, a task for the left end of a read, one for the right end, and one for the middle, then the left and right should be swapped and the middle left alone. In this case, you'd set \texttt{revcomp-task-order} to \texttt{[1,0,2]}. 
+    \item The \texttt{revcomp-task-order} is a list specifying which tasks in the forward sample should map to the tasks in the reverse sample. 
+        For example, if the two tasks represent reads on the plus and minus strand, then when you create a reverse-complemented training example, the minus strand becomes the plus strand, and vice versa.
+        So you'd set this parameter to \texttt{[1,0]} to indicate that the data for the two tasks should be swapped (in addition to reversed 5' to 3', of course). 
+        If you only have one task in a head, you should set this to \texttt{[0]}, to indicate that there is no swapping. 
+        If you have multiple tasks, say, a task for the left end of a read, one for the right end, and one for the middle, then the left and right should be swapped and the middle left alone. 
+        In this case, you'd set \texttt{revcomp-task-order} to \texttt{[1,0,2]}.
+        If this parameter is set to \texttt{"auto"}, then it will choose \texttt{[1,0]} if there are two strands, \texttt{[0]} if there is only one strand, and it will issue an error if there are more strands than that.
 \end{itemize}
 
 \subsubsection{Output specification}

@@ -1,5 +1,3 @@
-import numpy as np
-import os
 import logging
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
                                        ReduceLROnPlateau

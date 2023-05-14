@@ -11,8 +11,8 @@ import utils
 
 
 def revcompSeq(oneHotSeq):
-    #Since the order of the one-hot encoding is ACGT, if we flip the array 
-    #up-down, we complement the sequence, and if we flip it left-right, we 
+    #Since the order of the one-hot encoding is ACGT, if we flip the array
+    #up-down, we complement the sequence, and if we flip it left-right, we
     #reverse it. So reverse complement of the one hot sequence is just:
     return np.flip(oneHotSeq)
 
@@ -70,7 +70,7 @@ def writeH5(config):
     logging.debug("Opening ouptut file.")
     outFile = h5py.File(config["output-h5"], "w")
     logging.debug("Loading sequence information.")
-    seqs = getSequences(regions, genome, outputLength, 
+    seqs = getSequences(regions, genome, outputLength,
                         inputLength, jitter, config["reverse-complement"])
 
     outFile.create_dataset("sequence", data=seqs, dtype='i1', compression='gzip')
@@ -78,10 +78,20 @@ def writeH5(config):
     for i, head in enumerate(config["heads"]):
         if (config["reverse-complement"]):
             revcomp = head["revcomp-task-order"]
+            if (revcomp == "auto"):
+                #The user has left reverse-complementing up to us.
+                match len(head["bigwig-files"]):
+                    case 1:
+                        revcomp = [0]
+                    case 2:
+                        revcomp = [1,0]
+                    case _:
+                        assert False, "Cannot automatically determine revcomp "\
+                                      "order with more than two tasks."
         else:
             revcomp = False
         headVals = getHead(regions, head["bigwig-files"], outputLength, jitter, revcomp)
-        outFile.create_dataset("head_{0:d}".format(i), data=headVals, 
+        outFile.create_dataset("head_{0:d}".format(i), data=headVals,
                                dtype='f4', compression='gzip')
         logging.debug("Added data for head {0:d}".format(i))
     outFile.close()

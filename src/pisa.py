@@ -3,7 +3,6 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import utils
-import json
 import pysam
 import numpy as np
 import tqdm
@@ -425,7 +424,6 @@ class _Batcher:
         from keras.models import load_model
         import losses
         import utils
-        import numpy as np
         utils.setMemoryGrowth()
         self.model = load_model(modelFname, 
                 custom_objects={'multinomialNll': losses.multinomialNll})

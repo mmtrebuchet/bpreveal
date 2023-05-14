@@ -10,6 +10,7 @@ import utils
 import numpy as np
 import pybedtools
 import random
+import re
 
 
 def resize(interval, mode, width, genome):
@@ -18,7 +19,7 @@ def resize(interval, mode, width, genome):
     match mode:
         case "none":
             if (end - start != width):
-                assert False, "An input region is not the expected width: {0:s}".format(str(self))
+                assert False, "An input region is not the expected width: {0:s}".format(str(interval))
         case "center": 
             center = (end + start) // 2
             start = center - width // 2

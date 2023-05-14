@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import h5py
 import pyBigWig
-import scipy.special
 import numpy as np
 import argparse
 import logging
@@ -13,7 +12,6 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     inH5 = h5py.File(inH5Fname, "r")
     logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headId, taskId))
     bwHeader = []
-    nameToNum = dict()
     for i, name in enumerate(inH5["chrom_names"].asstr()):
         bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
     outBw = pyBigWig.open(outFname, 'w')

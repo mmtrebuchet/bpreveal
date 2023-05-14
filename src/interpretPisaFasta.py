@@ -5,7 +5,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import utils
 import json
 import pisa
-import logging
 
 
 def main(config):
