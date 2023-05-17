@@ -21,7 +21,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     logging.info("Added header.")
     numRegions = inH5['coords_chrom'].shape[0]
 
-    #Sort the regions. 
+    # Sort the regions.
     logging.debug("Loading coordinate data")
     coordsChrom = list(inH5['coords_chrom'])
     coordsStart = np.array(inH5['coords_start'])
@@ -54,35 +54,35 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     else:
         regionRange = range(numRegions)
     for regionNumber in regionRange:
-        #Extract the appropriate region from the sorted list. 
+        # Extract the appropriate region from the sorted list.
         if (regionChrom != curChrom):
             curChrom = regionChrom
             startWritingAt = 0
 
         if (startWritingAt < regionStart):
-            #The next region starts beyond the end 
-            #of the previous one. Some bases will not be filled in.
+            # The next region starts beyond the end
+            # of the previous one. Some bases will not be filled in.
             startWritingAt = regionStart
-        #By default, write the whole region. 
+        # By default, write the whole region.
         stopWritingAt = regionStop
-        #As long as we aren't on the last region, check for overlaps.
+        # As long as we aren't on the last region, check for overlaps.
         if (regionNumber < numRegions - 1):
             nextRegion = regionOrder[regionNumber + 1]
             nextChrom = coordsChrom[nextRegion]
             nextStart = coordsStart[nextRegion]
             nextStop = coordsStop[nextRegion]
             if (nextChrom == regionChrom and nextStart < stopWritingAt):
-                #The next region overlaps. So stop writing before then. 
+                # The next region overlaps. So stop writing before then.
                 overlapSize = regionStop - nextStart
                 stopWritingAt = stopWritingAt - overlapSize // 2
         dataSliceStart = startWritingAt - regionStart
         dataSliceStop = stopWritingAt - regionStart
 
-        #Okay, now it's time to actually do the thing to the data! 
+        # Okay, now it's time to actually do the thing to the data!
         match mode:
             case 'profile':
                 logits = headLogits[regionID]
-                #Logits will have shape (output-width x numTasks)
+                # Logits will have shape (output-width x numTasks)
                 logCounts = headLogcounts[regionID]
                 headProfile = utils.logitsToProfile(logits, logCounts)
                 taskProfile = headProfile[:, taskId]
@@ -103,7 +103,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
         try:
             if (startWritingAt == 0):
                 raise RuntimeError()
-            outBw.addEntries(bwHeader[regionChrom][0], 
+            outBw.addEntries(bwHeader[regionChrom][0],
                              int(startWritingAt),
                              values=vals,
                              span=1, step=1)
@@ -121,8 +121,8 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
             print(nextChrom)
             raise
 
-        #Update the region. By pulling the first setting of the region variables out of the loop,
-        #I avoid double-dipping to get those data from the H5. 
+        # Update the region. By pulling the first setting of the region variables out of the loop,
+        # I avoid double-dipping to get those data from the H5.
         startWritingAt = stopWritingAt
         regionID = nextRegion
         regionChrom = nextChrom
@@ -140,16 +140,16 @@ def main():
     parser.add_argument("--bw", help='The name of the bigwig file that should be written.')
     parser.add_argument("--head-id", help="Which head number do you want data for?",
                         dest='headId', type=int)
-    parser.add_argument("--task-id", help='Which task in that head do you want?', 
+    parser.add_argument("--task-id", help='Which task in that head do you want?',
                         dest='taskId', type=int)
-    parser.add_argument("--mode", 
+    parser.add_argument("--mode",
                         help='What do you want written? Options are "profile", meaning you '
                         'want (softmax(logits) * exp(logcounts)), or "logits", meaning you '
                         'just want logits, or "mnlogits", meaning you want the logits, but '
                         'mean-normalized (for easier display), or "logcounts", meaning you '
                         'want the log counts for every region, or "counts", meaning you want '
                         'exp(logcounts). You will usually want "profile"')
-    parser.add_argument("--verbose", help="Display progress as the file is being written.", 
+    parser.add_argument("--verbose", help="Display progress as the file is being written.",
                         action='store_true')
     parser.add_argument("--negate", help="Negate all of the values written to the bigwig. "
                         "Used for negative-strand predictions.", action='store_true')

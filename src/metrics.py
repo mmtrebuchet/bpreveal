@@ -29,17 +29,17 @@ class MetricsCalculator:
 
     def runRegions(self, regionReference, regionPredicted, regionID):
 
-        referenceData = np.nan_to_num(self.referenceBw.values(regionReference.chrom, 
-                                                              regionReference.start, 
+        referenceData = np.nan_to_num(self.referenceBw.values(regionReference.chrom,
+                                                              regionReference.start,
                                                               regionReference.stop))
         if (self.applyAbs):
             referenceData = np.abs(referenceData)
-        predictedData = np.nan_to_num(self.predictedBw.values(regionPredicted.chrom, 
-                                                              regionPredicted.start, 
+        predictedData = np.nan_to_num(self.predictedBw.values(regionPredicted.chrom,
+                                                              regionPredicted.start,
                                                               regionPredicted.stop))
         if (self.applyAbs):
             predictedData = np.abs(predictedData)
-        if (np.sum(referenceData) > 0 and np.sum(predictedData) > 0): 
+        if (np.sum(referenceData) > 0 and np.sum(predictedData) > 0):
             referencePmf = referenceData / np.sum(referenceData)
             predictedPmf = predictedData / np.sum(predictedData)
             mnll = scipy.stats.multinomial(np.sum(referenceData), predictedPmf)
@@ -83,7 +83,7 @@ def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
     regions = [Region(x) for x in open(regionsFname, 'r')]
     logging.info("Number of regions: {0:d}".format(len(regions)))
     numberQueue.put(len(regions))
-    for i, r in enumerate(regions): 
+    for i, r in enumerate(regions):
         regionQueue.put((r, r, i))
     for i in range(numThreads):
         regionQueue.put(None)
@@ -95,10 +95,10 @@ def percentileStats(name, vector, header=False):
     quantileCutoffs = np.linspace(0, 1, 5)
     quantiles = np.quantile(vector, quantileCutoffs)
     if (header):
-        print("{0:10s}".format("metric") 
-              + "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs]) 
+        print("{0:10s}".format("metric")
+              + "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
               + "\t{0:s}".format("regions"))
-    print("{0:10s}".format(name) 
+    print("{0:10s}".format(name)
           + "".join(["\t{0:15f}".format(x) for x in quantiles])
           + "\t{0:d}".format(vector.shape[0]))
 
@@ -121,7 +121,7 @@ def receiveThread(numRegions, outputQueue):
         referenceCounts[regionID] = referenceCount
         predictedCounts[regionID] = predictedCount
 
-    #Calculate the percentiles for each of the profile metrics. 
+    # Calculate the percentiles for each of the profile metrics.
     percentileStats("mnll", mnlls, header=True)
     percentileStats("jsd", jsds)
     percentileStats("pearsonr", pearsonrs)
@@ -138,19 +138,19 @@ def runMetrics(reference, predicted, regions, threads, applyAbs):
     resultQueue = Queue()
     numberQueue = Queue()
     print("reference {0:s} predicted {1:s} regions {2:s}".format(reference, predicted, regions))
-    regionThread = Process(target=regionGenThread, 
+    regionThread = Process(target=regionGenThread,
                            args=(regions, regionQueue, threads, numberQueue))
     processorThreads = []
     for i in range(threads):
         logging.debug("Creating thread {0:d}".format(i))
-        newThread = Process(target=calculatorThread, 
+        newThread = Process(target=calculatorThread,
                             args=(reference, predicted, applyAbs, regionQueue, resultQueue, i))
         processorThreads.append(newThread)
         newThread.start()
     regionThread.start()
-    #Since the number of regions is not known before starting up the regions thread, I have to 
-    #start the regions thread and then get a message telling me how many regions there are. 
-    #Clunky, but avoids re-reading the bed file.
+    # Since the number of regions is not known before starting up the regions thread, I have to
+    # start the regions thread and then get a message telling me how many regions there are.
+    # Clunky, but avoids re-reading the bed file.
     numRegions = numberQueue.get()
 
     writerThread = Process(target=receiveThread, args=(numRegions, resultQueue))
@@ -162,7 +162,7 @@ def runMetrics(reference, predicted, regions, threads, applyAbs):
 def main():
     parser = argparse.ArgumentParser(description="Take two bigwig-format files and calculate "
                                                  "an assortment of metrics on their contents.")
-    parser.add_argument("--reference", 
+    parser.add_argument("--reference",
             help='The name of the reference (i.e., experimental) bigwig.')
     parser.add_argument("--predicted",
             help='The name of the bigwig file generated by a model.')
@@ -170,11 +170,11 @@ def main():
             help="The name of a bed file containing the regions to use to calculate the metrics.")
     parser.add_argument("--verbose",
             help="Display progress as the file is being written.", action='store_true')
-    parser.add_argument("--threads", 
+    parser.add_argument("--threads",
             help="Number of parallel threads to use. Default 1.", default=1, type=int)
-    parser.add_argument("--apply-abs", 
+    parser.add_argument("--apply-abs",
             help="Use the absolute value of the entries in the bigwig. Useful if one bigwig "
-                 "contains negative values.", 
+                 "contains negative values.",
             action='store_true', dest='applyAbs')
     args = parser.parse_args()
     if (args.verbose):

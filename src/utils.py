@@ -15,7 +15,7 @@ def setMemoryGrowth():
 
 
 def loadChromSizes(fname):
-    #Read in a chrom sizes file and return a dictionary mapping chromosome name → size
+    # Read in a chrom sizes file and return a dictionary mapping chromosome name → size
     ret = dict()
     with open(fname, 'r') as fp:
         for line in fp:
@@ -26,11 +26,11 @@ def loadChromSizes(fname):
 
 
 def setVerbosity(userLevel):
-    levelMap = {"CRITICAL" : logging.CRITICAL,
-                "ERROR" : logging.ERROR,
-                "WARNING" : logging.WARNING,
-                "INFO" : logging.INFO,
-                "DEBUG" : logging.DEBUG}
+    levelMap = {"CRITICAL": logging.CRITICAL,
+                "ERROR": logging.ERROR,
+                "WARNING": logging.WARNING,
+                "INFO": logging.INFO,
+                "DEBUG": logging.DEBUG}
     logging.basicConfig(level=levelMap[userLevel])
 
 
@@ -44,13 +44,15 @@ def oneHotEncode(sequence):
     assert (np.sum(ret) == len(sequence)), (sorted(sequence), sorted(ret.sum(axis=1)))
     return ret
 
+
 def logitsToProfile(logitsAcrossSingleRegion, logCountsAcrossSingleRegion):
     """
     Purpose: Given a single task and region sequence prediction (position x channels),
         convert output logits/logcounts to human-readable representation of profile prediction.
     """
-    assert len(logitsAcrossSingleRegion.shape)==2 #Logits will have shape (output-width x numTasks)
-    assert len(logCountsAcrossSingleRegion.shape)==1 #Logits will be a scalar value
+    # Logits will have shape (output-width x numTasks)
+    assert len(logitsAcrossSingleRegion.shape) == 2
+    assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value
 
     profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
     profile = profileProb * np.exp(logCountsAcrossSingleRegion)

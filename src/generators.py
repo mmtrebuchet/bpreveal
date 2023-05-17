@@ -1,14 +1,8 @@
-import random
-import pysam
-import pybedtools
-import pyBigWig
 from tensorflow import keras
 import numpy as np
-import h5py
 import math
 import logging
 import time
-import tqdm
 
 
 class H5BatchGenerator(keras.utils.Sequence):
@@ -20,14 +14,14 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.outputLength = outputLength
         self.maxJitter = maxJitter
         self.batchSize = batchSize
-        #The shape of the sequence dataset is
-        #(numRegions x (inputLength + jitter*2 x 4))
+        # The shape of the sequence dataset is
+        # (numRegions x (inputLength + jitter*2 x 4))
         self.fullSequences = np.array(dataH5["sequence"])
         self.numRegions = self.fullSequences.shape[0]
-        #The shape of the profile is
-        #(num-heads) x (numRegions x (outputLength + jitter*2) x numTasks)
-        #Similar to the prediction script outputs, the heads are all separate,
-        #and are named "head_N", where N is 0,1,2, etc.
+        # The shape of the profile is
+        # (num-heads) x (numRegions x (outputLength + jitter*2) x numTasks)
+        # Similar to the prediction script outputs, the heads are all separate,
+        # and are named "head_N", where N is 0,1,2, etc.
         self.fullData = []
         for i, h in enumerate(headList):
             self.fullData.append(np.array(dataH5["head_{0:d}".format(i)]))
@@ -46,8 +40,8 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.batchCounts = []
         regionsRemaining = self.numRegions
         for i in range(len(self)):
-            #Build an empty sequence array. Note we have to special-case the last round
-            #in case the number of regions is not divisible by batch size.
+            # Build an empty sequence array. Note we have to special-case the last round
+            # in case the number of regions is not divisible by batch size.
             if (regionsRemaining > self.batchSize):
                 curBatchSize = self.batchSize
             else:
@@ -67,29 +61,29 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.refreshData()
 
     def refreshData(self):
-        #Go over all the data and load it into the data structures
-        #allocated in loadData.
-        #First, randomize which regions go into which batches.
+        # Go over all the data and load it into the data structures
+        # allocated in loadData.
+        # First, randomize which regions go into which batches.
         logging.debug("Refreshing batch data.")
         startTime = time.perf_counter()
         self.rng.shuffle(self.regionIndexes)
         for i in range(self.numRegions):
             tmpSequence = self.fullSequences[i]
-            #fullData is (num-heads)
+            # fullData is (num-heads)
             #            x (  num-regions
             #               x output-width+jitter*2
             #               x numTasks)
-            #so this slice takes the ith region of each of the head datasets.
+            # so this slice takes the ith region of each of the head datasets.
             tmpData = [x[i, :, :] for x in self.fullData]
             if (self.maxJitter > 0):
                 jitterOffset = self.rng.integers(0, self.maxJitter * 2 + 1)
                 tmpSequence = tmpSequence[jitterOffset:jitterOffset + self.inputLength, :]
                 for j in range(len(tmpData)):
                     tmpData[j] = tmpData[j][jitterOffset:jitterOffset + self.outputLength, :]
-                #Note that this generator does *not* revcomp the data,
-                #in case the input are stranded like chip-nexus.
-            #We've collected and trimmed the data, now to fill in the
-            #batch arrays.
+                # Note that this generator does *not* revcomp the data,
+                # in case the input are stranded like chip-nexus.
+            # We've collected and trimmed the data, now to fill in the
+            # batch arrays.
             regionIdx = self.regionIndexes[i]
             batchIdx = regionIdx // self.batchSize
             batchRegionIdx = regionIdx % self.batchSize

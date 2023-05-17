@@ -1,3 +1,18 @@
+Version 3.2.0, 2023-05-17
+	NEW FEATURES:
+	* Previously, if a solo model had a different input length than the
+	residual model, you could not combine them. Melanie added logic so that if
+	the solo model has a smaller input length (for example, because it has
+	fewer layers), the sequence will automatically be cropped down to match
+	it. In this way, you don't have to match solo and residual architectures
+	any more. 
+
+	ENHANCEMENTS:
+	* Further re-formatting to comply with PEP8. 
+
+	CONTRIBUTORS:
+	Melanie Weilert (cropdown logic), Charles McAnany (code cleanup)
+
 Version 3.1.0, 2023-05-14
 	NEW FEATURES:
 	* Added an automatic reverse complement strand selection feature. Instead
@@ -11,6 +26,9 @@ Version 3.1.0, 2023-05-14
 	BUG FIXES:
 	* Fixed a missing import in prepareBed.py that broke the regex mode. 
 
+	CONTRIBUTORS:
+	Charles McAnany
+
 
 Version 3.0.1, 2023-04-26
 	ENHANCEMENTS:
@@ -19,6 +37,9 @@ Version 3.0.1, 2023-04-26
 
 	BUG FIXES:
 	* Fixed a bug in argument order for deduplicating in prepareBed.py
+
+	CONTRIBUTORS:
+	Charles McAnany
 
 Version 3.0.0, 2023-03-10
 	BREAKING CHANGES:

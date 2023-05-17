@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#This file contains several helper functions for dealing with bed files.
+# This file contains several helper functions for dealing with bed files.
 
 import json
 import pyBigWig
@@ -19,8 +19,9 @@ def resize(interval, mode, width, genome):
     match mode:
         case "none":
             if (end - start != width):
-                assert False, "An input region is not the expected width: {0:s}".format(str(interval))
-        case "center": 
+                assert False, \
+                       "An input region is not the expected width: {0:s}".format(str(interval))
+        case "center":
             center = (end + start) // 2
             start = center - width // 2
             end = start + width
@@ -31,7 +32,7 @@ def resize(interval, mode, width, genome):
             assert False, "Unsupported resize mode: {0:s}".format(mode)
     if (start <= 0 or end >= genome.get_reference_length(interval.chrom)):
         return False  # We're off the edge of the chromosome.
-    return pybedtools.Interval(interval.chrom, start, end, name=interval.name, 
+    return pybedtools.Interval(interval.chrom, start, end, name=interval.name,
                                score=interval.score, strand=interval.strand)
 
 
@@ -43,7 +44,7 @@ def getCounts(interval, bigwig):
 def sequenceChecker(interval, genome):
     seq = genome.fetch(interval.chrom, interval.start, interval.end)
     if (len(seq.upper().lstrip('ACGT')) != 0):
-        #There were letters that aren't regular bases. (probably Ns)
+        # There were letters that aren't regular bases. (probably Ns)
         return False
     return True
 
@@ -68,7 +69,7 @@ def loadRegions(config):
     rejectRegions = []
     numRejected = 0
     match config["splits"]:
-        case {"train-chroms": trainChroms, "val-chroms": valChroms, 
+        case {"train-chroms": trainChroms, "val-chroms": valChroms,
               "test-chroms": testChroms, "regions": regionFnames}:
             for bedFile in regionFnames:
                 for line in open(bedFile):
@@ -84,7 +85,7 @@ def loadRegions(config):
                         logging.debug("Rejected region {0:s} because it's not in any "
                                       "of the chromosome sets.".format(line.strip()))
                         rejectRegions.append(r)
-        case {"train-regions": trainRegionFnames, "val-regions": valRegionFnames, 
+        case {"train-regions": trainRegionFnames, "val-regions": valRegionFnames,
               "test-regions": testRegionFnames}:
             for trainBedFile in trainRegionFnames:
                 for line in open(trainBedFile):
@@ -95,7 +96,7 @@ def loadRegions(config):
             for testBedFile in testRegionFnames:
                 for line in open(testBedFile):
                     testRegions.append(lineToInterval(line))
-        case {"train-regex": trainString, "val-regex": valString, 
+        case {"train-regex": trainString, "val-regex": valString,
               "test-regex": testString, "regions": regionFnames}:
             trainRegex = re.compile(trainString)
             valRegex = re.compile(valString)
@@ -130,29 +131,29 @@ def loadRegions(config):
     logging.info("Validation regions: {0:d}".format(len(valRegions)))
     logging.info("Testing regions: {0:d}".format(len(testRegions)))
     logging.info("Rejected on loading: {0:d}".format(len(rejectRegions)))
-    return (pybedtools.BedTool(trainRegions), 
-            pybedtools.BedTool(valRegions), 
-            pybedtools.BedTool(testRegions), 
+    return (pybedtools.BedTool(trainRegions),
+            pybedtools.BedTool(valRegions),
+            pybedtools.BedTool(testRegions),
             pybedtools.BedTool(rejectRegions))
 
 
 def removeOverlaps(config, regions, genome):
-    """Takes in the list of regions, resizes each to the minimum size, and if there are overlaps, 
+    """Takes in the list of regions, resizes each to the minimum size, and if there are overlaps,
         randomly chooses one of the overlapping regions."""
-    #Resize the regions down to the minimum size.
-    resizedRegions = regions.each(resize, 
-                                  config['resize-mode'], 
+    # Resize the regions down to the minimum size.
+    resizedRegions = regions.each(resize,
+                                  config['resize-mode'],
                                   config["overlap-max-distance"], genome).saveas()
-    #The algorithm here requires that the regions be sorted.
+    # The algorithm here requires that the regions be sorted.
     sortedRegions = resizedRegions.sort()
     piles = []
     curPile = [sortedRegions[0]]
     for r in sortedRegions:
         if (curPile[0].chrom == r.chrom and curPile[0].end > r.start):
-            #We have an overlap. 
+            # We have an overlap.
             curPile.append(r)
         else:
-            #No overlap, commit and reset the pile.
+            # No overlap, commit and reset the pile.
             piles.append(curPile)
             curPile = [r]
     if (len(curPile)):
@@ -172,8 +173,8 @@ def removeOverlaps(config, regions, genome):
 
 def validateRegions(config, regions, genome, bigwigs):
 
-    #First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of 
-    #the regions to the minimum size, then sort them and remove overlaps. 
+    # First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of
+    # the regions to the minimum size, then sort them and remove overlaps.
     if (config["remove-overlaps"]):
         noOverlapRegions, initialRejects = removeOverlaps(config, regions, genome)
         noOverlapRegions = noOverlapRegions.saveas()
@@ -186,15 +187,15 @@ def validateRegions(config, regions, genome, bigwigs):
             logging.warning("You have set remove-overlaps to false, but you still provided an "
                             "overlap-max-distance parameter. This parameter is meaningless.")
         logging.debug("Skipping region overlap removal.")
-    #Second, resize the regions to their biggest size.
-    unfilteredBigRegions = initialRegions.each(resize, 
-                                               config["resize-mode"], 
-                                               config["input-length"] + config["max-jitter"] * 2, 
+    # Second, resize the regions to their biggest size.
+    unfilteredBigRegions = initialRegions.each(resize,
+                                               config["resize-mode"],
+                                               config["input-length"] + config["max-jitter"] * 2,
                                                genome).saveas()
     logging.info("Resized sequences. {0:d} remain.".format(unfilteredBigRegions.count()))
     bigRegionsList = list(unfilteredBigRegions.filter(sequenceChecker, genome).saveas())
     logging.info("Filtered for weird nucleotides. {0:d} remain.".format(len(bigRegionsList)))
-    #Now, we have the possible regions. Get their counts values.
+    # Now, we have the possible regions. Get their counts values.
     validRegions = np.ones((len(bigRegionsList),))
     countsStats = dict()
     pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigs))
@@ -221,17 +222,17 @@ def validateRegions(config, regions, genome, bigwigs):
         logging.debug("Rejected {0:f}% of regions for having too many"
             "counts.".format(numReject * 100. / len(bigRegionsList)))
     pbar.close()
-    #We've now validated that the regions don't have too many counts when you inflate them. 
-    #We also need to check that the regions won't have too few counts in the output. 
+    # We've now validated that the regions don't have too many counts when you inflate them.
+    # We also need to check that the regions won't have too few counts in the output.
     logging.info("Validated inflated regions. Surviving: {0:d}".format(int(np.sum(validRegions))))
-    pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigs)) 
+    pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigs))
     bigRegionsBed = pybedtools.BedTool(bigRegionsList)
-    smallRegionsList = list(bigRegionsBed.each(resize, 
-                                               'center', 
+    smallRegionsList = list(bigRegionsBed.each(resize,
+                                               'center',
                                                config["output-length"] - config["max-jitter"] * 2,
                                                genome).saveas())
     for i, bwSpec in enumerate(config["bigwigs"]):
-        #Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
+        # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
         if ("min-quantile" in bwSpec):
             if (bwSpec["min-quantile"] == 0):
                 countsStats[bwSpec["file-name"]][1] = -1
@@ -247,9 +248,9 @@ def validateRegions(config, regions, genome, bigwigs):
         logging.debug("Min counts: {0:s}, file {1:s}".format(str(minCounts), bwSpec["file-name"]))
         countsStats[bwSpec["file-name"]][1] = minCounts[0]
         numReject = 0
-        for regionIdx in range(len(bigRegionsList)): 
-            #within len(bigRegions) in case a region was lost during the resize - we want that to 
-            #crash because resizing down should never invalidate a region due to sequence problems.
+        for regionIdx in range(len(bigRegionsList)):
+            # within len(bigRegions) in case a region was lost during the resize - we want that to
+            # crash because resizing down should never invalidate a region due to sequence problems.
             if (smallCounts[regionIdx] < minCounts[0]):
                 numReject += 1
                 validRegions[regionIdx] = 0
@@ -258,13 +259,14 @@ def validateRegions(config, regions, genome, bigwigs):
     pbar.close()
     logging.info("Validated small regions. Surviving regions: {0:d}"
                  .format(int(np.sum(validRegions))))
-    #Now we resize to the final output size.
+    # Now we resize to the final output size.
     smallRegionsBed = pybedtools.BedTool(smallRegionsList)
-    outRegionsBed = smallRegionsBed.each(resize, 
-                                         'center', 
-                                         config["output-length"], 
+    outRegionsBed = smallRegionsBed.each(resize,
+                                         'center',
+                                         config["output-length"],
                                          genome).saveas()
-    #Since we kept the array of valid regions separately, we now have to create the result manually.
+    # Since we kept the array of valid regions separately,
+    # we now have to create the result manually.
     logging.debug("Counts statistics. Name, max-counts, min-counts.")
     for k in countsStats.keys():
         logging.debug("{0:50s}\t{1:f}\t{2:f}"
@@ -283,6 +285,7 @@ def validateRegions(config, regions, genome, bigwigs):
     else:
         rejects = pybedtools.BedTool(rejectedRegions)
     return (pybedtools.BedTool(filteredRegions), rejects)
+
 
 def prepareBeds(config):
     logging.info("Starting bed file generation.")

@@ -14,7 +14,7 @@ def main(modelFname, pngFile):
     print(model.summary(expand_nested=True, show_trainable=True))
     if (pngFile is not None):
         from tensorflow.keras.utils import plot_model
-        plot_model(model, pngFile, show_shapes=True, show_dtype=True, 
+        plot_model(model, pngFile, show_shapes=True, show_dtype=True,
                 show_layer_names=True, expand_nested=True, show_layer_activations=True)
 
 

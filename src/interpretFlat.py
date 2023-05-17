@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import tensorflow as tf
@@ -15,7 +14,7 @@ import losses
 import h5py
 
 
-#Randomly chosen by /dev/urandom
+# Randomly chosen by /dev/urandom
 def shuffleGenerator(numShuffles):
     RANDOM_SEED = 355687
 
@@ -27,7 +26,7 @@ def shuffleGenerator(numShuffles):
 
 
 def combineMultAndDiffref(mult, orig_inp, bg_data):
-    #This is copied from Zahoor's code.
+    # This is copied from Zahoor's code.
     projected_hypothetical_contribs = \
         np.zeros_like(bg_data[0]).astype('float')
     assert (len(orig_inp[0].shape) == 2)
@@ -37,7 +36,7 @@ def combineMultAndDiffref(mult, orig_inp, bg_data):
         hypothetical_diffref = hypothetical_input[None, :, :] - bg_data[0]
         hypothetical_contribs = hypothetical_diffref * mult[0]
         projected_hypothetical_contribs[:, :, i] = np.sum(hypothetical_contribs, axis=-1)
-    #There are no bias importances, so the np.zeros_like(orig_inp[1]) is not needed.
+    # There are no bias importances, so the np.zeros_like(orig_inp[1]) is not needed.
     return [np.mean(projected_hypothetical_contribs, axis=0)]
 
 
@@ -81,7 +80,7 @@ def main(config):
                        custom_objects={'multinomialNll': losses.multinomialNll})
     genome = pysam.FastaFile(config["genome"])
 
-    #Build up a list of all the regions that need to be shapped.
+    # Build up a list of all the regions that need to be shapped.
     shapTargets = []
     padding = (config["input-length"] - config["output-length"]) // 2
     with open(config["bed-file"]) as fp:
@@ -92,11 +91,11 @@ def main(config):
             stop = int(lsp[2]) + padding
             shapTargets.append((chrom, start, stop))
 
-    #Now build up the array of one-hot encoded sequences.
+    # Now build up the array of one-hot encoded sequences.
     oneHotSequences = np.zeros((len(shapTargets), config["input-length"], 4), dtype=np.int8)
     for i, target in enumerate(shapTargets):
-        #I need to generate a one-hot encoded sequence
-        #that has the current base on its left-most side.
+        # I need to generate a one-hot encoded sequence
+        # that has the current base on its left-most side.
         startPos = target[1]
         stopPos = target[2]
         seq = genome.fetch(target[0], startPos, stopPos)

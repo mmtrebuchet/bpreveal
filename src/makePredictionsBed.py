@@ -14,8 +14,8 @@ import h5py
 import tqdm
 import losses
 import logging
-#Generate a simple sequence model taking one-hot encoded input and
-#producing a logits profile and a log(counts) scalar. 
+# Generate a simple sequence model taking one-hot encoded input and
+# producing a logits profile and a log(counts) scalar.
 
 
 def main(config):
@@ -38,20 +38,20 @@ def main(config):
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
         seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
-    model = load_model(config["settings"]["architecture"]["model-file"], 
+    model = load_model(config["settings"]["architecture"]["model-file"],
                        custom_objects={'multinomialNll': losses.multinomialNll})
     logging.info("Model loaded. Predicting.")
-    preds = model.predict(seqs, batch_size=batchSize, verbose=True, 
+    preds = model.predict(seqs, batch_size=batchSize, verbose=True,
                           workers=10, use_multiprocessing=True)
     logging.info("Predictions complete. Writing hdf5.")
     writePreds(regions, preds, outFile, numHeads, genome)
 
 
 def writePreds(regions, preds, outFile, numHeads, genome):
-    """Regions is the BedTool taken from the config's bed file. 
+    """Regions is the BedTool taken from the config's bed file.
     preds is the output of the model's predict function, no transformations.
-    outputTrackList is straight from the json file. 
-    numheads is the number of output heads. 
+    outputTrackList is straight from the json file.
+    numheads is the number of output heads.
     chromSizes is a dict mapping chromosome names to size. """
     logging.info("Writing predictions")
     stringDtype = h5py.string_dtype(encoding='utf-8')
@@ -75,8 +75,8 @@ def writePreds(regions, preds, outFile, numHeads, genome):
                                        "data type of these fields to fix."
         outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
 
-    #Build a table of chromosome numbers. For space savings, only store the
-    #index into the chrom_names table.
+    # Build a table of chromosome numbers. For space savings, only store the
+    # index into the chrom_names table.
     chromDset = [chromNameToIndex[r.chrom] for r in regions]
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]

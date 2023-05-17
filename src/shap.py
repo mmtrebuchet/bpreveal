@@ -130,10 +130,10 @@ class TFDeepExplainer:
         if type(data) != list and (hasattr(data, '__call__')==False):
             data = [data]
         self.data = data
-        
+
         self._vinputs = {} # used to track what op inputs depends on the model inputs
         self.orig_grads = {}
-        
+
         # if we are not given a session find a default session
         if session is None:
             try:
@@ -229,7 +229,7 @@ class TFDeepExplainer:
             if hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 orig_IsBackpropagatable = tf_gradients_impl._IsBackpropagatable
                 tf_gradients_impl._IsBackpropagatable = lambda tensor: True
-            
+
             # define the computation graph for the attribution values using custom a gradient-like computation
             try:
                 out = self.model_output[:,i] if self.multi_output else self.model_output
@@ -561,7 +561,7 @@ def passthrough(explainer, op, *grads):
 
 def break_dependence(explainer, op, *grads):
     """ This function name is used to break attribution dependence in the graph traversal.
-     
+
     These operation types may be connected above input data values in the graph but their outputs
     don't depend on the input values (for example they just depend on the shape).
     """
@@ -650,7 +650,7 @@ op_handlers["Softmax"] = softmax
 """
 This code is adapted from Avanti Shrikumar's version of Scott Lundberg's shap repository.
 This version is based on commit 79f1b24d69311b2d74942fb6a4446807ed12174e
-to kundajelab/shap on GitHub. 
+to kundajelab/shap on GitHub.
 
 The MIT License (MIT)
 

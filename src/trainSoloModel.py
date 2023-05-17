@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-#os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import utils
@@ -14,16 +13,16 @@ from callbacks import getCallbacks
 import models
 
 
-def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, 
+def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs,
                earlyStop, outputPrefix, plateauPatience, tensorboardDir=None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
     if (tensorboardDir is not None):
         from callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    history = model.fit(trainBatchGen, epochs=epochs, 
+    history = model.fit(trainBatchGen, epochs=epochs,
                         validation_data=valBatchGen, callbacks=callbacks)
-    #Turn the learning rate data into python floats, since they come as 
-    #numpy floats and those are not serializable.
+    # Turn the learning rate data into python floats, since they come as
+    # numpy floats and those are not serializable.
     history.history['lr'] = [float(x) for x in history.history["lr"]]
     return history
 
@@ -34,7 +33,7 @@ def main(config):
     utils.setMemoryGrowth()
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    numHeads = len(config["heads"]) 
+    numHeads = len(config["heads"])
 
     model = models.soloModel(
         inputLength, outputLength,
@@ -63,18 +62,18 @@ def main(config):
     valH5 = h5py.File(config["val-data"], "r")
 
     trainGenerator = generators.H5BatchGenerator(
-        config["heads"], trainH5, inputLength, outputLength, 
+        config["heads"], trainH5, inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     valGenerator = generators.H5BatchGenerator(
-        config["heads"], valH5, inputLength, outputLength, 
+        config["heads"], valH5, inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized.")
     tensorboardDir = None
     if ("tensorboard-log-dir" in config):
         tensorboardDir = config["tensorflow-log-dir"]
-    history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator, 
-                         config["settings"]["epochs"], 
-                         config["settings"]["early-stopping-patience"], 
+    history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator,
+                         config["settings"]["epochs"],
+                         config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
                          tensorboardDir)

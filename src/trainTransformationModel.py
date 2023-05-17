@@ -13,15 +13,15 @@ import models
 import logging
 
 
-def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop, 
+def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
                outputPrefix, plateauPatience, tensorboardDir=None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
     if (tensorboardDir is not None):
         from callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    history = model.fit(trainBatchGen, epochs=epochs, 
+    history = model.fit(trainBatchGen, epochs=epochs,
                         validation_data=valBatchGen, callbacks=callbacks)
-    #Turn the learning rates into python floats for json serialization. 
+    # Turn the learning rates into python floats for json serialization.
     history.history['lr'] = [float(x) for x in history.history['lr']]
     return history
 
@@ -34,8 +34,8 @@ def main(config):
                       "input-length in transformation config files."
     inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]
-    numHeads = len(config["heads"]) 
-    soloModel = load_model(config["settings"]["solo-model-file"], 
+    numHeads = len(config["heads"])
+    soloModel = load_model(config["settings"]["solo-model-file"],
             custom_objects={'multinomialNll': losses.multinomialNll})
 
     soloModel.trainable = False  # We're in the regression phase, no training the bias model!
@@ -62,22 +62,22 @@ def main(config):
     valH5 = h5py.File(config["val-data"], "r")
 
     trainGenerator = generators.H5BatchGenerator(
-        config["heads"], trainH5, 
-        inputLength, outputLength, 
+        config["heads"], trainH5,
+        inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     valGenerator = generators.H5BatchGenerator(
-        config["heads"], valH5, 
-        inputLength, outputLength, 
+        config["heads"], valH5,
+        inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized. Training.")
     tensorboardDir = None
     if ("tensorboard-log-dir" in config):
         tensorboardDir = config["tensorboard-log-dir"]
 
-    history = trainModel(model, inputLength, outputLength, trainGenerator, 
-                         valGenerator, config["settings"]["epochs"], 
-                         config["settings"]["early-stopping-patience"], 
-                         config["settings"]["output-prefix"], 
+    history = trainModel(model, inputLength, outputLength, trainGenerator,
+                         valGenerator, config["settings"]["epochs"],
+                         config["settings"]["early-stopping-patience"],
+                         config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
                          tensorboardDir)
 

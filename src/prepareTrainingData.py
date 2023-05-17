@@ -11,9 +11,9 @@ import utils
 
 
 def revcompSeq(oneHotSeq):
-    #Since the order of the one-hot encoding is ACGT, if we flip the array
-    #up-down, we complement the sequence, and if we flip it left-right, we
-    #reverse it. So reverse complement of the one hot sequence is just:
+    # Since the order of the one-hot encoding is ACGT, if we flip the array
+    # up-down, we complement the sequence, and if we flip it left-right, we
+    # reverse it. So reverse complement of the one hot sequence is just:
     return np.flip(oneHotSeq)
 
 
@@ -39,7 +39,7 @@ def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
 
 
 def getHead(bed, bigwigFnames, outputLength, jitter, revcomp):
-    #Note that revcomp should be either False or the task-order array (which is truthy).
+    # Note that revcomp should be either False or the task-order array (which is truthy).
     numSequences = bed.count()
     if (not revcomp):
         headVals = np.zeros((numSequences, outputLength + 2 * jitter, len(bigwigFnames)))
@@ -79,7 +79,7 @@ def writeH5(config):
         if (config["reverse-complement"]):
             revcomp = head["revcomp-task-order"]
             if (revcomp == "auto"):
-                #The user has left reverse-complementing up to us.
+                # The user has left reverse-complementing up to us.
                 match len(head["bigwig-files"]):
                     case 1:
                         revcomp = [0]

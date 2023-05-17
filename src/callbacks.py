@@ -1,10 +1,10 @@
 import logging
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
-                                       ReduceLROnPlateau
+    ReduceLROnPlateau
 
 
 def getCallbacks(earlyStop, outputPrefix, plateauPatience):
-    logging.debug("Creating callbacks based on earlyStop " +
+    logging.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
                       earlyStop, outputPrefix, plateauPatience))
     earlyStopCallback = EarlyStopping(monitor='val_loss',

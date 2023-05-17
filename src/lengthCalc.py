@@ -80,26 +80,26 @@ def get_length_difference(n_dil_layers, initial_convolution_widths, profile_kern
 
     overhang = 0
     for convWidth in initial_convolution_widths:
-        #First, remove the conv1 layer. The layer width must be odd.
+        # First, remove the conv1 layer. The layer width must be odd.
         assert convWidth % 2 == 1
-        #How many bases to trim? Consider a filter of width 5.
+        # How many bases to trim? Consider a filter of width 5.
         #    DATADATADATADATADATA
         #    12345          12345
         #    ''PREDICTIONPREDIC''
-        #We remove convWidth // 2 bases on each side, for a total of convWidth-1.
+        # We remove convWidth // 2 bases on each side, for a total of convWidth-1.
         overhang += (convWidth - 1)
         if (verbose):
             print("Convolutional layer, width {0:d}, receptive field {1:d}"
                   .format(convWidth, overhang + 1))
 
-    #Now we iterate through the dilated convolutions. The dilation rate starts at 2, then doubles
-    #at each layer in the network.
+    # Now we iterate through the dilated convolutions. The dilation rate starts at 2, then doubles
+    # at each layer in the network.
     #     DATADATADATADATADATADATADATA
     #     C O N                  C O N
     #     ''INTERMEDIATEINTERMEDIATE''
     #       C   O   N      C   O   N
     #       ''''PREDICTIONPREDIC''''
-    #The pattern is that the first layer removes four bases, the next eight bases, and so on.
+    # The pattern is that the first layer removes four bases, the next eight bases, and so on.
     # N
     # __
     # \
@@ -108,7 +108,7 @@ def get_length_difference(n_dil_layers, initial_convolution_widths, profile_kern
     overhang += 2 ** (n_dil_layers + 2) - 4
     if (verbose):
         print("After dilated convolutions, receptive field {0:d}".format(overhang + 1))
-    #Now, at the bottom, we have the output filter. It's the same math as the first filter.
+    # Now, at the bottom, we have the output filter. It's the same math as the first filter.
     assert profile_kernel_size % 2 == 1
     overhang += (profile_kernel_size - 1)
     if (verbose):
@@ -124,22 +124,22 @@ def getOutputLength(seq_len, n_dil_layers, initial_convolution_widths,
         Args:
             seq_len : The length of the input sequence, in bp.
             n_dil_layers : The number of dilated convolutional layers in BPNet.
-            initial_convolution_widths : The widths of the convolutional kernels preceding 
+            initial_convolution_widths : The widths of the convolutional kernels preceding
                 the dilated convolutions. In the original BPNet, this was a single layer of
                 width 25, so this argument would be [25].
             profile_kernel_size : The width of the final kernel that generates the profiles,
                 typically around 75.
         Returns:
-            An integer representing the width of the profile that will be calculated. If this 
-            value is zero or lower, then no bases will have their profile predicted and the 
+            An integer representing the width of the profile that will be calculated. If this
+            value is zero or lower, then no bases will have their profile predicted and the
             model is invalid.
     """
     return seq_len \
-        - get_length_difference(n_dil_layers, initial_convolution_widths, 
+        - get_length_difference(n_dil_layers, initial_convolution_widths,
                                 profile_kernel_size, verbose)
 
 
-def getInputLength(out_pred_len, n_dil_layers, initial_convolution_widths, 
+def getInputLength(out_pred_len, n_dil_layers, initial_convolution_widths,
                    profile_kernel_size, verbose):
     """Given a BPNet architecture and a length of the output profile, calculate the width of the
     input sequence necessary to get that profile..
@@ -147,8 +147,8 @@ def getInputLength(out_pred_len, n_dil_layers, initial_convolution_widths,
         Args:
             out_pred_len : The length of the output profile, in bp.
             n_dil_layers : The number of dilated convolutional layers in BPNet.
-            initial_convolution_widths : The widths of the convolutional kernels preceding 
-                the dilated convolutions. In the original BPNet, this was a single layer of 
+            initial_convolution_widths : The widths of the convolutional kernels preceding
+                the dilated convolutions. In the original BPNet, this was a single layer of
                 width 25, so this argument would be [25].
             profile_kernel_size : The width of the final kernel that generates the profiles,
                 typically around 75.
@@ -156,7 +156,7 @@ def getInputLength(out_pred_len, n_dil_layers, initial_convolution_widths,
             An integer representing the width of the sequence necessary to calculate the profile.
     """
     return out_pred_len \
-        + get_length_difference(n_dil_layers, initial_convolution_widths, 
+        + get_length_difference(n_dil_layers, initial_convolution_widths,
                                 profile_kernel_size, verbose)
 
 

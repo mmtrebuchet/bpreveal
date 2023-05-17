@@ -34,7 +34,7 @@ def loadFasta(fastaFname):
                 curSeq = curSeq + line
         else:
             if (len(curSeq)):
-                #Add the last sequence in the fasta.
+                # Add the last sequence in the fasta.
                 sequences.append(curSeq)
                 titles.append(curTitle)
     return sequences, titles
@@ -56,19 +56,20 @@ def main(config):
     for i, seq in enumerate(sequences):
         seqs[i] = utils.oneHotEncode(seq)
     logging.info("Input prepared. Loading model.")
-    model = load_model(config["settings"]["architecture"]["model-file"], 
+    model = load_model(config["settings"]["architecture"]["model-file"],
                        custom_objects={'multinomialNll': losses.multinomialNll})
     logging.info("Model loaded. Predicting.")
-    preds = model.predict(seqs, batch_size=batchSize, verbose=(config["verbosity"] in ["INFO", "DEBUG"]),
+    preds = model.predict(seqs, batch_size=batchSize,
+                          verbose=(config["verbosity"] in ["INFO", "DEBUG"]),
                           workers=10, use_multiprocessing=True)
     logging.info("Predictions complete. Writing hdf5.")
     writePreds(descriptions, preds, outFile, numHeads)
 
 
 def writePreds(descriptions, preds, outFile, numHeads):
-    """descriptions is a list of strings, the '>' line of each entry in the input fasta. 
+    """descriptions is a list of strings, the '>' line of each entry in the input fasta.
     preds is the output of the model's predict function, no transformations.
-    outputTrackList is straight from the json file. 
+    outputTrackList is straight from the json file.
     numheads is the number of output heads."""
     logging.info("Writing predictions")
     stringDtype = h5py.string_dtype(encoding='utf-8')

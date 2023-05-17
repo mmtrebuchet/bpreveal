@@ -15,7 +15,7 @@ def writeBigWig(inH5, outFname, verbose):
     outBw.addHeader(sorted(bwHeader))
     logging.debug("Bigwig header" + str((sorted(bwHeader))))
     numRegions = inH5['coords_chrom'].shape[0]
-    #Sort the regions. 
+    # Sort the regions.
     coordsChrom = np.array(inH5['coords_chrom'])
     coordsStart = np.array(inH5['coords_start'])
     coordsEnd   = np.array(inH5['coords_end'])
@@ -32,19 +32,19 @@ def writeBigWig(inH5, outFname, verbose):
     if (verbose):
         regionRange = tqdm.tqdm(regionRange)
     for regionNumber in regionRange:
-        #Extract the appropriate region from the sorted list. 
+        # Extract the appropriate region from the sorted list.
 
         if (regionChrom != curChrom):
             curChrom = regionChrom
             startWritingAt = 0
 
         if (startWritingAt < regionStart):
-            #The next region starts beyond the end 
-            #of the previous one. Some bases will not be filled in.
+            # The next region starts beyond the end
+            # of the previous one. Some bases will not be filled in.
             startWritingAt = regionStart
-        #By default, write the whole region. 
+        # By default, write the whole region.
         stopWritingAt = regionStop
-        #As long as we aren't on the last region, check for overlaps.
+        # As long as we aren't on the last region, check for overlaps.
 
         if (regionNumber < numRegions - 1):
             nextRegion = regionOrder[regionNumber + 1]
@@ -52,26 +52,26 @@ def writeBigWig(inH5, outFname, verbose):
             nextStart = coordsStart[nextRegion]
             nextStop = coordsEnd[nextRegion]
             if (nextChrom == regionChrom and nextStart < stopWritingAt):
-                #The next region overlaps. So stop writing before then. 
+                # The next region overlaps. So stop writing before then.
                 overlapSize = regionStop - nextStart
                 stopWritingAt = stopWritingAt - overlapSize // 2
         dataSliceStart = startWritingAt - regionStart
         dataSliceStop = stopWritingAt - regionStart
 
-        #Okay, now it's time to actually do the thing to the data! 
+        # Okay, now it's time to actually do the thing to the data!
         importances = inH5["hyp_scores"][regionID]
         seq = inH5["input_seqs"][regionID]
         projected = np.array(importances) * np.array(seq)
-        #Add up all the bases to get a vector of projected importances. 
-        profile = np.sum(projected, axis=1) 
+        # Add up all the bases to get a vector of projected importances.
+        profile = np.sum(projected, axis=1)
         vals = [float(x) for x in profile[dataSliceStart:dataSliceStop]]
-        outBw.addEntries(regionChrom, 
+        outBw.addEntries(regionChrom,
                          int(startWritingAt),
                          values=vals,
                          span=1, step=1)
 
-        #Update the region. By pulling the first setting of the region variables out of the loop,
-        #I avoid double-dipping to get those data from the H5. 
+        # Update the region. By pulling the first setting of the region variables out of the loop,
+        # I avoid double-dipping to get those data from the H5.
         startWritingAt = stopWritingAt
         if (nextRegion is not None):
             regionID = nextRegion
