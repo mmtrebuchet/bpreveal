@@ -2,93 +2,30 @@
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
 import utils
 import json
-import pysam
-import numpy as np
-
-import shap
-from keras.models import load_model
-import losses
-import h5py
-import logging
-#Randomly chosen by /dev/urandom
-RANDOM_SEED=355687
-def shuffleGenerator(numShuffles):
-    def generateShuffles(model_inputs):
-        rng = np.random.RandomState(RANDOM_SEED)
-        shuffles = [rng.permutation(model_inputs[0]) for x in range(numShuffles)]
-        shuffles = np.array(shuffles)
-        return [shuffles]
-    return generateShuffles
-
-
+import pisa
 
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    utils.setMemoryGrowth()
-    model = load_model(config["model-file"], 
-                       custom_objects = {'multinomialNll' : losses.multinomialNll})
-    genome = pysam.FastaFile(config["genome"])
+    receptiveField = config["input-length"] - config["output-length"]
+    generator = pisa.BedGenerator(config["bed-file"], config["genome"],
+                                  config["input-length"], config["output-length"])
+    writer = pisa.H5Saver(config["output-h5"], generator.numRegions, config["num-shuffles"],
+                          receptiveField, genome=config["genome"], useTqdm=True)
+    #For benchmarking, I've added a feature where you can dump a
+    #python profiling session to disk. You should probably
+    #never use this feature unless you're tuning shap performance or something.
+    #Long story short, all of the code's time is spent inside the shap library.
+    profileFname = None
+    if ("DEBUG_profile-output" in config):
+        profileFname = config["DEBUG_profile-output"]
 
-    #Build up a list of all the regions that need to be shapped. 
-    shapTargets = []
-    with open(config["bed-file"]) as fp:
-        for line in fp:
-            lsp = line.split()
-            chrom = lsp[0]
-            start = int(lsp[1])
-            stop = int(lsp[2])
-            for pos in range(start, stop):
-                shapTargets.append((chrom, pos))
-    #Now build up the array of one-hot encoded sequences.
-    oneHotSequences = np.zeros((len(shapTargets), config["input-length"], 4), dtype='float64')
-    padding = (config["input-length"] - config["output-length"]) //2
-    for i, target in enumerate(shapTargets):
-        #I need to generate a one-hot encoded sequence that has the current base on its left-most side. 
-        startPos = target[1] - padding
-        stopPos = startPos + config["input-length"]
-        seq = genome.fetch(target[0], startPos, stopPos)
-        oneHot = utils.oneHotEncode(seq)
-        oneHotSequences[i] = oneHot
-    
-    shuffler = shuffleGenerator(config["num-shuffles"])
-    shuffles = shuffler(oneHotSequences[:1])
-    sar = np.array(shuffles)
-    #                                      Keep the first dimension so it seems like a batch size of one.v    
-    #                                       Leftmost base in output v                                    |
-    #                            All of the samples in this batch v |     Sum samples in batch. v        |
-    #Oh boy, this slice.                      |--Current head---| V V  |current task----|       V        V
-    outputTarget = tf.reduce_sum(model.outputs[config["head-id"]][:,0, config["task-id"]], axis=0, keepdims=True)
-    profileExplainer = shap.TFDeepExplainer( (model.input, outputTarget), 
-                                    shuffles)
-    profileShapScores = profileExplainer.shap_values([oneHotSequences])
-
-    outputFile = h5py.File(config["output-h5"], 'w')
-
-    outputFile.attrs["head-id"] = config["head-id"]
-    outputFile.attrs["task-id"] = config["task-id"]
-    
-    stringDtype = h5py.string_dtype(encoding='utf-8')
-    outputFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
-    outputFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u4')
-    chromNameToIdx = dict()
-    for i, chromName in enumerate(genome.references):
-        outputFile['chrom_names'][i] = chromName
-        chromNameToIdx[chromName] = i
-        outputFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
-    outputFile.create_dataset('coords_chrom', (len(shapTargets),), dtype='u1')
-    outputFile.create_dataset('coords_base', (len(shapTargets),), dtype='u4')
-    for i, pos in enumerate(shapTargets):
-        outputFile['coords_chrom'][i] = chromNameToIdx[pos[0]]
-        outputFile['coords_base'][i] = pos[1]
-    outputFile.create_dataset('sequence', data=oneHotSequences[:,:-config['output-length'],:])
-    outputFile.create_dataset('shap', data=profileShapScores[:,:-config['output-length'],:])
-    outputFile.close()
-
+    batcher = pisa.PisaRunner(config["model-file"], config["head-id"], config["task-id"],
+                              10, generator, writer, config["num-shuffles"],
+                              receptiveField, profileFname)
+    batcher.run()
 
 
 if (__name__ == "__main__"):

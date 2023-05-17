@@ -8,12 +8,14 @@ tf = None
 tf_ops = None
 tf_gradients_impl = None
 
+
 def standard_combine_mult_and_diffref(mult, orig_inp, bg_data):
-    diffref_input = [orig_inp[l] - bg_data[l] for l in range(len(orig_inp))]
-    to_return = [(mult[l] * (diffref_input[l])).mean(0)
-            for l in range(len(orig_inp))]
+    diffref_input = [orig_inp[x] - bg_data[x] for x in range(len(orig_inp))]
+    to_return = [(mult[x] * (diffref_input[x])).mean(0)
+            for x in range(len(orig_inp))]
 
     return to_return
+
 
 class TFDeepExplainer:
     """
@@ -246,7 +248,7 @@ class TFDeepExplainer:
         return self.phi_symbolics[i]
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max",
-                             progress_message=None):
+                             progress_message=False):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -279,7 +281,10 @@ class TFDeepExplainer:
             phis = []
             for k in range(len(X)):
                 phis.append(np.zeros(X[k].shape))
-            for j in tqdm.tqdm(range(X[0].shape[0])):
+            pbar = range(X[0].shape[0])
+            if(progress_message):
+                pbar = tqdm.tqdm(pbar)
+            for j in pbar:
                 if (hasattr(self.data, '__call__')):
                     bg_data = self.data([X[l][j] for l in range(len(X))])
                     if type(bg_data) != list:
