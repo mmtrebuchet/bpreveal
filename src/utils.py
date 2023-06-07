@@ -3,7 +3,6 @@ import numpy as np
 import scipy
 
 
-
 def setMemoryGrowth():
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
@@ -42,7 +41,7 @@ def oneHotEncode(sequence):
     ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
     ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
     ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord('t'))
-    assert (np.sum(ret) == len(sequence)), (sorted(sequence), sorted(ret.sum(axis=1)))
+    assert (np.sum(ret) == len(sequence)), "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
 
 
@@ -53,7 +52,8 @@ def logitsToProfile(logitsAcrossSingleRegion, logCountsAcrossSingleRegion):
     """
     # Logits will have shape (output-width x numTasks)
     assert len(logitsAcrossSingleRegion.shape) == 2
-    assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value
+    # If the logcounts passed in is a float, this will break.
+    # assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value
 
     profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
     profile = profileProb * np.exp(logCountsAcrossSingleRegion)
@@ -62,33 +62,32 @@ def logitsToProfile(logitsAcrossSingleRegion, logCountsAcrossSingleRegion):
 
 class BatchPredictor:
     """This is a utility class for when you need to make lots of predictions,
-    and you may be generating sequences dynamically. Here's how it works. 
+    and you may be generating sequences dynamically. Here's how it works.
     You first create a predictor by calling BatchPredictor(modelName, batchSize).
-    If you're not sure, a batch size of 64 is probably good. 
+    If you're not sure, a batch size of 64 is probably good.
 
     Now, you submit any sequences you want predicted, using the submit methods.
-    Under the hood, every batchSize-th time you submit a sequence, this class will
-    round up those sequences into a batch and run them through the model. 
 
-    Once you've submitted all the sequences you want, you call runBatch() 
-    to make sure there aren't any lingering sequences in the input. 
-
-    Now that you've run all of your sequences, you can get your results with
+    Once you've submitted all of your sequences, you can get your results with
     the getOutput() method.
 
-    Note that the getOutput() method returns *one* result at a time, and 
-    you have to call getOutput() once for every time you called one of the 
+    Note that the getOutput() method returns *one* result at a time, and
+    you have to call getOutput() once for every time you called one of the
     submit methods. """
     def __init__(self, modelFname, batchSize):
         """Starts up the BatchPredictor. This will load your model,
-        and get ready to make predictions."""
+        and get ready to make predictions.
+        modelFname is the name of the BPReveal model that you want
+        to make predictions from. It's the same name you give for
+        the model in any of the other BPReveal tools.
+        batchSize is the number of samples that should be run simultaneously through the model."""
         logging.debug("Creating batch predictor.")
         from keras.models import load_model
         import losses
         from collections import deque
 
         self._model = load_model(modelFname,
-                custom_objects={"multinomialNll" : losses.multinomialNLL})
+                custom_objects={"multinomialNll": losses.multinomialNll})
         logging.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,
@@ -99,13 +98,23 @@ class BatchPredictor:
         self._inWaiting = 0
         self._outWaiting = 0
 
+    def clear(self):
+        """If you've left your predictor in some weird state, you can reset it
+        by calling clear(). This empties all the queues."""
+        self._inQueue.clear()
+        self._outQueue.clear()
+        self._inWaiting = 0
+        self._outWaiting = 0
+
     def submitOHE(self, sequence, label):
         """Sequence is an (input-length x 4) ndarray containing the
         one-hot encoded sequence to predict.
         label is any object, and it will be returned with the prediction."""
-        self._inQueue.appendLeft((sequence, label))
+        self._inQueue.appendleft((sequence, label))
         self._inWaiting += 1
-        if(self._inWaiting > self._batchSize):
+        if self._inWaiting > self._batchSize*64:
+            # We have a ton of sequences to run, so go ahead
+            # and run a batch real quick.
             self.runBatch()
 
     def submitString(self, sequence, label):
@@ -118,13 +127,14 @@ class BatchPredictor:
 
     def runBatch(self):
         """This actually runs the batch. Normally, this will be called
-        by the submit functions, but you should also call it manually
-        once you've submitted all of the sequences you're interested in,
-        otherwise you could have sequences left in the input queue."""
+        by the submit functions, and it will also be called if you ask
+        for output and the output queue is empty (assuming there are
+        sequences waiting in the input queue.)"""
         logging.debug("Starting batch run.")
-        if(self._inWaiting == 0):
+        if self._inWaiting == 0:
             # There are no samples to process right now, so return
             # (successfully) immediately.
+            logging.info("runBatch was called even though there was nothing to do.")
             return
         numSamples = self._inWaiting
         labels = []
@@ -138,22 +148,41 @@ class BatchPredictor:
         modelInputs[0] = firstElem[0]
         # With that ugliness out of the way, now I just populate the rest of
         # the prediction table.
+        writeHead = 1
         while self._inWaiting:
             nextElem = self._inQueue.pop()
-            modelInputs[i+1] = nextElem[0]
+            modelInputs[writeHead] = nextElem[0]
             labels.append(nextElem[1])
+            writeHead += 1
             self._inWaiting -= 1
         logging.debug("Running batch through model.")
-        preds = self._model(modelInputs[:numSamples,:,:])
+        preds = self._model.predict(modelInputs[:numSamples, :, :], verbose=0, batch_size=self._batchSize)
         # I now need to parse out the shape of the prediction toa
         # generate the correct outputs.
-        numHeads = len(preds)//2  # Two predictions (logits & logcounts)
-                                  # for each head.
+        numHeads = len(preds) // 2  # Two predictions (logits & logcounts)
+                                    # for each head.
+        # The output from the prediction is an awkward shape for
+        # decomposing the batch.
+        # Each head produces a logits tensor of
+        # (batch-size x output-length x num-tasks)
+        # and a logcounts tensor of (batch-size,)
+        # but I want to return something for each batch.
+        # So I'll mimic a batch size of one.
+        # Note that I'm collapsing the batch dimension out,
+        # so you don't have to always have a [0] index to
+        # indicate the first element of the batch.
+
         for i in range(numSamples):
             curHeads = []
+            # The logits come first.
             for j in range(numHeads):
-                curHeads.append(preds[j][i], preds[j+numHeads][i])
-            self._outQueue.appendLeft((curHeads, labels[i]))
+                curHeads.append(preds[j][i])
+            # and then the logcounts. For ease of processing,
+            # I'm converting the logcounts to a float, rather than
+            # a scalar value inside a numpy array.
+            for j in range(numHeads):
+                curHeads.append(float(preds[j + numHeads][i]))
+            self._outQueue.appendleft((curHeads, labels[i]))
             self._outWaiting += 1
 
     def outputReady(self):
@@ -168,30 +197,33 @@ class BatchPredictor:
         in the future. Instead, you should use a label when you submit your
         sequences and use that to determine order.
         The output will be a two-tuple.
-        The first element will be a list of length numHeads,
-        each element being a two-tuple.
-        The first element of *that* tuple will be a (outputLength * numTasks)
-        ndarray of the logits. The kth tuple in the list corresponds to head k.
-        The second element of the inner tuple is a scalar logcounts value.
+        The first element will be a list of length numHeads*2, representing the
+        output from the model. Since the output of the model will always have
+        a dimension representing the batch size, and this function only returns
+        the result of running a single sequence, the dimension representing
+        the batch size is removed. In other words, running the model on a
+        single example would give a logits output of shape
+        (1 x output-length x num-tasks).
+        But this function will remove that, so you will get an array of shape
+        (output-length x numTasks)
+        As with calling the model directly, the first numHeads elements are the
+        logits arrays, and then come the logcounts for each head.
         You can pass the logits and logcounts values to utils.logitsToProfile
         to get your profile.
         Going back to the outer tuple, the second element will be the label you
         passed in with the original sequence.
         Graphically:
-        ( [ ( <head-1-logits>, <head-1-logcounts> ),
-            ( <head-2-logits>, <head-2-logcounts> ),
-            ...
+        ( [<head-1-logits>, <head-2-logits>, ...
+           <head-1-logcounts>, <head-2-logcounts>, ...
           ],
           label)
-        Note that this is a VERY different arrangement from the output of calling the
-        model directly, but should be more convenient.
         """
-        assert self._outWaiting > 0, "You cannot get output when there is none ready. "\
-            "Did you forget to call runBatch()?"
+        if not self._outWaiting:
+            if self._inWaiting:
+                # There are inputs that have not been processed. Run the batch.
+                self.runBatch()
+            else:
+                assert False, "There are no outputs ready, and the input queue is empty."
         ret = self._outQueue.pop()
         self._outWaiting -= 1
         return ret
-
-
-
-
