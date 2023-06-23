@@ -1,3 +1,19 @@
+Version 3.3.0, 2023-06-23
+	NEW FEATURES:
+	* Added a genetic algorithm module. See the demo pdfs for how to use them. 
+	* Added a batch-running tool to utils.py, this lets you run many sequences
+	through your model without worrying about constructing batches
+	efficiently. 
+
+	ENHANCEMENTS:
+	* Rewrote makePredictionsFasta to stream data in and out. It is now quite
+	fast and uses very little memory. 
+	* Updated the OSKN demo python notebook to be compatible with version 3. 
+
+	CONTRIBUTORS:
+	Charles McAnany
+
+
 Version 3.2.0, 2023-05-17
 	NEW FEATURES:
 	* Previously, if a solo model had a different input length than the

@@ -41,7 +41,8 @@ def oneHotEncode(sequence):
     ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
     ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
     ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord('t'))
-    assert (np.sum(ret) == len(sequence)), "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
+    assert (np.sum(ret) == len(sequence)), \
+        "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
 
 
@@ -112,7 +113,7 @@ class BatchPredictor:
         label is any object, and it will be returned with the prediction."""
         self._inQueue.appendleft((sequence, label))
         self._inWaiting += 1
-        if self._inWaiting > self._batchSize*64:
+        if self._inWaiting > self._batchSize * 64:
             # We have a ton of sequences to run, so go ahead
             # and run a batch real quick.
             self.runBatch()
@@ -130,7 +131,6 @@ class BatchPredictor:
         by the submit functions, and it will also be called if you ask
         for output and the output queue is empty (assuming there are
         sequences waiting in the input queue.)"""
-        logging.debug("Starting batch run.")
         if self._inWaiting == 0:
             # There are no samples to process right now, so return
             # (successfully) immediately.
@@ -155,8 +155,9 @@ class BatchPredictor:
             labels.append(nextElem[1])
             writeHead += 1
             self._inWaiting -= 1
-        logging.debug("Running batch through model.")
-        preds = self._model.predict(modelInputs[:numSamples, :, :], verbose=0, batch_size=self._batchSize)
+        preds = self._model.predict(modelInputs[:numSamples, :, :],
+                                    verbose=0,
+                                    batch_size=self._batchSize)
         # I now need to parse out the shape of the prediction toa
         # generate the correct outputs.
         numHeads = len(preds) // 2  # Two predictions (logits & logcounts)
