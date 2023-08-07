@@ -5,6 +5,8 @@ scratch
 .snakemake
 doc/overview.aux
 doc/overview.log
+doc/overview.toc
+doc/overview.out
 src/__pycache__
 doc/img
 **/*.bw
