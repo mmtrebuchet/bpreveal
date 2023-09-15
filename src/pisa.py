@@ -436,9 +436,7 @@ class _Batcher:
         self.receptiveField = receptiveField
         logging.debug("Batcher prepared, creating explainer.")
         # This slice....
-
-        #
-        #
+        # Oh, this slice is a doozy!
         #                         Keep the first dimension, so it looks like a batch of size one--,
         #                                             Sum the samples in this batch-,             |
         #                                          The current task ----,           |             |

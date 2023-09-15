@@ -6,6 +6,7 @@ import logging
 import scipy.stats
 import scipy.spatial.distance
 import tqdm
+import json
 from multiprocessing import Process, Queue
 
 
@@ -50,11 +51,13 @@ class MetricsCalculator:
             pearsonr = scipy.stats.pearsonr(referenceData, predictedData)[0]
 
             spearmanr = scipy.stats.spearmanr(referenceData, predictedData)[0]
+            referenceCounts = np.sum(referenceData)
+            predictedCounts = np.sum(predictedData)
         else:
+            #We had a zero in our inputs. Poison the results.
             mnllVal = jsd = pearsonr = spearmanr = np.nan
+            referenceCounts = predictedCounts = np.nan
 
-        referenceCounts = np.sum(referenceData)
-        predictedCounts = np.sum(predictedData)
         ret = (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCounts, predictedCounts)
         self.outQueue.put(ret)
 
@@ -90,28 +93,34 @@ def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
     logging.debug("Generator done.")
 
 
-def percentileStats(name, vector, header=False):
-    vector = vector[np.logical_not(np.isnan(vector))]
+def percentileStats(name, vector, jsonDict, header=False, write=True):
     quantileCutoffs = np.linspace(0, 1, 5)
+    if vector.shape[0] < 5:
+        vector = np.zeros((5,))
     quantiles = np.quantile(vector, quantileCutoffs)
-    if (header):
+    jsonDict[name] = {"quantile-cutoffs" : list(quantileCutoffs),
+                      "quantiles" : list(quantiles)}
+    if header:
         print("{0:10s}".format("metric")
               + "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
               + "\t{0:s}".format("regions"))
-    print("{0:10s}".format(name)
-          + "".join(["\t{0:15f}".format(x) for x in quantiles])
-          + "\t{0:d}".format(vector.shape[0]))
+    if write:
+        print("{0:10s}".format(name)
+              + "".join(["\t{0:15f}".format(x) for x in quantiles])
+              + "\t{0:d}".format(vector.shape[0]))
 
 
-def receiveThread(numRegions, outputQueue):
+def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
     mnlls = np.zeros((numRegions,))
     jsds = np.zeros((numRegions,))
     pearsonrs = np.zeros((numRegions,))
     spearmanrs = np.zeros((numRegions,))
     referenceCounts = np.zeros((numRegions,))
     predictedCounts = np.zeros((numRegions,))
-
-    for i in tqdm.tqdm(range(numRegions)):
+    pbar = range(numRegions)
+    if not jsonOutput:
+        pbar = tqdm.tqdm(pbar)
+    for _ in pbar:
         ret = outputQueue.get()
         (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCount, predictedCount) = ret
         mnlls[regionID] = mnllVal
@@ -120,24 +129,41 @@ def receiveThread(numRegions, outputQueue):
         spearmanrs[regionID] = spearmanr
         referenceCounts[regionID] = referenceCount
         predictedCounts[regionID] = predictedCount
+    if skipZeroes:
+        def norm(vector):
+            return vector[np.isfinite(vector)]
+        mnlls = norm(mnlls)
+        jsds = norm(jsds)
+        pearsonrs = norm(pearsonrs)
+        spearmanrs = norm(spearmanrs)
+        referenceCounts = norm(referenceCounts)
+        predictedCounts = norm(predictedCounts)
 
     # Calculate the percentiles for each of the profile metrics.
-    percentileStats("mnll", mnlls, header=True)
-    percentileStats("jsd", jsds)
-    percentileStats("pearsonr", pearsonrs)
-    percentileStats("spearmanr", spearmanrs)
+    w = not jsonOutput
+    percentileStats("mnll", mnlls, jsonDict, header=w, write=w)
+    percentileStats("jsd", jsds, jsonDict, header=False, write=w)
+    percentileStats("pearsonr", pearsonrs, jsonDict, header=False, write=w)
+    percentileStats("spearmanr", spearmanrs, jsonDict, header=False, write=w)
 
     countsPearson = scipy.stats.pearsonr(referenceCounts, predictedCounts)
     countsSpearman = scipy.stats.spearmanr(referenceCounts, predictedCounts)
-    print("Counts pearson \t{0:10f}".format(countsPearson[0]))
-    print("Counts spearman\t{0:10f}".format(countsSpearman[0]))
+    if not jsonOutput:
+        print("Counts pearson \t{0:10f}".format(countsPearson[0]))
+        print("Counts spearman\t{0:10f}".format(countsSpearman[0]))
+    else:
+        jsonDict["counts-pearson"] : countsPearson[0]
+        jsonDict["counts-spearman"] : countsSpearman[0]
 
+    if jsonOutput:
+        print(json.dumps(jsonDict, indent=4))
 
-def runMetrics(reference, predicted, regions, threads, applyAbs):
+def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jsonOutput):
     regionQueue = Queue()
     resultQueue = Queue()
     numberQueue = Queue()
-    print("reference {0:s} predicted {1:s} regions {2:s}".format(reference, predicted, regions))
+    if not jsonOutput:
+        print("reference {0:s} predicted {1:s} regions {2:s}".format(reference, predicted, regions))
     regionThread = Process(target=regionGenThread,
                            args=(regions, regionQueue, threads, numberQueue))
     processorThreads = []
@@ -153,7 +179,9 @@ def runMetrics(reference, predicted, regions, threads, applyAbs):
     # Clunky, but avoids re-reading the bed file.
     numRegions = numberQueue.get()
 
-    writerThread = Process(target=receiveThread, args=(numRegions, resultQueue))
+    writerThread = Process(target=receiveThread,
+        args=(numRegions, resultQueue, skipZeroes, jsonOutput,
+        {"reference" : reference, "predicted" : predicted, "regions" : regions}))
 
     writerThread.start()
     writerThread.join()
@@ -172,6 +200,16 @@ def main():
             help="Display progress as the file is being written.", action='store_true')
     parser.add_argument("--threads",
             help="Number of parallel threads to use. Default 1.", default=1, type=int)
+    parser.add_argument("--skip-zeroes",
+            help="When a region has zero counts, the default behavior is to poison the results"
+                 "with NaN, to indicate that a problem has occurred. If this flag is set,"
+                 "then regions with zero counts in either bigwig will be silently skipped.",
+            action="store_true",
+            dest="skipZeroes")
+    parser.add_argument("--json-output",
+            help="Instead of producing a human-readable output, generate a machine-readable json file.",
+            action="store_true",
+            dest="jsonOutput")
     parser.add_argument("--apply-abs",
             help="Use the absolute value of the entries in the bigwig. Useful if one bigwig "
                  "contains negative values.",
@@ -182,7 +220,8 @@ def main():
     else:
         logging.basicConfig(level=logging.WARNING)
 
-    runMetrics(args.reference, args.predicted, args.regions, args.threads, args.applyAbs)
+    runMetrics(args.reference, args.predicted, args.regions, args.threads, 
+               args.applyAbs, args.skipZeroes, args.jsonOutput)
 
 
 if (__name__ == "__main__"):

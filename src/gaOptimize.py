@@ -12,6 +12,60 @@ IN_T = "Ť"
 IN_L = "ǍČǦŤ"
 IN_D = {"A": "Ǎ", "C": "Č", "G": "Ǧ", "T": "Ť"}
 
+#Use these to map corruptors to integers.
+CORRUPTOR_TO_IDX= {"A": 0, "C": 1, "G": 2, "T": 3,
+                   "Ǎ": 4, "Č": 5, "Ǧ": 6, "Ť": 7,
+                   "d" : 8}
+#Given an integer, which corruptor does it represent?
+#This is the inverse of CORRUPTOR_TO_IDX.
+IDX_TO_CORRUPTOR="ACGTǍČǦŤd"
+
+def corruptorsToArray(corruptorList):
+    """Given a list of corruptor tuples, like [(1354, 'C'), (1514, 'Ť'), (1693, 'd')],
+    convert that to an integer list that can be easily saved. This list will have the format
+    [ [1354, 1], [1514, 7], [1693, 8] ]
+    where the second number indicates the type of corruptor, as given by CORRUPTOR_TO_IDX.
+    Returns a list of lists, not a numpy array!
+    If you want an array, use `np.array(corruptorsToArray(myCorruptors))`"""
+    ret = []
+    for corruptor in corruptorList:
+        ret.append([corruptor[0], CORRUPTOR_TO_IDX[corruptor[1]]])
+    return ret
+
+def arrayToCorruptors(corruptorArray):
+    """The inverse of corruptorsToArray, takes an array of numerical corruptors in the form
+    [ [1354, 1], [1514, 7], [1693, 8] ]
+    and generates the canonical list with letters, as used in the rest of the code.
+    This function will work on a list or a numpy array of shape (N x 2).
+    Returns a list of tuples, one for each position that was corrupted, like:
+    [(1354, 'C'), (1514, 'Ť'), (1693, 'd')]
+    """
+    ret = []
+    for corruptorPair in corruptorArray:
+        pos = int(corruptorPair[0])
+        idx = int(corruptorPair[1])
+        ret.append( (pos, IDX_TO_CORRUPTOR[idx]) )
+    return ret
+
+def stringToCorruptorList(corruptorStr):
+    """Takes a string representing a list of corruptors and generates
+    the actual list as a python object. For example, if the string is
+        "[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]"
+    this function will parse it to the list of tuples
+        [(1354, 'C'), (1514, 'Ť'), (1693, 'd')]
+
+    (The inverse of this function is simply `str` on a corruptor list.)
+    """
+    import ast
+    ret = []
+    tree = ast.parse(corruptorStr)
+    elems = tree.body[0].value.elts
+    for e in elems:
+        pos = e.elts[0].value
+        cor = e.elts[1].value
+        ret.append( (pos, cor) )
+    return ret
+
 
 class Organism:
     """This represents the set of corruptors that are to be applied to the

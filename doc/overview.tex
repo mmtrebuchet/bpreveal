@@ -712,7 +712,7 @@ They are retained exactly as passed in.
 
 \begin{lstlisting}
 <prepare-bed-configuration> ::={
-    "bigwigs" : [data/testData.bw<bigwig-preparation-list>],
+    <bigwig-section>,
     "splits" : {<split-settings>},
     "genome" : <file-name>,
     "output-length" : <integer>,
@@ -723,15 +723,22 @@ They are retained exactly as passed in.
     <overlaps-section>
     <verbosity-section>
     }
+<bigwig-section> ::=
+    "heads" : [<head-preparation-list>]
+  | (DEPRECATED) "bigwigs" : [<bigwig-preparation-list>]
 
 <overlap-section> ::=
     "remove-overlaps" : true,
     "overlap-max-distance" : <integer>,
   | "remove-overlaps" : false,
 
-<bigwig-preparation-list> ::=
-    <individual-preparation-bigwig>
-  | <individual-preparation-bigwig>, <bigwig-preparation-list>
+(DEPRECATED) <bigwig-preparation-list> ::=
+(DEPRECATED)    <individual-preparation-bigwig>
+(DEPRECATED)  | <individual-preparation-bigwig>, <bigwig-preparation-list>
+
+<head-preparation-list> ::=
+    <individual-preparation-head>
+  | <individual-preparation-head>, <head-preparation-list>
 
 <resize-mode> ::=
     "none"
@@ -744,11 +751,17 @@ They are retained exactly as passed in.
     "output-val" : <file-name>,
     "output-test" : <file-name>
 
-<individual-preparation-bigwig> ::=
- { "file-name" : <file-name>,
+<individual-preparation-head> ::=
+ { "bigwig-names" : [<list-of-bigwig-files>],
    <max-cutoff-section>,
    <min-cutoff-section>
    }
+
+(DEPRECATED) <individual-preparation-bigwig> ::=
+(DEPRECATED)  { "file-name" : <file-name>,
+(DEPRECATED)    <max-cutoff-section>,
+(DEPRECATED)    <min-cutoff-section>
+(DEPRECATED)    }
 
 <max-cutoff-section> ::=
    "max-quantile" : <number>
@@ -779,6 +792,10 @@ They are retained exactly as passed in.
     "test-regex" : "<string>",
     "train-regex" : "<string>",
     "val-regex" : "<string>"
+
+<list-of-bigwig-files> ::=
+    <file-name>, <list-of-bigwig-files>
+  | <file-name>
 
 <list-of-bed-files> ::=
     <file-name>, <list-of-bed-files>

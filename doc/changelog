@@ -1,3 +1,32 @@
+Version 3.3.1, 2023-08-30
+	ENHANCEMENTS:
+	* Added a "heads" section to prepareBed.py json files. This lets you
+	combined multiple bigwigs just as you do for the final model. The old
+	"bigwigs" section is now deprecated, and will be removed in BPReveal 5.0.
+	Previously, if you had a two-task head, prepareBed.py would reject any
+	region where *either* of those tasks was outside of your counts limits.
+	The new version adds the bigwigs in each head together before doing the
+	counts culling. This is useful when one track has zero reads but the other
+	still has data.
+	Thanks to Melanie for suggesting this feature.
+	* Finally ran through shap.py and fixed formatting. 
+	* Added two features to metrics.py. First, for regions that are empty,
+	metrics.py now has a feature to simply ignore those regions rather than
+	using them in counts correlations (they were always ignored in profile
+	correlations). Second, added a feature to generate json output for ease of
+	parsing. 
+	* Added three utility functions to gaOptimize.py for easily converting
+	lists of corruptors to and from strings and numerical arrays. 
+	Thanks to Haining Jiang for suggesting these. 
+
+	DEPRECATIONS:
+	* The "bigwigs" section in prepareBed.py json files has been deprecated
+	and will become an error in BPReveal 5.0.
+
+	CONTRIBUTORS:
+	Melanie Weilert, Charles McAnany.
+
+
 Version 3.3.0, 2023-06-23
 	NEW FEATURES:
 	* Added a genetic algorithm module. See the demo pdfs for how to use them. 
