@@ -234,8 +234,8 @@ def validateRegions(config, regions, genome, bigwigLists):
     # We've now validated that the regions don't have too many counts when you inflate them.
     # We also need to check that the regions won't have too few counts in the output.
     logging.info("Validated inflated regions. Surviving: {0:d}".format(int(np.sum(validRegions))))
-    pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
     bigRegionsBed = pybedtools.BedTool(bigRegionsList)
+    pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
     smallRegionsList = list(bigRegionsBed.each(resize,
                                                'center',
                                                config["output-length"] - config["max-jitter"] * 2,
