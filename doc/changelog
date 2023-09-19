@@ -1,3 +1,14 @@
+Version 3.1.2, 2023-09-19
+	BUG FIXES:
+	* Updated the conda install script to be compatible with Tensorflow 2.12.
+	The tensorflow-probability package that had been installed was too old, so
+	I have changed to getting tensorflow and tensorflow-probability from conda.
+	The build script also installs mamba, which seemed to work better for me.
+
+	CONTRIBUTORS:
+	Charles McAnany
+
+
 Version 3.3.1, 2023-08-30
 	ENHANCEMENTS:
 	* Added a "heads" section to prepareBed.py json files. This lets you
