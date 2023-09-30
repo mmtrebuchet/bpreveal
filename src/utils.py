@@ -4,6 +4,10 @@ import scipy
 
 
 def setMemoryGrowth():
+    """Turn on the tensorflow option to grow memory usage as needed, instead
+       of allocating the whole GPU. All of the main programs in BPReveal
+       do this, so that you can use your GPU for other stuff as you work
+       with models."""
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
     try:
@@ -35,6 +39,12 @@ def setVerbosity(userLevel):
 
 
 def oneHotEncode(sequence):
+    """Converts the string sequence into a one-hot encoded numpy array.
+       The returned array will have shape (len(sequence), 4).
+       The columns are, in order, A, C, G, and T.
+       This function will error out if your sequence contains any
+       characters other than ACGTacgt, so N nucleotides are rejected."""
+
     ret = np.empty((len(sequence), 4), dtype='int8')
     ordSeq = np.fromstring(sequence, np.int8)
     ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
@@ -44,6 +54,22 @@ def oneHotEncode(sequence):
     assert (np.sum(ret) == len(sequence)), \
         "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
+
+def oneHotDecode(oneHotSequence):
+    """Given an array representing a one-hot encoded sequence, convert it back 
+    to a string. The input shall have shape (sequenceLength, 4), and the output 
+    will be a Python string. """
+    # Convert to an int8 array, since if we get floating point
+    # values, the chr() call will fail.
+    oneHotArray = oneHotSequence.astype(np.uint8)
+    ret = np.zeros((oneHotArray.shape[0],), dtype=np.uint8)
+
+    ret += oneHotArray[:,0] * ord('A')
+    ret += oneHotArray[:,1] * ord('C')
+    ret += oneHotArray[:,2] * ord('G')
+    ret += oneHotArray[:,3] * ord('T')
+
+    return ''.join([chr(x) for x in ret])
 
 
 def logitsToProfile(logitsAcrossSingleRegion, logCountsAcrossSingleRegion):
