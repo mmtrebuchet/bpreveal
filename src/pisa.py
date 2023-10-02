@@ -437,16 +437,16 @@ class _Batcher:
         logging.debug("Batcher prepared, creating explainer.")
         # This slice....
         # Oh, this slice is a doozy!
-        #                         Keep the first dimension, so it looks like a batch of size one--,
-        #                                             Sum the samples in this batch-,             |
-        #                                          The current task ----,           |             |
-        #                             The leftmost predicted base--,    |           |             |
-        #                              All samples in the batch-,  |    |           |             |
-        #                                               Current |  |    |           |             |
-        #                                                head   V  V    V           |             |
-        outputTarget = tf.reduce_sum(self.model.outputs[headId][:, 0, taskId], axis=0, keepdims=True)
+        #                      Keep the first dimension, so it looks like a batch of size one--,
+        #                                          Sum the samples in this batch-,             |
+        #                                       The current task ----,           |             |
+        #                          The leftmost predicted base--,    |           |             |
+        #                           All samples in the batch-,  |    |           |             |
+        #                                            Current |  |    |           |             |
+        #                                             head   V  V    V           |             |
+        outTarget = tf.reduce_sum(self.model.outputs[headId][:, 0, taskId], axis=0, keepdims=True)
         self.profileExplainer = shap.TFDeepExplainer(
-            (self.model.input, outputTarget),
+            (self.model.input, outTarget),
             self.generateShuffles)
         logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 

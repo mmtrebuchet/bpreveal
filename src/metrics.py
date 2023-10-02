@@ -54,7 +54,7 @@ class MetricsCalculator:
             referenceCounts = np.sum(referenceData)
             predictedCounts = np.sum(predictedData)
         else:
-            #We had a zero in our inputs. Poison the results.
+            # We had a zero in our inputs. Poison the results.
             mnllVal = jsd = pearsonr = spearmanr = np.nan
             referenceCounts = predictedCounts = np.nan
 
@@ -98,8 +98,8 @@ def percentileStats(name, vector, jsonDict, header=False, write=True):
     if vector.shape[0] < 5:
         vector = np.zeros((5,))
     quantiles = np.quantile(vector, quantileCutoffs)
-    jsonDict[name] = {"quantile-cutoffs" : list(quantileCutoffs),
-                      "quantiles" : list(quantiles)}
+    jsonDict[name] = {"quantile-cutoffs": list(quantileCutoffs),
+                      "quantiles": list(quantiles)}
     if header:
         print("{0:10s}".format("metric")
               + "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
@@ -152,11 +152,12 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
         print("Counts pearson \t{0:10f}".format(countsPearson[0]))
         print("Counts spearman\t{0:10f}".format(countsSpearman[0]))
     else:
-        jsonDict["counts-pearson"] : countsPearson[0]
-        jsonDict["counts-spearman"] : countsSpearman[0]
+        jsonDict["counts-pearson"]: countsPearson[0]
+        jsonDict["counts-spearman"]: countsSpearman[0]
 
     if jsonOutput:
         print(json.dumps(jsonDict, indent=4))
+
 
 def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jsonOutput):
     regionQueue = Queue()
@@ -181,7 +182,7 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
 
     writerThread = Process(target=receiveThread,
         args=(numRegions, resultQueue, skipZeroes, jsonOutput,
-        {"reference" : reference, "predicted" : predicted, "regions" : regions}))
+        {"reference": reference, "predicted": predicted, "regions": regions}))
 
     writerThread.start()
     writerThread.join()
@@ -207,7 +208,8 @@ def main():
             action="store_true",
             dest="skipZeroes")
     parser.add_argument("--json-output",
-            help="Instead of producing a human-readable output, generate a machine-readable json file.",
+            help="Instead of producing a human-readable output, "
+                 "generate a machine-readable json file.",
             action="store_true",
             dest="jsonOutput")
     parser.add_argument("--apply-abs",
@@ -220,7 +222,7 @@ def main():
     else:
         logging.basicConfig(level=logging.WARNING)
 
-    runMetrics(args.reference, args.predicted, args.regions, args.threads, 
+    runMetrics(args.reference, args.predicted, args.regions, args.threads,
                args.applyAbs, args.skipZeroes, args.jsonOutput)
 
 

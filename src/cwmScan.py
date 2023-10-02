@@ -7,24 +7,24 @@ import json
 
 def cwmScanMain(config):
     utils.setVerbosity(config["verbosity"])
-    if "quantile-settings" in config:
+    if "seqlet-settings" in config:
         logging.info("Modisco seqlet analysis requested. Starting.")
-        quantileConfig = config["quantile-settings"]
+        quantileConfig = config["seqlet-settings"]
         # First, make the pattern objects.
         csvFname = None
         if "seqlets-csv" in quantileConfig:
             csvFname = quantileConfig["seqlets-csv"]
         scanPatternDict = cwmUtils.analyzeSeqlets(quantileConfig["modisco-h5"],
-                                              quantileConfig["modisco-contrib-h5"],
-                                              quantileConfig["patterns"],
-                                              quantileConfig["ic-quantile"],
-                                              quantileConfig["contrib-quantile"],
-                                              quantileConfig["L1-quantile"],
-                                              quantileConfig["trim-threshold"],
-                                              quantileConfig["trim-padding"],
-                                              quantileConfig["background-probs"],
-                                              csvFname
-                                              )
+                                                  quantileConfig["modisco-contrib-h5"],
+                                                  quantileConfig["patterns"],
+                                                  quantileConfig["ic-quantile"],
+                                                  quantileConfig["contrib-quantile"],
+                                                  quantileConfig["L1-quantile"],
+                                                  quantileConfig["trim-threshold"],
+                                                  quantileConfig["trim-padding"],
+                                                  quantileConfig["background-probs"],
+                                                  csvFname
+                                                  )
         logging.info("Analysis complete.")
         if "quantile-json" in config:
             # You specified both quantile-settings and quantile-json.
@@ -45,6 +45,7 @@ def cwmScanMain(config):
                           config["hits-bed"],
                           config["window-size"],
                           config["num-threads"])
+
 
 if __name__ == "__main__":
     import sys

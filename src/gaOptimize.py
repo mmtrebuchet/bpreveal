@@ -12,13 +12,14 @@ IN_T = "Ť"
 IN_L = "ǍČǦŤ"
 IN_D = {"A": "Ǎ", "C": "Č", "G": "Ǧ", "T": "Ť"}
 
-#Use these to map corruptors to integers.
-CORRUPTOR_TO_IDX= {"A": 0, "C": 1, "G": 2, "T": 3,
-                   "Ǎ": 4, "Č": 5, "Ǧ": 6, "Ť": 7,
-                   "d" : 8}
-#Given an integer, which corruptor does it represent?
-#This is the inverse of CORRUPTOR_TO_IDX.
-IDX_TO_CORRUPTOR="ACGTǍČǦŤd"
+# Use these to map corruptors to integers.
+CORRUPTOR_TO_IDX = {"A": 0, "C": 1, "G": 2, "T": 3,
+                    "Ǎ": 4, "Č": 5, "Ǧ": 6, "Ť": 7,
+                    "d": 8}
+# Given an integer, which corruptor does it represent?
+# This is the inverse of CORRUPTOR_TO_IDX.
+IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
+
 
 def corruptorsToArray(corruptorList):
     """Given a list of corruptor tuples, like [(1354, 'C'), (1514, 'Ť'), (1693, 'd')],
@@ -32,6 +33,7 @@ def corruptorsToArray(corruptorList):
         ret.append([corruptor[0], CORRUPTOR_TO_IDX[corruptor[1]]])
     return ret
 
+
 def arrayToCorruptors(corruptorArray):
     """The inverse of corruptorsToArray, takes an array of numerical corruptors in the form
     [ [1354, 1], [1514, 7], [1693, 8] ]
@@ -44,8 +46,9 @@ def arrayToCorruptors(corruptorArray):
     for corruptorPair in corruptorArray:
         pos = int(corruptorPair[0])
         idx = int(corruptorPair[1])
-        ret.append( (pos, IDX_TO_CORRUPTOR[idx]) )
+        ret.append((pos, IDX_TO_CORRUPTOR[idx]))
     return ret
+
 
 def stringToCorruptorList(corruptorStr):
     """Takes a string representing a list of corruptors and generates
@@ -63,7 +66,7 @@ def stringToCorruptorList(corruptorStr):
     for e in elems:
         pos = e.elts[0].value
         cor = e.elts[1].value
-        ret.append( (pos, cor) )
+        ret.append((pos, cor))
     return ret
 
 
@@ -92,7 +95,7 @@ class Organism:
 
         seq = []
         readHead = 0  # The position in the input sequence where the
-                      # next base should be taken from.
+        # next base should be taken from.
 
         writeHead = 0  # Our current position in the output sequence.
         # Note that writeHead will be close, but not exactly the same,

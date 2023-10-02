@@ -55,19 +55,20 @@ def oneHotEncode(sequence):
         "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
 
+
 def oneHotDecode(oneHotSequence):
-    """Given an array representing a one-hot encoded sequence, convert it back 
-    to a string. The input shall have shape (sequenceLength, 4), and the output 
+    """Given an array representing a one-hot encoded sequence, convert it back
+    to a string. The input shall have shape (sequenceLength, 4), and the output
     will be a Python string. """
     # Convert to an int8 array, since if we get floating point
     # values, the chr() call will fail.
     oneHotArray = oneHotSequence.astype(np.uint8)
-    ret = np.zeros((oneHotArray.shape[0],), dtype=np.uint8)
+    ret = np.zeros((oneHotArray.shape[0], ), dtype=np.uint8)
 
-    ret += oneHotArray[:,0] * ord('A')
-    ret += oneHotArray[:,1] * ord('C')
-    ret += oneHotArray[:,2] * ord('G')
-    ret += oneHotArray[:,3] * ord('T')
+    ret += oneHotArray[:, 0] * ord('A')
+    ret += oneHotArray[:, 1] * ord('C')
+    ret += oneHotArray[:, 2] * ord('G')
+    ret += oneHotArray[:, 3] * ord('T')
 
     return ''.join([chr(x) for x in ret])
 
