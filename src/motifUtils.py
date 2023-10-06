@@ -13,6 +13,14 @@ import csv
 import tqdm
 import scipy.signal
 import multiprocessing
+from pstats import SortKey
+import cProfile
+import pstats
+import io
+ENABLE_DEBUG_PROFILING = False
+
+PROFILING_SORT_ORDER = SortKey.TIME
+FLOAT_T = np.float32
 
 
 def arrayQuantileMap(standard, samples, standardSorted=False):
@@ -55,11 +63,11 @@ def arrayQuantileMap(standard, samples, standardSorted=False):
     return np.interp(samples, standard, standardQuantiles)
 
 
-def slidingDotproduct(importanceScores, cwm):
+def slidingDotproduct(seqletValues, pssm):
     # The funny slice here is because scipy.signal.correlate doesn't collapse the
     # length-one dimension that is a result of both sequences having the same
     # second dimension.
-    return scipy.signal.correlate(importanceScores, cwm, mode='valid')[:, 0]
+    return scipy.signal.correlate(seqletValues, pssm, mode='valid')[:, 0]
 
 
 def ppmToPwm(ppm, backgroundProbs):
@@ -204,19 +212,19 @@ class Pattern:
 
     # The following arrays are of shape (numSeqlets,):
     # The information content match for each seqlet to the pattern's pssm.
-    seqletICs = None
+    seqletSeqMatches = None
     # The continuous Jaccard similarity between each seqlet and the pattern's cwm
-    seqletJaccards = None
+    seqletContribMatches = None
     # The sum of the absolute value of all contribution scores for each seqlet.
-    seqletL1s = None
+    seqletContribMagnitudes = None
 
     # When you give the quantile bounds to getCutoffs, these get stored:
     # What is the minimal information content (i.e., pssm) match score for a hit?
-    cutoffIC = None
+    cutoffSeqMatch = None
     # What is the minimal Jaccard similarity between a seqlet and the cwm for a hit?
-    cutoffJaccard = None
+    cutoffContribMatch = None
     # What is the minimum total contribution a seqlet must have to be a hit?
-    cutoffL1 = None
+    cutoffContribMagnitude = None
 
     # If you load in genomic coordinates by providing the contribution hdf5, these
     # members will get populated. Each is a list of length numSeqlets.
@@ -254,8 +262,8 @@ class Pattern:
 
         """
         h5Pattern = modiscoFp[self.metaclusterName][self.patternName]
-        self.cwm = np.array(h5Pattern["contrib_scores"])
-        self.ppm = np.array(h5Pattern["sequence"])
+        self.cwm = np.array(h5Pattern["contrib_scores"], dtype=FLOAT_T)
+        self.ppm = np.array(h5Pattern["sequence"], dtype=FLOAT_T)
         self.pwm = ppmToPwm(self.ppm, backgroundProbs)
         self.pssm = ppmToPssm(self.ppm, backgroundProbs)
         self.cwmTrimLeftPoint, self.cwmTrimRightPoint = cwmTrimPoints(self.cwm,
@@ -264,13 +272,16 @@ class Pattern:
         self.cwmTrim = self.cwm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
         self.pssmTrim = self.pssm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
 
+    def _callJaccard(self, seqlet, cwm):
+        return jaccard.slidingJaccard(seqlet, cwm)
+
     def loadSeqlets(self, modiscoFp):
         """This function loads up all the seqlet data from the modisco file and calculates
         quantile values for information content match, contribution jaccard match,
         and contribution L1 match.
         """
         seqletsGroup = modiscoFp[self.metaclusterName][self.patternName]["seqlets"]
-        self.seqletContribs = np.array(seqletsGroup["contrib_scores"])
+        self.seqletContribs = np.array(seqletsGroup["contrib_scores"], dtype=FLOAT_T)
         self.seqletStarts = np.array(seqletsGroup["start"])
         self.seqletEnds = np.array(seqletsGroup["end"])
         self.seqletIndexes = np.array(seqletsGroup["example_idx"])
@@ -280,27 +291,31 @@ class Pattern:
         self.numSeqlets = int(seqletsGroup["n_seqlets"][0])
         # Now it's time to calculate stuff!
         # First, scan the seqlets and get their similarities to the called motif.
-        seqletICScan = [
-            float(slidingDotproduct(x[self.cwmTrimLeftPoint:self.cwmTrimRightPoint],
-                                    self.pssmTrim))
-            for x in self.seqletOneHots]
-        self.seqletICs = np.array(seqletICScan)
-        self.seqletJaccards = np.zeros((self.numSeqlets,))
-        self.seqletL1s = np.zeros((self.numSeqlets,))
+        self.seqletSeqMatches = np.zeros((self.numSeqlets,), dtype=FLOAT_T)
+        self.seqletContribMatches = np.zeros((self.numSeqlets,), dtype=FLOAT_T)
+        self.seqletContribMagnitudes = np.zeros((self.numSeqlets,), dtype=FLOAT_T)
         for i in range(self.numSeqlets):
             trimmedSeqlet = self.seqletContribs[i, self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
-            jaccardScores, L1 = jaccard.slidingJaccard(trimmedSeqlet, self.cwmTrim)
-            self.seqletJaccards[i] = float(jaccardScores)
-            self.seqletL1s[i] = float(L1)
+            contribMatch, contribMagnitude = self._callJaccard(trimmedSeqlet, self.cwmTrim)
+            self.seqletContribMatches[i] = float(contribMatch)
+            self.seqletContribMagnitudes[i] = float(contribMagnitude)
+            seqMatchScore = slidingDotproduct(self.seqletOneHots[i]
+                                              [self.cwmTrimLeftPoint:self.cwmTrimRightPoint],
+                                              self.pssmTrim)
+            self.seqletSeqMatches[i] = float(seqMatchScore)
 
-    def getCutoffs(self, quantileIC, quantileJaccard, quantileL1):
+    def getCutoffs(self, quantileSeqMatch, quantileContribMatch, quantileContribMagnitude):
         """Given the quantile values you want to use as cutoffs, actually
         look at the seqlet data and pick the right parameters. If you want to choose
-        your own quantile cutoffs, set the cutoffIC, cutoffJaccard, and cutoffL1 members
-        of this object."""
-        self.cutoffIC = np.quantile(self.seqletICs, quantileIC)
-        self.cutoffJaccard = np.quantile(self.seqletJaccards, quantileJaccard)
-        self.cutoffL1 = np.quantile(self.seqletL1s, quantileL1)
+        your own quantile cutoffs, set the cutoffSeqMatch, cutoffContribMatch,
+        and cutoffContribMagnitude members of this object."""
+        if quantileSeqMatch is not None:
+            self.cutoffSeqMatch = np.quantile(self.seqletSeqMatches, quantileSeqMatch)
+        if quantileContribMatch is not None:
+            self.cutoffContribMatch = np.quantile(self.seqletContribMatches, quantileContribMatch)
+        if quantileContribMagnitude is not None:
+            self.cutoffContribMagnitude = np.quantile(self.seqletContribMagnitudes,
+                                                      quantileContribMagnitude)
 
     def seqletInfoIterator(self):
         """An iterator (meaning you can use it as the range in a for loop)
@@ -311,14 +326,14 @@ class Pattern:
             "start" : <integer>,
             "end" : <integer>,
             "short-name" : <string>,
-            "L1-score" : <float>,
+            "contrib-magnitude" : <float>,
             "strand" : <character>,
 
             "metacluster-name" : <string>,
             "pattern-name" : <string>
             "sequence" : <string>,
             "index" : <integer>,
-            "ic-match" : <float>,
+            "seq-match" : <float>,
             "contrib-match" : <float>
         }
         """
@@ -330,15 +345,15 @@ class Pattern:
             ret["start"] = self.seqletGenomicStarts[i]
             # TODO ditto
             ret["end"] = self.seqletGenomicEnds[i]
-            ret["short-name"] = self.shortName
-            ret["L1-score"] = self.seqletL1s[i]
+            ret["short_name"] = self.shortName
+            ret["contrib_magnitude"] = self.seqletContribMagnitudes[i]
             ret["strand"] = '-' if self.seqletRevcomps[i] else '+'
-            ret["metacluster-name"] = self.metaclusterName
-            ret["pattern-name"] = self.patternName
+            ret["metacluster_name"] = self.metaclusterName
+            ret["pattern_name"] = self.patternName
             ret["sequence"] = self.seqletSequences[i]
-            ret["index"] = self.seqletIndexes[i]
-            ret["ic-match"] = self.seqletICs[i]
-            ret["contrib-match"] = self.seqletJaccards[i]
+            ret["region_index"] = self.seqletIndexes[i]
+            ret["seq_match"] = self.seqletSeqMatches[i]
+            ret["contrib_match"] = self.seqletContribMatches[i]
             yield ret
 
     def loadSeqletCoordinates(self, contribH5fp):
@@ -349,9 +364,9 @@ class Pattern:
         seqletChroms, seqletGenomicStarts, seqletGenomicEnds.
 
         """
-        self.seqletChroms = ["chr1" for _ in range(self.numSeqlets)]
-        self.seqletGenomicStarts = self.seqletStarts
-        self.seqletGenomicEnds = self.seqletEnds
+        self.seqletChroms = ["UNDEFINED" for _ in range(self.numSeqlets)]
+        self.seqletGenomicStarts = [-10000 for _ in range(self.numSeqlets)]
+        self.seqletGenomicEnds = [-10000 for _ in range(self.numSeqlets)]
 
     def getScanningInfo(self):
         """Get a dictionary (that can be converted to json) containing
@@ -361,15 +376,15 @@ class Pattern:
                 "short-name": self.shortName,
                 "cwm": self.cwmTrim.tolist(),
                 "pssm": self.pssmTrim.tolist(),
-                "ic-cutoff": self.cutoffIC,
-                "jaccard-cutoff": self.cutoffJaccard,
-                "L1-cutoff": self.cutoffL1}
+                "seq-match-cutoff": self.cutoffSeqMatch,
+                "contrib-match-cutoff": self.cutoffContribMatch,
+                "contrib-magnitude-cutoff": self.cutoffContribMagnitude}
 
 
-def analyzeSeqlets(modiscoH5Fname, contribH5Fname, patternSpec,
-                   quantileIC, quantileJaccard, quantileL1,
-                   trimThreshold, trimPadding, backgroundProbs,
-                   outputSeqletsFname=None):
+def seqletCutoffs(modiscoH5Fname, contribH5Fname, patternSpec,
+                  quantileSeqMatch, quantileContribMatch, quantileContribMagnitude,
+                  trimThreshold, trimPadding, backgroundProbs,
+                  outputSeqletsFname=None):
     """Given a modisco hdf5 file, go over the seqlets and establish the quantile boundaries.
     If you give hard cutoffs for information content and L1 norm match, this function need not
     be called.
@@ -387,15 +402,15 @@ def analyzeSeqlets(modiscoH5Fname, contribH5Fname, patternSpec,
     patternSpec is either a list of dicts, or the string "all". See makePatternObjects for how
         this parameter is interpreted.
 
-    quantileIC is the information content shared between the PSSM (which is based on nucleotide
-        frequency, NOT contribution scores. A lower value means allow sequences which are a worse
-        match to the PSSM.
-    quantileJaccard gives the similarity required between the contribution scores of each seqlet
-        and the cwm of the pattern (i.e., motif). Lower means let through worse matches to the
-        contribution scores.
-    quantileL1 gives the cutoff in terms of total importance for a seqlet for it to be considered.
-        A low value means that seqlets that have low total contribution (sum(abs(contrib scores)))
-        can still be considered hits.
+    quantileSeqMatch is the information content shared between the PSSM (which is based on
+        nucleotide frequency, NOT contribution scores. A lower value means allow sequences
+        which are a worse match to the PSSM.
+    quantileContribMatch gives the similarity required between the contribution scores of
+        each seqlet and the cwm of the pattern (i.e., motif). Lower means let through worse
+        matches to the contribution scores.
+    quantileContribMagnitude gives the cutoff in terms of total importance for a seqlet for
+        it to be considered. A low value means that seqlets that have low total contribution
+        (sum(abs(contrib scores))) can still be considered hits.
 
     trimThreshold and trimBuffer give the cutoffs for trimming off uninformative flanks of the cwms.
         See cwmTrimPoints for details of these parameters.
@@ -404,7 +419,7 @@ def analyzeSeqlets(modiscoH5Fname, contribH5Fname, patternSpec,
         each base in the genome. See ppmToPwm and pwmToPssm for details on this argument.
 
     outputSeqletsFname, if provided, gives a name for a file where the all of the seqlets in the
-        Modisco output should be saved as a csv file.
+        Modisco output should be saved as a tsv file.
 
     Returns a list of dicts that will be needed by the cwm scanning utility.
         It is structured as follows:
@@ -412,37 +427,42 @@ def analyzeSeqlets(modiscoH5Fname, contribH5Fname, patternSpec,
             "pattern-name" : <string>,
             "cwm" : < array of floats of shape (length, 4) >,
             "pssm" : < array of floats of shape (length, 4) >,
-            "ic-cutoff" : <float>,
-            "jaccard-cutoff" : <float>,
-            "L1-cutoff" : <float> },
+            "seq-match-cutoff" : <float-or-null>,
+            "contrib-match-cutoff" : <float-or-null>,
+            "contrib-magnitude-cutoff" : <float-or-null> },
         ...
         ]
 
-    This dictionary can be saved as a json for use with the cwm-scanning tool, or passed directly to
-    the cwm scanning Python functions.
+    This dictionary can be saved as a json for use with the motif scanning tool, or passed
+    directly to the motif scanning Python functions.
 
     """
+    if ENABLE_DEBUG_PROFILING:
+        pr = cProfile.Profile()
+        pr.enable()
+
     patterns = makePatternObjects(patternSpec, modiscoH5Fname)
     logging.info("Initialized patterns, beginning to load data.")
     with h5py.File(modiscoH5Fname, "r") as modiscoFp:
         for pattern in patterns:
             pattern.loadCwm(modiscoFp, trimThreshold, trimPadding, backgroundProbs)
             pattern.loadSeqlets(modiscoFp)
-            pattern.getCutoffs(quantileIC, quantileJaccard, quantileL1)
+            pattern.getCutoffs(quantileSeqMatch, quantileContribMatch, quantileContribMagnitude)
     logging.info("Loaded and analyzed seqlet data.")
     if outputSeqletsFname is not None:
         # We should load up the genomic coordinates of the seqlets.
-        logging.info("Writing csv of seqlet information.")
+        logging.info("Writing tsv of seqlet information.")
         with h5py.File(contribH5Fname, "r") as contribH5fp:
             for pattern in patterns:
                 pattern.loadSeqletCoordinates(contribH5fp)
         # Now, write the output.
         with open(outputSeqletsFname, "w", newline='') as outFp:
             # Write the header.
-            fieldNames = ["chrom", "start", "end", "short-name", "L1-score", "strand",
-                         "metacluster-name", "pattern-name", "sequence", "index", "ic-match",
-                         "contrib-match"]
-            writer = csv.DictWriter(outFp, fieldnames=fieldNames)
+            fieldNames = ["chrom", "start", "end", "short_name", "contrib_magnitude", "strand",
+                          "metacluster_name", "pattern_name", "sequence", "region_index",
+                          "seq_match", "contrib_match"]
+            writer = csv.DictWriter(outFp, fieldnames=fieldNames,
+                                    delimiter='\t', lineterminator='\n')
             writer.writeheader()
             for pattern in patterns:
                 for seqletDict in pattern.seqletInfoIterator():
@@ -453,6 +473,14 @@ def analyzeSeqlets(modiscoH5Fname, contribH5Fname, patternSpec,
     for pattern in patterns:
         ret.append(pattern.getScanningInfo())
     logging.info("Done with analyzing seqlets.")
+
+    if ENABLE_DEBUG_PROFILING:
+        pr.disable()
+        s = io.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats(PROFILING_SORT_ORDER)
+        ps.print_stats()
+        with open("MOTIF_SCAN_SEQLET_THREAD_STATS.dat", "w") as fp:
+            fp.write(s.getvalue())
     return ret
 
 
@@ -523,34 +551,49 @@ class MiniPattern:
         self.metaclusterName = config["metacluster-name"]
         self.patternName = config["pattern-name"]
         self.shortName = config["short-name"]
-        self.cwm = np.array(config["cwm"], dtype=np.float64)
+        self.cwm = np.array(config["cwm"], dtype=FLOAT_T)
         self.rcwm = np.flip(self.cwm)  # (revcomp)
-        self.pssm = np.array(config["pssm"], dtype=np.float64)
+        self.pssm = np.array(config["pssm"], dtype=FLOAT_T)
         self.rpssm = np.flip(self.pssm)  # (revcomp)
-        self.icCutoff = config["ic-cutoff"]
-        self.jaccardCutoff = config["jaccard-cutoff"]
-        self.L1Cutoff = config["L1-cutoff"]
+        self.seqMatchCutoff = config["seq-match-cutoff"]
+        self.contribMatchCutoff = config["contrib-match-cutoff"]
+        self.contribMagnitudeCutoff = config["contrib-magnitude-cutoff"]
+
+    def _callJaccard(self, scores, cwm):
+        # This is just a separate function so the profiler can see the call to Jaccard.
+        return jaccard.slidingJaccard(scores, cwm)
 
     def _scanOneWay(self, sequence, scores, cwm, pssm, strand):
         """Don't do revcomp - let scan take care of that. You should never
         call this method. Use scan instead!"""
-        jaccardScores, L1Scores = jaccard.slidingJaccard(scores, cwm)
-        icScores = slidingDotproduct(sequence, pssm)
-        jaccardPass = jaccardScores > self.jaccardCutoff
-        L1Pass = L1Scores > self.L1Cutoff
-        icPass = icScores > self.icCutoff
-        contribPass = np.logical_and(jaccardPass, L1Pass)
-        allPass = np.logical_and(contribPass, icPass)
+        contribMatchScores, contribMagnitudes = self._callJaccard(scores, cwm)
+        seqMatchScores = slidingDotproduct(sequence, pssm)
+        if self.contribMatchCutoff is not None:
+            contribMatchPass = contribMatchScores > self.contribMatchCutoff
+        else:
+            contribMatchPass = np.full(contribMatchScores.shape, True, dtype='bool')
+
+        if self.contribMagnitudeCutoff is not None:
+            contribMagnitudePass = contribMagnitudes > self.contribMagnitudeCutoff
+            contribPass = np.logical_and(contribMatchPass, contribMagnitudePass)
+        else:
+            contribPass = contribMatchPass
+
+        if self.seqMatchCutoff is not None:
+            seqMatchPass = seqMatchScores > self.seqMatchCutoff
+            allPass = np.logical_and(contribPass, seqMatchPass)
+        else:
+            allPass = contribPass
 
         # Great! Now where did we get hits?
         passLocations = allPass.nonzero()[0]
         # Now build up a list of things to return.
         ret = []
         for passLoc in passLocations:
-            jaccardScore = jaccardScores[passLoc]
-            L1Score = L1Scores[passLoc]
-            icScore = icScores[passLoc]
-            ret.append((passLoc, strand, L1Score, jaccardScore, icScore))
+            contribMatchScore = contribMatchScores[passLoc]
+            contribMagnitude = contribMagnitudes[passLoc]
+            seqMatchScore = seqMatchScores[passLoc]
+            ret.append((passLoc, strand, contribMagnitude, contribMatchScore, seqMatchScore))
         return ret
 
     def scan(self, sequence, scores):
@@ -562,9 +605,9 @@ class MiniPattern:
         Returns a list of hits. A hit is a tuple with five elements.
         First, an integer giving the offset in the sequence where the hit starts.
         Second, the strand on which the hit was found.
-        Third, the L1 score of the pattern at that position.
-        Fourth, the Jaccard score of the importance scores at that position.
-        Finally, the information content match against the pattern at that position.
+        Third, the contribution magnitude of the pattern at that position.
+        Fourth, the contribution match score of the importance scores at that position.
+        Finally, the sequence match score against the pattern at that position.
         """
 
         hitsPos = self._scanOneWay(sequence, scores, self.cwm, self.pssm, '+')
@@ -576,7 +619,8 @@ class Hit:
     """The hit class is a small struct-like class that is used to bundle up found hits
     for insertion in the pipe to the writer thread."""
     def __init__(self, chrom, start, end, shortName, metaclusterName, patternName,
-                 strand, sequence, index, L1Score, jaccardScore, icScore):
+                 strand, sequence, index, contribMagnitude,
+                 contribMatchScore, seqMatchScore):
         self.chrom = chrom.decode('utf-8')
         self.start = start
         self.end = end
@@ -586,31 +630,31 @@ class Hit:
         self.strand = strand
         self.sequence = sequence
         self.index = index
-        self.L1Score = L1Score
-        self.jaccardScore = jaccardScore
-        self.icScore = icScore
+        self.contribMagnitude = contribMagnitude
+        self.contribMatchScore = contribMatchScore
+        self.seqMatchScore = seqMatchScore
 
     def toDict(self):
-        """Converts the class to a dictionary that's easier to use with csv writers."""
+        """Converts the class to a dictionary that's easier to use with tsv writers."""
         ret = dict()
         ret["chrom"] = self.chrom
         ret["start"] = self.start
         ret["end"] = self.end
-        ret["short-name"] = self.shortName
-        ret["L1-score"] = self.L1Score
+        ret["short_name"] = self.shortName
+        ret["contrib_magnitude"] = self.contribMagnitude
         ret["strand"] = self.strand
         ret["sequence"] = self.sequence
-        ret["index"] = self.index
-        ret["metacluster-name"] = self.metaclusterName
-        ret["pattern-name"] = self.patternName
-        ret["ic-match"] = self.icScore
-        ret["contrib-match"] = self.jaccardScore
+        ret["region_index"] = self.index
+        ret["metacluster_name"] = self.metaclusterName
+        ret["pattern_name"] = self.patternName
+        ret["seq_match"] = self.seqMatchScore
+        ret["contrib_match"] = self.contribMatchScore
         return ret
 
 
 class PatternScanner:
 
-    def __init__(self, hitQueue, contribFname, patternConfig, windowSize):
+    def __init__(self, hitQueue, contribFname, patternConfig):
         """hitQueue is a Multiprocessing Queue where found hits should be put().
         (A Hit put in this queue should be an instance of the Hit class defined
         above.)
@@ -622,12 +666,9 @@ class PatternScanner:
         patternConfig is the dictionary/json generated by the quantile script.
         It contains the cwm and pssm of each pattern, as well as the cutoffs for
         hits.
-
-        windowSize is currently ignored."""
-
+        """
         self.hitQueue = hitQueue
         self.miniPatterns = [MiniPattern(x) for x in patternConfig]
-        self.windowSize = windowSize
         self.contribFp = h5py.File(contribFname, "r")
 
     def scanIndex(self, idx):
@@ -641,26 +682,29 @@ class PatternScanner:
         # Get all the data for this index.
         chrom = self.contribFp["coords_chrom"][idx]
         regionStart = self.contribFp["coords_start"][idx]
-        regionEnd = self.contribFp["coords_end"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
-        hypScores = np.array(self.contribFp["hyp_scores"][idx])
-        contribScores = hypScores * oneHotSequence
+        hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=FLOAT_T, order='C')
+        contribScores = np.array(hypScores * oneHotSequence, dtype=FLOAT_T, order='C')
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
             hits = pattern.scan(oneHotSequence, contribScores)
             if len(hits) > 0:
                 # Hey, we found something!
                 for hit in hits:
+                    # ret.append((passLoc, strand, L1Score, jaccardScore, icScore))
                     start = hit[0]
                     end = hit[0] + pattern.cwm.shape[0]
+                    strand = hit[1]
                     hitOneHot = oneHotSequence[start:end, :]
+                    if strand == '-':
+                        hitOneHot = np.flip(hitOneHot)
                     hitSequence = utils.oneHotDecode(hitOneHot)
                     madeHit = Hit(chrom, regionStart + start,
                                   regionStart + end,
                                   pattern.shortName,
                                   pattern.metaclusterName,
                                   pattern.patternName,
-                                  hit[1],
+                                  strand,
                                   hitSequence, idx,
                                   hit[2],
                                   hit[3], hit[4])
@@ -672,74 +716,92 @@ class PatternScanner:
         self.hitQueue.put(-1)
 
 
-def scannerThread(queryQueue, hitQueue, contribFname, patternConfig, windowSize):
+def scannerThread(queryQueue, hitQueue, contribFname, patternConfig):
     """This is the thread for one scanner. Each scanner is looking for every pattern,
     and gets regions to scan from queryQueue. Every time it finds a hit in one of the
     queries it pulled, it stuffs those Hit objects into hitQueue.
     contribFname is a string naming the hdf5-format file generated by interpretFlat.py.
     patternConfig is the dictionary/json generated by the quantile script. It contains
     a cwm, pssm, and cutoff values for each pattern you want to scan for.
-    windowSize is currently ignored.
     """
-    scanner = PatternScanner(hitQueue, contribFname, patternConfig, windowSize)
-
+    pr = cProfile.Profile()
+    scanner = PatternScanner(hitQueue, contribFname, patternConfig)
+    wasIOne = False
     while True:
         curQuery = queryQueue.get(True, 1.0)  # Block for one second, then error out.
+        if curQuery == 1 and ENABLE_DEBUG_PROFILING:
+            wasIOne = True
         if curQuery == -1:
             # End of the line, finish up!
             scanner.done()
             break
+        if wasIOne:
+            pr.enable()
         scanner.scanIndex(curQuery)
+        if wasIOne:
+            pr.disable()
+    if wasIOne:
+        s = io.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats(PROFILING_SORT_ORDER)
+        ps.print_stats()
+        with open("MOTIF_SCAN_SCAN_THREAD_STATS.dat", "w") as fp:
+            fp.write(s.getvalue())
 
 
-def writerThread(hitQueue, scannerThreads, csvFname=None, bedFname=None):
+def writerThread(hitQueue, scannerThreads, tsvFname):
     """This thread runs concurrently with however many scanners you're using.
     It reads from hitQueue and saves out any hits to a csv file, a bed file, or both.
     scannerThreads is an integer giving the number of scanners running concurrently.
         Why does the writer need to know this? Because each scanner sends a special flag
         down the queue when it's done, and the writer needs to know how many of these
         special values to expect before it knows that all the scanners have finished.
-    csvFname and bedFname are the names of the csv and bed files that should be written."""
-
+    tsvFname is the name of the tsv file that should be written."""
+    if ENABLE_DEBUG_PROFILING:
+        pr = cProfile.Profile()
+        pr.enable()
     threadsRemaining = scannerThreads
-    if csvFname is None:
-        csvFname = "/dev/null"
-    if bedFname is None:
-        bedFname = "/dev/null"
-    with open(csvFname, "w", newline='') as outCsv:
-        with open(bedFname, "w", newline='') as outBed:
-            # Must match Hit.toDict()
-            fieldNames = ["chrom", "start", "end", "short-name", "L1-score", "strand",
-                          "metacluster-name", "pattern-name", "sequence", "index",
-                          "ic-match", "contrib-match"]
-            writer = csv.DictWriter(outCsv, fieldnames=fieldNames)
-            writer.writeheader()
-            while True:
-                ret = hitQueue.get(True, 1.0)
-                if ret == -1:
-                    threadsRemaining -= 1
-                    if threadsRemaining <= 0:
-                        break
-                    continue
-                writer.writerow(ret.toDict())
-                outBed.write("{0:s}\t{1:d}\t{2:d}\t{3:s}\t{4:f}\t{5:s}\n".format(
-                             ret.chrom, ret.start, ret.end, ret.shortName, ret.L1Score, ret.strand))
+    logging.debug("Starting writer.")
+    with open(tsvFname, "w", newline='') as outTsv:
+        # Must match Hit.toDict()
+        fieldNames = ["chrom", "start", "end", "short_name", "contrib_magnitude", "strand",
+                      "metacluster_name", "pattern_name", "sequence", "region_index",
+                      "seq_match", "contrib_match"]
+        writer = csv.DictWriter(outTsv, fieldnames=fieldNames,
+                                delimiter='\t', lineterminator='\n')
+        writer.writeheader()
+        while True:
+            ret = hitQueue.get(True, 1.0)
+            if ret == -1:
+                threadsRemaining -= 1
+                logging.debug("Writer got thread done message, "
+                              "{0:d} remain.".format(threadsRemaining))
+                if threadsRemaining <= 0:
+                    break
+                continue
+            writer.writerow(ret.toDict())
+    if ENABLE_DEBUG_PROFILING:
+        pr.disable()
+        s = io.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats(PROFILING_SORT_ORDER)
+        ps.print_stats()
+        with open("MOTIF_SCAN_WRITE_THREAD_STATS.dat", "w") as fp:
+            fp.write(s.getvalue())
 
 
-def scanPatterns(contribH5Fname, patternConfig, csvFname, bedFname, windowSize, numThreads):
+def scanPatterns(contribH5Fname, patternConfig, tsvFname, numThreads):
     """ContribH5Fname is the name of a contribution score file generated by interpretFlat.py
     patternConfig is a dictionary/json generated by the quantile script that contains the necessary
     information to scan for the patterns.
-    csvFname and bedFname, are the names of the csv and bed files to write. If either of these
-    are None, then that file won't be written.
-    windowSize is not currently used.
+    tsvFname is the name of the output file containing the hits. Columns 1-6 of this file can
+    be extracted with cut to get a bed file.
     numThreads is the *total* number of threads to use for the scanning. This must be at least
     three, since this function builds a pipeline with one thread generating queries,
     one saving results, and all the rest furiously scanning the query sequences for matches.
     I suggest running rampant with as many threads as they'll let you use, the scanning is very
     computationally expensive!"""
 
-    assert numThreads >= 3, "Scanning requires at least three threads."
+    assert numThreads >= 3, "Scanning requires at least three threads. " \
+                            "(but works great with fifty!)"
     # A queue size of 1024 is reasonable.
     queryQueue = multiprocessing.Queue(1024)
     hitQueue = multiprocessing.Queue(1024)
@@ -748,10 +810,10 @@ def scanPatterns(contribH5Fname, patternConfig, csvFname, bedFname, windowSize, 
     for i in range(numThreads - 2):
         scanProc = multiprocessing.Process(target=scannerThread,
                                            args=[queryQueue, hitQueue, contribH5Fname,
-                                                 patternConfig, windowSize])
+                                                 patternConfig])
         scannerProcesses.append(scanProc)
     writeProc = multiprocessing.Process(target=writerThread,
-                                        args=[hitQueue, numThreads - 2, csvFname, bedFname])
+                                        args=[hitQueue, numThreads - 2, tsvFname])
     logging.info("Starting threads.")
     [x.start() for x in scannerProcesses]
 
@@ -760,7 +822,10 @@ def scanPatterns(contribH5Fname, patternConfig, csvFname, bedFname, windowSize, 
         # How many queries do I need to stuff down the query queue?
         numRegions = np.array(fp["coords_start"]).shape[0]
     logging.debug("Starting to send queries to the processes.")
-    for i in tqdm.tqdm(range(numRegions)):
+    pbar = range(numRegions)
+    if logging.root.level in [logging.DEBUG, logging.INFO]:
+        pbar = tqdm.tqdm(pbar)
+    for i in pbar:
         # The queries are generated by the main thread.
         queryQueue.put(i)
     logging.debug("Done adding queries to the processes. Waiting for scanners to finish.")

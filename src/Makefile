@@ -1,3 +1,3 @@
 
 jaccard.cpython-310-x86_64-linux-gnu.so: libjaccard.c libjaccard.pyf
-	f2py -c libjaccard.pyf libjaccard.c 
+	CFLAGS="-Ofast -march=native -fexpensive-optimizations -ffast-math" f2py -c libjaccard.pyf libjaccard.c
