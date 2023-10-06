@@ -1,4 +1,15 @@
-Version 3.1.2, 2023-09-19
+Version 3.4.0, 2023-10-06
+	NEW FEATURES:
+	* CWM scanning is now implemented. This takes the output from modisco and
+	uses contribution scores to look for motif instances across the genome.
+	The documentation has been updated. Thanks to Melanie Weilert for an
+	initial BPReveal-compatible implementation of CWM scanning.
+
+	CONTRIBUTORS:
+	Melanie Weilert, Charles McAnany
+
+
+Version 3.3.2, 2023-09-19
 	BUG FIXES:
 	* Updated the conda install script to be compatible with Tensorflow 2.12.
 	The tensorflow-probability package that had been installed was too old, so
