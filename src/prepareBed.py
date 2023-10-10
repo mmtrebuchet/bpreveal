@@ -14,6 +14,26 @@ import re
 
 
 def resize(interval, mode, width, genome):
+    """Given an interval (a PyBedTools Interval object),
+    return a new Interval that is at the same coordinate.
+    (see mode for the meaning of "same").
+    Arguments:
+    Interval is a PyBedTools Interval object with start and end information.
+    mode is one of:
+        "none", meaning that no resizing is done. In that case, this function will
+            check that the interval obeys stop-start == width. If an interval
+            does not have the correct width, an assertion will fail.
+        "center", in which case the interval is resized around its center.
+        "start", in which case the start coordinate is preserved.
+    width is an integer. The returned interval will obey x.end - x.start == width.
+    genome is an opened pysam genome fasta file. This is used to check if an interval
+        has fallen off the edge of a chromosome. If this is the case, this function will
+        return False. Check for this!
+    Returns:
+        A PyBedTools Interval object, newly allocated.
+        It will preserve the chromosome, name, score, and strand
+        information, but not other bed fields.
+    """
     start = interval.start
     end = interval.end
     match mode:
@@ -37,6 +57,13 @@ def resize(interval, mode, width, genome):
 
 
 def getCounts(interval, bigwigs):
+    """For the given PyBedTools interval and a list of open bigwig files
+    (NOT file names, actual file objects), determine
+    the SUM of counts for that interval across all given bigwigs.
+    Returns:
+    A single floating-point value representing the total of each bigwig in the given region.
+    NaN entries in the bigwigs are treated as zero.
+    """
     total = 0
     for bw in bigwigs:
         vals = np.nan_to_num(bw.values(interval.chrom, interval.start, interval.end))
@@ -45,6 +72,11 @@ def getCounts(interval, bigwigs):
 
 
 def sequenceChecker(interval, genome):
+    """For the given interval, does it only contain A, C, G, and T?
+    If there are other bases, like N, returns False.
+    Returns:
+        True if the sequence matches "^[ACGTacgt]*$", False otherwise.
+    """
     seq = genome.fetch(interval.chrom, interval.start, interval.end)
     if (len(seq.upper().lstrip('ACGT')) != 0):
         # There were letters that aren't regular bases. (probably Ns)
@@ -52,20 +84,27 @@ def sequenceChecker(interval, genome):
     return True
 
 
-def stripCountsBelow(bed, cutoff, bigwigs):
-    return bed.filter(lambda interval: getCounts(interval, bigwigs) >= cutoff).saveas()
+# def stripCountsBelow(bed, cutoff, bigwigs):
+#    return bed.filter(lambda interval: getCounts(interval, bigwigs) >= cutoff).saveas()
 
 
-def stripCountsAbove(bed, cutoff, bigwigs):
-    return bed.filter(lambda interval: getCounts(interval, bigwigs) <= cutoff).saveas()
+# def stripCountsAbove(bed, cutoff, bigwigs):
+#    return bed.filter(lambda interval: getCounts(interval, bigwigs) <= cutoff).saveas()
 
 
 def lineToInterval(line):
+    """Simply takes a text line from a bed file and creates a PyBedTools Interval object.
+    If the line is not a data line, return False."""
+    if len(line.strip()) == 0 or line[0] == '#':
+        return False
     initInterval = pybedtools.cbedtools.create_interval_from_list(line.split())
     return initInterval
 
 
 def loadRegions(config):
+    """Given a configuration (see the specification), return four PyBedTools BedTool objects.
+    The first will consist of the training regions, the second will be the validation regions, then
+    the test regions, and finally any regions that were rejected on loading."""
     trainRegions = []
     testRegions = []
     valRegions = []
@@ -76,29 +115,34 @@ def loadRegions(config):
               "test-chroms": testChroms, "regions": regionFnames}:
             for bedFile in regionFnames:
                 for line in open(bedFile):
-                    r = lineToInterval(line)
-                    if (r.chrom in trainChroms):
-                        trainRegions.append(r)
-                    elif (r.chrom in valChroms):
-                        valRegions.append(r)
-                    elif (r.chrom in testChroms):
-                        testRegions.append(r)
-                    else:
-                        numRejected += 1
-                        logging.debug("Rejected region {0:s} because it's not in any "
-                                      "of the chromosome sets.".format(line.strip()))
-                        rejectRegions.append(r)
+                    if r := lineToInterval(line):
+                        if (r.chrom in trainChroms):
+                            trainRegions.append(r)
+                        elif (r.chrom in valChroms):
+                            valRegions.append(r)
+                        elif (r.chrom in testChroms):
+                            testRegions.append(r)
+                        else:
+                            numRejected += 1
+                            logging.debug("        Rejected region {0:s} because it's not in any "
+                                          "of the chromosome sets.".format(line.strip()))
+                            rejectRegions.append(r)
+
         case {"train-regions": trainRegionFnames, "val-regions": valRegionFnames,
               "test-regions": testRegionFnames}:
             for trainBedFile in trainRegionFnames:
                 for line in open(trainBedFile):
-                    trainRegions.append(lineToInterval(line))
+                    if r := lineToInterval(line):
+                        trainRegions.append(r)
             for valBedFile in valRegionFnames:
                 for line in open(valBedFile):
-                    valRegions.append(lineToInterval(line))
+                    if r := lineToInterval(line):
+                        valRegions.append(r)
             for testBedFile in testRegionFnames:
                 for line in open(testBedFile):
-                    testRegions.append(lineToInterval(line))
+                    if r := lineToInterval(line):
+                        testRegions.append(r)
+
         case {"train-regex": trainString, "val-regex": valString,
               "test-regex": testString, "regions": regionFnames}:
             trainRegex = re.compile(trainString)
@@ -106,34 +150,37 @@ def loadRegions(config):
             testRegex = re.compile(testString)
             for bedFile in regionFnames:
                 for line in open(bedFile):
-                    r = lineToInterval(line)
-                    foundTrain = False
-                    foundVal = False
-                    foundTest = False
-                    if (trainRegex.search(r.name) is not None):
-                        foundTrain = True
-                        trainRegions.append(r)
-                    if (valRegex.search(r.name) is not None):
-                        assert not foundTrain, "Region {0:s} matches multiple "\
-                                               "regexes.".format(line)
-                        foundVal = True
-                        valRegions.append(r)
-                    if (testRegex.search(r.name) is not None):
-                        assert not (foundTrain or foundVal), "Region {0:s} matches "\
-                                                             "multiple regexes.".format(line)
-                        foundTest = True
-                        testRegions.append(r)
-                    if (not (foundTrain or foundVal or foundTest)):
-                        numRejected += 1
-                        logging.debug("Rejected region {0:s} because it didn't match "
-                                      "any of your split regexes.".format(line.strip()))
-                        rejectRegions.append(r)
+                    if r := lineToInterval(line):
+                        foundTrain = False
+                        foundVal = False
+                        foundTest = False
+                        if (trainRegex.search(r.name) is not None):
+                            foundTrain = True
+                            trainRegions.append(r)
+                        if (valRegex.search(r.name) is not None):
+                            assert not foundTrain, "Region {0:s} matches multiple "\
+                                                   "regexes.".format(line)
+                            foundVal = True
+                            valRegions.append(r)
+                        if (testRegex.search(r.name) is not None):
+                            assert not (foundTrain or foundVal), "Region {0:s} matches "\
+                                                                 "multiple regexes.".format(line)
+                            foundTest = True
+                            testRegions.append(r)
+                        if (not (foundTrain or foundVal or foundTest)):
+                            numRejected += 1
+                            logging.debug("        Rejected region {0:s} because it didn't match "
+                                          "any of your split regexes.".format(line.strip()))
+                            rejectRegions.append(r)
+
         case _:
             assert False, "Config invalid: {0:s}".format(str(config["splits"]))
+
     logging.info("Training regions: {0:d}".format(len(trainRegions)))
     logging.info("Validation regions: {0:d}".format(len(valRegions)))
     logging.info("Testing regions: {0:d}".format(len(testRegions)))
     logging.info("Rejected on loading: {0:d}".format(len(rejectRegions)))
+
     return (pybedtools.BedTool(trainRegions),
             pybedtools.BedTool(valRegions),
             pybedtools.BedTool(testRegions),
@@ -169,13 +216,17 @@ def removeOverlaps(config, regions, genome):
             if (i == selectedIdx):
                 ret.append(elem)
             else:
-                logging.debug("Rejected region {0:s} because it overlaps.".format(str(elem)))
+                logging.debug("        Rejected region {0:s} because it overlaps.".format(str(elem)))
                 rejects.append(elem)
     return (pybedtools.BedTool(ret), pybedtools.BedTool(rejects))
 
 
 def validateRegions(config, regions, genome, bigwigLists):
-
+    """The workhorse of this program.
+    Given a config (see the spec), a BedTool of regions, an open pysam FastaFile, and a list of
+    bigwigs to check, filter down the regions so that they satisfy the configuration.
+    Returns two BedTools: The first contains the regions that passed the filters, and the second
+    contains the rejected regions."""
     # First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of
     # the regions to the minimum size, then sort them and remove overlaps.
     if (config["remove-overlaps"]):
@@ -183,24 +234,24 @@ def validateRegions(config, regions, genome, bigwigLists):
         noOverlapRegions = noOverlapRegions.saveas()
         initialRejects = initialRejects.saveas()
         initialRegions = noOverlapRegions
-        logging.info("Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))
+        logging.info("    Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))
     else:
         initialRegions = regions
         if ("overlap-max-distance" in config):
-            logging.warning("You have set remove-overlaps to false, but you still provided an "
-                            "overlap-max-distance parameter. This parameter is meaningless.")
-        logging.debug("Skipping region overlap removal.")
+            logging.warning("    You have set remove-overlaps to false, but you still provided an"
+                            " overlap-max-distance parameter. This parameter is meaningless.")
+        logging.debug("    Skipping region overlap removal.")
     # Second, resize the regions to their biggest size.
     unfilteredBigRegions = initialRegions.each(resize,
                                                config["resize-mode"],
                                                config["input-length"] + config["max-jitter"] * 2,
                                                genome).saveas()
-    logging.info("Resized sequences. {0:d} remain.".format(unfilteredBigRegions.count()))
+    logging.info("    Resized sequences. {0:d} remain.".format(unfilteredBigRegions.count()))
     bigRegionsList = list(unfilteredBigRegions.filter(sequenceChecker, genome).saveas())
-    logging.info("Filtered for weird nucleotides. {0:d} remain.".format(len(bigRegionsList)))
+    logging.info("    Filtered for weird nucleotides. {0:d} remain.".format(len(bigRegionsList)))
     # Now, we have the possible regions. Get their counts values.
     validRegions = np.ones((len(bigRegionsList),))
-    pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
+    #pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
     # Note: The bigwigLists correspond to the heads in here.
     # So go over every region and measure its counts (unless max-quantile == 1)
     # and reject regions that are over-full on reads.
@@ -215,25 +266,25 @@ def validateRegions(config, regions, genome, bigwigLists):
         bigCounts = np.zeros((len(bigRegionsList),))
         for j, r in enumerate(bigRegionsList):
             bigCounts[j] = getCounts(r, bigwigLists[i])
-            pbar.update()
+            #pbar.update()
         if ("max-counts" in headSpec):
             maxCounts = headSpec["max-counts"]
         else:
             maxCounts = np.quantile(bigCounts, [headSpec["max-quantile"]])[0]
-        logging.debug("Max counts: {0:s}, file {1:s}".format(str(maxCounts),
-                                                             str(headSpec["bigwig-names"])))
+        logging.debug("    Max counts: {0:s}, file {1:s}".format(str(maxCounts),
+                                                                 str(headSpec["bigwig-names"])))
         numReject = 0
         for regionIdx in range(len(bigRegionsList)):
             if (bigCounts[regionIdx] > maxCounts):
                 numReject += 1
                 validRegions[regionIdx] = 0
-        logging.debug("Rejected {0:f}% of regions for having too many"
+        logging.debug("    Rejected {0:f}% of regions for having too many"
             "counts.".format(numReject * 100. / len(bigRegionsList)))
-    pbar.close()
+    #pbar.close()
 
     # We've now validated that the regions don't have too many counts when you inflate them.
     # We also need to check that the regions won't have too few counts in the output.
-    logging.info("Validated inflated regions. Surviving: {0:d}".format(int(np.sum(validRegions))))
+    logging.info("    Validated inflated regions. Surviving: {0:d}".format(int(np.sum(validRegions))))
     bigRegionsBed = pybedtools.BedTool(bigRegionsList)
     pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
     smallRegionsList = list(bigRegionsBed.each(resize,
@@ -253,8 +304,8 @@ def validateRegions(config, regions, genome, bigwigLists):
             minCounts = headSpec["min-counts"]
         else:
             minCounts = np.quantile(smallCounts, [headSpec["min-quantile"]])[0]
-        logging.debug("Min counts: {0:s}, file {1:s}".format(str(minCounts),
-                                                             str(headSpec["bigwig-names"])))
+        logging.debug("    Min counts: {0:s}, file {1:s}".format(str(minCounts),
+                                                                 str(headSpec["bigwig-names"])))
         numReject = 0
         for regionIdx in range(len(bigRegionsList)):
             # within len(bigRegions) in case a region was lost during the resize - we want that to
@@ -262,10 +313,10 @@ def validateRegions(config, regions, genome, bigwigLists):
             if (smallCounts[regionIdx] < minCounts):
                 numReject += 1
                 validRegions[regionIdx] = 0
-        logging.debug("Rejected {0:f}% of small regions."
+        logging.debug("    Rejected {0:f}% of small regions."
                       .format(numReject * 100. / len(bigRegionsList)))
     pbar.close()
-    logging.info("Validated small regions. Surviving regions: {0:d}"
+    logging.info("    Validated small regions. Surviving regions: {0:d}"
                  .format(int(np.sum(validRegions))))
     # Now we resize to the final output size.
     smallRegionsBed = pybedtools.BedTool(smallRegionsList)
@@ -285,7 +336,7 @@ def validateRegions(config, regions, genome, bigwigLists):
             filteredRegions.append(r)
         else:
             rejectedRegions.append(r)
-    logging.info("Total surviving regions: {0:d}".format(len(filteredRegions)))
+    logging.info("    Total surviving regions: {0:d}".format(len(filteredRegions)))
     if (config["remove-overlaps"]):
         rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions), postmerge=False)
     else:
@@ -359,17 +410,17 @@ def prepareBeds(config):
     bigwigLists = []
     for head in config["heads"]:
         bigwigLists.append([pyBigWig.open(bwName) for bwName in head["bigwig-names"]])
-    logging.info("Validating training regions.")
+    logging.info("Training regions validation beginning.")
     validTrain, rejectTrain = validateRegions(config, trainRegions, genome, bigwigLists)
-    logging.info("Validating validation regions.")
+    logging.info("Validation regions validation beginning.")
     validVal, rejectVal = validateRegions(config, valRegions, genome, bigwigLists)
-    logging.info("Validating testing regions.")
+    logging.info("Test regions validation beginning.")
     validTest, rejectTest = validateRegions(config, testRegions, genome, bigwigLists)
 
     for bwList in bigwigLists:
         for f in bwList:
             f.close()
-
+    logging.info("Saving region lists to bed files.")
     validTrain.saveas(outputTrainFname)
     validVal.saveas(outputValFname)
     validTest.saveas(outputTestFname)

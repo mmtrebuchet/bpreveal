@@ -136,8 +136,10 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
         jsds = norm(jsds)
         pearsonrs = norm(pearsonrs)
         spearmanrs = norm(spearmanrs)
-        referenceCounts = norm(referenceCounts)
-        predictedCounts = norm(predictedCounts)
+        countsSelection = np.logical_and(np.isfinite(referenceCounts),
+                                         np.isfinite(predictedCounts))
+        referenceCounts = referenceCounts[countsSelection]
+        predictedCounts = predictedCounts[countsSelection]
 
     # Calculate the percentiles for each of the profile metrics.
     w = not jsonOutput

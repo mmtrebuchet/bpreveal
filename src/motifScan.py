@@ -40,11 +40,12 @@ def cwmScanMain(config):
     else:
         # We didn't have quantile-settings, so we'd better have quantile-json.
         # (In this case, we're reading quantile-json)
-        logging.info("Loading scanner parameters.")
+        logging.debug("Loading scanner parameters.")
         with open(config["seqlet-cutoff-json"], "r") as fp:
             scanPatternDict = json.load(fp)
 
     scanConfig = config["scan-settings"]
+    logging.info("Beginning motif scan.")
     motifUtils.scanPatterns(scanConfig["scan-contrib-h5"],
                             scanPatternDict,
                             scanConfig["hits-tsv"],

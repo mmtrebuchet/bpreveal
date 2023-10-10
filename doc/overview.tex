@@ -882,7 +882,7 @@ Second, it produces a json-format file that will be needed by \texttt{motifScan.
     <empty>
   | "modisco-contrib-h5" : <string>,
 
-<seqlet-tsv-section> ::= 
+<seqlet-tsv-section> ::=
     <empty>
   | "seqlets-tsv" : <string>,
 \end{lstlisting}
@@ -932,9 +932,11 @@ It is an error to specify both \texttt{seqlet-cutoff-settings} and \texttt{seqle
 \begin{lstlisting}
 <motif-scan-config> ::= {
     <scan-quantile-settings>
-    "scan-contrib-h5" : <string>,
-    "hits-tsv" : <string>,
-    "num-threads" : <integer>,
+    "scan-settings" : {
+        "scan-contrib-h5" : <string>,
+        "hits-tsv" : <string>,
+        "num-threads" : <integer>,
+    }
     <verbosity-section>}
 
 <scan-quantile-settings> ::=

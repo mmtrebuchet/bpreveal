@@ -8,6 +8,7 @@ import numpy as np
 import tqdm
 import h5py
 import logging
+import pybedtools
 import multiprocessing
 
 
@@ -316,12 +317,9 @@ class BedGenerator(Generator):
         # Note that this opens a file during construction (a no-no for my threading model)
         # but it just reads it and closes it right back up. When the initializer finishes,
         # there are no pointers to file handles in this object.
-        with open(self.bedFname, "r") as fp:
+        with pybedtools.BedTool(self.bedFname) as fp:
             for line in fp:
-                lsp = line.split()
-                start = int(lsp[1])
-                stop = int(lsp[2])
-                numRegions += (stop - start)
+               numRegions += line.end - line.start
         self.numRegions = numRegions
         logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
@@ -332,14 +330,10 @@ class BedGenerator(Generator):
         self.shapTargets = []
         self.genome = pysam.FastaFile(self.genomeFname)
         self.readHead = 0
-        with open(self.bedFname) as fp:
+        with pybedtools.BedTool(self.bedFname) as fp:
             for line in fp:
-                lsp = line.split()
-                chrom = lsp[0]
-                start = int(lsp[1])
-                stop = int(lsp[2])
-                for pos in range(start, stop):
-                    self.shapTargets.append((chrom, pos))
+                for pos in range(line.start, line.end):
+                    self.shapTargets.append((line.chrom, pos))
 
     def __iter__(self):
         logging.debug("Creating iterator for bed generator.")

@@ -12,7 +12,7 @@ def setMemoryGrowth():
     gpus = tf.config.list_physical_devices('GPU')
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
-        logging.info("GPU memory growth enabled.")
+        logging.debug("GPU memory growth enabled.")
     except Exception:
         logging.warning("Not using GPU")
         pass
@@ -35,7 +35,10 @@ def setVerbosity(userLevel):
                 "WARNING": logging.WARNING,
                 "INFO": logging.INFO,
                 "DEBUG": logging.DEBUG}
-    logging.basicConfig(level=levelMap[userLevel])
+    logging.basicConfig(level=levelMap[userLevel],
+                        format='%(asctime)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.debug("Logger configured.")
 
 
 def oneHotEncode(sequence):
