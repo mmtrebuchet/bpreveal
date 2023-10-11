@@ -3,7 +3,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau
 
 
-def getCallbacks(earlyStop, outputPrefix, plateauPatience):
+def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int):
     logging.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
                       earlyStop, outputPrefix, plateauPatience))
@@ -24,7 +24,7 @@ def getCallbacks(earlyStop, outputPrefix, plateauPatience):
     return [earlyStopCallback, checkpointCallback, plateauCallback]
 
 
-def tensorboardCallback(logDir):
+def tensorboardCallback(logDir: str):
     logging.debug("Creating tensorboard callback in {0:s}".format(logDir))
     from tensorflow.keras.callbacks import TensorBoard
     return TensorBoard(log_dir=logDir,

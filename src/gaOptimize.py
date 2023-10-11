@@ -2,7 +2,10 @@ import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import random
-
+from typing import List, Tuple, TypeAlias, Callable, cast, Optional
+import numpy.typing as npt
+import utils
+import numpy as np
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
 # in case they aren't easily typeable on your keyboard:
 IN_A = "Ǎ"
@@ -20,8 +23,10 @@ CORRUPTOR_TO_IDX = {"A": 0, "C": 1, "G": 2, "T": 3,
 # This is the inverse of CORRUPTOR_TO_IDX.
 IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 
+Corruptor: TypeAlias = tuple[int, str]
+Profile: TypeAlias = List[Tuple[npt.NDArray[np.float64], float]]
 
-def corruptorsToArray(corruptorList):
+def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int,int]]:
     """Given a list of corruptor tuples, like [(1354, 'C'), (1514, 'Ť'), (1693, 'd')],
     convert that to an integer list that can be easily saved. This list will have the format
     [ [1354, 1], [1514, 7], [1693, 8] ]
@@ -34,7 +39,7 @@ def corruptorsToArray(corruptorList):
     return ret
 
 
-def arrayToCorruptors(corruptorArray):
+def arrayToCorruptors(corruptorArray: List[Tuple[int,int]]) -> List[Corruptor]:
     """The inverse of corruptorsToArray, takes an array of numerical corruptors in the form
     [ [1354, 1], [1514, 7], [1693, 8] ]
     and generates the canonical list with letters, as used in the rest of the code.
@@ -50,7 +55,7 @@ def arrayToCorruptors(corruptorArray):
     return ret
 
 
-def stringToCorruptorList(corruptorStr):
+def stringToCorruptorList(corruptorStr: str) -> List[Corruptor]:
     """Takes a string representing a list of corruptors and generates
     the actual list as a python object. For example, if the string is
         "[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]"
@@ -62,10 +67,12 @@ def stringToCorruptorList(corruptorStr):
     import ast
     ret = []
     tree = ast.parse(corruptorStr)
-    elems = tree.body[0].value.elts
+    body : ast.Expr = cast(ast.Expr, tree.body[0])
+    elems = cast(ast.List,body.value).elts
     for e in elems:
-        pos = e.elts[0].value
-        cor = e.elts[1].value
+        e = cast(ast.Tuple, e)
+        pos = cast(ast.Constant, e.elts[0]).value
+        cor = cast(ast.Constant, e.elts[1]).value
         ret.append((pos, cor))
     return ret
 
@@ -73,16 +80,18 @@ def stringToCorruptorList(corruptorStr):
 class Organism:
     """This represents the set of corruptors that are to be applied to the
     input sequence."""
-    def __init__(self, corruptors):
+    profile: Profile
+    score: float
+    def __init__(self, corruptors: List[Corruptor]):
         """Construct an organism with the given corruptors.
         """
 
         self.corruptors = sorted(corruptors)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
-        self.profile = None
-        self.score = None
+        #self.profile = None
+        #self.score = None
 
-    def getSequence(self, initialSequence, inputLength):
+    def getSequence(self, initialSequence: str, inputLength: int) -> str:
         """Applies this organism's corruptors to initialSequence, a string.
         and then returns the first inputLength bases of the result.
         Note that initialSequence will need to be longer than the inputLength
@@ -133,26 +142,26 @@ class Organism:
         fullSequence = "".join(seq) + initialSequence[readHead:]
         return fullSequence[:inputLength]
 
-    def setScore(self, scoreFn):
+    def setScore(self, scoreFn: Callable[[Profile, List[Corruptor]], float]):
         assert self.profile is not None, \
             "Attempting to score organism with no profile."
         self.score = scoreFn(self.profile, self.corruptors)
 
-    def __eq__(self, other):
+    def __eq__(self, other: 'Organism') -> bool:
         """Returns True if this organism has the same corruptors
         as the other. Does *not* check that the profiles or score
         are identical!
         """
         return self.cmp(other) == 0
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Returns an integer representing a hash of this organism's
         corruptors. This means that you can use organisms as a key
         in a dictionary, for example.
         Note that profile and score are not integrated in this hash!"""
         return str(self.corruptors).__hash__()
 
-    def cmp(self, other):
+    def cmp(self, other: 'Organism') -> int:
         """A general comparator between two organisms based on their
         corruptors.
         Returns 1 if this organism is after (alphabetically) the other
@@ -178,7 +187,8 @@ class Organism:
         # We have identical corruptors, we are the same organism.
         return 0
 
-    def mutated(self, allowedCorruptors, checkCorruptors):
+    def mutated(self, allowedCorruptors: List[Corruptor],
+                checkCorruptors: Callable[[List[Corruptor]], bool]) -> 'Organism':
         """This is something you may want to override in a subclass.
         This returns a NEW organism that has one changed corruptor.
         It chooses one of its current corruptors at random, and then changes
@@ -207,7 +217,8 @@ class Organism:
                 found = checkCorruptors(candidateCorruptors)
         return Organism(candidateCorruptors)
 
-    def mixed(self, other, checkCorruptors):
+    def mixed(self, other: 'Organism',
+              checkCorruptors: Callable[[List[Corruptor]], bool]) -> 'Organism':
         """This is also something you may wish to override in a subclass.
         Currently, it pools the corruptors from self and other, and then
         randomly selects numCorruptors of them. If that passes checkCorruptors,
@@ -254,9 +265,11 @@ class Organism:
 
 class Population:
     """This is the main class for running the sequence optimization GA."""
-    def __init__(self, initialSequence, inputLength, populationSize,
-                 numCorruptors, allowedCorruptors, checkCorruptors, fitnessFn,
-                 numSurvivingParents, predictor):
+    def __init__(self, initialSequence: str, inputLength: int, populationSize: int,
+                 numCorruptors: int, allowedCorruptors: List[Corruptor],
+                 checkCorruptors: Callable[[List[Corruptor]], bool],
+                 fitnessFn: Callable[[Profile, List[Corruptor]], float],
+                 numSurvivingParents: int, predictor: utils.BatchPredictor):
         """This is a heck of a constructor, but you need to make a
         lot of choices to use the GA.
 
@@ -338,7 +351,7 @@ class Population:
             # We've created a new organism that is ready to go!
             self.organisms.append(candidate)
 
-    def _newOrganism(self):
+    def _newOrganism(self) -> Organism:
         for _ in range(100):
             corLocations = random.sample(self.allowedCorruptors, self.numCorruptors)
             # Since sample is without replacement, I'm guaranteed to not have corruptors in
@@ -367,7 +380,7 @@ class Population:
 
         self.organisms.sort(key=lambda x: x.score)
 
-    def _choose1(self):
+    def _choose1(self) -> Organism:
         """Randomly choose one of the organisms in the population.
         This only makes sense once you've runCalculation(), since it needs
         to know which organisms are good. You may want to override this in
@@ -381,7 +394,7 @@ class Population:
             toChoose = self.populationSize - 1
         return self.organisms[toChoose]
 
-    def _choose2(self):
+    def _choose2(self) -> Tuple[Organism, Organism]:
         """Randomly choose two of the organisms in the population.
         This guarantees that the two organisms will be different.
         You may want to override this in a subclass to change the
@@ -435,8 +448,9 @@ class Population:
         self.organisms = list(ret)
 
 
-def getCandidateCorruptorList(sequence, regions=None, allowDeletion=True,
-                             allowInsertion=True):
+def getCandidateCorruptorList(sequence: str, regions: Optional[List[Tuple[int,int]]] = None,
+                              allowDeletion: bool = True,
+                              allowInsertion: bool = True) -> List[Corruptor]:
     """Given a sequence (a string), this generates a list of tuples
     that contain all of the possible corruptors for each position in the
     sequence. It will have the format
@@ -480,7 +494,7 @@ def getCandidateCorruptorList(sequence, regions=None, allowDeletion=True,
     return ret
 
 
-def anyCorruptorsCloserThan(corList, distance):
+def anyCorruptorsCloserThan(corList: List[Corruptor], distance: int) -> bool:
     """A utility function that you can integrate into checkCorruptors
     to see if any corruptors are close to each other. Given a sorted
     list of corruptors (each corruptor a tuple of (position, effect)),
@@ -497,7 +511,8 @@ def anyCorruptorsCloserThan(corList, distance):
     return False
 
 
-def removeCorruptors(corruptorList, corsToRemove):
+def removeCorruptors(corruptorList: List[Corruptor],
+                     corsToRemove: List[Corruptor]) -> List[Corruptor]:
     """Given a candidate corruptor list, like from getCandidateCorruptorList, and
     a list of tuples giving disallowed corruptors, return a new candidate corruptor
     list where those disallowed corruptors are removed.
@@ -522,7 +537,7 @@ def removeCorruptors(corruptorList, corsToRemove):
     return ret
 
 
-def validCorruptorList(corruptorList):
+def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
     """ A utility to make sure that a list of corruptors
     is fundamentally sound. A valid list satisfies the
     following properties:
@@ -554,8 +569,13 @@ def validCorruptorList(corruptorList):
         prev = c
     return True
 
-
-def plotTraces(posTraces, negTraces, xvals, annotations, corruptors, ax):
+import matplotlib.pyplot as plt
+def plotTraces(posTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
+               negTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
+               xvals: npt.NDArray[np.float64],
+               annotations: List[Tuple[Tuple[int,int], str, str]],
+               corruptors: List[Corruptor],
+               ax: plt.Axes):
     """Generate a nice little plot including pips for corruptors and boxes for
     annotations.
     posTraces is a list of tuples. Each tuple has three things:

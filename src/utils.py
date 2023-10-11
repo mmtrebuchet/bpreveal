@@ -1,7 +1,8 @@
 import logging
 import numpy as np
 import scipy
-
+import numpy.typing as npt
+import typing
 
 def setMemoryGrowth():
     """Turn on the tensorflow option to grow memory usage as needed, instead
@@ -17,8 +18,28 @@ def setMemoryGrowth():
         logging.warning("Not using GPU")
         pass
 
+def limitMemoryUsage(fraction: float):
+    # Limit tensorflow to use only the given fraction of memory.
+    assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
+    import subprocess as sp
+    cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
+    ret = sp.run(cmd, capture_output=True)
+    line = ret.stdout.decode('utf-8').split('\n')[1]
+    logging.debug("Memory usage limited based on {0:s}".format(line))
+    lsp = line.split(' ')
+    total = float(lsp[0])
+    free = float(lsp[2])
+    assert total * fraction < free, "Attempting to request more memory than is free!"
 
-def loadChromSizes(fname):
+    import tensorflow as tf
+    gpus = tf.config.list_physical_devices('GPU')
+    tf.config.set_logical_device_configuration(
+        gpus[0],
+        [tf.config.LogicalDeviceConfiguration(memory_limit=int(total*fraction))])
+    logging.debug("Configured gpu with {0:d} MiB of memory.".format(int(total*fraction)))
+
+
+def loadChromSizes(fname: str)-> dict[str,int]:
     # Read in a chrom sizes file and return a dictionary mapping chromosome name → size
     ret = dict()
     with open(fname, 'r') as fp:
@@ -29,19 +50,19 @@ def loadChromSizes(fname):
     return ret
 
 
-def setVerbosity(userLevel):
+def setVerbosity(userLevel: str):
     levelMap = {"CRITICAL": logging.CRITICAL,
                 "ERROR": logging.ERROR,
                 "WARNING": logging.WARNING,
                 "INFO": logging.INFO,
                 "DEBUG": logging.DEBUG}
     logging.basicConfig(level=levelMap[userLevel],
-                        format='%(asctime)s %(message)s',
+                        format='%(levelname)s : %(asctime)s : %(filename)s:%(lineno)d : %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     logging.debug("Logger configured.")
 
 
-def oneHotEncode(sequence):
+def oneHotEncode(sequence: str) -> npt.NDArray[np.int8]:
     """Converts the string sequence into a one-hot encoded numpy array.
        The returned array will have shape (len(sequence), 4).
        The columns are, in order, A, C, G, and T.
@@ -49,7 +70,7 @@ def oneHotEncode(sequence):
        characters other than ACGTacgt, so N nucleotides are rejected."""
 
     ret = np.empty((len(sequence), 4), dtype='int8')
-    ordSeq = np.fromstring(sequence, np.int8)
+    ordSeq = np.fromstring(sequence, np.int8)  # type:ignore
     ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
     ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
     ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
@@ -58,8 +79,7 @@ def oneHotEncode(sequence):
         "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
 
-
-def oneHotDecode(oneHotSequence):
+def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     """Given an array representing a one-hot encoded sequence, convert it back
     to a string. The input shall have shape (sequenceLength, 4), and the output
     will be a Python string. """
@@ -75,7 +95,8 @@ def oneHotDecode(oneHotSequence):
     return ret.tobytes().decode('ascii')
 
 
-def logitsToProfile(logitsAcrossSingleRegion, logCountsAcrossSingleRegion):
+def logitsToProfile(logitsAcrossSingleRegion: np.ndarray,
+                    logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float64]:
     """
     Purpose: Given a single task and region sequence prediction (position x channels),
         convert output logits/logcounts to human-readable representation of profile prediction.
@@ -104,7 +125,7 @@ class BatchPredictor:
     Note that the getOutput() method returns *one* result at a time, and
     you have to call getOutput() once for every time you called one of the
     submit methods. """
-    def __init__(self, modelFname, batchSize):
+    def __init__(self, modelFname: str, batchSize: int):
         """Starts up the BatchPredictor. This will load your model,
         and get ready to make predictions.
         modelFname is the name of the BPReveal model that you want
@@ -113,11 +134,12 @@ class BatchPredictor:
         batchSize is the number of samples that should be run simultaneously through the model."""
         logging.debug("Creating batch predictor.")
         from keras.models import load_model
+        import keras
         import losses
         from collections import deque
 
-        self._model = load_model(modelFname,
-                custom_objects={"multinomialNll": losses.multinomialNll})
+        self._model: keras.Model = load_model(modelFname,
+            custom_objects={"multinomialNll": losses.multinomialNll})  # type: ignore
         logging.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,
@@ -136,7 +158,7 @@ class BatchPredictor:
         self._inWaiting = 0
         self._outWaiting = 0
 
-    def submitOHE(self, sequence, label):
+    def submitOHE(self, sequence: npt.NDArray[np.int8], label: typing.Any):
         """Sequence is an (input-length x 4) ndarray containing the
         one-hot encoded sequence to predict.
         label is any object, and it will be returned with the prediction."""
@@ -147,7 +169,7 @@ class BatchPredictor:
             # and run a batch real quick.
             self.runBatch()
 
-    def submitString(self, sequence, label):
+    def submitString(self, sequence: str, label: typing.Any):
         """Submits a given sequence for prediction.
         sequence is a string of length input-length, and
         label is any object. Label will be returned to you with the
@@ -185,7 +207,7 @@ class BatchPredictor:
             writeHead += 1
             self._inWaiting -= 1
         preds = self._model.predict(modelInputs[:numSamples, :, :],
-                                    verbose=0,
+                                    verbose=0,  # type: ignore
                                     batch_size=self._batchSize)
         # I now need to parse out the shape of the prediction toa
         # generate the correct outputs.

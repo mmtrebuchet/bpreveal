@@ -251,7 +251,6 @@ def validateRegions(config, regions, genome, bigwigLists):
     logging.info("    Filtered for weird nucleotides. {0:d} remain.".format(len(bigRegionsList)))
     # Now, we have the possible regions. Get their counts values.
     validRegions = np.ones((len(bigRegionsList),))
-    #pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
     # Note: The bigwigLists correspond to the heads in here.
     # So go over every region and measure its counts (unless max-quantile == 1)
     # and reject regions that are over-full on reads.
@@ -266,7 +265,6 @@ def validateRegions(config, regions, genome, bigwigLists):
         bigCounts = np.zeros((len(bigRegionsList),))
         for j, r in enumerate(bigRegionsList):
             bigCounts[j] = getCounts(r, bigwigLists[i])
-            #pbar.update()
         if ("max-counts" in headSpec):
             maxCounts = headSpec["max-counts"]
         else:
@@ -280,7 +278,6 @@ def validateRegions(config, regions, genome, bigwigLists):
                 validRegions[regionIdx] = 0
         logging.debug("    Rejected {0:f}% of regions for having too many"
             "counts.".format(numReject * 100. / len(bigRegionsList)))
-    #pbar.close()
 
     # We've now validated that the regions don't have too many counts when you inflate them.
     # We also need to check that the regions won't have too few counts in the output.

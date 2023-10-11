@@ -4,19 +4,21 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import utils
 import json
-import pisa
+import interpretUtils
 
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
     receptiveField = config["input-length"] - config["output-length"]
-    generator = pisa.FastaGenerator(config["sequence-fasta"])
-    writer = pisa.H5Saver(config["output-h5"], generator.numRegions, config["num-shuffles"],
-                          receptiveField, genome=None, useTqdm=True)
+    generator = interpretUtils.FastaGenerator(config["sequence-fasta"])
+    writer = interpretUtils.PisaH5Saver(config["output-h5"], generator.numRegions,
+                                    config["num-shuffles"],
+                                    receptiveField, genome=None, useTqdm=True)
 
-    batcher = pisa.PisaRunner(config["model-file"], config["head-id"], config["task-id"], 10,
-                              generator, writer, config["num-shuffles"],
-                              receptiveField, profileFname=None)
+    batcher = interpretUtils.PisaRunner(config["model-file"], config["head-id"],
+                                        config["task-id"], 10, generator, writer,
+                                        config["num-shuffles"], receptiveField,
+                                        profileFname=None)
     batcher.run()
 
 

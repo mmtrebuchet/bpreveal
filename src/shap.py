@@ -184,7 +184,7 @@ class TFDeepExplainer:
         for op in self.between_ops:
             if (op.type not in op_handlers and op.type not in self.used_types):
                 logging.info(str(op.type) + "used in model but handling of op"
-                      " is not specified by shap; will use original "
+                      " is not specified by shap; will use original"
                       " gradients")
             self.used_types[op.type] = True
 
@@ -624,6 +624,12 @@ op_handlers["Tile"] = passthrough
 op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
+
+# Handlers added by Charles McAnany to make the code not issue warnings.
+op_handlers["AddV2"] = passthrough
+op_handlers["SpaceToBatchND"] = passthrough
+op_handlers["BatchToSpaceND"] = passthrough
+op_handlers["StopGradient"] = passthrough  # Let tensorflow stop the gradient.
 
 # ops that don't pass any attributions to their inputs
 op_handlers["Shape"] = break_dependence
