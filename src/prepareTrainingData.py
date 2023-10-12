@@ -84,7 +84,7 @@ def writeH5(config):
                     case 1:
                         revcomp = [0]
                     case 2:
-                        revcomp = [1,0]
+                        revcomp = [1, 0]
                     case _:
                         assert False, "Cannot automatically determine revcomp "\
                                       "order with more than two tasks."

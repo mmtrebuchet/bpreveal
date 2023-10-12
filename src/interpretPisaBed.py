@@ -12,7 +12,8 @@ def main(config):
     receptiveField = config["input-length"] - config["output-length"]
     generator = interpretUtils.PisaBedGenerator(config["bed-file"], config["genome"],
                                   config["input-length"], config["output-length"])
-    writer = interpretUtils.PisaH5Saver(config["output-h5"], generator.numRegions, config["num-shuffles"],
+    writer = interpretUtils.PisaH5Saver(config["output-h5"], generator.numRegions,
+                                        config["num-shuffles"],
                           receptiveField, genome=config["genome"], useTqdm=True)
     # For benchmarking, I've added a feature where you can dump a
     # python profiling session to disk. You should probably

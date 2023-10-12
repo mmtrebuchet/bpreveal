@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-from interpretFlat import combineMultAndDiffref
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '4'
 import utils
 import pysam
@@ -14,6 +13,7 @@ import logging
 import pybedtools
 import multiprocessing
 import abc
+
 
 class Query:
     """This is what is passed to the batcher. It has two things.
@@ -30,8 +30,10 @@ class Query:
         self.passData = passData
         self.index = index
 
+
 class Result:
     pass
+
 
 class PisaResult(Result):
     """This is the output from shapping a single base. It contains a few things.
@@ -92,10 +94,12 @@ class FlatResult(Result):
         self.passData = passData
         self.index = index
 
+
 class Generator:
     """This is the base class for generating pisa samples."""
     def __init__(self):
         raise NotImplemented()
+
     @abc.abstractmethod
     def __iter__(self) -> Iterator[Query]:
         raise NotImplemented()
@@ -112,11 +116,20 @@ class Generator:
         # When the batcher is done, this is called to free any allocated resources.
         raise NotImplemented()
 
+
 class Saver:
     """The saver runs in the main thread, so it's safe to open files and stuff in __init__.
     Descendants of this class shall receive Results from the batcher and save them to an
-    appropriate structure, usually on disk."""
+    appropriate structure, usually on disk.
+    The user creates a Saver object in the main thread, and then the saver gets
+    construct()ed inside a separate thread created by the runners. Therefore, you
+    should only create members that are serializable in __init__."""
     def __init__(self):
+        raise NotImplemented()
+
+    def construct(self):
+        """This function should actually open the output files, since it will
+        be called from inside the actual saver thread."""
         raise NotImplemented()
 
     def add(self, result: Result):
@@ -139,7 +152,7 @@ class FlatRunner:
 
     def __init__(self, modelFname: str, headId: int, numHeads: int, taskIDs: list[int],
                  batchSize: int, generator: Generator, profileSaver: Saver,
-                 countsSaver: Saver, numShuffles: int, profileFname: Optional[str]=None):
+                 countsSaver: Saver, numShuffles: int, profileFname: Optional[str] = None):
         """modelFname is the name of the model on disk
         headId and taskIDs are the head and tasks to shap, obviously.
             Typically, you'd want to interpret all of the tasks in a head, so for a two-task
@@ -159,11 +172,13 @@ class FlatRunner:
         self._countsInQueue = multiprocessing.Queue(1000)
         self._profileOutQueue = multiprocessing.Queue(1000)
         self._countsOutQueue = multiprocessing.Queue(1000)
+
         def ap(txt) -> Optional[str]:
             """Add some text to the profileFname"""
             if profileFname is None:
                 return None
             return profileFname + txt
+
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._profileInQueue, self._countsInQueue], generator,
                   ap("_gen.dat")))
@@ -178,9 +193,9 @@ class FlatRunner:
                   ap("_counts.dat")))
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
-            args = (self._profileOutQueue, profileSaver, ap("_profileWrite.dat")))
+            args=(self._profileOutQueue, profileSaver, ap("_profileWrite.dat")))
         self._countsSaverThread = multiprocessing.Process(target=_saverThread,
-            args = (self._countsOutQueue, countsSaver, ap("_countsWrite.dat")))
+            args=(self._countsOutQueue, countsSaver, ap("_countsWrite.dat")))
         if profileFname is not None:
             import pstats
             for end in ["_gen", "_profile", "_counts", "_profileWrite", "_countsWrite"]:
@@ -188,10 +203,6 @@ class FlatRunner:
                     s = pstats.Stats(ap(end + ".dat"), stream=fp)
                     s.sort_stats('cumulative')
                     s.print_stats()
-
-
-
-
 
     def run(self):
         """Starts up the threads and waits for them to finish."""
@@ -221,8 +232,8 @@ class PisaRunner:
     those out to an hdf5-format file."""
 
     def __init__(self, modelFname: str, headId: int, taskId: int, batchSize: int,
-                 generator: Generator, saver: Saver,
-                 numShuffles: int, receptiveField: int, profileFname: Optional[str]=None):
+                 generator: Generator, saver: Saver, numShuffles: int,
+                 receptiveField: int, profileFname: Optional[str] = None):
         """modelFname is the name of the model on disk
         headId and taskID are the head and task to shap, obviously,
         batchSize is the *shap* batch size, which should be your usual batch size divided
@@ -241,11 +252,13 @@ class PisaRunner:
         logging.info("Initializing pisa runner.")
         self._inQueue = multiprocessing.Queue(1000)
         self._outQueue = multiprocessing.Queue(1000)
+
         def ap(txt):
             """Add some text to the profileFname"""
             if profileFname is None:
                 return None
             return profileFname + txt
+
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._inQueue], generator, ap("_generate.dat")))
         self._batchThread = multiprocessing.Process(target=_pisaBatcherThread,
@@ -274,7 +287,7 @@ class PisaRunner:
 class FlatH5Saver(Saver):
     """Saves the shap scores to the output file. """
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
-                 genome: Optional[str]=None, useTqdm: bool=False):
+                 genome: Optional[str] = None, useTqdm: bool = False):
         """
         OutputFname is the name of the hdf5-format file that the shap scores will be deposited in.
         numSamples is the number of regions (i.e., bases) that pisa will be run on.
@@ -283,20 +296,29 @@ class FlatH5Saver(Saver):
             the genome of the organism. If provided, then chromosome name and size information
             will be included in the output, and, additionally, two other datasets will be
             created: coords_chrom, and coords_base. """
-        logging.info("Initializing saver.")
-        self._outFile = h5py.File(outputFname, "w")
+        self._outputFname = outputFname
         self.numSamples = numSamples
         self.genomeFname = genome
-        self._outFile.create_dataset("hyp_scores", (numSamples, inputLength, 4), dtype='f4')
+        self.inputLength = inputLength
+        self._useTqdm = useTqdm
+
+    def construct(self):
+        logging.info("Initializing saver.")
+        self._outFile = h5py.File(self._outputFname, "w")
+        self._outFile.create_dataset("hyp_scores",
+                                     (self.numSamples, self.inputLength, 4),
+                                     dtype='f8')
         # TODO for later: Adding compression to the sequence here absolutely tanks performan
-        self._outFile.create_dataset('input_seqs', (numSamples, inputLength, 4), dtype='u1')
+        self._outFile.create_dataset('input_seqs',
+                                     (self.numSamples, self.inputLength, 4),
+                                     dtype='u1')
         self.pbar = None
-        if (useTqdm):
-            self.pbar = tqdm.tqdm(total=numSamples)
+        if (self._useTqdm):
+            self.pbar = tqdm.tqdm(total=self.numSamples)
         if (self.genomeFname is not None):
             self._loadGenome()
         else:
-            self._outFile.create_dataset("descriptions", (numSamples,),
+            self._outFile.create_dataset("descriptions", (self.numSamples,),
                                          dtype=h5py.string_dtype('utf-8'))
         logging.debug("Saver initialized, hdf5 file created.")
 
@@ -312,7 +334,7 @@ class FlatH5Saver(Saver):
         """
         import pysam
         logging.info("Loading genome information.")
-        with pysam.FastaFile(self.genomeFname) as genome: # type: ignore
+        with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
                                          (genome.nreferences,),
                                          dtype=h5py.string_dtype(encoding='utf-8'))
@@ -361,7 +383,7 @@ class FlatH5Saver(Saver):
 class PisaH5Saver(Saver):
     """Saves the shap scores to the output file. """
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
-                 genome: Optional[str]=None, useTqdm: bool=False):
+                 genome: Optional[str] = None, useTqdm: bool = False):
         """
         OutputFname is the name of the hdf5-format file that the shap scores will be deposited in.
         numSamples is the number of regions (i.e., bases) that pisa will be run on.
@@ -372,22 +394,34 @@ class PisaH5Saver(Saver):
             will be included in the output, and, additionally, two other datasets will be
             created: coords_chrom, and coords_base. """
         logging.info("Initializing saver.")
-        self._outFile = h5py.File(outputFname, "w")
+        self._outputFname = outputFname
         self.numSamples = numSamples
         self.numShuffles = numShuffles
         self.genomeFname = genome
-        self._outFile.create_dataset("input_predictions", (numSamples,), dtype='f4')
-        self._outFile.create_dataset("shuffle_predictions", (numSamples, numShuffles), dtype='f4')
-        self._outFile.create_dataset("shap", (numSamples, receptiveField, 4), dtype='f4')
+        self._useTqdm = useTqdm
+        self.receptiveField = receptiveField
+
+    def construct(self):
+        self._outFile = h5py.File(self._outputFname, "w")
+        self._outFile.create_dataset("input_predictions",
+                                     (self.numSamples,), dtype='f4')
+        self._outFile.create_dataset("shuffle_predictions",
+                                     (self.numSamples, self.numShuffles),
+                                     dtype='f4')
+        self._outFile.create_dataset("shap",
+                                     (self.numSamples, self.receptiveField, 4),
+                                     dtype='f4')
         # TODO for later: Adding compression to the sequence here absolutely tanks performan
-        self._outFile.create_dataset('sequence', (numSamples, receptiveField, 4), dtype='u1')
+        self._outFile.create_dataset('sequence',
+                                     (self.numSamples, self.receptiveField, 4),
+                                     dtype='u1')
         self.pbar = None
-        if (useTqdm):
-            self.pbar = tqdm.tqdm(total=numSamples)
+        if (self._useTqdm):
+            self.pbar = tqdm.tqdm(total=self.numSamples)
         if (self.genomeFname is not None):
             self._loadGenome()
         else:
-            self._outFile.create_dataset("descriptions", (numSamples,),
+            self._outFile.create_dataset("descriptions", (self.numSamples,),
                                          dtype=h5py.string_dtype('utf-8'))
         logging.debug("Saver initialized, hdf5 file created.")
 
@@ -578,7 +612,7 @@ class PisaBedGenerator(Generator):
         # there are no pointers to file handles in this object.
         fp = pybedtools.BedTool(self.bedFname)
         for line in fp:
-           numRegions += line.end - line.start
+            numRegions += line.end - line.start
         self.numRegions = numRegions
         logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
@@ -620,7 +654,7 @@ class PisaBedGenerator(Generator):
 def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headId: int, numHeads: int,
                        taskIDs: list[int], numShuffles: int, mode: str,
-                       profileFname: Optional[str]=None):
+                       profileFname: Optional[str] = None):
     logging.debug("Starting flat batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
@@ -646,7 +680,8 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headId: int, taskId: int,
-                       numShuffles: int, receptiveField: int, profileFname: Optional[str]=None):
+                       numShuffles: int, receptiveField: int,
+                       profileFname: Optional[str] = None):
     logging.debug("Starting batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
@@ -670,7 +705,7 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 
 
 def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
-                     profileFname : Optional[str] = None):
+                     profileFname: Optional[str] = None):
     import cProfile
     profiler = cProfile.Profile()
     if (profileFname is not None):
@@ -698,6 +733,7 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
     profiler = cProfile.Profile()
     if (profileFname is not None):
         profiler.enable()
+    saver.construct()
     while (True):
         rv = outQueue.get()
         if (rv is None):
@@ -830,7 +866,6 @@ class _FlatBatcher:
         import utils
         utils.limitMemoryUsage(0.4)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-        #utils.setMemoryGrowth()
         self.model = load_model(modelFname,
                 custom_objects={'multinomialNll': losses.multinomialNll})
         self.batchSize = batchSize
@@ -859,7 +894,7 @@ class _FlatBatcher:
                     combine_mult_and_diffref=combineMultAndDiffref)
             case "counts":
                 # Now for counts - much easier!
-                countsMetric = self.model.outputs[numHeads + headId][:,0]
+                countsMetric = self.model.outputs[numHeads + headId][:, 0]
                 self.explainer = shap.TFDeepExplainer((self.model.input, countsMetric),
                     self.generateShuffles,
                     combine_mult_and_diffref=combineMultAndDiffref)
@@ -898,7 +933,6 @@ class _FlatBatcher:
         # REAL_SEQUENCE_1_REAL_SEQUENCE_1_REAL_SEQUENCE_1
         # REAL_SEQUENCE_2_REAL_SEQUENCE_2_REAL_SEQUENCE_2
 
-
         for i, q in enumerate(self.curBatch):
             oneHotBuf[i, :, :] = q.sequence
         # Okay, now the data structures are set up.
@@ -911,3 +945,17 @@ class _FlatBatcher:
             ret = FlatResult(querySequence, queryScores, q.passData, q.index)
             self.outQueue.put(ret)
 
+
+def combineMultAndDiffref(mult, orig_inp, bg_data):
+    # This is copied from Zahoor's code.
+    projected_hypothetical_contribs = \
+        np.zeros_like(bg_data[0]).astype('float')
+    assert (len(orig_inp[0].shape) == 2)
+    for i in range(4):  # We're going to go over all the base possibilities.
+        hypothetical_input = np.zeros_like(orig_inp[0]).astype('float')
+        hypothetical_input[:, i] = 1.0
+        hypothetical_diffref = hypothetical_input[None, :, :] - bg_data[0]
+        hypothetical_contribs = hypothetical_diffref * mult[0]
+        projected_hypothetical_contribs[:, :, i] = np.sum(hypothetical_contribs, axis=-1)
+    # There are no bias importances, so the np.zeros_like(orig_inp[1]) is not needed.
+    return [np.mean(projected_hypothetical_contribs, axis=0)]

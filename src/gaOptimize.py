@@ -26,7 +26,8 @@ IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 Corruptor: TypeAlias = tuple[int, str]
 Profile: TypeAlias = List[Tuple[npt.NDArray[np.float64], float]]
 
-def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int,int]]:
+
+def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int, int]]:
     """Given a list of corruptor tuples, like [(1354, 'C'), (1514, 'Ť'), (1693, 'd')],
     convert that to an integer list that can be easily saved. This list will have the format
     [ [1354, 1], [1514, 7], [1693, 8] ]
@@ -39,7 +40,7 @@ def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int,int]]:
     return ret
 
 
-def arrayToCorruptors(corruptorArray: List[Tuple[int,int]]) -> List[Corruptor]:
+def arrayToCorruptors(corruptorArray: List[Tuple[int, int]]) -> List[Corruptor]:
     """The inverse of corruptorsToArray, takes an array of numerical corruptors in the form
     [ [1354, 1], [1514, 7], [1693, 8] ]
     and generates the canonical list with letters, as used in the rest of the code.
@@ -67,12 +68,10 @@ def stringToCorruptorList(corruptorStr: str) -> List[Corruptor]:
     import ast
     ret = []
     tree = ast.parse(corruptorStr)
-    body : ast.Expr = cast(ast.Expr, tree.body[0])
-    elems = cast(ast.List,body.value).elts
+    elems = tree.body[0].value.elts  # type: ignore
     for e in elems:
-        e = cast(ast.Tuple, e)
-        pos = cast(ast.Constant, e.elts[0]).value
-        cor = cast(ast.Constant, e.elts[1]).value
+        pos = e.elts[0].value  # type: ignore
+        cor = e.elts[1].value  # type: ignore
         ret.append((pos, cor))
     return ret
 
@@ -82,14 +81,13 @@ class Organism:
     input sequence."""
     profile: Profile
     score: float
-    def __init__(self, corruptors: List[Corruptor]):
+
+    def __init__(self, corruptors: List[Corruptor]) -> None:
         """Construct an organism with the given corruptors.
         """
 
         self.corruptors = sorted(corruptors)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
-        #self.profile = None
-        #self.score = None
 
     def getSequence(self, initialSequence: str, inputLength: int) -> str:
         """Applies this organism's corruptors to initialSequence, a string.
@@ -142,7 +140,7 @@ class Organism:
         fullSequence = "".join(seq) + initialSequence[readHead:]
         return fullSequence[:inputLength]
 
-    def setScore(self, scoreFn: Callable[[Profile, List[Corruptor]], float]):
+    def setScore(self, scoreFn: Callable[[Profile, List[Corruptor]], float]) -> None:
         assert self.profile is not None, \
             "Attempting to score organism with no profile."
         self.score = scoreFn(self.profile, self.corruptors)
@@ -215,7 +213,7 @@ class Organism:
             candidateCorruptors = sorted(keepCorruptors + [newCor])
             if validCorruptorList(candidateCorruptors):
                 found = checkCorruptors(candidateCorruptors)
-        return Organism(candidateCorruptors)
+        return Organism(candidateCorruptors)  # type: ignore
 
     def mixed(self, other: 'Organism',
               checkCorruptors: Callable[[List[Corruptor]], bool]) -> 'Organism':
@@ -334,7 +332,7 @@ class Population:
         self.predictor = predictor
         self._seed()
 
-    def _seed(self):
+    def _seed(self) -> None:
         for _ in range(self.populationSize):
             add = False
             numTries = 0
@@ -349,7 +347,7 @@ class Population:
                         add = False
                         break
             # We've created a new organism that is ready to go!
-            self.organisms.append(candidate)
+            self.organisms.append(candidate)  # type: ignore
 
     def _newOrganism(self) -> Organism:
         for _ in range(100):
@@ -364,7 +362,7 @@ class Population:
                 return Organism(cors)
         assert False, "Over 100 attempts to choose corruptors for new organism."
 
-    def runCalculation(self):
+    def runCalculation(self) -> None:
         """Runs the current population through the model, assigns scores
         to each organism, and sorts the organisms by score."""
 
@@ -413,7 +411,7 @@ class Population:
                 secondChoice = secondChoice - 1
         return self.organisms[firstChoice], self.organisms[secondChoice]
 
-    def nextGeneration(self):
+    def nextGeneration(self) -> None:
         """Once you've runCalculation(), you call this to create new organisms
         for the next generation. This replaces the .organisms array with the new
         children. If you want to save a list of the best parents, remember that
@@ -448,7 +446,7 @@ class Population:
         self.organisms = list(ret)
 
 
-def getCandidateCorruptorList(sequence: str, regions: Optional[List[Tuple[int,int]]] = None,
+def getCandidateCorruptorList(sequence: str, regions: Optional[List[Tuple[int, int]]] = None,
                               allowDeletion: bool = True,
                               allowInsertion: bool = True) -> List[Corruptor]:
     """Given a sequence (a string), this generates a list of tuples
@@ -569,13 +567,16 @@ def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
         prev = c
     return True
 
+
 import matplotlib.pyplot as plt
+
+
 def plotTraces(posTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
                negTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
                xvals: npt.NDArray[np.float64],
-               annotations: List[Tuple[Tuple[int,int], str, str]],
+               annotations: List[Tuple[Tuple[int, int], str, str]],
                corruptors: List[Corruptor],
-               ax: plt.Axes):
+               ax: plt.Axes) -> None:
     """Generate a nice little plot including pips for corruptors and boxes for
     annotations.
     posTraces is a list of tuples. Each tuple has three things:

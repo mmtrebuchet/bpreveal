@@ -2,6 +2,7 @@
 \usepackage{listings}
 \usepackage{fullpage}
 \usepackage{hyperref}
+\usepackage{amsmath}
 \hypersetup{
     colorlinks=true,
     linktoc=all
@@ -23,29 +24,37 @@
 
 \newpage
 
-\section{Purpose}
+\section{Workflow}
 
 BPReveal is an expansion of the chrombpnet-lite repository, designed to allow for more flexibility.
-It also incorporates a new interpretation tool, called PISA (Pairwise Interaction Shap Analysis) that lets you view a two-dimensional map of cause and effect over a region.
-The two main changes are the addition of multi-task models, and a generalization of the regression step.
+It also incorporates a new interpretation tool, called PISA (Pairwise Interaction Shap Analysis)
+that lets you view a two-dimensional map of cause and effect over a region.
+The two main changes are the addition of multi-task models, and a generalization of the regression
+step.
 For cases where you don't have a bias track you want to regress out, here are the steps:
 
 \begin{enumerate}
-    \item Prepare bigwig tracks and select the regions you are interested in. There are some utilities for this in BPReveal, but you are mostly on your own for this stage.
-    \item Prepare training data files. These hdf5 files contain the sequences and experimental profiles for all the heads in your model.
+    \item Prepare bigwig tracks and select the regions you are interested in. There are some
+        utilities for this in BPReveal, but you are mostly on your own for this stage.
+    \item Prepare training data files. These hdf5 files contain the sequences and experimental
+        profiles for all the heads in your model.
     \item Train a solo model.
     \item Measure the performance of your model.
     \item Make predictions from the model.
-    \item Generate importance scores, either one-dimensionally, as is usual, or by making two-dimensional PISA plots.
+    \item Generate importance scores, either one-dimensionally, as is usual, or by making
+        two-dimensional PISA plots.
     \item Run MoDISco to extract motifs (using the external \texttt{tfmodisco-lite} package)
-    \item Use hitscoring to map the discovered motifs back to the genome. (hitscoring is not currently available in \texttt{tfmodisco-lite})
+    \item Use the motif mapping tools to map the discovered motifs back to the genome.
 \end{enumerate}
 
-If you do have strong experimental biases, you will need to regress them out. In that case, the workflow is the following:
+If you do have strong experimental biases, you will need to regress them out. In that case, the
+workflow is the following:
 
 \begin{enumerate}
     \item Prepare bigwig tracks and select the regions you are interested in.
-    \item Prepare a data file containing bias. The bias regions may be uninteresting regions in the genome, or you may train on your regions of interest but use an experimental control for the data.
+    \item Prepare a data file containing bias. The bias regions may be uninteresting regions in
+        the genome, or you may train on your regions of interest but use an experimental control
+        for the data.
     \item Train a bias (AKA solo) model.
     \item Train a transformation model to match the bias model to the experimental data.
     \item Train a residual model to explain non-bias parts of the experimental data.
@@ -53,7 +62,7 @@ If you do have strong experimental biases, you will need to regress them out. In
     \item Make predictions from the full model and residual model.
     \item Generate importance scores from the residual model.
     \item Run MoDISco.
-    \item Use hitscoring to map the discovered motifs back to the genome.
+    \item Map the discovered motifs back to the genome.
 \end{enumerate}
 
 \newpage
@@ -63,15 +72,29 @@ If you do have strong experimental biases, you will need to regress them out. In
 These are the guidelines for code design in BPReveal:
 
 \begin{itemize}
-    \item Make each program do one thing well. To do a new job, build afresh rather than complicate old programs by adding new features.
-    \item Expect the output of every program to become the input to another, as yet unknown, program. Don't clutter the output with extraneous information. Don't insist on interactive input.
+    \item Make each program do one thing well. To do a new job, build afresh rather than
+        complicate old programs by adding new features.
+    \item Expect the output of every program to become the input to another, as yet unknown,
+        program. Don't clutter the output with extraneous information. Don't insist on
+        interactive input.
     \item But do include logging messages that can be enabled for debugging.
-    \item Explicit is better than implicit. Wherever possible, do not allow for defaults when a value is not specified.  (Looking at you, MoDISco!)
+    \item Explicit is better than implicit. Wherever possible, do not allow for defaults when
+        a value is not specified.  (Looking at you, MoDISco!)
+    \item For substantial programs, prefer configuration files over a sea of command-line
+        arguments. Use JSON for all data that aren't (1.) bed files, (2.) bigwig files,
+        (3.) fasta files, or (4.) potentially enormous (for large datasets, prefer hdf5.).
     \item Flat is better than nested. Write code that has minimal architectural overhead.
-    \item Don't be too clever. The code should use the standard idioms of the language, even if an operation could be completed in fewer characters or slightly more efficiently some other way.
+    \item Don't be too clever. The code should use the standard idioms of the language, even if
+        an operation could be completed in fewer characters or slightly more efficiently
+        some other way.
+    \item But performance matters. Write code that works fast enough that people can use it
+        to ask new questions. Use parallelism with wild abandon.
     \item Errors should never pass silently.
+    \item One line of code is ten lines of documentation. The documentation consists of in-code
+        comments, clear specifications (this document), tutorials, and the reference publication.
     \item If the implementation is hard to explain, it's a bad idea.
-    \item The API should mirror the CLI.
+    \item Use only well-established and stable dependencies. Don't require specific versions of
+        libraries, and only require packages that are truly essential.
 \end{itemize}
 
 \newpage
@@ -81,37 +104,73 @@ These are the guidelines for code design in BPReveal:
 BPReveal includes the following core programs:
 
 \begin{description}
-    \item [trainSoloModel.py] Takes in a training input configuration and trains up a model to predict the the given data, with no bias correction. Saves the model to disk, along with information from the training phase.
-    \item [trainTransformationModel.py] Takes in a bias (i.e., solo) model and the actual experimental (i.e., biology + bias) data. Derives a relation to best fit the bias profile onto the experimental data. Saves a new model to disk, adding a simple layer or two to do the regression.
-    \item [trainCombinedModel.py] Takes a transformation model and experimental data and builds a model to explain the residuals. Saves both a combined model and the residual model alone to disk.
-    \item [prepareTrainingData.py] Takes in bed and bigwig files and a genome, and generates an hdf5-format file containing the samples used for training.
-    \item [makePredictionsBed.py] Takes a trained model (solo, combined, residual, or even transformation models work) and predicts over the given regions.
-    \item [makePredictionsFasta.py] Takes a trained model and predicts on sequences given as a fasta file.
-    \item [interpretFlat.py] Generates shap scores of the same type as BPNet. Hypothetical contributions for each base are written to a modisco-compatible h5.
+    \item [trainSoloModel.py] Takes in a training input configuration and trains up a model to
+        predict the the given data, with no bias correction. Saves the model to disk, along with
+        information from the training phase.
+    \item [trainTransformationModel.py] Takes in a bias (i.e., solo) model and the actual
+        experimental (i.e., biology + bias) data. Derives a relation to best fit the bias profile
+        onto the experimental data. Saves a new model to disk, adding a simple layer or two to
+        do the regression.
+    \item [trainCombinedModel.py] Takes a transformation model and experimental data and builds
+        a model to explain the residuals. Saves both a combined model and the residual model
+        alone to disk.
+    \item [prepareTrainingData.py] Takes in bed and bigwig files and a genome, and generates an
+        hdf5-format file containing the samples used for training.
+    \item [makePredictionsBed.py] Takes a trained model (solo, combined, residual, or even
+        transformation models work) and predicts over the given regions.
+    \item [makePredictionsFasta.py] Takes a trained model and predicts on sequences given as
+        a fasta file.
+    \item [interpretFlat.py] Generates shap scores of the same type as BPNet. Hypothetical
+        contributions for each base are written to a modisco-compatible h5.
     \item [interpretPisaBed.py] Runs an all-to-all shap analysis on the given regions.
     \item [interpretPisaFasta.py] Runs an all-to-all shap analysis on the given sequences.
+    \item [motifAddQuantiles.py] Loads the output from modiscolite and calculates cutoff values
+        to use during motif scanning.
+    \item [motifScan.py] Scan the genome for patterns of contribution scores that match motifs
+        identified by modiscolite.
 \end{description}
 
 And the following utilities:
 
 \begin{description}
     \item [metrics.py] Calculates a suite of metrics about how good a model's predictions are.
-    \item [predictToBigwig.py] Takes the hdf5 file generated by the predict step and converts one track from it into a bigwig file.
-    \item [shapToBigwig.py] Converts a shap hdf5 file (from \texttt{interpretFlat.py}) into a bigwig track for visualization.
-    \item [lengthCalc.py] Given the parameters of a network, like input filter width, number of layers \&c., determine the input width or output width.
-    \item [makeLossPlots.py] Once you've trained a model, you can run this on the history file to get plots of all of the components of the loss.
-    \item [prepareBed.py] Given a set of regions and data tracks, reject regions that have too few (or too many) reads, or that have unmappped bases in the genome.
+    \item [predictToBigwig.py] Takes the hdf5 file generated by the predict step and converts one
+        track from it into a bigwig file.
+    \item [shapToBigwig.py] Converts a shap hdf5 file (from \texttt{interpretFlat.py}) into a
+        bigwig track for visualization.
+    \item [shapToNumpy.py] Takes the interpretations from \texttt{interpretFlat.py} and converts
+        them to numpy arrays that can be read in by modiscolite.
+    \item [lengthCalc.py] Given the parameters of a network, like input filter width, number of
+        layers \&c., determine the input width or output width.
+    \item [makeLossPlots.py] Once you've trained a model, you can run this on the history file
+        to get plots of all of the components of the loss.
+    \item [prepareBed.py] Given a set of regions and data tracks, reject regions that have too
+        few (or too many) reads, or that have unmappped bases in the genome.
     \item [showModel.py] Make a pretty picture of your model.
+    \item [motifAddQuantiles.py] Takes the output from \texttt{motifScan.py} and
+        \texttt{motifAddQuantiles.py} and adds quantile information for determining how good
+        your motif matches were.
+\end{description}
+
+And the following libraries:
+
+\begin{description}
+    \item [gaOptimize.py] contains tools for evolving sequences that lead to desired profiles.
+        It implements a genetic algorithm that supports insertions and deletions.
+    \item [utils.py] Contains general-use utilities and a high-performance tool to generate
+        predictions for many sequences.
 \end{description}
 
 \newpage
 
 \section{Setup}
 
-BPReveal requires just a few libraries, and I use conda to manage my environment. You can also install these with pip.
+BPReveal requires just a few libraries, and I use conda to manage my environment.
+You can also install these with pip.
 
 \begin{itemize}
-    \item \texttt{python} version 3.10 or later. Note that this codebase uses features that were introduced in version 3.10, so it will not work with 3.9 or earlier.
+    \item \texttt{python} version 3.10 or later. Note that this codebase uses features that were
+        introduced in version 3.10, so it will not work with 3.9 or earlier.
     \item \texttt{tfmodisco-lite}, only needed if you want to do motif identification.
     \item \texttt{pyBigWig}, for reading and writing bigwig files.
     \item \texttt{pysam}, to read in fasta files.
@@ -124,22 +183,28 @@ BPReveal requires just a few libraries, and I use conda to manage my environment
 
 You can, of course, install any other packages you like.
 I'm fond of \texttt{jupyter lab} for doing analysis.
-I found that I also needed to install a \texttt{cudatoolkit} package to get everything compatible, but this may not be necessary on your system.
-You should check the TensorFlow website for instructions on how to install TensorFlow on your system. 
+I found that I also needed to install a \texttt{cudatoolkit} package to get everything compatible,
+but this may not be necessary on your system.
+You should check the TensorFlow website for instructions on how to install TensorFlow on your
+system.
 
 
 \newpage
 
 \section{Programs}
 
-In this section, I will provide detailed specifications for all of the input files, with particular emphasis on configuration json files.
+In this section, I will provide detailed specifications for all of the input files, with
+particular emphasis on configuration JSON files.
 
 \newpage
 \subsection{Prepare training data: \texttt{prepareTrainingData.py}}
 
-This program reads in a genome file, a list of regions in bed format, and a set of bigwig files containing profiles that the model will predict.
+This program reads in a genome file, a list of regions in bed format, and a set of bigwig
+files containing profiles that the model will predict.
 It generates an hdf5-format file that is used during training.
-If you want to train on a custom genome, or you don't have a meaningful genome for your experiment, you can still provide sequences and profiles by creating an hdf5 file in the same format as this tool generates.
+If you want to train on a custom genome, or you don't have a meaningful genome for your
+experiment, you can still provide sequences and profiles by creating an hdf5 file
+in the same format as this tool generates.
 
 \subsubsection{Input specification}
 
@@ -190,17 +255,29 @@ If you want to train on a custom genome, or you don't have a meaningful genome f
 
 \subsubsection{Parameter notes}
 \begin{itemize}
-    \item \texttt{genome} is the name of the fasta-format file for your organism. 
-    \item \texttt{regions} is the name of the bed file of regions you will train on. These regions must be \texttt{output-width} in length. 
-    \item The \texttt{reverse-complement} flag sets whether the data files will include reverse-complement augmentation. 
-        If this is set to \texttt{true} then you must include \texttt{revcomp-task-order} in every head section.
-    \item The \texttt{revcomp-task-order} is a list specifying which tasks in the forward sample should map to the tasks in the reverse sample.
-        For example, if the two tasks represent reads on the plus and minus strand, then when you create a reverse-complemented training example, the minus strand becomes the plus strand, and vice versa.
-        So you'd set this parameter to \texttt{[1,0]} to indicate that the data for the two tasks should be swapped (in addition to reversed 5' to 3', of course).
-        If you only have one task in a head, you should set this to \texttt{[0]}, to indicate that there is no swapping.
-        If you have multiple tasks, say, a task for the left end of a read, one for the right end, and one for the middle, then the left and right should be swapped and the middle left alone.
+    \item \texttt{genome} is the name of the fasta-format file for your organism.
+    \item \texttt{regions} is the name of the bed file of regions you will train on. These regions
+        must be \texttt{output-width} in length.
+    \item The \texttt{reverse-complement} flag sets whether the data files will include
+        reverse-complement augmentation. If this is set to \texttt{true} then you must include
+        \texttt{revcomp-task-order} in every head section.
+    \item The \texttt{revcomp-task-order} is a list specifying which tasks in the forward sample
+        should map to the tasks in the reverse sample.
+        For example, if the two tasks represent reads on the plus and minus strand, then when you
+        create a reverse-complemented training example, the minus strand becomes the plus strand,
+        and vice versa.
+        So you'd set this parameter to \texttt{[1,0]} to indicate that the data for the two
+        tasks should be swapped (in addition to reversed 5' to 3', of course).
+        If you only have one task in a head, you should set this to \texttt{[0]}, to indicate
+        that there is no swapping.
+        If you have multiple tasks, say, a task for the left end of a read, one for the right end,
+        and one for the middle, then the left and right should be swapped and the middle left
+        alone.
         In this case, you'd set \texttt{revcomp-task-order} to \texttt{[1,0,2]}.
-        If this parameter is set to \texttt{"auto"}, then it will choose \texttt{[1,0]} if there are two strands, \texttt{[0]} if there is only one strand, and it will issue an error if there are more strands than that.
+        If this parameter is set to \texttt{"auto"}, then it will choose \texttt{[1,0]} if
+        there are two strands, \texttt{[0]} if there is only one strand, and it will issue an
+        error if there are more strands than that.
+        \texttt{"auto"} is appropriate for data like ChIP-nexus.
 \end{itemize}
 
 \subsubsection{Output specification}
@@ -208,9 +285,11 @@ If you want to train on a custom genome, or you don't have a meaningful genome f
 It will generate a file that is organized as follows:
 
 \begin{itemize}
-    \item \texttt{head\_N}, where N is an integer from 0 to however many heads you have. It will have shape (num-regions x (output-length + 2*jitter) x num-tasks).
+    \item \texttt{head\_N}, where \texttt{N} is an integer from 0 to however many heads you have.
+        It will have shape (num-regions x (output-length + 2*jitter) x num-tasks).
     \item (more \texttt{head\_N} entries)...
-    \item \texttt{sequence}, which is the one-hot encoded sequence for each corresponding region. It will have shape (num-regions x (input-width + 2*jitter) x 4).
+    \item \texttt{sequence}, which is the one-hot encoded sequence for each corresponding
+        region. It will have shape (num-regions x (input-width + 2*jitter) x 4).
 \end{itemize}
 
 
@@ -220,22 +299,33 @@ It will generate a file that is organized as follows:
 \subsection{Training a solo model: \texttt{trainSoloModel.py}}
 
 This program generates a neural network that maps genomic sequence to experimental readout.
-In cases where you don't need to regress out a bias track, this is the only training program you'll use.
-By and large, you can refer to the BPNet paper for details on how this program works, the only difference is in the input padding.
-In the original BPNet, for an output window of 1 kb, the input sequence was 1 kb long, and if a neuron needed to know about bases outside that window, it got all zeros.
-For image processing, this makes sense, because you can't un-crop an image. However, for DNA in a genome, you can just expand out the windows and get as much DNA sequence as you like.
-Therefore, BPReveal models require an input length that is larger than output length, so that the model can use DNA sequence information that is outside of its output window.
+In cases where you don't need to regress out a bias track, this is the only training program
+you'll use.
+By and large, you can refer to the BPNet paper for details on how this program works, the only
+difference is in the input padding.
+In the original BPNet, for an output window of 1 kb, the input sequence was 1 kb long, and if
+a neuron needed to know about bases outside that window, it got all zeros.
+For image processing, this makes sense, because you can't un-crop an image. However, for DNA in
+a genome, you can just expand out the windows and get as much DNA sequence as you like.
+Therefore, BPReveal models require an input length that is larger than output length, so that
+the model can use DNA sequence information that is outside of its output window.
 
-The required input files are two hdf5-format files that contain sequences and profiles. One of these is used for training, one for validation during training.
+The required input files are two hdf5-format files that contain sequences and profiles.
+One of these is used for training, one for validation during training.
+See \texttt{prepareTrainingData.py} for the specification for this file.
 
-The program will produce two outputs, one being a Keras model. This model will be used later for prediction and interpretation. 
-The other output records the progress of the model during training, and it is read in by makeLossPlots.py.
+The program will produce two outputs, one being a Keras model. This model will be used later
+for prediction and interpretation.
+The other output records the progress of the model during training, and it is read in
+by \texttt{makeLossPlots.py}.
 
 
 \subsubsection{Input specification}
 
-A solo training input configuration file is a JSON file that specifies what data should be used to train up the solo model.
-It shall contain exactly one settings section, one data section, one heads section, and one verbosity section.
+A solo training input configuration file is a JSON file that specifies what data should
+be used to train up the solo model.
+It shall contain exactly one settings section, one data section, one heads section,
+and one verbosity section.
 
 \begin{lstlisting}[language=python]
 <solo-training-input-configuration> ::=
@@ -293,33 +383,76 @@ It shall contain exactly one settings section, one data section, one heads secti
 \subsubsection{Parameter notes}
 
 \begin{itemize}
-    \item The \texttt{profile-loss-weight} is simply a scalar that the profile loss is multiplied by. This comes in handy when you're training on two datasets with disparate coverage. Since the MNLL loss is proportional to the number of reads, a track with higher coverage will dominate the loss. Instead of calculating this a priori, I find it easiest to start training the model, look at the loss values, and then pick multipliers that will make them about even.
-    \item The \texttt{counts-loss-weight} is similar to \texttt{profile-loss-weight}, but do keep in mind that you need to set it even when you're training a single output head, since the mean squared error value of the counts prediction tends to be minuscule compared to the MNLL loss of the profile. Again, instead of calculating it a priori, I start training with an initial guess and then refine the value later.
-    \item \texttt{output-prefix} is the file name where you want your model saved. For example, if you are saving models in a directory called ``models'', and you want the model to be called ``solo'', then you'd write \texttt{"output-prefix" : "models/solo"}. In this case, you'll find the files ``models/solo.model'', which is the Keras model, and ``models/solo.history.json'', containing the training history.
-    \item \texttt{early-stopping-patience} controls how long the network should wait for an improvement in the loss before quitting. I recommend a bit more than double the \texttt{learning-rate-plateau-patience}, on the order of 11.
-    \item \texttt{batch-size} determines how many regions the network will look at simultaneously during training. It doesn't really matter, but if you make it too big your data won't fit on the GPU and if you make it too small your network will take an eternity to train. I like 64 or so.
-    \item \texttt{learning-rate} determines how aggressive the optimizer will be as the network trains. 0.004 is a good bet. (Note that the LR will decrease during training because of the plateau patience.)
-    \item \texttt{learning-rate-plateau-patience} controls how many epochs must pass without improvement before the optimizer decreases the learning rate. I recommend 5 or so.
+    \item The \texttt{profile-loss-weight} is simply a scalar that the profile loss is multiplied
+        by. This comes in handy when you're training on two datasets with disparate coverage.
+        Since the MNLL loss is proportional to the number of reads, a track with higher
+        coverage will dominate the loss. Instead of calculating this a priori, I find it
+        easiest to start training the model, look at the loss values, and then pick
+        multipliers that will make them about even.
+    \item The \texttt{counts-loss-weight} is similar to \texttt{profile-loss-weight}, but do keep
+        in mind that you need to set it even when you're training a single output head, since
+        the mean squared error value of the counts prediction tends to be minuscule compared
+        to the MNLL loss of the profile. Again, instead of calculating it a priori, I start
+        training with an initial guess and then refine the value later.
+    \item \texttt{output-prefix} is the file name where you want your model saved.
+        For example, if you are saving models in a directory called \texttt{models}, and you
+        want the model to be called \texttt{solo}, then you'd write
+        \texttt{"output-prefix" : "models/solo"}. In this case, you'll find the files
+        \texttt{models/solo.model}, which is the Keras model, and
+        \texttt{models/solo.history.json}, containing the training history.
+    \item \texttt{early-stopping-patience} controls how long the network should wait for an
+        improvement in the loss before quitting. I recommend a bit more than double the
+        \texttt{learning-rate-plateau-patience}, on the order of 11.
+    \item \texttt{batch-size} determines how many regions the network will look at simultaneously
+        during training. It doesn't really matter, but if you make it too big your data won't
+        fit on the GPU and if you make it too small your network will take an eternity to
+        train. I like 64 or so.
+    \item \texttt{learning-rate} determines how aggressive the optimizer will be as the network
+        trains. 0.004 is a good bet. (Note that the LR will decrease during training
+        because of the plateau patience.)
+    \item \texttt{learning-rate-plateau-patience} controls how many epochs must pass without
+        improvement before the optimizer decreases the learning rate. I recommend 5 or so.
 
-    \item The \texttt{architecture-name} is a future-proofing argument that will determine what type of network you want. Currently, only the basic bpnet-style architecture is supported.
-    \item \texttt{input-length} is the width of the input sequence that will be fed into the network. You can use the \texttt{lengthCalc.py} script to calculate this based on a desired profile width and architecture.
-    \item \texttt{output-length} is the width of the predicted profile. This is usually on the order of 1000.
-    \item \texttt{model-name} is just a string that is stored along with the model. BPNet-heavy does not use it internally.
-    \item \texttt{model-args} is a future-proofing argument. If there is a new feature added to a particular architecture, the \texttt{model-args} string will be passed to the architecture and the architecture may do with that string as it pleases. Currently, this serves no purpose.
-    \item \texttt{filters} is the number of convolutional filters at each layer. The more filters you add, the more patterns the model will try to learn. Typically this is between 32 and 128, smaller for simpler tasks.
-    \item \texttt{input-filter-width} is the size of the very first motif-scanning layer in BPNet. Lately, there's been a trend of making this small, on the order of 7.
-    \item \texttt{output-filter-width} is the width of the very last convolution, the one that actually results in the predicted profile. This layer is placed at the very bottom of the dilated layers. I use a width of 75, but many people use smaller output widths, on the order of 25.
-    \item \texttt{max-jitter} is the maximum allowed shifting of the regions. This random shifting is applied during training, and helps to create some variety in the counts values to prevent over-fitting. Note that you must use the same jitter you used when you created your training data file - if you want to try a different jitter, you need to re-generate your data hdf5 files.
+    \item The \texttt{architecture-name} is a future-proofing argument that will determine
+        what type of network you want. Currently, only the basic bpnet-style architecture
+        is supported.
+    \item \texttt{input-length} is the width of the input sequence that will be fed into
+        the network. You can use the \texttt{lengthCalc.py} script to calculate this based on
+        a desired profile width and architecture.
+    \item \texttt{output-length} is the width of the predicted profile. This is usually on
+        the order of 1000.
+    \item \texttt{model-name} is just a string that is stored along with the model.
+        BPReveal does not use it internally.
+    \item \texttt{model-args} is a future-proofing argument. If there is a new feature added
+        to a particular architecture, the \texttt{model-args} string will be passed to the
+        architecture and the architecture may do with that string as it pleases.
+        Currently, this serves no purpose.
+    \item \texttt{filters} is the number of convolutional filters at each layer. The more
+        filters you add, the more patterns the model will try to learn. Typically this is
+        between 32 and 128, smaller for simpler tasks.
+    \item \texttt{input-filter-width} is the size of the very first motif-scanning layer in BPNet.
+        Lately, there's been a trend of making this small, on the order of 7.
+    \item \texttt{output-filter-width} is the width of the very last convolution, the one that
+        actually results in the predicted profile. This layer is placed at the very bottom of
+        the dilated layers. I use a width of 75, but many people use smaller output widths,
+        on the order of 25.
+    \item \texttt{max-jitter} is the maximum allowed shifting of the regions.
+        This random shifting is applied during training, and helps to create some variety
+        in the counts values to prevent over-fitting. Note that you must use the same
+        jitter you used when you created your training data file - if you want to try a
+        different jitter, you need to re-generate your data hdf5 files.
 \end{itemize}
 
 \newpage
 
 \subsection{Training a transformation model: \texttt{trainTransformationModel.py}}
 
-The transformation input file is a JSON file that names a solo model and gives the experimental data that it should be fit to.
+The transformation input file is a JSON file that names a solo model and gives the experimental
+data that it should be fit to.
 Note that it may occasionally be appropriate to chain several transformation models together.
-Currently, the easiest way to do this is to feed the first transformation model in as the solo model
-for the second transformation. A better way to do it would be to write your own custom transformation Model.
+Currently, the easiest way to do this is to feed the first transformation model in as the solo
+model for the second transformation. A better way to do it would be to write your own custom
+transformation Model.
 
 \subsubsection{Input specification}
 \begin{lstlisting}
@@ -367,12 +500,20 @@ transformation - it must be a solo model that uses sequence as input.
 \subsubsection{Parameter notes}
 
 \begin{enumerate}
-    \item \texttt{solo-model-file} is the name of the file (or directory, since that's how keras likes to save models) that contains the solo model.
-    \item A \texttt{passthrough} transformation does nothing to the solo model, it doesn't regress anything.
-    \item A \texttt{simple} transformation applies the specified functions to the output of the solo model, and adjusts the parameters to best fit the experimental data.
-        A linear model applies y=mx+b to the solo predictions (which, remember, are in log-space), a sigmoid applies y = m1 *sigmoid(m2x+b2) + b1, and a relu applies y = m1 * relu(m2x+b2) + b1.
-        In other words, there's a linear model both before and after the sigmoid or relu activation.
-        Generally, you need to use these more complex functions when the solo model is not a great fit for the experimental bias.
+    \item \texttt{solo-model-file} is the name of the file (or directory, since that's how keras
+        likes to save models) that contains the solo model.
+    \item A \texttt{passthrough} transformation does nothing to the solo model, it doesn't
+        regress anything.
+    \item A \texttt{simple} transformation applies the specified functions to the output of the
+        solo model, and adjusts the parameters to best fit the experimental data.
+        A linear model applies $y=m x+b$ to the solo predictions (which, remember, are in
+        log-space),
+        a sigmoid applies $y = m_1 *sigmoid(m_2x+b_2) + b_1$,
+        and a relu applies $y = m_1 * relu(m_2x+b_2) + b_1$.
+        In other words, there's a linear model both before and after the sigmoid or relu
+        activation.
+        Generally, you need to use these more complex functions when the solo model is not a
+        great fit for the experimental bias.
 \end{enumerate}
 
 
@@ -381,7 +522,7 @@ transformation - it must be a solo model that uses sequence as input.
 
 \subsection{Combined training: \texttt{trainCombinedModel.py}}
 
-The full model, known as a combined model is specified by a JSON file, much like the solo configuration file.
+The combined model is specified by a JSON file, much like the solo configuration file.
 
 \subsubsection{Input specification}
 
@@ -442,12 +583,19 @@ The full model, known as a combined model is specified by a JSON file, much like
 \subsubsection{Parameter notes}
 
 \begin{enumerate}
-    \item \texttt{use-bias-counts} selects if you want to add the counts prediction from the transformation model, and the appropriateness of this flag will depend on the nature of your bias. 
-        If the bias is a constant background signal, then it makes sense to subtract the bias contribution to the counts. 
-        However, if your bias is multiplied by the underlying biology, then you probably shouldn't add in the bias counts since they won't affect the actual experiment.
-    \item \texttt{input-length} refers to the input size of the \emph{residual} model, not the \emph{solo} model.
+    \item \texttt{use-bias-counts} selects if you want to add the counts prediction from the
+        transformation model, and the appropriateness of this flag will depend on the nature
+        of your bias.
+        If the bias is a constant background signal, then it makes sense to subtract the bias
+        contribution to the counts.
+        However, if your bias is multiplied by the underlying biology, then you probably
+        shouldn't add in the bias counts since they won't affect the actual experiment.
+    \item \texttt{input-length} refers to the input size of the \emph{residual} model, not
+        the \emph{solo} model.
         The solo model, having already been created, knows its own input length.
-        If the solo model's input length is smaller than the \texttt{input-length} setting in this config file, the sequence input to the solo model will automatically be cropped down to match. 
+        If the solo model's input length is smaller than the \texttt{input-length} setting
+        in this config file, the sequence input to the solo model will automatically
+        be cropped down to match.
 \end{enumerate}
 
 
@@ -457,7 +605,8 @@ The full model, known as a combined model is specified by a JSON file, much like
 
 \subsection{Prediction from bed regions: \texttt{makePredictionsBed.py}}
 
-This program takes in a list of regions in bed format, extracts the corresponding sequences from a given genome file, and runs those sequences through your model.
+This program takes in a list of regions in bed format, extracts the corresponding sequences from
+a given genome file, and runs those sequences through your model.
 
 
 \subsubsection{Input specification}
@@ -486,25 +635,38 @@ This program takes in a list of regions in bed format, extracts the correspondin
 \subsubsection{Parameter notes}
 
 \begin{enumerate}
-    \item \texttt{heads} just gives the number of output heads for your model. You don't need to tell this program how many tasks there are for each head, since it just blindly sticks whatever the model outputs into the hdf5 file.
+    \item \texttt{heads} just gives the number of output heads for your model. You don't need to
+        tell this program how many tasks there are for each head, since it just blindly sticks
+        whatever the model outputs into the hdf5 file.
 \end{enumerate}
 
 \subsubsection{Output specification}
 
-This program will produce an hdf5-format file containing the predicted values. It is organized as follows:
+This program will produce an hdf5-format file containing the predicted values.
+It is organized as follows:
 
 \begin{itemize}
-    \item \texttt{chrom\_names} is a list of strings that give you the meaning of each index in the \texttt{coords\_chrom} dataset. 
-        This is particularly handy when you want to make a bigwig file, since you can extract a header from this data.
-    \item \texttt{chrom\_size}, the size of each chromosome in the same order as \texttt{chrom\_names}. Mostly used to create bigwig headers.
-    \item \texttt{coords\_chrom} a list of integers, one for each region predicted, that gives the chromosome index (see \texttt{chrom\_names}) for that region.
+    \item \texttt{chrom\_names} is a list of strings that give you the meaning of each index in
+        the \texttt{coords\_chrom} dataset.
+        This is particularly handy when you want to make a bigwig file, since you can extract a
+        header from this data.
+    \item \texttt{chrom\_size}, the size of each chromosome in the same order as
+        \texttt{chrom\_names}. Mostly used to create bigwig headers.
+    \item \texttt{coords\_chrom} a list of integers, one for each region predicted, that gives
+        the chromosome index (see \texttt{chrom\_names}) for that region.
     \item \texttt{coords\_start}, the start base of each predicted region.
     \item \texttt{coords\_stop}, the end point of each predicted region.
-    \item A subgroup for each output head of the model. The subgroups are named \texttt{head\_N}, where N is 0, 1, 2, etc.
+    \item A subgroup for each output head of the model. The subgroups are named
+        \texttt{head\_N}, where N is 0, 1, 2, etc.
         \begin{itemize}
-            \item \texttt{logcounts}, a vector of shape (numRegions,) that gives the logcounts value for each region.
-            \item \texttt{logits}, the array of logit values for each track for each region. The shape is (numRegions x outputWidth x numTasks). 
-                Don't forget that you must calculate the softmax on the whole set of logits, not on each task's logits independently.
+            \item \texttt{logcounts}, a vector of shape (numRegions,) that gives the logcounts
+                value for each region.
+            \item \texttt{logits}, the array of logit values for each track for each region.
+                The shape is (numRegions x outputWidth x numTasks).
+                Don't forget that you must calculate the softmax on the whole set of logits,
+                not on each task's logits independently.
+                (There is a \texttt{logitsToProfile} function inside \texttt{utils.py} for
+                doing this conversion.)
         \end{itemize}
 
 \end{itemize}
@@ -514,8 +676,10 @@ This program will produce an hdf5-format file containing the predicted values. I
 
 \subsection{Prediction from fasta: \texttt{makePredictionsFasta.py}}
 
-This is the JSON file given to the prediction from fasta script. It names the model to use and the file that contains the sequences to run predictions on.
-This program streams sequences in and writes them out as it makes predictions, so it can be used on very large numbers of sequences without requiring much memory. 
+This is the JSON file given to the prediction from fasta script. It names the model to use and
+the file that contains the sequences to run predictions on.
+This program streams sequences in and writes them out as it makes predictions, so it can be used
+on very large numbers of sequences without requiring much memory.
 
 \subsubsection{Input specification}
 
@@ -536,15 +700,24 @@ This program streams sequences in and writes them out as it makes predictions, s
 
 \subsubsection{Output specification}
 
-This program will produce an hdf5-format file containing the description lines from the original fasta, as well as the predicted logcounts and logits.
+This program will produce an hdf5-format file containing the description lines from the original
+fasta, as well as the predicted logcounts and logits.
 It is structured so:
 
 \begin{itemize}
-    \item \texttt{descriptions}, a list of strings of length (numRegions,). Each string corresponds to one description line (i.e., a line starting with \texttt{>}).
-    \item A subgroup for each output head of the model. The subgroups are named \texttt{head\_N}, where N is 0, 1, 2, etc.
+    \item \texttt{descriptions}, a list of strings of length (numRegions,). Each string
+        corresponds to one description line (i.e., a line starting with \texttt{>}).
+    \item A subgroup for each output head of the model. The subgroups are named \texttt{head\_N},
+        where N is 0, 1, 2, etc.
         \begin{itemize}
-            \item \texttt{logcounts}, a vector of shape (numRegions,) that gives the logcounts value for each region.
-            \item \texttt{logits}, the array of logit values for each track for each region. The shape is (numRegions x outputWidth x numTasks). Don't forget that you must calculate the softmax on the whole set of logits, not on each task's logits independently.
+            \item \texttt{logcounts}, a vector of shape (numRegions,) that gives the logcounts
+                value for each region.
+            \item \texttt{logits}, the array of logit values for each track for each region.
+                The shape is (numRegions x outputWidth x numTasks). Don't forget that you must
+                calculate the softmax on the whole set of logits, not on each task's logits
+                independently.
+                (There is a \texttt{logitsToProfile} function inside \texttt{utils.py} that
+                does this.)
         \end{itemize}
 \end{itemize}
 
@@ -555,15 +728,15 @@ It is structured so:
 
 \subsection{Interpret flat: \texttt{interpretFlat.py}}
 
-This is the configuration file that is passed to interpretFlat.py, that lists the regions of the genome where classical importance scores should be calculated. It is structured as follows:
+This is the configuration file that is passed to interpretFlat.py, that lists the regions of
+the genome where classical importance scores should be calculated. It is structured as follows:
 
 \subsubsection{Input specification}
 
 \begin{lstlisting}
 <flat-interpretation-configuration> ::=
 {
-    "genome" : <file-name>,
-    "bed-file" : <file-name>,
+    <bed-or-fasta>,
     "model-file" : <file-name>,
     "input-length" : <integer>,
     "output-length" : <integer>,
@@ -576,6 +749,12 @@ This is the configuration file that is passed to interpretFlat.py, that lists th
     <verbosity-section>
 }
 
+<bed-or-fasta> ::=
+    "genome" : <file-name>,
+    "bed-file" : <file-name>
+ |  "fasta-file" : <file-name>
+
+
 <list-of-integers> ::=
     <integer>
   | <integer>, <list-of-integers>
@@ -584,27 +763,75 @@ This is the configuration file that is passed to interpretFlat.py, that lists th
 
 \subsubsection{Parameter notes}
 \begin{itemize}
-    \item The \texttt{heads} parameter is the \emph{total} number of heads that the model has, and the \texttt{head-id} parameter gives which head you want importance values calculated for.
-    \item The \texttt{profile-task-ids} parameter lists which of the profile predictions (i.e., tasks) from the specified head you want considered. Almost always, you should include all of the profiles. For a single-task head, this would be \texttt{[0]}, and for a two-task head this would be \texttt{[0,1]}.
-    \item The \texttt{profile-h5} and \texttt{counts-h5} file names are the output files from the algorithm.
+    \item If you specify a \texttt{genome} and \texttt{bed-file} in the configuration, then
+        this program will read coordinates from the bed file, extract the sequences from the
+        provided fasta, and run interpretations on those sequences. In this case, the output file
+        will include \texttt{chrom\_names}, \texttt{chrom\_sizes}, \texttt{coords\_start}, 
+        \texttt{coords\_end} and \texttt{coords\_chrom}. If, however, you specify a fasta file,
+        then the sequences are taken directly from that file. In this case, the output
+        hdf5 file will not contain those fields, and instead it will contain a
+        \texttt{descriptions} dataset, which holds the description lines from the fasta.
+    \item The \texttt{bed-file} that you give should have regions matching the model's
+        \emph{output} length. The regions will be automatically inflated in order to
+        extract the input sequence from the genome. Somewhat confusingly, this means
+        that the contribution scores will include contributions from bases that are not
+        in your bed file. This is because the contribution scores explain how all of the
+        input bases contribute to the output observed at the region in the bed file.
+        However, if you specify \texttt{fasta-file}, then the sequences in that fasta
+        must be as long as the model's \emph{input} length.
+        (Since we need the whole sequence that will be explained.) In this case,
+        the contribution scores in the output will match one-to-one with the input bases.
+
+    \item The \texttt{heads} parameter is the \emph{total} number of heads that the model has,
+        and the \texttt{head-id} parameter gives which head you want importance values calculated
+        for.
+    \item The \texttt{profile-task-ids} parameter lists which of the profile predictions
+        (i.e., tasks) from the specified head you want considered.
+        Almost always, you should include all of the profiles. For a single-task head, this
+        would be \texttt{[0]}, and for a two-task head this would be \texttt{[0,1]}.
+    \item The \texttt{profile-h5} and \texttt{counts-h5} file names are the output files from
+        the algorithm.
 \end{itemize}
 
 \subsubsection{Output specification}
 
-It will produce an hdf5-format file structured as follows:
+If you provide \texttt{bed-file} and \texttt{genome}, the output will be structured as follows:
 
 \begin{itemize}
-        \item \texttt{chrom\_names}, a list of strings giving the name of each chromosome. This is used to figure out which chromosome each number in \texttt{coords\_chrom} corresponds to.
-        \item \texttt{chrom\_sizes}, a list of integers giving the size of each chromosome. This is mostly here as a handy reference when you want to make a bigwig file.
-        \item \texttt{coords\_start}, the start point for each of the regions in the input bed file.
+        \item \texttt{chrom\_names}, a list of strings giving the name of each chromosome.
+            Unlike the predictions from fasta, the \texttt{coords\_chrom} columns are
+            \emph{strings}, so the \texttt{chrom\_names} field is mostly for generating bigwig
+            headers.
+        \item \texttt{chrom\_sizes}, a list of integers giving the size of each chromosome.
+            This is mostly here as a handy reference when you want to make a bigwig file.
+        \item \texttt{coords\_start}, the start point for each of the regions in the input
+            bed file. This will have shape (num-regions,).
         \item \texttt{coords\_end}, the end point for each of the regions in the bed file.
-        \item \texttt{coords\_chrom}, the chromosome on which each region is found. These are strings.
-        \item \texttt{input\_seqs}, a one-hot encoded array representing the input sequences. It will have shape (numRegions x inputLength x 4)
-        \item \texttt{hyp\_scores}, a table of the shap scores. It will have shape (numSamples x inputLength x 4)
+            This will have shape (num-regions,).
+        \item \texttt{coords\_chrom}, the chromosome on which each region is found.
+            These are strings, and this dataset has shape (num-regions,)
+        \item \texttt{input\_seqs}, a one-hot encoded array representing the input sequences.
+            It will have shape (num-regions x input-length x 4)
+        \item \texttt{hyp\_scores}, a table of the shap scores. It will have shape
+            (num-regions x input-length x 4) If you want the actual contribution scores, not the
+            hypothetical ones, multiply \texttt{hyp\_scores} by \texttt{input\_seqs} to zero out
+            all purely hypothetical contribution scores.
 
 \end{itemize}
 
+However, if you just provide a fasta of sequences to analyze, then it will be structured so:
 
+\begin{itemize}
+    \item \texttt{descriptions}, a list of strings that are the description lines from
+        the input fasta file (with the leading \texttt{>} removed). This list will have shape
+        (num-regions,)
+    \item \texttt{input\_seqs} and \texttt{hyp\_scores}, with the same meaning
+        as in the bed-and-genome based output files.
+\end{itemize}
+
+Note that while you can use \texttt{shapToNumpy.py} on either format of \texttt{interpretFlat.py} output,
+you cannot convert a fasta-based interpretation h5 to a bigwig, since it doesn't contain
+coordinate information.
 
 
 \newpage
@@ -612,8 +839,10 @@ It will produce an hdf5-format file structured as follows:
 
 This is the JSON file given to the PISA interpretation tool.
 This tool wants a bed file, but this file represents the *individual bases* that should be shapped.
-There is no restriction on the number of regions, nor on their length. If you are interested in the effects of a particular motif,
-then you'd put the region surrounding that motif in the bed file, making it as large as you want to see the interactions you're interested in.
+There is no restriction on the number of regions, nor on their length. If you are interested in
+the effects of a particular motif,
+then you'd put the region surrounding that motif in the bed file, making it as large as you want
+to see the interactions you're interested in.
 
 \subsubsection{Input specification}
 
@@ -638,19 +867,31 @@ then you'd put the region surrounding that motif in the bed file, making it as l
 It produces an hdf5 format which is organized as follows:
 
 \begin{itemize}
-        \item \texttt{head-id}, an integer representing which head of the model was used to generate the data.
+        \item \texttt{head-id}, an integer representing which head of the model was used to
+            generate the data.
         \item \texttt{task-id}, an integer giving the task number within the specified head.
-        \item \texttt{chrom\_names}, a list of strings giving the name of each chromosome. This is used to figure out which chromosome each number in \texttt{coords\_chrom} corresponds to.
-        \item \texttt{chrom\_sizes}, a list of integers giving the size of each chromosome. This is mostly here as a handy reference when you want to make a bigwig file.
-        \item \texttt{coords\_base}, the center point for each of the regions in the table of PISA values.
+        \item \texttt{chrom\_names}, a list of strings giving the name of each chromosome.
+            This is used to figure out which chromosome each number in \texttt{coords\_chrom}
+            corresponds to.
+        \item \texttt{chrom\_sizes}, a list of integers giving the size of each chromosome. This
+            is mostly here as a handy reference when you want to make a bigwig file.
+        \item \texttt{coords\_base}, the center point for each of the regions in the table of
+            PISA values.
         \item \texttt{coords\_chrom}, the chromosome on which each PISA vector is found.
-        \item \texttt{input\_predictions}, a (numSamples,) array of the logit value of the target base when that sequence is run through the network.
-        \item \texttt{shuffle\_predictions}, a (numSamples, numShuffles) array of the logits of the target base in the shuffled reference sequences.
-        \item \texttt{sequence}, a one-hot encoded array representing the sequence under each PISA value. 
-                The shape is (num regions * receptive-field * 4). Note that this is receptive field, not input width, since each base being shapped will only be affected by bases in its receptive field, and there's no reason to store the noise.
-        \item \texttt{shap}, a table of the shap scores. 
-                The shape is the same as the sequence table, and each position in the shap table represents the corresponding base in the sequence table. 
-                These values are contribution scores to the difference-from-reference of the logit at this base.
+            This is a list of integers. The width of the integer data type may vary from run to
+            run, and is calculated based on the number of chromosomes in the genome file.
+        \item \texttt{input\_predictions}, a (numSamples,) array of the logit value of the target
+            base when that sequence is run through the network.
+        \item \texttt{shuffle\_predictions}, a (numSamples, numShuffles) array of the logits of
+            the target base in the shuffled reference sequences.
+        \item \texttt{sequence}, a one-hot encoded array representing the sequence under each
+            PISA value. The shape is (num regions * receptive-field * 4). Note that this is
+            receptive field, not input width, since each base being shapped will only be affected
+            by bases in its receptive field, and there's no reason to store the noise.
+        \item \texttt{shap}, a table of the shap scores. The shape is the same as the sequence
+            table, and each position in the shap table represents the corresponding base in the
+            sequence table. These values are contribution scores to the difference-from-reference
+            of the logit at this base.
 
 \end{itemize}
 
@@ -660,12 +901,16 @@ It produces an hdf5 format which is organized as follows:
 
 \subsection{Interpret PISA from fasta: \texttt{interpetPisaFasta.py}}
 
-This is the JSON file given to the PISA fasta tool, instead of fetching sequences based on a bed file and a genome, you supply the sequences directly.
-Since PISA calculates shap scores for a single base, this tool always calculates the pisa scores for the \emph{leftmost} base in the output window.
+This is the JSON file given to the PISA fasta tool, instead of fetching sequences based on a bed
+file and a genome, you supply the sequences directly.
+Since PISA calculates shap scores for a single base, this tool always calculates the pisa scores
+for the \emph{leftmost} base in the output window.
 
 Suppose the input length is 3090 bp, and the output is 1000 bp.
-In this case, the receptive field is 2091 bp, and there are 1045 bp of overhang on each end of the input sequence.
-So, for each input sequence, this program will assign shap scores to the 1046th base (one-indexed) of the input sequence.
+In this case, the receptive field is 2091 bp, and there are 1045 bp of overhang on each end of
+the input sequence.
+So, for each input sequence, this program will assign shap scores to the 1046th base (one-indexed)
+of the input sequence.
 
 \subsubsection{Input specification}
 \begin{lstlisting}
@@ -687,13 +932,20 @@ So, for each input sequence, this program will assign shap scores to the 1046th 
 It produces an hdf5 format file which is organized as follows:
 
 \begin{itemize}
-    \item \texttt{head-id}, an integer representing which head of the model was used to generate the data.
+    \item \texttt{head-id}, an integer representing which head of the model was used to generate
+        the data.
     \item \texttt{task-id}, an integer giving the task number within the specified head
-    \item \texttt{descriptions}, a string taken from the fasta file. These are the comment (\texttt{>}) lines, and are stored without the leading \texttt{>}. This will have shape (numSamples)
-    \item \texttt{sequence}, the one-hot encoded input sequences. Note that these only cover the receptive field of the model, so they are not as wide as the input. This will have shape (numSamples x receptiveField x 4).
-    \item \texttt{input\_predictions}, the logit predicted for the base being shapped. This will have shape (numSamples).
+    \item \texttt{descriptions}, a string taken from the fasta file. These are the comment
+        (\texttt{>}) lines, and are stored without the leading \texttt{>}. This will
+        have shape (numSamples,)
+    \item \texttt{sequence}, the one-hot encoded input sequences. Note that these only cover
+        the receptive field of the model, so they are not as wide as the input. This will have
+        shape (numSamples x receptiveField x 4).
+    \item \texttt{input\_predictions}, the logit predicted for the base being shapped.
+        This will have shape (numSamples,).
     \item \texttt{shap}, the shap scores. This will have shape (numSamples x receptiveField x 4).
-    \item \texttt{shuffle\_predictions}, the predicted logit of the target base on the shuffled input sequences. This will have shape (numSamples, numShuffles).
+    \item \texttt{shuffle\_predictions}, the predicted logit of the target base on the shuffled
+        input sequences. This will have shape (numSamples, numShuffles).
 \end{itemize}
 
 
@@ -806,28 +1058,50 @@ They are retained exactly as passed in.
 \subsubsection{Parameter notes}
 
 \begin{itemize}
-    \item The \texttt{resize-mode} specifies where in the regions in the bed file the output regions should be centered. Note that this program assumes your bed files are in bed3 format, that is, (chrom, start, stop). If you have additional columns with information like peak offset, those data will be ignored.
-    \item The max and min quantile values, if provided, will be used to threshold which regions are included in the output. First, all of the counts in the given regions are computed (which takes a while!), and then the given quantile is computed. All regions exceeding that value are not included in the output files.
-    \item Similarly, if max and min counts are given, all regions having more (or fewer) reads than the given number will be excluded.
-    \item If you use regexes to make your splits, then the \texttt{name} entry of the bed files will be compared against each regex. On a match, that region will be included in that split.
-    \item The \texttt{remove-overlaps} flag can be set to \texttt{true} if you'd like to exclude overlapping regions. This is done by resizing all regions down to \texttt{overlap-max-distance}, and then, if multiple regions have an overlap, one is deleted at random. If \texttt{remove-overlaps} is \texttt{false}, then \texttt{overlap-max-distance} does not need to be set.
+    \item The \texttt{resize-mode} specifies where in the regions in the bed file the output
+        regions should be centered. Note that this program assumes your bed files are in bed3
+        format, that is, (chrom, start, stop). If you have additional columns with information
+        like peak offset, those data will be ignored.
+    \item The max and min quantile values, if provided, will be used to threshold which regions
+        are included in the output. First, all of the counts in the given regions are computed
+        (which takes a while!), and then the given quantile is computed. All regions exceeding
+        that value are not included in the output files.
+    \item Similarly, if max and min counts are given, all regions having more (or fewer) reads
+        than the given number will be excluded.
+    \item If you use regexes to make your splits, then the \texttt{name} entry of the bed files
+        will be compared against each regex.
+        On a match, that region will be included in that split.
+    \item The \texttt{remove-overlaps} flag can be set to \texttt{true} if you'd like to exclude
+        overlapping regions. This is done by resizing all regions down to
+        \texttt{overlap-max-distance}, and then, if multiple regions have an overlap,
+        one is deleted at random.
+        If \texttt{remove-overlaps} is \texttt{false}, then \texttt{overlap-max-distance}
+        does not need to be set.
 \end{itemize}
 
 I should mention that the maximum and minimum counts are not compared across the same window.
-When comparing a region against the maximum counts value, all counts within the input length + jitter are added up. This way, if you have a crazy-huge spike just outside your region, that region will be rejected.
-Conversely, for minimum counts, the counts within the output-length - jitter will be considered. This way, no matter what jitter value is selected, there will be at least the given number of counts in the region.
+When comparing a region against the maximum counts value, all counts within the
+$input\mbox{-}length + jitter$ are added up. This way, if you have a crazy-huge spike just outside
+your region, that region will be rejected.
+Conversely, for minimum counts, the counts within the $output\mbox{-}length - jitter$ will be
+considered. This way, no matter what jitter value is selected, there will be at least the
+given number of counts in the region.
+
+
+\newpage
 
 \subsection{Modisco seqlet analysis: \texttt{motifSeqletCutoffs.py}}
-In order to see where seqlets are found on the genome, we need to scan the cwms derived from modisco.
-The first step of this process is to look at the seqlets that MoDISco called for each pattern
-it identified, and establish cutoff values.
-This program does that. 
-It reads in a modisco hdf5 file and calculates cutoff values of seqlet similarity for
-what constitutes a hit.
-It requires one json-format input, and generates two outputs: First, it generates a tsv
-file containing all of the seqlets in the modisco h5 with some helpful metadata,
-like how well they match the pattern they are identified as being a part of.
-Second, it produces a json-format file that will be needed by \texttt{motifScan.py}.
+In order to see where seqlets are found on the genome, we need to scan the cwms derived from
+modiscolite.
+The first step of this process is to look at the seqlets that MoDISco called for each pattern it
+identified, and establish cutoff values.
+This program does that.
+It reads in a modiscolite hdf5 file and calculates cutoff values of seqlet similarity for what
+constitutes a hit.
+It requires one JSON-format input, and generates two outputs: First, it generates a tsv file
+containing all of the seqlets in the modisco h5 with some helpful metadata, like how well they
+match the pattern they are identified as being a part of.
+Second, it produces a JSON-format file that will be needed by \texttt{motifScan.py}.
 
 \subsubsection{Input specification}
 \begin{lstlisting}
@@ -838,7 +1112,7 @@ Second, it produces a json-format file that will be needed by \texttt{motifScan.
 
 <seqlet-scanning-settings> ::=
     <seqlet-tsv-section>
-    "modisco-h5" : <string>,
+    "modisco-h5" : <file-name>,
     <seqlet-contrib-section>
     <pattern-spec-section>,
     "seq-match-quantile" : <float-or-null>,
@@ -861,7 +1135,7 @@ Second, it produces a json-format file that will be needed by \texttt{motifScan.
     <pattern-spec>
   | <pattern-spec>, <list-of-pattern-specs>
 
-<pattern-spec> ::= 
+<pattern-spec> ::=
     {"metacluster-name" : <string>,
      "pattern-name" : <string> }
   | {"metacluster-name" : <string>,
@@ -876,15 +1150,15 @@ Second, it produces a json-format file that will be needed by \texttt{motifScan.
 
 <quantile-json-section> ::=
     <empty>
-  | "quantile-json" : <string>,
+  | "quantile-json" : <file-name>,
 
 <seqlet-contrib-section> ::=
     <empty>
-  | "modisco-contrib-h5" : <string>,
+  | "modisco-contrib-h5" : <file-name>,
 
 <seqlet-tsv-section> ::=
     <empty>
-  | "seqlets-tsv" : <string>,
+  | "seqlets-tsv" : <file-name>,
 \end{lstlisting}
 
 \subsubsection{Parameter notes}
@@ -911,15 +1185,18 @@ Second, it produces a json-format file that will be needed by \texttt{motifScan.
 
 \subsubsection{Output specification}
 See \texttt{motifAddQuantiles.py} for a description of the tsv file,
-and \texttt{motifScan.py} for a description of the generated json.
+and \texttt{motifScan.py} for a description of the generated JSON.
+
+
+\newpage
 
 
 \subsection{Scanning for motifs: \texttt{motifScan.py}}
 
 This program scans over the contribution scores you calculated with \texttt{interpretFlat.py}
-and looks for matches to motifs called by MoDISco.
-It can be run with a quantile json generated by \texttt{motifSeqletCutoffs.py}, or you can
-include the settings for that program inside the json for this one, in which case it
+and looks for matches to motifs called by modiscolite.
+It can be run with a quantile JSON from \texttt{motifSeqletCutoffs.py}, or you can
+include the settings for that program inside the JSON for this one, in which case it
 will perform the seqlet analysis first and save those results for you.
 If you include a \texttt{seqlet-cutoff-settings} block in the config, it will run
 the \texttt{motifSeqletCutoffs.py} tools, and if you don't include that, you must include
@@ -944,7 +1221,7 @@ It is an error to specify both \texttt{seqlet-cutoff-settings} and \texttt{seqle
   | "seqlet-cutoff-settings" : <seqlet-scanning-settings>,
 \end{lstlisting}
 
-You also need a json file containing the information for each pattern.
+You also need a JSON file containing the information for each pattern.
 This file is generated by \texttt{motifSeqletCutoffs.py} and saved to the name
 \texttt{quantile-json} in the configuration to that script.
 
@@ -952,7 +1229,7 @@ This file is generated by \texttt{motifSeqletCutoffs.py} and saved to the name
 <quantile-json> ::= [
     <list-of-scan-patterns> ]
 
-<list-of-scan-patterns> ::= 
+<list-of-scan-patterns> ::=
     <scan-pattern>
   | <scan-pattern>, <list-of-scan-pattern>
 
@@ -969,19 +1246,19 @@ This file is generated by \texttt{motifSeqletCutoffs.py} and saved to the name
 <motif-array> ::= [
     <list-of-base-arrays> ]
 
-<list-of-base-arrays> ::= 
+<list-of-base-arrays> ::=
     <base-array>
   | <base-array>, <list-of-base-arrays>
 
-base-array ::= 
+base-array ::=
     [<float>, <float>, <float>, <float>]
 \end{lstlisting}
 
 
 \subsubsection{Parameter notes}
 \begin{itemize}
-    \item The contrib-h5 file is the output of \texttt{interpretFlat.py} and contains
-        contribution scores.
+    \item The \texttt{scan-contrib-h5} file is the output of \texttt{interpretFlat.py}
+        and contains contribution scores.
         All of the regions in this file will be scanned.
     \item \texttt{num-threads} is the number of parallel workers to use.
         Due to the streaming architecture of this program, \texttt{num-threads}
@@ -990,7 +1267,8 @@ base-array ::=
         and haven't tested it beyond that.
 \end{itemize}
 
-In the quantile json, we find the actual numerical cutoffs for scanning.
+In the quantile JSON, we find the actual numerical cutoffs for scanning.
+
 \begin{itemize}
     \item \texttt{metacluster-name} and \texttt{pattern-name} are from the modisco hdf5 file.
     \item \texttt{short-name} is a convenient name for this motif, and is entirely up to you.
@@ -999,22 +1277,26 @@ In the quantile json, we find the actual numerical cutoffs for scanning.
         It is used to calculate the Jaccard similarity and the L1 score.
     \item \texttt{pssm} is the sequence-based information content at each position, and is
         used to calculate sequence match scores.
-    \item The three cutoff values are the actual scores, NOT QUANTILE VALUES.
-        These are calculated by \texttt{motifSeqletCutoffs.py}. You could set these
-        manually, but why would you? 
+    \item The three cutoff values are the actual scores, \emph{not quantile values}.
+        These are calculated by \\ \texttt{motifSeqletCutoffs.py}. You could set these
+        manually, but why would you?
 \end{itemize}
 
 \subsubsection{Output specification}
 For the generated tsv file, see \texttt{motifAddQuantiles.py}.
-If you include a \texttt{quantile-json} in your \texttt{seqlet-cutoff-settings}, then
-running \texttt{motifScan.py} will save out the cutoff json.
+If you include a \texttt{quantile-json} in your \\ \texttt{seqlet-cutoff-settings}, then
+running \texttt{motifScan.py} will save out the cutoff JSON.
+
+
+\newpage
+
 
 \subsection{Annotating seqlets with quantile information: {cwmAddQuantiles.py}}
 
 This little helper program calculates quantile values for seqlets and called motif instances.
 For each pattern (patterns in different metaclusters are distinct), it looks at the seqlets
-and determines where that seqlet's importance magnitude, contribution match, and sequence match scores
-fall among other seqlets in that pattern.
+and determines where that seqlet's importance magnitude, contribution match, and sequence match
+scores fall among other seqlets in that pattern.
 Then, for motif hits, it sees where each hit falls, in terms of quantile, among the seqlets
 in that pattern.
 
@@ -1031,30 +1313,33 @@ If a hit falls between the scores of two seqlets, then a linear interpolation
 is performed to assign a quantile value.
 
 The input and ouput to this program are tsv files, and the only difference in format
-is that the outputs have three additional columns:
-\texttt{contrib\_magnitude\_quantile}, \texttt{ic\_match\_quantile}, and \texttt{contrib\_match\_quantile}.
+is that the outputs have three additional columns: \texttt{contrib\_magnitude\_quantile},\\
+\texttt{seq\_match\_quantile}, and
+\texttt{contrib\_match\_quantile}.
 The remaining columns are described below:
 
 \begin{itemize}
     \item \texttt{chrom} gives the chromosome where the seqlet or hit was found.
-    \item \texttt{start} gives the start position (inclusive, zero-based) of the seqlet or motif hit.
+    \item \texttt{start} gives the start position (inclusive, zero-based) of the seqlet or
+        motif hit.
     \item \texttt{end} gives the end position (exclusive, zero-based) of the seqlet or motif hit.
     \item \texttt{short\_name} is the user-provided name for this motif. If you didn't provide
-        one in \texttt{cwmPrepare.py}, then it will be something like \verb|pos_0| for the
-        positive metacluster, pattern zero.
+        one in the configuration for \texttt{motifSeqletCutoffs.py}, then it will be something like \texttt{pos\_0}
+        for the positive metacluster, pattern zero.
     \item \texttt{contrib\_magnitude} is the total contribution across this motif instance.
         A higher value means more motif contribution.
     \item \texttt{strand} is a single character indicating if the motif was on the positive
         or negative strand.
     \item \texttt{metacluster\_name} is straigh from the modisco hdf5 file. It will be
-        something like \verb|pos_patterns|.
+        something like \texttt{pos\_patterns}.
     \item \texttt{pattern\_name} is also from the modisco hdf5. It will be something
-        like \verb|pattern_5|.
+        like \texttt{pattern\_5}.
     \item \texttt{sequence} is the DNA sequence of that motif instance.
     \item \texttt{index} gives either the region index in the contribution hdf5
         (from \texttt{motifScan.py}), or the seqlet index in the modisco
         hdf5 (from \texttt{motifSeqletCutoffs.py}).
-    \item \texttt{seq\_match} gives the information content of the sequence match to the motif's pwm.
+    \item \texttt{seq\_match} gives the information content of the sequence match to the motif's
+        pwm.
     \item \texttt{contrib\_match} gives the continuous Jaccard similarity between the motif's
         cwm and the contribution scores of this seqlet.
 \end{itemize}
@@ -1069,29 +1354,131 @@ command can generate a viewable bed file from these tsvs:
     cat scan.tsv | cut -f 1-6 | tail -n +2 > scan.bed
 \end{lstlisting}
 
+Note that the hits from scanning can contain duplicates. This can happen if the same bases
+appear in multiple regions (i.e., there is overlap in the region set). In this case, it makes
+sense to only keep the best instance (highest importance magnitude) of that motif hit.
+This can be done with a little Unix-fu:
 
+\begin{lstlisting}
+    cat scan.tsv | \
+        cut -f 1-6 | \
+        tail -n +2 | \
+        sort -k1,1 -k2,2n -k3,3n -k4,4 -k5,5nr | \
+        awk '!_[$1,$2,$3,$4,$6]++' > scan.bed
+\end{lstlisting}
+%stopzone
 \newpage
 \section{Model architectures}\label{sec:modelArchitectures}
 
-The precise details of the model architectures can be found in models.py, but they share some common themes.
-Every model that ever gets saved to disk accepts a one-hot encoded sequence as input, and produces outputs that are grouped into ``heads''.
+The precise details of the model architectures can be found in models.py, but they share some
+common themes.
+Every model that ever gets saved to disk accepts a one-hot encoded sequence as input, and produces
+outputs that are grouped into ``heads''.
 A model may generate any number of heads, and the heads may have different sizes.
-In general, each head should represent one set of DNA fragments. For example, an experiment that produces cut sites on the + and - strand of DNA produces
-two tracks, but the tracks represent two ends of the same fragments. So these two tracks would be in the same head.
-However, if you have an experiment where it's appropriate to split fragments into ``short'' (100-500 bp) and ``long'' (1 kb to 10 kb), then
-those tracks do not represent the same fragments, so they should be in different heads.
+In general, each head should represent one set of DNA fragments. For example, an experiment that
+produces cut sites on the + and - strand of DNA produces two tracks, but the tracks represent two
+ends of the same fragments. So these two tracks would be in the same head.
+However, if you have an experiment where it's appropriate to split fragments into ``short''
+(100-500 bp) and ``long'' (1 kb to 10 kb), then those tracks do not represent the same
+fragments, so they should be in different heads.
 
-If you have done ChIP-nexus on three different factors, then you'd have three heads, each one corresponding to a different factor, and each head would predict both the + and - strand data for that factor.
+If you have done ChIP-nexus on three different factors, then you'd have three heads, each one
+corresponding to a different factor, and each head would predict both the + and - strand data
+for that factor.
 
-If you're not sure if you can combine your data under one output head, it's much safer to split the data into multiple heads.
+If you're not sure if you can combine your data under one output head, it's much safer to split
+the data into multiple heads.
 
-A head contains a profile prediction and a counts prediction. The profile prediction is a tensor of shape (batch-size x) number-of-tracks x output-width, and each value in this tensor is a logit.
-Note that the WHOLE profile prediction should be considered when taking the softmax.
-That is to say, the profile of the first track is NOT exp(counts) * softmax(profile[0,:]), but rather you have to take the softmax first and then slice out the profile: exp(counts) * softmax(profile)[:,0]
+A head contains a profile prediction and a counts prediction. The profile prediction is a tensor
+of shape (batch-size x) number-of-tracks x output-width, and each value in this tensor is a logit.
+Note that the \emph{whole} profile prediction should be considered when taking the softmax.
+That is to say, the profile of the first track is NOT $e^{logcounts} * softmax(profile_{0,:})$,
+but rather you have to take the softmax first and then slice out the profile:
+$e^{logcounts} * softmax(profile)_{0,:}$. There is a function, \texttt{logitsToProfile}, in
+\texttt{utils.py} that does this automatically.
 
 Of course, if the profile only has one track, this distinction is vacuous.
-The counts output is a scalar that represents the natural logarithm of the number of reads predicted for the current region.
+The counts output is a scalar that represents the natural logarithm of the number of reads
+predicted for the current region.
 
-It is possible to add more model architectures, but currently the program only supports a BPNet-style architecture. You can take a look at soloModel in models.py for details on how it works.
+It is possible to add more model architectures, but currently the program only supports a
+BPNet-style architecture.
+You can take a look at soloModel in \texttt{models.py} for details on how it works.
+
+\section{PISA}
+The traditional method of interpretation of BPNet models asks the question,
+``How is it that this base here affects some readout over this window?'',
+where the readout is a single scalar value calculated over an entire prediction window.
+If our readout is counts, then we are calculating how much each input base contributed to the
+total counts over our prediction window. For profile, we calculate a weighted mean-normalized
+logit value (as was done in the original BPNet paper). In this way, each base gets a single scalar
+value for how it contributed to the overall readout.
+
+PISA asks a subtly different question:
+``How is it that this base here affects the readout at that base over there?''
+In this case, instead of looking at how much one base contributes to a global readout, we're
+asking about its effect on a single one of its neighbors. With PISA, each base gets a vector of
+its contributions to the readout at each one of its neighbors.
+This vector has shape (receptive-field,)
+Accordingly, if we perform PISA on a region of the genome, we would get a PISA array of shape
+(region-length, receptive-field).
+
+We use code derived from \texttt{deepshap} to perform this calculation. With deepShap, we create
+an explainer that looks at one output from the model. For the sake of simplicity, all of the PISA
+implementation looks at the leftmost base in the output window, but this implementation detail
+has no effect on the actual calculated values.
+Once the explainer has been created, we provide it with genomic sequences to explain, and it
+assigns, to each base in the input, its contribution to the observed output.
+
+The outputs of the model are logits, and the contribution scores have the same units, so the
+explainer is effectively assigning a (base $e$) fold-change value to each input.
+
+There are several properties of Shapley values that are important here.
+In these formulae, $\phi_i$ is the contribution score of base $i$, drawn from the sequence $S$.
+The readout that we're measuring, the logit at the leftmost base, is $v(S)$.
+I'll also use $K$ to refer to a subset of the input sequence $S$.
+I'll use $R$ to refer to an ensemble of reference sequences, and the average prediction from those
+reference sequences is $\bar{v}(R)$
+
+The first, and arguably most important, property of Shapley values is \emph{efficiency}:
+
+\begin{equation}
+    \sum_{i \in S} \phi_i(v) = v(S) - \bar{v}(R)
+\end{equation}
+
+This means that if we add up all the shap values that were assigned for a particular logit, we
+recover the difference-from-reference of that logit.
+
+One possible weakness of a method like this has to do with cooperation. Suppose that some readout
+is observed if at least one of the bases in a region is A. If two bases are A, we observe that
+readout. But how should we assign $\phi$ values to those two bases?
+With shapley values, we are guaranteed that they will get the same score:
+
+\begin{equation}
+    \Bigl( \forall (K \subseteq S \backslash \{i,j\})\;
+    \bigl(v(K \cup \{i\}) = v(K \cup \{j\})\bigr) \Bigr)
+    \\
+    \implies \phi_i(v) = \phi_j(v)
+\end{equation}
+
+The third property turns out to be very important in performing PISA on bias-corrected models.
+The combined model uses a simple sum to combine the logits from the solo model and the residual
+model, so $v_{combined}(S) = v_{solo}(S) + v_{residual}(S)$.
+Shapley values preserve this linearity, ensuring that it's meaningful to look at PISA plots of
+a residual model:
+
+\begin{equation}
+    \phi_i(u + v) = \phi_i(u) + \phi_i(v)
+\end{equation}
+
+Finally, an almost-obvious property: If a particular base has no effect on the readout, its $\phi$
+values should be zero. So it is:
+
+\begin{equation}
+    \Bigl( \forall (K \subseteq S \backslash \{i\})
+    \bigl( v(K \cup \{i\}) = v(K)\bigr)\Bigr)
+    \\
+    \implies phi_i(v) = 0
+\end{equation}
 
 \end{document}

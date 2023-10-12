@@ -4,7 +4,8 @@ import scipy
 import numpy.typing as npt
 import typing
 
-def setMemoryGrowth():
+
+def setMemoryGrowth() -> None:
     """Turn on the tensorflow option to grow memory usage as needed, instead
        of allocating the whole GPU. All of the main programs in BPReveal
        do this, so that you can use your GPU for other stuff as you work
@@ -18,7 +19,8 @@ def setMemoryGrowth():
         logging.warning("Not using GPU")
         pass
 
-def limitMemoryUsage(fraction: float):
+
+def limitMemoryUsage(fraction: float) -> None:
     # Limit tensorflow to use only the given fraction of memory.
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
     import subprocess as sp
@@ -35,11 +37,11 @@ def limitMemoryUsage(fraction: float):
     gpus = tf.config.list_physical_devices('GPU')
     tf.config.set_logical_device_configuration(
         gpus[0],
-        [tf.config.LogicalDeviceConfiguration(memory_limit=int(total*fraction))])
-    logging.debug("Configured gpu with {0:d} MiB of memory.".format(int(total*fraction)))
+        [tf.config.LogicalDeviceConfiguration(memory_limit=int(total * fraction))])
+    logging.debug("Configured gpu with {0:d} MiB of memory.".format(int(total * fraction)))
 
 
-def loadChromSizes(fname: str)-> dict[str,int]:
+def loadChromSizes(fname: str) -> dict[str, int]:
     # Read in a chrom sizes file and return a dictionary mapping chromosome name → size
     ret = dict()
     with open(fname, 'r') as fp:
@@ -50,15 +52,15 @@ def loadChromSizes(fname: str)-> dict[str,int]:
     return ret
 
 
-def setVerbosity(userLevel: str):
+def setVerbosity(userLevel: str) -> None:
     levelMap = {"CRITICAL": logging.CRITICAL,
                 "ERROR": logging.ERROR,
                 "WARNING": logging.WARNING,
                 "INFO": logging.INFO,
                 "DEBUG": logging.DEBUG}
     logging.basicConfig(level=levelMap[userLevel],
-                        format='%(levelname)s : %(asctime)s : %(filename)s:%(lineno)d : %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+        format='%(levelname)s : %(asctime)s : %(filename)s:%(lineno)d : %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
     logging.debug("Logger configured.")
 
 
@@ -79,6 +81,7 @@ def oneHotEncode(sequence: str) -> npt.NDArray[np.int8]:
         "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
 
+
 def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     """Given an array representing a one-hot encoded sequence, convert it back
     to a string. The input shall have shape (sequenceLength, 4), and the output
@@ -86,7 +89,6 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     # Convert to an int8 array, since if we get floating point
     # values, the chr() call will fail.
     oneHotArray = oneHotSequence.astype(np.uint8)
-    #ret = np.zeros((oneHotArray.shape[0], ), dtype=np.uint8)
 
     ret = oneHotArray[:, 0] * ord('A') + \
           oneHotArray[:, 1] * ord('C') + \
@@ -95,8 +97,8 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     return ret.tobytes().decode('ascii')
 
 
-def logitsToProfile(logitsAcrossSingleRegion: np.ndarray,
-                    logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float64]:
+def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
+                    logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float32]:
     """
     Purpose: Given a single task and region sequence prediction (position x channels),
         convert output logits/logcounts to human-readable representation of profile prediction.
@@ -108,7 +110,7 @@ def logitsToProfile(logitsAcrossSingleRegion: np.ndarray,
 
     profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
     profile = profileProb * np.exp(logCountsAcrossSingleRegion)
-    return profile
+    return profile.astype(np.float32)
 
 
 class BatchPredictor:
@@ -125,7 +127,7 @@ class BatchPredictor:
     Note that the getOutput() method returns *one* result at a time, and
     you have to call getOutput() once for every time you called one of the
     submit methods. """
-    def __init__(self, modelFname: str, batchSize: int):
+    def __init__(self, modelFname: str, batchSize: int) -> None:
         """Starts up the BatchPredictor. This will load your model,
         and get ready to make predictions.
         modelFname is the name of the BPReveal model that you want
@@ -150,7 +152,7 @@ class BatchPredictor:
         self._inWaiting = 0
         self._outWaiting = 0
 
-    def clear(self):
+    def clear(self) -> None:
         """If you've left your predictor in some weird state, you can reset it
         by calling clear(). This empties all the queues."""
         self._inQueue.clear()
@@ -158,7 +160,7 @@ class BatchPredictor:
         self._inWaiting = 0
         self._outWaiting = 0
 
-    def submitOHE(self, sequence: npt.NDArray[np.int8], label: typing.Any):
+    def submitOHE(self, sequence: npt.NDArray[np.int8], label: typing.Any) -> None:
         """Sequence is an (input-length x 4) ndarray containing the
         one-hot encoded sequence to predict.
         label is any object, and it will be returned with the prediction."""
@@ -169,7 +171,7 @@ class BatchPredictor:
             # and run a batch real quick.
             self.runBatch()
 
-    def submitString(self, sequence: str, label: typing.Any):
+    def submitString(self, sequence: str, label: typing.Any) -> None:
         """Submits a given sequence for prediction.
         sequence is a string of length input-length, and
         label is any object. Label will be returned to you with the
@@ -177,7 +179,7 @@ class BatchPredictor:
         seqOhe = oneHotEncode(sequence)
         self.submitOHE(seqOhe, label)
 
-    def runBatch(self):
+    def runBatch(self) -> None:
         """This actually runs the batch. Normally, this will be called
         by the submit functions, and it will also be called if you ask
         for output and the output queue is empty (assuming there are
@@ -237,12 +239,12 @@ class BatchPredictor:
             self._outQueue.appendleft((curHeads, labels[i]))
             self._outWaiting += 1
 
-    def outputReady(self):
+    def outputReady(self) -> bool:
         """Is there any output ready for you? Returns True if you can safely call
         getOutput(), and False otherwise."""
         return self._outWaiting > 0
 
-    def getOutput(self):
+    def getOutput(self) -> tuple[list, typing.Any]:
         """Returns one of the predictions made by the model.
         This implementation guarantees that predictions will be returned in
         the same order as they were submitted, but you should not rely on that

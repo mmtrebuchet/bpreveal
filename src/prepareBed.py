@@ -216,7 +216,8 @@ def removeOverlaps(config, regions, genome):
             if (i == selectedIdx):
                 ret.append(elem)
             else:
-                logging.debug("        Rejected region {0:s} because it overlaps.".format(str(elem)))
+                logging.debug("        Rejected region {0:s} because it overlaps.".format(
+                    str(elem)))
                 rejects.append(elem)
     return (pybedtools.BedTool(ret), pybedtools.BedTool(rejects))
 
@@ -281,7 +282,8 @@ def validateRegions(config, regions, genome, bigwigLists):
 
     # We've now validated that the regions don't have too many counts when you inflate them.
     # We also need to check that the regions won't have too few counts in the output.
-    logging.info("    Validated inflated regions. Surviving: {0:d}".format(int(np.sum(validRegions))))
+    logging.info("    Validated inflated regions. Surviving: {0:d}".format(
+        int(np.sum(validRegions))))
     bigRegionsBed = pybedtools.BedTool(bigRegionsList)
     pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
     smallRegionsList = list(bigRegionsBed.each(resize,

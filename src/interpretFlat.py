@@ -22,8 +22,8 @@ def main(config):
                                                config["input-length"], genome=genomeFname,
                                                useTqdm=True)
     countsWriter = interpretUtils.FlatH5Saver(config["counts-h5"], generator.numRegions,
-                                               config["input-length"], genome=genomeFname,
-                                               useTqdm=False)
+                                              config["input-length"], genome=genomeFname,
+                                              useTqdm=False)
     # For benchmarking, I've added a feature where you can dump a
     # python profiling session to disk. You should probably
     # never use this feature unless you're tuning shap performance or something.
