@@ -804,10 +804,13 @@ If you provide \texttt{bed-file} and \texttt{genome}, the output will be structu
             headers.
         \item \texttt{chrom\_sizes}, a list of integers giving the size of each chromosome.
             This is mostly here as a handy reference when you want to make a bigwig file.
-        \item \texttt{coords\_start}, the start point for each of the regions in the input
-            bed file. This will have shape (num-regions,).
-        \item \texttt{coords\_end}, the end point for each of the regions in the bed file.
+        \item \texttt{coords\_start}, the start point for each of the regions that were explained.
+            This will have shape (num-regions,). Note that this starts at the beginning of the
+            \emph{input} to the model, so it will not match the coordinates in the bed file.
+        \item \texttt{coords\_end}, the end point for each of the regions that were explained.
             This will have shape (num-regions,).
+            As with \texttt{coords\_start}, this corresponds to the last base in the
+            \emph{input} to the model.
         \item \texttt{coords\_chrom}, the chromosome on which each region is found.
             These are strings, and this dataset has shape (num-regions,)
         \item \texttt{input\_seqs}, a one-hot encoded array representing the input sequences.

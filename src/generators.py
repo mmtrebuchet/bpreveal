@@ -3,11 +3,14 @@ import numpy as np
 import math
 import logging
 import time
+import h5py
+from utils import ONEHOT_T, MODEL_ONEHOT_T
 
 
 class H5BatchGenerator(keras.utils.Sequence):
 
-    def __init__(self, headList, dataH5, inputLength, outputLength, maxJitter, batchSize):
+    def __init__(self, headList: dict, dataH5: h5py.File, inputLength: int,
+                 outputLength: int, maxJitter: int, batchSize: int):
         logging.info("Initial load of dataset for hdf5-based generator.")
         self.headList = headList
         self.inputLength = inputLength
@@ -16,7 +19,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.batchSize = batchSize
         # The shape of the sequence dataset is
         # (numRegions x (inputLength + jitter*2 x 4))
-        self.fullSequences = np.array(dataH5["sequence"])
+        self.fullSequences = np.array(dataH5["sequence"], dtype=MODEL_ONEHOT_T)
         self.numRegions = self.fullSequences.shape[0]
         # The shape of the profile is
         # (num-heads) x (numRegions x (outputLength + jitter*2) x numTasks)
@@ -28,13 +31,13 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.loadData()
         logging.info("Batch generator initialized.")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return math.ceil(self.numRegions / self.batchSize)
 
     def __getitem__(self, idx):
         return self.batchSequences[idx], (self.batchVals[idx] + self.batchCounts[idx])
 
-    def loadData(self):
+    def loadData(self) -> None:
         self.batchSequences = []
         self.batchVals = []
         self.batchCounts = []
@@ -47,12 +50,13 @@ class H5BatchGenerator(keras.utils.Sequence):
             else:
                 curBatchSize = regionsRemaining
             regionsRemaining -= self.batchSize
-            self.batchSequences.append(np.empty((curBatchSize, self.inputLength, 4)))
+            self.batchSequences.append(np.empty((curBatchSize, self.inputLength, 4),
+                                                dtype=MODEL_ONEHOT_T))
             newBatchVals = []
             newBatchCounts = []
             for head in self.headList:
                 newBatchVals.append(
-                    np.empty((curBatchSize, self.outputLength, head["num-tasks"])))
+                    np.empty((curBatchSize, self.outputLength, head["num-tasks"]), dtype=np.float32))
                 newBatchCounts.append(np.empty((curBatchSize, )))
             self.batchVals.append(newBatchVals)
             self.batchCounts.append(newBatchCounts)
@@ -60,7 +64,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.rng = np.random.default_rng(seed=1234)
         self.refreshData()
 
-    def refreshData(self):
+    def refreshData(self) -> None:
         # Go over all the data and load it into the data structures
         # allocated in loadData.
         # First, randomize which regions go into which batches.

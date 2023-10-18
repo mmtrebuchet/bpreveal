@@ -21,12 +21,12 @@ import queue
 ENABLE_DEBUG_PROFILING = False
 import numpy.typing as npt
 from typing import Optional, Literal
+from utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T
 PROFILING_SORT_ORDER = SortKey.TIME
-FLOAT_T = np.float32
 
 
 def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
-                     standardSorted: Optional[bool] = False) -> npt.NDArray[FLOAT_T]:
+                     standardSorted: Optional[bool] = False) -> npt.NDArray[MOTIF_FLOAT_T]:
     """For each sample in samples (samples is an array of shape (N,)), in
     which quantile of the array of standards (of shape (M,)) would
     that sample fall?
@@ -51,7 +51,7 @@ def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
 
     if not standardSorted:
         standard = np.sort(standard)
-    standardQuantiles = np.linspace(0, 1, num=standard.shape[0], endpoint=True, dtype=np.float32)
+    standardQuantiles = np.linspace(0, 1, num=standard.shape[0], endpoint=True, dtype=MOTIF_FLOAT_T)
     minStandard = standard[0]
     maxStandard = standard[-1]
     if np.any(samples < minStandard) or np.any(samples > maxStandard):
@@ -63,17 +63,17 @@ def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
     else:
         newSamples = samples
 
-    return np.interp(samples, standard, standardQuantiles).astype(FLOAT_T)
+    return np.interp(samples, standard, standardQuantiles).astype(MOTIF_FLOAT_T)
 
 
-def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArray[FLOAT_T]:
+def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
     # The funny slice here is because scipy.signal.correlate doesn't collapse the
     # length-one dimension that is a result of both sequences having the same
     # second dimension.
     return scipy.signal.correlate(seqletValues, pssm, mode='valid')[:, 0]
 
 
-def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[FLOAT_T]:
+def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
     """Given a position probability matrix, which gives the probability of each
     base at each position, convert that into a position weight matrix, which gives
     the information (in bits) contained at each position.
@@ -87,10 +87,10 @@ def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[FLOA
     """
     # Add a minute amount of pseudocounts just so that numpy doesn't whine about
     # overflow in the log.
-    return np.log2((ppm / backgroundProbs) + 1e-30, dtype=FLOAT_T)
+    return np.log2((ppm / backgroundProbs) + 1e-30, dtype=MOTIF_FLOAT_T)
 
 
-def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[FLOAT_T]:
+def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
     """Given a position probability matrix, convert that to a pssm array,
     which is a measure of the information contained by each base.
     This method adds a small (1%) pseudocount at each position.
@@ -105,7 +105,7 @@ def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[FLO
     ppm = ppm + 0.01
     ppm = ppm / np.sum(ppm, axis=1, keepdims=True)
 
-    return np.log(ppm / backgroundProbs, dtype=FLOAT_T)
+    return np.log(ppm / backgroundProbs, dtype=MOTIF_FLOAT_T)
 
 
 def cwmTrimPoints(cwm: npt.NDArray,
@@ -178,19 +178,19 @@ class Pattern:
     # The human-readable name of this pattern.
     shortName: str
     # A (length, 4) array of the contribution weight matrix.
-    cwm: npt.NDArray[FLOAT_T]
+    cwm: npt.NDArray[MOTIF_FLOAT_T]
     # A (length, 4) array of the probability of each base at each position in the pattern.
-    ppm: npt.NDArray[FLOAT_T]
+    ppm: npt.NDArray[MOTIF_FLOAT_T]
     # The position weight matrix for this motif, the usual motif representation in logos.
-    pwm: npt.NDArray[FLOAT_T]
+    pwm: npt.NDArray[MOTIF_FLOAT_T]
     # The information content at each base in the motif.
-    pssm: npt.NDArray[FLOAT_T]
+    pssm: npt.NDArray[MOTIF_FLOAT_T]
     # When trimming the motif using cwmTrimPoints, where should you start and stop?
     cwmTrimLeftPoint: int
     cwmTrimRightPoint: int
     # For quick reference, I store the trimmed cwm and pssm.
-    cwmTrim: npt.NDArray[FLOAT_T]
-    pssmTrim: npt.NDArray[FLOAT_T]
+    cwmTrim: npt.NDArray[MOTIF_FLOAT_T]
+    pssmTrim: npt.NDArray[MOTIF_FLOAT_T]
     # (if you want the trimmed pwm, it's pwm[cwmTrimLeftPoint:cwmTrimRightPoint].)
 
     # How many seqlets are in this pattern?
@@ -212,17 +212,17 @@ class Pattern:
 
     # The following arrays are of shape (numSeqlets, seqletLength, 4):
     # The one-hot encoded sequence.
-    seqletOneHots: npt.NDArray[np.int8]
+    seqletOneHots: npt.NDArray[ONEHOT_T]
     # The contribution scores for each base.
-    seqletContribs: npt.NDArray[FLOAT_T]
+    seqletContribs: npt.NDArray[MOTIF_FLOAT_T]
 
     # The following arrays are of shape (numSeqlets,):
     # The information content match for each seqlet to the pattern's pssm.
-    seqletSeqMatches: npt.NDArray[FLOAT_T]
+    seqletSeqMatches: npt.NDArray[MOTIF_FLOAT_T]
     # The continuous Jaccard similarity between each seqlet and the pattern's cwm
-    seqletContribMatches: npt.NDArray[FLOAT_T]
+    seqletContribMatches: npt.NDArray[MOTIF_FLOAT_T]
     # The sum of the absolute value of all contribution scores for each seqlet.
-    seqletContribMagnitudes: npt.NDArray[FLOAT_T]
+    seqletContribMagnitudes: npt.NDArray[MOTIF_FLOAT_T]
 
     # When you give the quantile bounds to getCutoffs, these get stored:
     # What is the minimal information content (i.e., pssm) match score for a hit?
@@ -252,7 +252,7 @@ class Pattern:
             self.shortName = shortName
 
     def loadCwm(self, modiscoFp: h5py.File, trimThreshold: float,
-                padding: int, backgroundProbs: npt.NDArray[FLOAT_T]) -> None:
+                padding: int, backgroundProbs: npt.NDArray[MOTIF_FLOAT_T]) -> None:
         """Given an opened hdf5 file object, load up the contribution scores for this
         pattern.
         trimThreshold and padding are used to trim the motifs, see cwmTrimPoints
@@ -270,8 +270,8 @@ class Pattern:
 
         """
         h5Pattern = modiscoFp[self.metaclusterName][self.patternName]
-        self.cwm = np.array(h5Pattern["contrib_scores"], dtype=FLOAT_T)
-        self.ppm = np.array(h5Pattern["sequence"], dtype=FLOAT_T)
+        self.cwm = np.array(h5Pattern["contrib_scores"], dtype=MOTIF_FLOAT_T)
+        self.ppm = np.array(h5Pattern["sequence"], dtype=MOTIF_FLOAT_T)
         self.pwm = ppmToPwm(self.ppm, backgroundProbs)
         self.pssm = ppmToPssm(self.ppm, backgroundProbs)
         self.cwmTrimLeftPoint, self.cwmTrimRightPoint = cwmTrimPoints(self.cwm,
@@ -280,8 +280,8 @@ class Pattern:
         self.cwmTrim = self.cwm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
         self.pssmTrim = self.pssm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
 
-    def _callJaccard(self, seqlet: npt.NDArray[FLOAT_T],
-                     cwm: npt.NDArray[FLOAT_T]) -> npt.NDArray[FLOAT_T]:
+    def _callJaccard(self, seqlet: npt.NDArray[MOTIF_FLOAT_T],
+                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[FLOAT_T]:
         return jaccard.slidingJaccard(seqlet, cwm)
 
     def loadSeqlets(self, modiscoFp: h5py.File) -> None:
@@ -290,7 +290,7 @@ class Pattern:
         and contribution L1 match.
         """
         seqletsGroup = modiscoFp[self.metaclusterName][self.patternName]["seqlets"]
-        self.seqletContribs = np.array(seqletsGroup["contrib_scores"], dtype=FLOAT_T)
+        self.seqletContribs = np.array(seqletsGroup["contrib_scores"], dtype=MOTIF_FLOAT_T)
         self.seqletStarts = np.array(seqletsGroup["start"])
         self.seqletEnds = np.array(seqletsGroup["end"])
         self.seqletIndexes = np.array(seqletsGroup["example_idx"])
@@ -300,9 +300,9 @@ class Pattern:
         self.numSeqlets = int(seqletsGroup["n_seqlets"][0])
         # Now it's time to calculate stuff!
         # First, scan the seqlets and get their similarities to the called motif.
-        self.seqletSeqMatches = np.zeros((self.numSeqlets,), dtype=FLOAT_T)
-        self.seqletContribMatches = np.zeros((self.numSeqlets,), dtype=FLOAT_T)
-        self.seqletContribMagnitudes = np.zeros((self.numSeqlets,), dtype=FLOAT_T)
+        self.seqletSeqMatches = np.zeros((self.numSeqlets,), dtype=MOTIF_FLOAT_T)
+        self.seqletContribMatches = np.zeros((self.numSeqlets,), dtype=MOTIF_FLOAT_T)
+        self.seqletContribMagnitudes = np.zeros((self.numSeqlets,), dtype=MOTIF_FLOAT_T)
         for i in range(self.numSeqlets):
             trimmedSeqlet = self.seqletContribs[i, self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
             contribMatch, contribMagnitude = self._callJaccard(trimmedSeqlet, self.cwmTrim)
@@ -395,7 +395,7 @@ class Pattern:
 def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str, patternSpec: dict,
                   quantileSeqMatch: float, quantileContribMatch: float,
                   quantileContribMagnitude: float, trimThreshold: float,
-                  trimPadding: int, backgroundProbs: npt.NDArray[FLOAT_T],
+                  trimPadding: int, backgroundProbs: npt.NDArray[MOTIF_FLOAT_T],
                   outputSeqletsFname: Optional[str] = None) -> list[dict]:
     """Given a modisco hdf5 file, go over the seqlets and establish the quantile boundaries.
     If you give hard cutoffs for information content and L1 norm match, this function need not
@@ -563,22 +563,22 @@ class MiniPattern:
         self.metaclusterName = config["metacluster-name"]
         self.patternName = config["pattern-name"]
         self.shortName = config["short-name"]
-        self.cwm = np.array(config["cwm"], dtype=FLOAT_T)
+        self.cwm = np.array(config["cwm"], dtype=MOTIF_FLOAT_T)
         self.rcwm = np.flip(self.cwm)  # (revcomp)
-        self.pssm = np.array(config["pssm"], dtype=FLOAT_T)
+        self.pssm = np.array(config["pssm"], dtype=MOTIF_FLOAT_T)
         self.rpssm = np.flip(self.pssm)  # (revcomp)
         self.seqMatchCutoff = config["seq-match-cutoff"]
         self.contribMatchCutoff = config["contrib-match-cutoff"]
         self.contribMagnitudeCutoff = config["contrib-magnitude-cutoff"]
 
-    def _callJaccard(self, scores: npt.NDArray[FLOAT_T],
-                     cwm: npt.NDArray[FLOAT_T]) -> npt.NDArray[FLOAT_T]:
+    def _callJaccard(self, scores: npt.NDArray[MOTIF_FLOAT_T],
+                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[FLOAT_T]:
         # This is just a separate function so the profiler can see the call to Jaccard.
         return jaccard.slidingJaccard(scores, cwm)
 
-    def _scanOneWay(self, sequence: npt.NDArray[np.int8],
-                    scores: npt.NDArray[FLOAT_T], cwm: npt.NDArray[FLOAT_T],
-                    pssm: npt.NDArray[FLOAT_T], strand: Literal['+', '-']
+    def _scanOneWay(self, sequence: ONEHOT_AR_T,
+                    scores: npt.NDArray[MOTIF_FLOAT_T], cwm: npt.NDArray[FLOAT_T],
+                    pssm: npt.NDArray[MOTIF_FLOAT_T], strand: Literal['+', '-']
                     ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
         """Don't do revcomp - let scan take care of that. You should never
         call this method. Use scan instead!"""
@@ -612,7 +612,7 @@ class MiniPattern:
             ret.append((passLoc, strand, contribMagnitude, contribMatchScore, seqMatchScore))
         return ret
 
-    def scan(self, sequence: npt.NDArray[np.int8], scores: npt.NDArray[FLOAT_T]
+    def scan(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
              ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
         """Given a sequence and a contribution score track, identify all places
         where this pattern matches. sequence is a (length, 4) one-hot encoded
@@ -704,11 +704,11 @@ class PatternScanner:
                 multiprocessing.current_process().pid))
             self.firstIndex = False
         # Get all the data for this index.
-        chrom = self.contribFp["coords_chrom"][idx]
+        chrom = self.contribFp["coords_chrom"][idx].decode('utf-8')
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
-        hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=FLOAT_T, order='C')
-        contribScores = np.array(hypScores * oneHotSequence, dtype=FLOAT_T, order='C')
+        hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')
+        contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order='C')
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
             hits = pattern.scan(oneHotSequence, contribScores)

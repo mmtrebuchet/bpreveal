@@ -2,9 +2,10 @@ import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import random
-from typing import List, Tuple, TypeAlias, Callable, cast, Optional
+from typing import List, Tuple, TypeAlias, Callable, Optional
 import numpy.typing as npt
 import utils
+from utils import PRED_T, ONEHOT_T, ONEHOT_AR_T, PRED_AR_T
 import numpy as np
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
 # in case they aren't easily typeable on your keyboard:
@@ -24,7 +25,7 @@ CORRUPTOR_TO_IDX = {"A": 0, "C": 1, "G": 2, "T": 3,
 IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 
 Corruptor: TypeAlias = tuple[int, str]
-Profile: TypeAlias = List[Tuple[npt.NDArray[np.float64], float]]
+Profile: TypeAlias = List[Tuple[PRED_AR_T, float]]
 
 
 def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int, int]]:
@@ -571,9 +572,9 @@ def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
 import matplotlib.pyplot as plt
 
 
-def plotTraces(posTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
-               negTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
-               xvals: npt.NDArray[np.float64],
+def plotTraces(posTraces: List[Tuple[PRED_AR_T, str, str]],
+               negTraces: List[Tuple[PRED_AR_T, str, str]],
+               xvals: npt.NDArray[np.float32],
                annotations: List[Tuple[Tuple[int, int], str, str]],
                corruptors: List[Corruptor],
                ax: plt.Axes) -> None:
@@ -616,16 +617,16 @@ def plotTraces(posTraces: List[Tuple[npt.NDArray[np.float64], str, str]],
                        "d": "black",
                        "Ǎ": "green", "Č": "orange", "Ǧ": "blue", "Ť": "red"}
     for cor in corruptors:
-        l = cor[0] - 5
-        r = cor[0] + 5
+        left = cor[0] - 5
+        right = cor[0] + 5
         h = boxHeight  # Just for brevity.
         if cor[1] in "ACGT":
             # Use a diamond for SNPs.
-            corXvals = [l, cor[0], r, cor[0]]
+            corXvals = [left, cor[0], right, cor[0]]
             corYvals = [0, h, 0, -h]
         else:
             # Use a wedge for deletions
-            corXvals = [l, l + 4, l, r, r - 4, r]
+            corXvals = [left, left + 4, left, right, right - 4, right]
             corYvals = [-h, 0, h, h, 0, -h]
         ax.fill(corXvals, corYvals, corruptorColors[cor[1]])
     ax.legend()

@@ -14,6 +14,9 @@ import pybedtools
 import multiprocessing
 import abc
 
+from utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T
+# Use a low-precision floating point format for importance scores.
+
 
 class Query:
     """This is what is passed to the batcher. It has two things.
@@ -25,7 +28,11 @@ class Query:
     Since there's no guarantee that the results will arrive in order, we have to
     track which query was which.
     """
-    def __init__(self, oneHotSequence: npt.NDArray[np.int8], passData: Any, index: int):
+    sequence: ONEHOT_AR_T
+    passData: Any
+    index: int
+
+    def __init__(self, oneHotSequence: ONEHOT_AR_T, passData: Any, index: int):
         self.sequence = oneHotSequence
         self.passData = passData
         self.index = index
@@ -62,8 +69,8 @@ class PisaResult(Result):
 
     def __init__(self, inputPrediction: npt.NDArray[np.float32],
                  shufflePredictions: npt.NDArray[np.float32],
-                 sequence: npt.NDArray[np.int8],
-                 shap: npt.NDArray[np.float32],
+                 sequence: ONEHOT_AR_T,
+                 shap: npt.NDArray[IMPORTANCE_T],
                  passData: Any,
                  index: int):
         self.inputPrediction = inputPrediction
@@ -82,12 +89,14 @@ class FlatResult(Result):
 
     passData is a (picklable) object that is passed through from the generator.
         For bed-based interpretations, it will be a three-tuple of (chrom, start, end)
+        (The start and end positions correspond to the INPUT to the model, so they are inflated
+        with respect to the bed file.)
         For fasta-based interpretations it will be a string.
 
     index, an int, gives the position in the output hdf5 where the scores should be saved.
     """
-    def __init__(self, sequence: npt.NDArray[np.int8],
-                 shap: npt.NDArray[np.float32],
+    def __init__(self, sequence: ONEHOT_AR_T,
+                 shap: npt.NDArray[IMPORTANCE_T],
                  passData: Any, index: int):
         self.sequence = sequence
         self.shap = shap
@@ -206,12 +215,12 @@ class FlatRunner:
 
     def run(self):
         """Starts up the threads and waits for them to finish."""
-        logging.info("Beginning pisa run.")
+        logging.info("Beginning flat run.")
         self._genThread.start()
         logging.debug("Started generator.")
         self._profileBatchThread.start()
         self._countsBatchThread.start()
-        logging.debug("Started batcher. Starting savers.")
+        logging.debug("Started batchers. Starting savers.")
         self._profileSaverThread.start()
         self._countsSaverThread.start()
         logging.info("All processes started. Beginning main loop.")
@@ -219,10 +228,10 @@ class FlatRunner:
         logging.debug("Generator joined.")
         self._profileBatchThread.join()
         self._countsBatchThread.join()
-        logging.debug("Batcher joined.")
+        logging.debug("Batchers joined.")
         self._profileSaverThread.join()
         self._countsSaverThread.join()
-        logging.info("Saver complete. Done.")
+        logging.info("Savers complete. Done.")
 
 
 class PisaRunner:
@@ -286,6 +295,16 @@ class PisaRunner:
 
 class FlatH5Saver(Saver):
     """Saves the shap scores to the output file. """
+    CHUNK_SHAPE: tuple[int, int, int]
+    _outputFname: str
+    numSamples: int
+    genomeFname: Optional[str]
+    inputLength: int
+    _useTqdm: bool = False
+    _outFile: h5py.File
+    _chunksToWrite: dict[int, dict]
+    pbar: Optional[tqdm.tqdm] = None
+
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
                  genome: Optional[str] = None, useTqdm: bool = False):
         """
@@ -296,6 +315,7 @@ class FlatH5Saver(Saver):
             the genome of the organism. If provided, then chromosome name and size information
             will be included in the output, and, additionally, two other datasets will be
             created: coords_chrom, and coords_base. """
+        self.CHUNK_SHAPE = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
         self._outputFname = outputFname
         self.numSamples = numSamples
         self.genomeFname = genome
@@ -305,16 +325,16 @@ class FlatH5Saver(Saver):
     def construct(self):
         logging.info("Initializing saver.")
         self._outFile = h5py.File(self._outputFname, "w")
+        self._chunksToWrite = dict()
+
         self._outFile.create_dataset("hyp_scores",
                                      (self.numSamples, self.inputLength, 4),
-                                     dtype='f8')
-        # TODO for later: Adding compression to the sequence here absolutely tanks performan
+                                     dtype=IMPORTANCE_T, chunks=self.CHUNK_SHAPE,
+                                     compression='gzip')
         self._outFile.create_dataset('input_seqs',
                                      (self.numSamples, self.inputLength, 4),
-                                     dtype='u1')
-        self.pbar = None
-        if (self._useTqdm):
-            self.pbar = tqdm.tqdm(total=self.numSamples)
+                                     dtype=ONEHOT_T, chunks=self.CHUNK_SHAPE,
+                                     compression='gzip')
         if (self.genomeFname is not None):
             self._loadGenome()
         else:
@@ -361,17 +381,52 @@ class FlatH5Saver(Saver):
 
     def done(self):
         logging.debug("Saver closing.")
-        if (self.pbar is not None):
+        if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
 
     def add(self, result: FlatResult):
-        if (self.pbar is not None):
+        if self.pbar is None and self._useTqdm:
+            # Initialize the progress bar.
+            # I would do it earlier, but starting it before the batchers
+            # have warmed up skews the stats.
+            self.pbar = tqdm.tqdm(total=self.numSamples)
+        if self.pbar is not None:
             self.pbar.update()
         index = result.index
-        self._outFile["input_seqs"][index, :, :] = result.sequence
-        self._outFile["hyp_scores"][index, :, :] = result.shap
+        # Which chunk does this result go in?
+        chunkIdx = index // self.CHUNK_SHAPE[0]
+        # And where in the chunk does it go?
+        chunkOffset = index % self.CHUNK_SHAPE[0]
+        if chunkIdx not in self._chunksToWrite:
+            # Allocate a new chunk.
+            # Note that we can't just statically allocate one chunk buffer because we don't
+            # guarantee the order that the results will arrive in.
+            numToAdd = self.CHUNK_SHAPE[0]
+            if chunkIdx == self.numSamples // self.CHUNK_SHAPE[0]:
+                numToAdd = self.numSamples % self.CHUNK_SHAPE[0]
+            curChunkShape = (numToAdd, self.CHUNK_SHAPE[1], self.CHUNK_SHAPE[2])
+            self._chunksToWrite[chunkIdx] = {
+                "hyp_scores": np.empty(curChunkShape, dtype=IMPORTANCE_T),
+                "input_seqs": np.empty(curChunkShape, dtype=ONEHOT_T),
+                "numToAdd": numToAdd,
+                "writeStart": chunkIdx * self.CHUNK_SHAPE[0],
+                "writeEnd": chunkIdx * self.CHUNK_SHAPE[0] + numToAdd}
+        curChunk = self._chunksToWrite[chunkIdx]
+        curChunk["numToAdd"] -= 1
+        curChunk["hyp_scores"][chunkOffset] = result.shap
+        curChunk["input_seqs"][chunkOffset] = result.sequence
+        if curChunk["numToAdd"] == 0:
+            # We added the last missing entry to this chunk. Write it to the file.
+            start = curChunk["writeStart"]
+            end = curChunk["writeEnd"]
+            self._outFile["input_seqs"][start:end, :, :] = curChunk["input_seqs"]
+            self._outFile["hyp_scores"][start:end, :, :] = curChunk["hyp_scores"]
+            # Free the memory held by this chunk.
+            del self._chunksToWrite[chunkIdx]
+
         # Okay, now we either add the description line, or add a genomic coordinate.
+        # These are not chunked, since the data aren't compressed.
         if (self.genomeFname is not None):
             self._outFile["coords_chrom"][index] = result.passData[0]
             self._outFile["coords_start"][index] = result.passData[1]
@@ -400,6 +455,7 @@ class PisaH5Saver(Saver):
         self.genomeFname = genome
         self._useTqdm = useTqdm
         self.receptiveField = receptiveField
+        self.CHUNK_SHAPE = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
 
     def construct(self):
         self._outFile = h5py.File(self._outputFname, "w")
@@ -408,13 +464,23 @@ class PisaH5Saver(Saver):
         self._outFile.create_dataset("shuffle_predictions",
                                      (self.numSamples, self.numShuffles),
                                      dtype='f4')
+        # self._outFile.create_dataset("shap",
+        #                             (self.numSamples, self.receptiveField, 4),
+        #                             dtype='f4')
+        # TODO for later: Adding compression to the sequence here absolutely tanks performan
+        # self._outFile.create_dataset('sequence',
+        #                             (self.numSamples, self.receptiveField, 4),
+        #                             dtype='u1')
+        self._chunksToWrite = dict()
+
         self._outFile.create_dataset("shap",
                                      (self.numSamples, self.receptiveField, 4),
-                                     dtype='f4')
-        # TODO for later: Adding compression to the sequence here absolutely tanks performan
+                                     dtype=IMPORTANCE_T, chunks=self.CHUNK_SHAPE,
+                                     compression='gzip')
         self._outFile.create_dataset('sequence',
                                      (self.numSamples, self.receptiveField, 4),
-                                     dtype='u1')
+                                     dtype=ONEHOT_T, chunks=self.CHUNK_SHAPE,
+                                     compression='gzip')
         self.pbar = None
         if (self._useTqdm):
             self.pbar = tqdm.tqdm(total=self.numSamples)
@@ -481,10 +547,41 @@ class PisaH5Saver(Saver):
         if (self.pbar is not None):
             self.pbar.update()
         index = result.index
+        # Which chunk does this result go in?
+        chunkIdx = index // self.CHUNK_SHAPE[0]
+        # And where in the chunk does it go?
+        chunkOffset = index % self.CHUNK_SHAPE[0]
+        if chunkIdx not in self._chunksToWrite:
+            # Allocate a new chunk.
+            # Note that we can't just statically allocate one chunk buffer because we don't
+            # guarantee the order that the results will arrive in.
+            numToAdd = self.CHUNK_SHAPE[0]
+            if chunkIdx == self.numSamples // self.CHUNK_SHAPE[0]:
+                numToAdd = self.numSamples % self.CHUNK_SHAPE[0]
+            curChunkShape = (numToAdd, self.CHUNK_SHAPE[1], self.CHUNK_SHAPE[2])
+            self._chunksToWrite[chunkIdx] = {
+                "shap": np.empty(curChunkShape, dtype=IMPORTANCE_T),
+                "sequence": np.empty(curChunkShape, dtype=ONEHOT_T),
+                "numToAdd": numToAdd,
+                "writeStart": chunkIdx * self.CHUNK_SHAPE[0],
+                "writeEnd": chunkIdx * self.CHUNK_SHAPE[0] + numToAdd}
+
+        curChunk = self._chunksToWrite[chunkIdx]
+        curChunk["numToAdd"] -= 1
+        curChunk["shap"][chunkOffset] = result.shap
+        curChunk["sequence"][chunkOffset] = result.sequence
+        if curChunk["numToAdd"] == 0:
+            # We added the last missing entry to this chunk. Write it to the file.
+            start = curChunk["writeStart"]
+            end = curChunk["writeEnd"]
+            self._outFile["sequence"][start:end, :, :] = curChunk["sequence"]
+            self._outFile["shap"][start:end, :, :] = curChunk["shap"]
+            # Free the memory held by this chunk.
+            del self._chunksToWrite[chunkIdx]
         self._outFile["input_predictions"][index] = result.inputPrediction
         self._outFile["shuffle_predictions"][index, :] = result.shufflePredictions
-        self._outFile["sequence"][index, :, :] = result.sequence
-        self._outFile["shap"][index, :, :] = result.shap
+        # self._outFile["sequence"][index, :, :] = result.sequence
+        # self._outFile["shap"][index, :, :] = result.shap
         # Okay, now we either add the description line, or add a genomic coordinate.
         if (self.genomeFname is not None):
             self._outFile["coords_chrom"][index] = self.chromNameToIdx[result.passData[0]]
@@ -524,7 +621,7 @@ class FastaGenerator(Generator):
         logging.debug("Creating fasta iterator.")
         return self
 
-    def __next__(self):
+    def __next__(self) -> ONEHOT_AR_T:
         if (self.nowStop):
             raise StopIteration()
         sequence = ""
@@ -579,17 +676,17 @@ class FlatBedGenerator(Generator):
         logging.debug("Creating iterator for bed generator.")
         return self
 
-    def __next__(self):
+    def __next__(self) -> ONEHOT_AR_T:
         # Get the sequence and make a Query with it.
         if (self.readHead >= len(self.shapTargets)):
             raise StopIteration()
         r = self.shapTargets[self.readHead]
         padding = (self.inputLength - self.outputLength) // 2
         startPos = r.start - padding
-        stopPos = startPos + self.inputLength
-        seq = self.genome.fetch(r.chrom, startPos, stopPos)
+        endPos = startPos + self.inputLength
+        seq = self.genome.fetch(r.chrom, startPos, endPos)
         oneHot = utils.oneHotEncode(seq)
-        ret = Query(oneHot, (r.chrom, r.start, r.end), self.readHead)
+        ret = Query(oneHot, (r.chrom, startPos, endPos), self.readHead)
         self.readHead += 1
         return ret
 
@@ -632,7 +729,7 @@ class PisaBedGenerator(Generator):
         logging.debug("Creating iterator for bed generator.")
         return self
 
-    def __next__(self):
+    def __next__(self) -> ONEHOT_AR_T:
         # Get the sequence and make a Query with it.
         if (self.readHead >= len(self.shapTargets)):
             raise StopIteration()
@@ -810,7 +907,8 @@ class _PisaBatcher:
         # First, build up an array of sequences to test.
         numQueries = len(self.curBatch)
         inputLength = self.curBatch[0].sequence.shape[0]
-        oneHotBuf = np.empty((numQueries * (self.numShuffles + 1), inputLength, 4), dtype=np.int8)
+        oneHotBuf = np.empty((numQueries * (self.numShuffles + 1), inputLength, 4),
+                             dtype=MODEL_ONEHOT_T)
         # To predict on as large a batch as possible, I put the actual sequences and all the
         # references for the current batch into this array. The first <nsamples> rows are the real
         # sequence, the next <numShuffles> rows are the shuffles of the first sequence, then
@@ -864,7 +962,7 @@ class _FlatBatcher:
         from keras.models import load_model
         import losses
         import utils
-        utils.limitMemoryUsage(0.4)
+        utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = load_model(modelFname,
                 custom_objects={'multinomialNll': losses.multinomialNll})
@@ -927,7 +1025,7 @@ class _FlatBatcher:
         # First, build up an array of sequences to test.
         numQueries = len(self.curBatch)
         inputLength = self.curBatch[0].sequence.shape[0]
-        oneHotBuf = np.empty((numQueries, inputLength, 4), dtype=np.int8)
+        oneHotBuf = np.empty((numQueries, inputLength, 4), dtype=MODEL_ONEHOT_T)
         # To predict on as large a batch as possible, I put all of the sequences
         # to explain in this array, like this:
         # REAL_SEQUENCE_1_REAL_SEQUENCE_1_REAL_SEQUENCE_1

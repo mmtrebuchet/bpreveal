@@ -4,6 +4,33 @@ import scipy
 import numpy.typing as npt
 import typing
 
+ONEHOT_T = np.uint8
+ONEHOT_AR_T = npt.NDArray[ONEHOT_T]
+PRED_T = np.float32
+PRED_AR_T = npt.NDArray[PRED_T]
+
+# Store importance scores with 16 bits of precision. Since importance scores
+# (particularly PISA values) take up a lot of space, I use a small floating point type
+# and compression to mitigate the amount of data.
+IMPORTANCE_T = np.float16
+
+# Inside the models, we use floating point numbers to represent one-hot sequences.
+# For reasons I don't understand, setting this to uint8 DESTROYS pisa values.
+MODEL_ONEHOT_T = np.float32
+
+# The type used to represent cwms and pwms, and also the type used by the jaccard code.
+# If you change this, be sure to change libJaccard.c and libJaccard.pyf (and run make)
+# so that the jaccard library uses the correct data type.
+MOTIF_FLOAT_T = np.float32
+
+
+# When saving large hdf5 files, store the data in compressed chunks.
+# This constant sets the number of entries in each chunk that gets compressed.
+# For good performance, whenever you read a compressed hdf5 file, it really helps
+# if you read out whole chunks at a time and buffer them. See, for example,
+# shapToBigwig.py for an example of a chunked reader.
+H5_CHUNK_SIZE=128
+
 
 def setMemoryGrowth() -> None:
     """Turn on the tensorflow option to grow memory usage as needed, instead
@@ -20,7 +47,7 @@ def setMemoryGrowth() -> None:
         pass
 
 
-def limitMemoryUsage(fraction: float) -> None:
+def limitMemoryUsage(fraction: float, offset: float) -> None:
     # Limit tensorflow to use only the given fraction of memory.
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
     import subprocess as sp
@@ -35,10 +62,11 @@ def limitMemoryUsage(fraction: float) -> None:
 
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
+    useMem = int(total * fraction - offset)
     tf.config.set_logical_device_configuration(
         gpus[0],
-        [tf.config.LogicalDeviceConfiguration(memory_limit=int(total * fraction))])
-    logging.debug("Configured gpu with {0:d} MiB of memory.".format(int(total * fraction)))
+        [tf.config.LogicalDeviceConfiguration(memory_limit=useMem)])
+    logging.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
 
 
 def loadChromSizes(fname: str) -> dict[str, int]:
@@ -64,14 +92,14 @@ def setVerbosity(userLevel: str) -> None:
     logging.debug("Logger configured.")
 
 
-def oneHotEncode(sequence: str) -> npt.NDArray[np.int8]:
+def oneHotEncode(sequence: str) -> ONEHOT_AR_T:
     """Converts the string sequence into a one-hot encoded numpy array.
        The returned array will have shape (len(sequence), 4).
        The columns are, in order, A, C, G, and T.
        This function will error out if your sequence contains any
        characters other than ACGTacgt, so N nucleotides are rejected."""
 
-    ret = np.empty((len(sequence), 4), dtype='int8')
+    ret = np.empty((len(sequence), 4), dtype=ONEHOT_T)
     ordSeq = np.fromstring(sequence, np.int8)  # type:ignore
     ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
     ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
@@ -88,7 +116,7 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     will be a Python string. """
     # Convert to an int8 array, since if we get floating point
     # values, the chr() call will fail.
-    oneHotArray = oneHotSequence.astype(np.uint8)
+    oneHotArray = oneHotSequence.astype(ONEHOT_T)
 
     ret = oneHotArray[:, 0] * ord('A') + \
           oneHotArray[:, 1] * ord('C') + \
@@ -160,7 +188,7 @@ class BatchPredictor:
         self._inWaiting = 0
         self._outWaiting = 0
 
-    def submitOHE(self, sequence: npt.NDArray[np.int8], label: typing.Any) -> None:
+    def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
         """Sequence is an (input-length x 4) ndarray containing the
         one-hot encoded sequence to predict.
         label is any object, and it will be returned with the prediction."""
@@ -197,7 +225,7 @@ class BatchPredictor:
         # I need to determine the input length, and I'll do that by looking at
         # the first sequence.
         inputLength = firstElem[0].shape[0]
-        modelInputs = np.zeros((numSamples, inputLength, 4))
+        modelInputs = np.zeros((numSamples, inputLength, 4), dtype=ONEHOT_T)
         modelInputs[0] = firstElem[0]
         # With that ugliness out of the way, now I just populate the rest of
         # the prediction table.
@@ -281,3 +309,5 @@ class BatchPredictor:
         ret = self._outQueue.pop()
         self._outWaiting -= 1
         return ret
+
+

@@ -1,3 +1,41 @@
+Version 3.5.0, 2023-10-17
+	BREAKING CHANGES
+	* This should not have any effects on typical uses, but BPReveal now uses
+	Python 3.11.
+	* Removed the compiled jaccard library, the install process now
+	automatically builds it. You'll need to re-install BPReveal (or run make
+	in the src directory).
+
+	NEW FEATURES:
+	* Created a directory of helpful tools under src/tools. These are not part
+	of BPReveal proper, but have some useful goodies for plotting and stuff.
+	Pull requests welcome for new tools!
+	* Added the ability to provide sequence fasta files to interpretFlat.py
+	this required a total rewrite of the interpretation code to use streaming.
+	interpretFlat now requires just a few gigs of memory. It also calculates
+	profile and counts contribution simultaneously, leading to a 60% speedup.
+	* Created better conda integration. The BPReveal libraries should be on
+	your python path when you open python, and they are in the bpreveal
+	package. You can now `import bpreveal.utils` from any python interpreter.
+	Also created a bin/ directory that has links to all of the BPReveal
+	scripts. You should be able to just run `trainSoloModel config.json` once
+	you've activated the conda environment.
+
+	ENHANCEMENTS:
+	* Switched to storing importance scores as 16-bit floating point values
+	and enabled hdf5 compression, leading to an 80% reduction in the size of
+	contribution hdf5 files. Upgraded several components to effectively read
+	and write in a compressed, block-oriented format.
+	* Added type annotations to most of the library functions, allowing your
+	editor to quickly check for mistakes in argument order and type.
+	* Added type definitions to utils.py, so the code now (mostly) uses
+	consintent definitions for variable types.
+	* Updated the build scripts and added one for building a local copy of the
+	BPReveal environment.
+
+	CONTRIBUTORS:
+	Charles McAnany
+
 Version 3.4.0, 2023-10-06
 	NEW FEATURES:
 	* CWM scanning is now implemented. This takes the output from modisco and

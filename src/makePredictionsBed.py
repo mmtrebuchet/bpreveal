@@ -14,6 +14,8 @@ import h5py
 import tqdm
 import losses
 import logging
+from utils import ONEHOT_T, PRED_T
+
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.
 
@@ -29,7 +31,7 @@ def main(config):
     logging.debug("Opening output hdf5 file.")
     outFile = h5py.File(config["settings"]["output-h5"], "w")
     regions = pybedtools.BedTool(config["bed-file"])
-    seqs = np.zeros((len(regions), inputLength, 4))
+    seqs = np.zeros((len(regions), inputLength, 4), dtype=ONEHOT_T)
     genome = pysam.FastaFile(genomeFname)
     padding = (inputLength - outputLength) // 2
 
@@ -56,23 +58,29 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     logging.info("Writing predictions")
     stringDtype = h5py.string_dtype(encoding='utf-8')
     outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
-    outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u4')
+    outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u8')
     chromNameToIndex = dict()
+    chromDtype = np.uint8
+    if genome.nreferences > 127:
+        # We could store up to 255 in a uint8, but people might
+        # .astype(int8) and that would be a problem. So we sacrifice a
+        # bit if there are 128 to 255 chromosomes.
+        chromDtype = np.uint16
     assert len(genome.references) < 65535, "The genome has more than 2^16 chromosomes, "\
                                            "and cannot be saved using the current hdf5 "\
                                            "format. Increase the width of the coords_chrom "\
                                            "dataset to fix. Alternatively, consider predicting "\
                                            "from a fasta file, which lets you use arbitrary "\
                                            "names for each sequence."
-
+    chromPosDtype = np.uint32
     for i, chromName in enumerate(genome.references):
         outFile['chrom_names'][i] = chromName
         chromNameToIndex[chromName] = i
         refLen = genome.get_reference_length(chromName)
-        assert refLen < (2 ** 32 - 1), "The genome contains a chromosome that is over four "\
-                                       "billion bases long. This will overflow the coords_start "\
-                                       "and coords_stop fields in the output file. Widen the "\
-                                       "data type of these fields to fix."
+        if refLen > (2 ** 31 - 1):
+            logging.debug("The genome contains a chromosome that is over four billion bases long. "
+                          "Using an 8-byte integer for chromosome positions.")
+            chromPosDtype = np.uint64
         outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
 
     # Build a table of chromosome numbers. For space savings, only store the
@@ -81,14 +89,15 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]
     logging.debug("Datasets created. Populating regions.")
-    outFile.create_dataset('coords_chrom', dtype='u2', data=chromDset)
-    outFile.create_dataset('coords_start', dtype='u4', data=startDset)
-    outFile.create_dataset('coords_stop',  dtype='u4', data=stopDset)
+    outFile.create_dataset('coords_chrom', dtype=chromDtype, data=chromDset)
+    outFile.create_dataset('coords_start', dtype=chromPosDtype, data=startDset)
+    outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)
+
     logging.debug("Writing predictions.")
     for headId in tqdm.tqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headId))
-        headGroup.create_dataset("logcounts", data=preds[numHeads + headId])
-        headGroup.create_dataset("logits", data=preds[headId])
+        headGroup.create_dataset("logcounts", data=preds[numHeads + headId], dtype=PRED_T)
+        headGroup.create_dataset("logits", data=preds[headId], dtype=PRED_T)
     outFile.close()
     logging.info("File saved.")
 

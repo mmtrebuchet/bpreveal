@@ -10,6 +10,7 @@ import numpy as np
 import h5py
 import tqdm
 import logging
+from utils import ONEHOT_T, PRED_T
 
 
 class FastaReader:
@@ -77,15 +78,16 @@ class H5Writer:
         for headId in range(self.numHeads):
             headGroup = self._fp.create_group("head_{0:d}".format(headId))
             # These are the storage buffers for incoming data.
-            headBuffer = [np.empty((self.writeChunkSize, ), dtype=np.float32),
-                          np.empty((self.writeChunkSize, ) + sampleOutputs[headId].shape)]
+            headBuffer = [np.empty((self.writeChunkSize, ), dtype=PRED_T),  # counts
+                          np.empty((self.writeChunkSize, ) + sampleOutputs[headId].shape,
+                                   dtype=PRED_T)]  # profile
             self.headBuffers.append(headBuffer)
             headGroup.create_dataset("logcounts", (self.numPredictions,),
-                                     dtype=np.float32,
+                                     dtype=PRED_T,
                                      chunks=(self.writeChunkSize,))
             headGroup.create_dataset("logits",
                                      ((self.numPredictions,) + sampleOutputs[headId].shape),
-                                     dtype=np.float32,
+                                     dtype=PRED_T,
                                      chunks=((self.writeChunkSize,) + sampleOutputs[headId].shape))
         logging.debug("Initialized datasets.")
 

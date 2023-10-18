@@ -5,17 +5,19 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import utils
 import json
 import interpretUtils
+import logging
 
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
     genomeFname = None
     if "bed-file" in config:
-        print(config)
+        logging.debug("Configuration specifies a bed file.")
         genomeFname = config["genome"]
         generator = interpretUtils.FlatBedGenerator(config["bed-file"], genomeFname,
                                       config["input-length"], config["output-length"])
     else:
+        logging.debug("Configuration specifies a fasta file.")
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
 
     profileWriter = interpretUtils.FlatH5Saver(config["profile-h5"], generator.numRegions,

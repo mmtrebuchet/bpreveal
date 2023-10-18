@@ -8,5 +8,7 @@ doc/overview.log
 doc/overview.toc
 doc/overview.out
 src/__pycache__
+src/tools/__pycache__
 doc/img
 **/*.bw
+**/*.so

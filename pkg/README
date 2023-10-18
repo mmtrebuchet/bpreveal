@@ -1,0 +1,19 @@
+This directory holds symlinks to the src/ and tools/ directories in a way that makes it easy to
+import bits of bpreveal into your python programs without having to faff about with sys.path
+To use it, you need to create a file in your anaconda environment's site-packages folder.
+There are a couple ways to do this. 
+1. (recommended) Use `conda develop` to create a .pth file
+    First, run this command to get the necessary tool:
+    conda install conda-build
+    Then, either
+        conda develop -p <your-environment-location> /wherever/you/cloned/the/git/repo/bpreveal/pkg
+        or
+        conda develop -n <your-environment-name> /wherever/you/cloned/the/git/repo/bpreveal/pkg
+        depending on whether you specify your environment by path or by name.
+
+2.Create the .pth file manually.
+    echo "/wherever/you/cloned/the/git/repo/bpreveal/pkg" > ${CONDA_PREFIX}/lib/python3.10/site-packages/bpreveal.pth
+
+Then, inside your program, you just say
+
+from bpreveal.utils import oneHotEncode

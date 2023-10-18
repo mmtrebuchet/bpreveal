@@ -45,6 +45,8 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     regionStop = coordsStop[regionID]
     logging.info("Loading head data.")
     head = inH5['head_{0:d}'.format(headId)]
+    # No batching here, read in the whole array.
+    # It's only a genome worth of data, surely it will fit in memory.
     headLogits = np.array(head['logits'])
     headLogcounts = np.array(head['logcounts'])
 
