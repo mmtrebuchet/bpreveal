@@ -72,6 +72,8 @@ check
 ${CONDA_BIN} install --yes -c conda-forge cmake
 check
 
+#A compiler is needed to build the wheel for pybedtools.
+${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
 #pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
 #in the conda repositories. So install them through pip.
 pip install --no-input pysam pybedtools pybigwig
