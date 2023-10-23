@@ -2,13 +2,11 @@
 #SBATCH --job-name buildBpreveal
 #SBATCH --ntasks=3
 #SBATCH --nodes=1
-#SBATCH --mem=50gb
+#SBATCH --mem=5gb
 #SBATCH --time=1:00:00
 #SBATCH --output=log%j.log
 #SBATCH --partition=gpu
-
-#Don't request a GPU. It's enough to run on the gpu partition.
-#   #SBATCH --gres gpu:1
+#SBATCH --gres gpu:a100_3g.20gb:1
 
 # This is a script that you can run on Cerebro (the cluster at Stowers)
 # to install bpreveal. If you're not on a cluster, see the buildCondaLocal.zsh
@@ -58,13 +56,14 @@ check
 
 conda activate ${ENV_NAME}
 check
-# Tensorflow expressly advises against installing with conda.
-# I'm gonna do it anyway, because it works for me.
-${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu
-check
 # You have to install the nvidia-toolkit manually to enable optimizations
 # for tensorflow.
 ${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
+check
+
+# Tensorflow expressly advises against installing with conda.
+# I'm gonna do it anyway, because it works for me.
+${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu
 check
 
 ${CONDA_BIN} install --yes -c conda-forge tensorflow-probability
@@ -84,6 +83,7 @@ check
 
 # Before building stuff with pip, we need to make sure we have a compiler installed.
 ${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
+check
 
 # pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
 # in the conda repositories. So install them through pip.
@@ -132,10 +132,15 @@ echo "export BPREVEAL_KILL_PATH=${BPREVEAL_DIR}/bin"\
 echo "export PATH=\$BPREVEAL_KILL_PATH:\$PATH"\
     >> ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
 
+echo "export XLA_FLAGS=\"--xla_gpu_cuda_data_dir=${CONDA_PREFIX}\"" \
+    > ${CONDA_PREFIX}/etc/conda/activate.d/cuda_xla_activate.sh
+
 #And add a (very hacky) deactivation command that removes bpreveal from
 #your path when you deactivate the environment.
 echo "export PATH=\$(echo \$PATH | tr ':' '\n' | grep -v \$BPREVEAL_KILL_PATH | tr '\n' ':')"\
     > ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
 echo "unset BPREVEAL_KILL_PATH"\
     >> ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
+echo "unset XLA_FLAGS" \
+    > ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
 

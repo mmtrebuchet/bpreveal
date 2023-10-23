@@ -1,3 +1,13 @@
+Version 3.5.1, 2023-10-23
+	BUG FIXES:
+	* Building conda environments is always haunted. Fixed problems with model
+	training scripts not being able to find the cuda tools on Cerebro (even
+	though they're found just fine on my local workstation!)
+
+	CONTRIBUTORS:
+	Charles McAnany
+
+
 Version 3.5.0, 2023-10-17
 	BREAKING CHANGES
 	* This should not have any effects on typical uses, but BPReveal now uses
