@@ -281,7 +281,7 @@ class Pattern:
         self.pssmTrim = self.pssm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
 
     def _callJaccard(self, seqlet: npt.NDArray[MOTIF_FLOAT_T],
-                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[FLOAT_T]:
+                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[MOTIF_FLOAT_T]:
         return jaccard.slidingJaccard(seqlet, cwm)
 
     def loadSeqlets(self, modiscoFp: h5py.File) -> None:
@@ -572,12 +572,12 @@ class MiniPattern:
         self.contribMagnitudeCutoff = config["contrib-magnitude-cutoff"]
 
     def _callJaccard(self, scores: npt.NDArray[MOTIF_FLOAT_T],
-                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[FLOAT_T]:
+                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[MOTIF_FLOAT_T]:
         # This is just a separate function so the profiler can see the call to Jaccard.
         return jaccard.slidingJaccard(scores, cwm)
 
     def _scanOneWay(self, sequence: ONEHOT_AR_T,
-                    scores: npt.NDArray[MOTIF_FLOAT_T], cwm: npt.NDArray[FLOAT_T],
+                    scores: npt.NDArray[MOTIF_FLOAT_T], cwm: npt.NDArray[MOTIF_FLOAT_T],
                     pssm: npt.NDArray[MOTIF_FLOAT_T], strand: Literal['+', '-']
                     ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
         """Don't do revcomp - let scan take care of that. You should never
