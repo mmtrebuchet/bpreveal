@@ -17,6 +17,8 @@ countsReTrain = re.compile(r"^(?P<mode>[^v].*)_logcounts_(?P<head>.*)_loss$")
 profileReTrain = re.compile(r"^(?P<mode>[^v].*)_profile_(?P<head>.*)_loss$")
 countsReVal = re.compile(r"^val_(?P<mode>.*)_logcounts_(?P<head>.*)_loss$")
 profileReVal = re.compile(r"^val_(?P<mode>.*)_profile_(?P<head>.*)_loss$")
+
+
 def loadLosses(lossStats):
     ret = dict()
     for k in lossStats.keys():
@@ -45,7 +47,8 @@ def loadLosses(lossStats):
             ret[head]["profileVal"] = lossStats[k][-1]
     return ret
 
-def addLossRatios(lossByHead: dict, targetRatio : float):
+
+def addLossRatios(lossByHead: dict, targetRatio: float):
     for k in lossByHead.keys():
         trainRatio = lossByHead[k]["countsTrain"] / lossByHead[k]["profileTrain"]
         valRatio = lossByHead[k]["countsVal"] / lossByHead[k]["profileVal"]
@@ -60,7 +63,8 @@ def main(jsonFname: str, targetRatio: float, prevWeight: float):
     lossByHead = loadLosses(lossStats)
     addLossRatios(lossByHead, targetRatio)
     if targetRatio > 0:
-        print("{0:10s}\t{1:10s}\t{2:10s}\t{3:20s}".format("C/Ptrain", "C/Pval", "newWeight", "name"))
+        print("{0:10s}\t{1:10s}\t{2:10s}\t{3:20s}"
+              .format("C/Ptrain", "C/Pval", "newWeight", "name"))
     else:
         print("{0:10s}\t{1:10s}\t{2:20s}".format("C/Ptrain", "C/Pval", "name"))
     for k in lossByHead.keys():
@@ -73,7 +77,7 @@ def main(jsonFname: str, targetRatio: float, prevWeight: float):
         else:
             print("{0:10f}\t{1:10f}\t{2:20s}".format(
                 lossByHead[k]["trainRatio"] * prevWeight,
-                lossByHead[k]["valRatio"]* prevWeight, k))
+                lossByHead[k]["valRatio"] * prevWeight, k))
 
 
 if __name__ == "__main__":
@@ -91,4 +95,3 @@ if __name__ == "__main__":
         "actual contribution in your model.", type=float, default=1.0, dest="prevWeight")
     args = parser.parse_args()
     main(args.json, args.targetRatio, args.prevWeight)
-

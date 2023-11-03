@@ -19,13 +19,13 @@ def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: s
         condaString = "module load bpreveal\n"
     else:
         condaString = "conda deactivate\n"
-        condaString += "conda activate {envName:s}\n".format(envName = envName)
+        condaString += "conda activate {envName:s}\n".format(envName=envName)
 
-    return {"workDir" : workingDirectory, "sourceShell" : sourceShell, "condaString" : condaString}
+    return {"workDir": workingDirectory, "sourceShell": sourceShell, "condaString": condaString,
+            "gpuType": "a100_3g.20gb"}
 
 
-
-LOCAL_HEADER="""#!/usr/bin/env zsh
+LOCAL_HEADER = """#!/usr/bin/env zsh
 
 {sourcerc:s}
 
@@ -34,7 +34,7 @@ export PATH=$PATH:/n/apps/CentOS7/bin
 
 """
 
-SLURM_HEADER_NOGPU="""#!/usr/bin/env zsh
+SLURM_HEADER_NOGPU = """#!/usr/bin/env zsh
 #SBATCH --job-name {jobName:s}
 #SBATCH --ntasks={ntasks:d}
 #SBATCH --nodes=1
@@ -58,16 +58,17 @@ module load sratoolkit
 {condastring:s}
 """
 
+
 def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
                ntasks: int, mem: int, time: str):
     cmd = SLURM_HEADER_NOGPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
                                     time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
-                                    workDir=config["workDir"], condastring = config["condaString"])
+                                    workDir=config["workDir"], condastring=config["condaString"])
     for i, task in enumerate(tasks):
-        cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i+1)
+        cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
         cmd += "    {0:s}\n".format(task)
         cmd += "fi\n\n"
-    with open(config["workDir"]+"/slurm/{0:s}.slurm".format(jobName), "w") as fp:
+    with open(config["workDir"] + "/slurm/{0:s}.slurm".format(jobName), "w") as fp:
         fp.write(cmd)
 
 
@@ -80,11 +81,11 @@ def jobsLocal(config, tasks, jobName, ntasks, mem, time):
     cmd = LOCAL_HEADER.format(sourcerc=config["sourceShell"])
     for task in tasks:
         cmd += "{0:s}\n".format(task)
-    with open(config["workDir"]+"/slurm/{0:s}.zsh".format(jobName), "w") as fp:
+    with open(config["workDir"] + "/slurm/{0:s}.zsh".format(jobName), "w") as fp:
         fp.write(cmd)
 
 
-SLURM_HEADER_GPU="""#!/usr/bin/env zsh
+SLURM_HEADER_GPU = """#!/usr/bin/env zsh
 #SBATCH --job-name {jobName:s}
 #SBATCH --ntasks={ntasks:d}
 #SBATCH --nodes=1
@@ -92,7 +93,7 @@ SLURM_HEADER_GPU="""#!/usr/bin/env zsh
 #SBATCH --time={time:s}
 #SBATCH --output={workdir:s}/logs/{jobName:s}_%A_%a.out
 #SBATCH --partition=gpu
-#SBATCH --gres gpu:a100_3g.20gb:1
+#SBATCH --gres gpu:{gpuType:s}:1
 #SBATCH --array=1-{numJobs:d}%10
 
 {sourcerc:s}
@@ -105,16 +106,15 @@ module load ucsc
 """
 
 
-
 def jobsGpu(config, tasks, jobName, ntasks, mem, time):
 
     cmd = SLURM_HEADER_GPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
-                                    time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
-                                    workdir=config["workDir"], condastring = config["condaString"])
+                                  time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
+                                  workdir=config["workDir"], condastring=config["condaString"],
+                                  gpuType=config["gpuType"])
     for i, task in enumerate(tasks):
-        cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i+1)
+        cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
         cmd += "    {0:s}\n".format(task)
         cmd += "fi\n\n"
-    with open(config["workDir"]+"/slurm/{0:s}.slurm".format(jobName), "w") as fp:
+    with open(config["workDir"] + "/slurm/{0:s}.slurm".format(jobName), "w") as fp:
         fp.write(cmd)
-

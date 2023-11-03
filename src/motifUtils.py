@@ -1,6 +1,6 @@
 import logging
 try:
-    import jaccard
+    import bpreveal.jaccard as jaccard
 except ModuleNotFoundError:
     logging.error("Could not find the Jaccard module. You may need to run `make`"
                   " in the src/ directory.")
@@ -8,7 +8,7 @@ except ModuleNotFoundError:
 
 import h5py
 import numpy as np
-import utils
+import bpreveal.utils as utils
 import csv
 import tqdm
 import scipy.signal
@@ -21,7 +21,7 @@ import queue
 ENABLE_DEBUG_PROFILING = False
 import numpy.typing as npt
 from typing import Optional, Literal
-from utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T
+from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T
 PROFILING_SORT_ORDER = SortKey.TIME
 
 

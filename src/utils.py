@@ -29,7 +29,7 @@ MOTIF_FLOAT_T = np.float32
 # For good performance, whenever you read a compressed hdf5 file, it really helps
 # if you read out whole chunks at a time and buffer them. See, for example,
 # shapToBigwig.py for an example of a chunked reader.
-H5_CHUNK_SIZE=128
+H5_CHUNK_SIZE = 128
 
 
 def setMemoryGrowth() -> None:
@@ -165,7 +165,7 @@ class BatchPredictor:
         logging.debug("Creating batch predictor.")
         from keras.models import load_model
         import keras
-        import losses
+        import bpreveal.losses as losses
         from collections import deque
 
         self._model: keras.Model = load_model(modelFname,
@@ -241,8 +241,7 @@ class BatchPredictor:
                                     batch_size=self._batchSize)
         # I now need to parse out the shape of the prediction toa
         # generate the correct outputs.
-        numHeads = len(preds) // 2  # Two predictions (logits & logcounts)
-                                    # for each head.
+        numHeads = len(preds) // 2  # Two predictions (logits & logcounts) for each head.
         # The output from the prediction is an awkward shape for
         # decomposing the batch.
         # Each head produces a logits tensor of
@@ -309,5 +308,3 @@ class BatchPredictor:
         ret = self._outQueue.pop()
         self._outWaiting -= 1
         return ret
-
-

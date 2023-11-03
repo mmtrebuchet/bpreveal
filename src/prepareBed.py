@@ -6,99 +6,12 @@ import pyBigWig
 import pysam
 import tqdm
 import logging
-import utils
+import bpreveal.utils as utils
 import numpy as np
 import pybedtools
 import random
 import re
-
-
-def resize(interval, mode, width, genome):
-    """Given an interval (a PyBedTools Interval object),
-    return a new Interval that is at the same coordinate.
-    (see mode for the meaning of "same").
-    Arguments:
-    Interval is a PyBedTools Interval object with start and end information.
-    mode is one of:
-        "none", meaning that no resizing is done. In that case, this function will
-            check that the interval obeys stop-start == width. If an interval
-            does not have the correct width, an assertion will fail.
-        "center", in which case the interval is resized around its center.
-        "start", in which case the start coordinate is preserved.
-    width is an integer. The returned interval will obey x.end - x.start == width.
-    genome is an opened pysam genome fasta file. This is used to check if an interval
-        has fallen off the edge of a chromosome. If this is the case, this function will
-        return False. Check for this!
-    Returns:
-        A PyBedTools Interval object, newly allocated.
-        It will preserve the chromosome, name, score, and strand
-        information, but not other bed fields.
-    """
-    start = interval.start
-    end = interval.end
-    match mode:
-        case "none":
-            if (end - start != width):
-                assert False, \
-                       "An input region is not the expected width: {0:s}".format(str(interval))
-        case "center":
-            center = (end + start) // 2
-            start = center - width // 2
-            end = start + width
-        case "start":
-            start = start - width // 2
-            end = start + width
-        case _:
-            assert False, "Unsupported resize mode: {0:s}".format(mode)
-    if (start <= 0 or end >= genome.get_reference_length(interval.chrom)):
-        return False  # We're off the edge of the chromosome.
-    return pybedtools.Interval(interval.chrom, start, end, name=interval.name,
-                               score=interval.score, strand=interval.strand)
-
-
-def getCounts(interval, bigwigs):
-    """For the given PyBedTools interval and a list of open bigwig files
-    (NOT file names, actual file objects), determine
-    the SUM of counts for that interval across all given bigwigs.
-    Returns:
-    A single floating-point value representing the total of each bigwig in the given region.
-    NaN entries in the bigwigs are treated as zero.
-    """
-    total = 0
-    for bw in bigwigs:
-        vals = np.nan_to_num(bw.values(interval.chrom, interval.start, interval.end))
-        total += np.sum(vals)
-    return total
-
-
-def sequenceChecker(interval, genome):
-    """For the given interval, does it only contain A, C, G, and T?
-    If there are other bases, like N, returns False.
-    Returns:
-        True if the sequence matches "^[ACGTacgt]*$", False otherwise.
-    """
-    seq = genome.fetch(interval.chrom, interval.start, interval.end)
-    if (len(seq.upper().lstrip('ACGT')) != 0):
-        # There were letters that aren't regular bases. (probably Ns)
-        return False
-    return True
-
-
-# def stripCountsBelow(bed, cutoff, bigwigs):
-#    return bed.filter(lambda interval: getCounts(interval, bigwigs) >= cutoff).saveas()
-
-
-# def stripCountsAbove(bed, cutoff, bigwigs):
-#    return bed.filter(lambda interval: getCounts(interval, bigwigs) <= cutoff).saveas()
-
-
-def lineToInterval(line):
-    """Simply takes a text line from a bed file and creates a PyBedTools Interval object.
-    If the line is not a data line, return False."""
-    if len(line.strip()) == 0 or line[0] == '#':
-        return False
-    initInterval = pybedtools.cbedtools.create_interval_from_list(line.split())
-    return initInterval
+from bedUtils import resize, sequenceChecker, getCounts, lineToInterval
 
 
 def loadRegions(config):

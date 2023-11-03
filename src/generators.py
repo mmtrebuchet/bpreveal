@@ -56,7 +56,10 @@ class H5BatchGenerator(keras.utils.Sequence):
             newBatchCounts = []
             for head in self.headList:
                 newBatchVals.append(
-                    np.empty((curBatchSize, self.outputLength, head["num-tasks"]), dtype=np.float32))
+                    np.empty((curBatchSize,
+                              self.outputLength,
+                              head["num-tasks"]),
+                             dtype=np.float32))
                 newBatchCounts.append(np.empty((curBatchSize, )))
             self.batchVals.append(newBatchVals)
             self.batchCounts.append(newBatchCounts)

@@ -11,6 +11,7 @@ from utils import H5_CHUNK_SIZE
 class BatchedH5Reader:
     curChunkStart: int
     curChunkEnd: int
+
     def __init__(self, h5fp, batchSize):
         self.batchSize = batchSize
         self.h5fp = h5fp
@@ -24,18 +25,18 @@ class BatchedH5Reader:
             return
         self.curChunkStart = index
         self.curChunkEnd = min(index + self.batchSize, self.maxIndex)
-        self.curScore = np.array(self.h5fp["hyp_scores"]\
-                                 [self.curChunkStart:self.curChunkEnd,:,:])
-        self.curSeqs = np.array(self.h5fp["input_seqs"]\
-                                [self.curChunkStart:self.curChunkEnd,:,:])
+        self.curScore = np.array(self.h5fp["hyp_scores"]
+                                 [self.curChunkStart:self.curChunkEnd, :, :])
+        self.curSeqs = np.array(self.h5fp["input_seqs"]
+                                [self.curChunkStart:self.curChunkEnd, :, :])
 
     def readScore(self, idx: int):
         self.loadChunk(idx)
-        return self.curScore[idx - self.curChunkStart,:,:]
+        return self.curScore[idx - self.curChunkStart, :, :]
 
     def readSeq(self, idx: int):
         self.loadChunk(idx)
-        return self.curSeqs[idx - self.curChunkStart,:,:]
+        return self.curSeqs[idx - self.curChunkStart, :, :]
 
 
 def writeBigWig(inH5, outFname, verbose):
@@ -92,9 +93,8 @@ def writeBigWig(inH5, outFname, verbose):
 
         # Okay, now it's time to actually do the thing to the data!
 
-        importances = h5Reader.readScore(regionID)#inH5["hyp_scores"][regionID]
-        seq = h5Reader.readSeq(regionID)#inH5["input_seqs"][regionID]
-        #seq = inH5["input_seqs"][regionID]
+        importances = h5Reader.readScore(regionID)
+        seq = h5Reader.readSeq(regionID)
         projected = np.array(importances) * np.array(seq)
         # Add up all the bases to get a vector of projected importances.
         profile = np.sum(projected, axis=1)
