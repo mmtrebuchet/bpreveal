@@ -2,9 +2,9 @@
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-import utils
+import bpreveal.utils as utils
 import json
-import interpretUtils
+import bpreveal.interpretUtils as interpretUtils
 import logging
 
 

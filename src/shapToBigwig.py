@@ -5,7 +5,7 @@ import numpy as np
 import argparse
 import logging
 import tqdm
-from utils import H5_CHUNK_SIZE
+from bpreveal.utils import H5_CHUNK_SIZE
 
 
 class BatchedH5Reader:

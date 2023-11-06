@@ -59,7 +59,6 @@ def createTilingRegions(inputLength: int, outputLength: int,
         return pybedtools.Interval(s.chrom, newStart, newEnd)
 
     shrunkSegments = pybedtools.BedTool(segments).each(shrinkSegment).saveas()
-    shrunkSegments.saveas("/dev/shm/segments.bed")
     logging.debug("Filtered segments. {0:d} survive.".format(shrunkSegments.count()))
 
     # Phase 3. Generate tiling regions.

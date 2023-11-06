@@ -11,7 +11,7 @@ import numpy as np
 import pybedtools
 import random
 import re
-from bedUtils import resize, sequenceChecker, getCounts, lineToInterval
+from bpreveal.bedUtils import resize, sequenceChecker, getCounts, lineToInterval
 
 
 def loadRegions(config):

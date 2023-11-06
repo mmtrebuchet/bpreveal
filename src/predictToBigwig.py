@@ -5,7 +5,7 @@ import numpy as np
 import argparse
 import logging
 import tqdm
-import utils
+import bpreveal.utils as utils
 
 
 def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):

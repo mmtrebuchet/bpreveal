@@ -7,9 +7,9 @@ import json
 import pysam
 import logging
 import pybedtools
-import utils
+import bpreveal.utils as utils
 from typing import Literal
-from utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
+from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
 
 
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:

@@ -4,9 +4,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import random
 from typing import List, Tuple, TypeAlias, Callable, Optional
 import numpy.typing as npt
-import utils
-from utils import PRED_T, ONEHOT_T, ONEHOT_AR_T, PRED_AR_T
+import bpreveal.utils as utils
+from bpreveal.utils import PRED_T, ONEHOT_T, ONEHOT_AR_T, PRED_AR_T
 import numpy as np
+import matplotlib.pyplot as plt
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
 # in case they aren't easily typeable on your keyboard:
 IN_A = "Ǎ"
@@ -569,7 +570,6 @@ def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
     return True
 
 
-import matplotlib.pyplot as plt
 
 
 def plotTraces(posTraces: List[Tuple[PRED_AR_T, str, str]],

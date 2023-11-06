@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
-import layers
+import bpreveal.layers as layers
 import logging
 
 

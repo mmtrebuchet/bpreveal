@@ -4,7 +4,7 @@ import math
 import logging
 import time
 import h5py
-from utils import ONEHOT_T, MODEL_ONEHOT_T
+from bpreveal.utils import ONEHOT_T, MODEL_ONEHOT_T
 
 
 class H5BatchGenerator(keras.utils.Sequence):

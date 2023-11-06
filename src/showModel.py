@@ -3,10 +3,10 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-import utils
+import bpreveal.utils as utils
 utils.setMemoryGrowth()
 from keras.models import load_model
-import losses
+import bpreveal.losses as losses
 
 
 def main(modelFname, pngFile):

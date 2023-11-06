@@ -5,12 +5,12 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
-import utils
+import bpreveal.utils as utils
 import numpy as np
 import h5py
 import tqdm
 import logging
-from utils import ONEHOT_T, PRED_T
+from bpreveal.utils import ONEHOT_T, PRED_T
 
 
 class FastaReader:

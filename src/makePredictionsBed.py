@@ -5,16 +5,16 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
-import utils
+import bpreveal.utils as utils
 import pybedtools
 import numpy as np
 import pysam
 from keras.models import load_model
 import h5py
 import tqdm
-import losses
+import bpreveal.losses as losses
 import logging
-from utils import ONEHOT_T, PRED_T
+from bpreveal.utils import ONEHOT_T, PRED_T
 
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import motifUtils
+import bpreveal.motifUtils as motifUtils
 import numpy as np
 import csv
 import argparse

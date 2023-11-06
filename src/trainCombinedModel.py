@@ -2,15 +2,15 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
-import utils
+import bpreveal.utils as utils
 import h5py
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
 from keras.models import load_model
-import generators
-import losses
-from callbacks import getCallbacks
-import models
+import bpreveal.generators as generators
+import bpreveal.losses as losses
+from bpreveal.callbacks import getCallbacks
+import bpreveal.models as models
 import logging
 
 

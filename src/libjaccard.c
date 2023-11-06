@@ -110,15 +110,3 @@ void slidingJaccard(FLOAT_T *importanceScores, int importanceLength,
     }
 }
 
-
-void mysum(FLOAT_T *a, FLOAT_T *out, int rows, int cols){
-    for (int i = 0; i < rows; i++){
-        out[i] = 0.0;
-        for (int j = 0; j < cols; j++){
-            out[i] += a[i*cols + j];
-        }
-    }
-}
-
-
-
