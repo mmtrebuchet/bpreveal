@@ -5,10 +5,112 @@ import numpy as np
 import argparse
 import logging
 import tqdm
+import multiprocessing
 import bpreveal.utils as utils
 
 
-def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
+class Region:
+    def __init__(self, chromIdx, start, end, h5Idx):
+        self.chromIdx = chromIdx
+        self.start = start
+        self.end = end
+        self.h5Idx = h5Idx
+
+    def getValues(self, h5fp, mode, head, taskId):
+        headLogits = h5fp["head_{0:d}".format(head)]["logits"]
+        headLogcounts = h5fp["head_{0:d}".format(head)]["logcounts"]
+
+        match mode:
+            case 'profile':
+                logits = headLogits[self.h5Idx]
+                # Logits will have shape (output-width x numTasks)
+                logCounts = headLogcounts[self.h5Idx]
+                headProfile = utils.logitsToProfile(logits, logCounts)
+                taskProfile = headProfile[:, taskId]
+                profile = taskProfile
+            case 'logits':
+                profile = headLogits[self.h5Idx, :, taskId]
+            case 'mnlogits':
+                profile = headLogits[self.h5Idx, :, taskId]
+                profile -= np.mean(profile)
+            case 'logcounts':
+                profile = np.zeros((self.end - self.start)) + headLogcounts[self.h5Idx]
+            case 'counts':
+                profile = np.zeros((self.end - self.start)) + np.exp(headLogcounts[self.h5Idx])
+        return profile
+
+
+def getChromInserts(arg):
+    """Packs all the arguments into one so it's easier to use with pool.map()."""
+    regionList, h5Fname, headId, taskId, mode = arg
+    with h5py.File(h5Fname, "r") as h5fp:
+        vec = getChromVector(regionList, h5fp, headId, taskId, mode)
+        inserts = vectorToListOfInserts(vec)
+    logging.info("Finished region {0:s}".format(str(regionList[0].chromIdx)))
+    return inserts
+
+
+def getChromVector(regionList, h5fp, headId, taskId, mode):
+    chromSize = h5fp["chrom_sizes"][regionList[0].chromIdx]
+    regionCounts = np.zeros((chromSize,), dtype=np.uint16)
+    regionValues = np.zeros((chromSize,), dtype=np.float32)
+    for r in regionList:
+        regionCounts[r.start:r.end] += 1
+        regionValues[r.start:r.end] += r.getValues(h5fp, mode, headId, taskId)
+    regionCounts[regionCounts == 0] = 1
+    return regionValues / regionCounts
+
+
+def vectorToListOfInserts(dataVector):
+    rets = []
+    regionStart = 0
+    poses = np.nonzero(dataVector)[0]
+    lastPoint = -1
+    for pos in poses:
+        if pos == lastPoint + 1:
+            # We're in a block.
+            pass
+        else:
+            # We just ended a block.
+            rets.append((dataVector[regionStart:lastPoint + 1], regionStart))
+            regionStart = pos
+
+        lastPoint = pos
+    rets.append((dataVector[regionStart:poses[-1] + 1], regionStart))
+    return rets
+
+
+def buildRegionList(inH5):
+    numRegions = inH5['coords_chrom'].shape[0]
+
+    # Sort the regions.
+    logging.debug("Loading coordinate data")
+    coordsChrom = list(inH5['coords_chrom'])
+    coordsStart = np.array(inH5['coords_start'])
+    coordsStop = np.array(inH5['coords_stop'])
+    logging.debug("Region data loaded. Sorting.")
+    regionList = []
+    regionRange = range(numRegions)
+    for regionNumber in regionRange:
+        regionList.append(Region(coordsChrom[regionNumber],
+                                 coordsStart[regionNumber],
+                                 coordsStop[regionNumber],
+                                 regionNumber))
+    logging.debug("Generated list of regions to sort.")
+    regionOrder = sorted(range(numRegions),
+                         key=lambda x: (regionList[x].chromIdx, regionList[x].start))
+    logging.info("Region order calculated.")
+
+    regionsByChrom = dict()
+    for idx in regionOrder:
+        r = regionList[idx]
+        if r.chromIdx not in regionsByChrom:
+            regionsByChrom[r.chromIdx] = []
+        regionsByChrom[r.chromIdx].append(r)
+    return regionsByChrom
+
+
+def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate, numThreads):
     inH5 = h5py.File(inH5Fname, "r")
     logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headId, taskId))
     bwHeader = []
@@ -19,120 +121,45 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate):
     outBw.addHeader(bwHeader)
     logging.debug(bwHeader)
     logging.info("Added header.")
-    numRegions = inH5['coords_chrom'].shape[0]
+    regionsByChrom = buildRegionList(inH5)
+    chromList = sorted(regionsByChrom.keys())
+    # In order to use multiprocessing, I need to unstaple the dict into a list.
+    # The order of the list is sorted(regionsByChrom.keys())
+    chromRegionLists = []
+    for chromIdx in chromList:
+        chromRegionLists.append((regionsByChrom[chromIdx], inH5Fname, headId, taskId, mode))
+    logging.info("Extracted list of regions to process.")
+    logging.info("Beginning to extract profile data.")
 
-    # Sort the regions.
-    logging.debug("Loading coordinate data")
-    coordsChrom = list(inH5['coords_chrom'])
-    coordsStart = np.array(inH5['coords_start'])
-    coordsStop = np.array(inH5['coords_stop'])
-    logging.debug("Region data loaded. Sorting.")
-    regionList = []
-    if (verbose):
-        regionRange = tqdm.tqdm(range(numRegions))
-    else:
-        regionRange = range(numRegions)
-    for regionNumber in regionRange:
-        regionList.append((coordsChrom[regionNumber], coordsStart[regionNumber]))
-    logging.debug("Generated list of regions to sort.")
-    regionOrder = sorted(range(numRegions), key=lambda x: regionList[x])
-    logging.info("Region order calculated.")
-    curChrom = 0
-    startWritingAt = 0
-    regionID = regionOrder[0]
-    regionChrom = coordsChrom[regionID]
-    regionStart = coordsStart[regionID]
-    regionStop = coordsStop[regionID]
-    logging.info("Loading head data.")
-    head = inH5['head_{0:d}'.format(headId)]
-    # No batching here, read in the whole array.
-    # It's only a genome worth of data, surely it will fit in memory.
-    headLogits = np.array(head['logits'])
-    headLogcounts = np.array(head['logcounts'])
-
-    logging.info("Starting to write data.")
-    if (verbose):
-        regionRange = tqdm.tqdm(range(numRegions))
-    else:
-        regionRange = range(numRegions)
-    for regionNumber in regionRange:
-        # Extract the appropriate region from the sorted list.
-        if (regionChrom != curChrom):
-            curChrom = regionChrom
-            startWritingAt = 0
-
-        if (startWritingAt < regionStart):
-            # The next region starts beyond the end
-            # of the previous one. Some bases will not be filled in.
-            startWritingAt = regionStart
-        # By default, write the whole region.
-        stopWritingAt = regionStop
-        # As long as we aren't on the last region, check for overlaps.
-        if (regionNumber < numRegions - 1):
-            nextRegion = regionOrder[regionNumber + 1]
-            nextChrom = coordsChrom[nextRegion]
-            nextStart = coordsStart[nextRegion]
-            nextStop = coordsStop[nextRegion]
-            if (nextChrom == regionChrom and nextStart < stopWritingAt):
-                # The next region overlaps. So stop writing before then.
-                overlapSize = regionStop - nextStart
-                stopWritingAt = stopWritingAt - overlapSize // 2
-        dataSliceStart = startWritingAt - regionStart
-        dataSliceStop = stopWritingAt - regionStart
-
-        # Okay, now it's time to actually do the thing to the data!
-        match mode:
-            case 'profile':
-                logits = headLogits[regionID]
-                # Logits will have shape (output-width x numTasks)
-                logCounts = headLogcounts[regionID]
-                headProfile = utils.logitsToProfile(logits, logCounts)
-                taskProfile = headProfile[:, taskId]
-                profile = taskProfile
-            case 'logits':
-                profile = headLogits[regionID, :, taskId]
-            case 'mnlogits':
-                profile = headLogits[regionID, :, taskId]
-                profile -= np.mean(profile)
-            case 'logcounts':
-                profile = np.zeros((regionStop - regionStart)) + headLogcounts[regionID]
-            case 'counts':
-                profile = np.zeros((regionStop - regionStart)) + np.exp(headLogcounts[regionID])
-
-        if (negate):
-            profile *= -1
-        vals = [float(x) for x in profile[dataSliceStart:dataSliceStop]]
-        try:
-            if (startWritingAt == 0):
-                raise RuntimeError()
-            outBw.addEntries(bwHeader[regionChrom][0],
-                             int(startWritingAt),
-                             values=vals,
+    with multiprocessing.Pool(numThreads) as p:
+        # Get the insert list for each chromosome in a subprocess.
+        chromInsertLists = p.map(getChromInserts, chromRegionLists)
+    logging.info("Insert lists calculated. Writing bigwig.")
+    pbar = None
+    if verbose:
+        totalInserts = 0
+        for il in chromInsertLists:
+            totalInserts += len(il)
+        pbar = tqdm.tqdm(total=totalInserts)
+    for i, chromIdx in enumerate(chromList):
+        inserts = chromInsertLists[i]
+        chromName = inH5["chrom_names"][chromIdx].decode('utf-8')
+        for ins in inserts:
+            if pbar is not None:
+                pbar.update()
+            values, start = ins
+            if negate:
+                values *= -1
+            insertValues = [float(x) for x in values]
+            outBw.addEntries(chromName,
+                             start,
+                             values=insertValues,
                              span=1, step=1)
-        except RuntimeError as e:
-            print(e)
-            print(startWritingAt)
-            print(bwHeader[regionChrom][0])
-            print(regionID)
-            print(nextRegion)
-            print(regionStart)
-            print(nextStart)
-            print(regionStop)
-            print(nextStop)
-            print(regionChrom)
-            print(nextChrom)
-            raise
-
-        # Update the region. By pulling the first setting of the region variables out of the loop,
-        # I avoid double-dipping to get those data from the H5.
-        startWritingAt = stopWritingAt
-        regionID = nextRegion
-        regionChrom = nextChrom
-        regionStart = nextStart
-        regionStop = nextStop
-    logging.debug("Closing bigwig.")
+    if pbar is not None:
+        pbar.close()
+    logging.info("Bigwig written. Closing.")
     outBw.close()
-    logging.info("Bigwig closed.")
+    logging.info("Done.")
 
 
 def main():
@@ -155,12 +182,15 @@ def main():
                         action='store_true')
     parser.add_argument("--negate", help="Negate all of the values written to the bigwig. "
                         "Used for negative-strand predictions.", action='store_true')
+    parser.add_argument("--threads", help="Number of threads to use for calculating profile "
+                        "tracks (max: num chromosomes)", type=int, default=24, dest='numThreads')
     args = parser.parse_args()
     if (args.verbose):
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
-    writeBigWig(args.h5, args.bw, args.headId, args.taskId, args.mode, args.verbose, args.negate)
+    writeBigWig(args.h5, args.bw, args.headId, args.taskId, args.mode, args.verbose,
+                args.negate, args.numThreads)
 
 
 if (__name__ == "__main__"):
