@@ -1,3 +1,23 @@
+Version 3.6.0, 2023-11-06
+	ENHANCEMENTS:
+	* The old predictToBigwig script had odd behavior with overlapping inputs.
+	It always took the leftmost region that predicted a particular base and
+	saved that out. Now, it instead averages all of the predictions made for a
+	given base and saves the average value. This may result in small changes
+	to your bigwigs, but should not cause any meaningful differences.
+	predictToBigwig now has a --threads option, since I made it GO FAST LIKE
+	NYOOOOM! Since this cause a change in outputs, I'm assigning a minor
+	version increase, though it's really not a big deal.
+	* Fully qualified the names of all the imports in all the python files, so
+	they should be callable from anywhere and importable from any script now.
+
+	BUG FIXES:
+	* In the specification, corrected "chrom_name" to "chrom_names" in the
+	output hdf5 format for makePredictionsBed.
+
+	CONTRIBUTORS:
+	Charles McAnany
+
 Version 3.5.3, 2023-11-03
 	NEW FEATURES:
 	* Added a bedUtils.py library with useful tools for manipulating bed
