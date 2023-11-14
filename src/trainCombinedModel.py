@@ -14,6 +14,7 @@ import bpreveal.models as models
 import logging
 import tensorflow as tf
 
+
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
                outputPrefix, plateauPatience, heads, tensorboardDir=None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)

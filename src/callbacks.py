@@ -4,6 +4,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 import re
 
+
 def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads):
     logging.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
@@ -26,14 +27,16 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
                                                    earlyStopCallback, checkpointCallback)
     return [earlyStopCallback, checkpointCallback, plateauCallback, adaptiveLossCallback]
 
+
 class ApplyAdaptiveCountsLoss(Callback):
-    """This updates the counts loss weights in your model on the fly, so that you can specify a target
-    fraction of the loss that is due to counts, and the model will automatically update the weight.
-    It currently does not update profile weights, so you can't yet automatically balance the losses
-    in a multitask model. (You can still manually specify them in the config json, of course!)"""
+    """This updates the counts loss weights in your model on the fly, so that you can specify a
+    target fraction of the loss that is due to counts, and the model will automatically update
+    the weight. It currently does not update profile weights, so you can't yet automatically
+    balance the losses in a multitask model.
+    (You can still manually specify them in the config json, of course!)"""
     # Straight from the json, with "INTERNAL_counts-loss-weight-variable".
     heads: dict
-    #0 = don't change weights, 1 = ignore history, change weights very fast.
+    # 0 = don't change weights, 1 = ignore history, change weights very fast.
     aggression: float
     # The logs at each epoch.
     logsHistory: list[dict]
@@ -52,9 +55,10 @@ class ApplyAdaptiveCountsLoss(Callback):
         be exactly twice (or half) of the old weight, so that gross instability in the early stages
         doesn't cause the model to explode.)
         The three callbacks are the others used in the model, and should be run BEFORE
-        this callback is executed. This callback messes with their internal state (naughty, naughty!)
-        because changing the loss weights could cause the model's loss value to go up even though the
-        model hasn't gotten any worse.
+        this callback is executed.
+        This callback messes with their internal state (naughty, naughty!) because changing the
+        loss weights could cause the model's loss value to go up even though the model hasn't
+        gotten any worse.
         """
         super().__init__()
         self.heads = heads
@@ -103,7 +107,7 @@ class ApplyAdaptiveCountsLoss(Callback):
             # (with some debugging information.
             print("Loss names ", list(epochLosses.keys()))
             print("head name ", headName)
-            print("regex matches ",  [profile, counts, valProfile, valCounts])
+            print("regex matches ", [profile, counts, valProfile, valCounts])
             assert False, "A loss didn't match any regex."
         ret = (epochLosses[profile],
                epochLosses[counts],
@@ -124,7 +128,7 @@ class ApplyAdaptiveCountsLoss(Callback):
             curWeight = weightVar.read_value()
             oldWeight = self.weightHistory[head["head-name"]][epoch]
             valTotalLoss += vcl * curWeight / oldWeight
-        logging.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"\
+        logging.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"
                       .format(valTotalLoss, epoch, logs["val_loss"]))
         return valTotalLoss
 
@@ -147,12 +151,12 @@ class ApplyAdaptiveCountsLoss(Callback):
         the loss on epoch three would *actually* have been 16." so that the
         callback thinks that the loss of 14 on epoch 4 is an improvement."""
 
-        #Find which epoch set the record.
+        # Find which epoch set the record.
 
         recordEpoch = self.earlyStopCallback.best_epoch
         # Now, set the callbacks to have a corrected loss at the record-setting epoch.
         correctedLoss = self.whatWouldValLossBe(recordEpoch)
-        logging.debug("Resetting callbacks from old loss {0:f} to new loss {1:f}"\
+        logging.debug("Resetting callbacks from old loss {0:f} to new loss {1:f}"
                       .format(self.lrPlateauCallback.best, correctedLoss))
         self.lrPlateauCallback.best = correctedLoss
         self.earlyStopCallback.best = correctedLoss
@@ -185,16 +189,16 @@ class ApplyAdaptiveCountsLoss(Callback):
                 target = head["counts-loss-frac-target"]
                 correctedWeight = target * profileLoss / (countsLossRaw * (1 - target))
                 # Approach the new target weight slowly, using exponential damping.
-                newWeight = curWeight * (1-self.aggression) + correctedWeight * self.aggression
+                newWeight = curWeight * (1 - self.aggression) + correctedWeight * self.aggression
                 # If the weight would change by more than a factor of aggression, clamp it down.
 
                 if (max(newWeight, curWeight) / min(newWeight, curWeight)) > 2:
-                    logging.debug("Large weight change detected. Old: {0:f}, new {1:f}"\
+                    logging.debug("Large weight change detected. Old: {0:f}, new {1:f}"
                                   .format(curWeight, newWeight))
                     if newWeight > curWeight:
                         # N / C > 2
                         # make N = C * 2
-                        newWeight = curWeight *2
+                        newWeight = curWeight * 2
                     else:
                         # C / N > 2
                         # make N = C / 2
@@ -206,11 +210,11 @@ class ApplyAdaptiveCountsLoss(Callback):
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
 
                 logging.debug(("countsLoss: head {0:s} old cw {1:f}, new cw {2:f} (A=1: {3:f})."
-                                " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})")\
+                               " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})")
                               .format(head["head-name"], curWeight, newWeight,
-                                      correctedWeight, scaledCurFrac,
-                                      head["counts-loss-frac-target"],
-                                      countsLossRaw, countsLoss))
+                                   correctedWeight, scaledCurFrac,
+                                   head["counts-loss-frac-target"],
+                                   countsLossRaw, countsLoss))
 
                 weightVar.assign(newWeight)
         # We've updated the loss. But now we have to go mess with the callbacks so that

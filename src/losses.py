@@ -3,6 +3,7 @@ import tensorflow_probability as tfp
 import logging
 from keras import backend
 
+
 def multinomialNll(trueCounts, logits):
     logging.debug("Creating multinomial NLL.")
     inputShape = tf.shape(trueCounts)
@@ -28,6 +29,7 @@ def weightedMse(weightTensor):
     counts weight algorithm.
     Returns a loss function."""
     logging.debug("Creating weighted mse.")
+
     def mse(y_true, y_pred):
         y_pred = tf.convert_to_tensor(y_pred)
         y_true = tf.cast(y_true, y_pred.dtype)

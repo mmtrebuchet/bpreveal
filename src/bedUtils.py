@@ -6,6 +6,8 @@ import logging
 import numpy as np
 from typing import Literal
 import tqdm
+
+
 def makeWhitelistSegments(genome: pysam.FastaFile,
                           blacklist: pybedtools.BedTool | None = None) -> pybedtools.BedTool:
     """Get a list of windows where it is safe to draw inputs for your model.
@@ -35,11 +37,12 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
         if chromName in blacklistsByChrom:
             seqList = list(chromSeq)
             for blackInterval in blacklistsByChrom[chromName]:
-                for base in range(blackInterval.start, blackInterval.end-1):
+                for base in range(blackInterval.start, blackInterval.end - 1):
                     try:
                         seqList[base] = 'N'
                     except IndexError:
-                        logging.warning("Ran off the end of the chromosome. Interval: {0:s}".format(str(blackInterval)))
+                        logging.warning("Ran off the end of the chromosome. Interval: {0:s}"
+                                        .format(str(blackInterval)))
                         break
             chromSeq = ''.join(seqList)
         segmentStart = 0
@@ -60,6 +63,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
             # We finished the chromosome without hitting Ns. Certainly possible!
             segments.append(pybedtools.Interval(chromName, segmentStart, len(chromSeq)))
     return segments
+
 
 def tileSegments(inputLength: int, outputLength: int,
                  segments: pybedtools.BedTool,
@@ -97,6 +101,7 @@ def tileSegments(inputLength: int, outputLength: int,
     logging.debug("Regions created, {0:d} across genome.".format(len(regions)))
 
     return pybedtools.BedTool(regions)
+
 
 def createTilingRegions(inputLength: int, outputLength: int,
                         genome: pysam.FastaFile,

@@ -1,8 +1,9 @@
-def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: str, maxJobs=10) -> dict:
+def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: str,
+                maxJobs=10) -> dict:
     """shellRcFiles is a list of strings, each one giving the name of
     a .shrc file in your home directory. These will be sourced, in order,
     inside the generated script.
-    If shellRcFiles is just a string, it names the one and only .shrc file that should be executed.
+    If shellRcFiles is just a string, it names one and only .shrc file that should be executed.
     envName is a string, and it gives the name for the environment that should be loaded.
     if envName is "ml", then instead of a conda command being used to load bpreveal, the
     module system on cerebro will be used instead.
@@ -22,7 +23,7 @@ def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: s
         condaString += "conda activate {envName:s}\n".format(envName=envName)
 
     return {"workDir": workingDirectory, "sourceShell": sourceShell, "condaString": condaString,
-            "gpuType": "a100_3g.20gb", "maxJobs" : maxJobs}
+            "gpuType": "a100_3g.20gb", "maxJobs": maxJobs}
 
 
 LOCAL_HEADER = """#!/usr/bin/env zsh
@@ -65,7 +66,7 @@ def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
     cmd = SLURM_HEADER_NOGPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
                                     time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
                                     workDir=config["workDir"], condastring=config["condaString"],
-                                    maxJobs = config["maxJobs"])
+                                    maxJobs=config["maxJobs"])
     cmd += extraHeader + "\n\n"
     for i, task in enumerate(tasks):
         cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
@@ -75,13 +76,13 @@ def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
         fp.write(cmd)
 
 
-def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader = ""):
+def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     condaString = config["condaString"]
 
     if condaString[:6] == "module":
         assert False, "Cannot run local jobs if the configuration specified 'ml'."
 
-    cmd = LOCAL_HEADER.format(sourcerc=config["sourceShell"], condastring = condaString)
+    cmd = LOCAL_HEADER.format(sourcerc=config["sourceShell"], condastring=condaString)
     cmd += "\n" + extraHeader + "\n"
     for task in tasks:
         cmd += "{0:s}\n".format(task)
@@ -110,12 +111,12 @@ module load ucsc
 """
 
 
-def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader = ""):
+def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
 
     cmd = SLURM_HEADER_GPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
                                   time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
                                   workdir=config["workDir"], condastring=config["condaString"],
-                                  gpuType=config["gpuType"], maxJobs = config["maxJobs"])
+                                  gpuType=config["gpuType"], maxJobs=config["maxJobs"])
     cmd += extraHeader + "\n\n"
 
     for i, task in enumerate(tasks):

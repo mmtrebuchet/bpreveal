@@ -68,7 +68,7 @@ def main():
                 typesToAdd = []
                 for lossType in lossPair:
                     if re.search(countsRe, lossType):
-                        #We found a counts loss and know the right weights.
+                        # We found a counts loss and know the right weights.
                         weightedCountsLosses = np.array(history[lossType])
                         weightsAr = np.array(countsLossWeight[countsKey])
                         unweightedCountsLosses = weightedCountsLosses / weightsAr

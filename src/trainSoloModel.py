@@ -49,7 +49,6 @@ def main(config):
     logging.debug("Model built.")
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = []
-    #countsLosses = ['mse'] * numHeads
     profileWeights = []
     countsWeights = []
     for head in config['heads']:
