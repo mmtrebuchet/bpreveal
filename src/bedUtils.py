@@ -5,7 +5,98 @@ import pyBigWig
 import logging
 import numpy as np
 from typing import Literal
+import tqdm
+def makeWhitelistSegments(genome: pysam.FastaFile,
+                          blacklist: pybedtools.BedTool | None = None) -> pybedtools.BedTool:
+    """Get a list of windows where it is safe to draw inputs for your model.
+    Given a genome file, go over each chromosomem and see where the Ns are.
+    Create a BedTool that contains all regions that don't contain N.
+    For example, if your genome were
+    ATATATATnnnnnnnATATATATATATnnn,
+    then this would return a BedTool corresponding to the regions containing
+    As and Ts.
+    blacklist, if provided, is a bed file of regions that should be treated as though
+    they contained N nucleotides.
+    """
+    segments = []
 
+    logging.debug("Building segments.")
+    blacklistsByChrom = dict()
+    if blacklist is not None:
+        # We're going to iterate over blacklist several times,
+        # so save it in case it's a streaming bedtool.
+        blacklist.saveas()
+        for blackInterval in blacklist:
+            if blackInterval.chrom not in blacklistsByChrom:
+                blacklistsByChrom[blackInterval.chrom] = []
+            blacklistsByChrom[blackInterval.chrom].append(blackInterval)
+    for chromName in tqdm.tqdm(sorted(genome.references)):
+        chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
+        if chromName in blacklistsByChrom:
+            seqList = list(chromSeq)
+            for blackInterval in blacklistsByChrom[chromName]:
+                for base in range(blackInterval.start, blackInterval.end-1):
+                    try:
+                        seqList[base] = 'N'
+                    except IndexError:
+                        logging.warning("Ran off the end of the chromosome. Interval: {0:s}".format(str(blackInterval)))
+                        break
+            chromSeq = ''.join(seqList)
+        segmentStart = 0
+        inSegment = False
+        for i, c in enumerate(chromSeq):
+            if c not in 'ACGTacgt':
+                # We have hit a segment boundary.
+                if inSegment:
+                    # We should commit the current segment.
+                    segments.append(pybedtools.Interval(chromName, segmentStart, i))
+                inSegment = False
+            elif not inSegment:
+                # Start up a new segment.
+                segmentStart = i
+                inSegment = True
+
+        if inSegment:
+            # We finished the chromosome without hitting Ns. Certainly possible!
+            segments.append(pybedtools.Interval(chromName, segmentStart, len(chromSeq)))
+    return segments
+
+def tileSegments(inputLength: int, outputLength: int,
+                 segments: pybedtools.BedTool,
+                 spacing: int) -> pybedtools.BedTool:
+    logging.debug("Beginning to trim segments. {0:d} segments alive.".format(len(segments)))
+    padding = (inputLength - outputLength) // 2
+    logging.debug("Calculated padding of {0:d}".format(padding))
+
+    def shrinkSegment(s: pybedtools.Interval):
+        newEnd = s.end - padding
+        newStart = s.start + padding
+        if newEnd - newStart < outputLength:
+            return False
+        return pybedtools.Interval(s.chrom, newStart, newEnd)
+
+    shrunkSegments = pybedtools.BedTool(segments).each(shrinkSegment).saveas()
+    logging.debug("Filtered segments. {0:d} survive.".format(shrunkSegments.count()))
+
+    # Phase 3. Generate tiling regions.
+    logging.debug("Creating regions.")
+    regions = []
+    for s in tqdm.tqdm(shrunkSegments):
+        startPos = s.start
+        endPos = startPos + outputLength
+        while endPos < s.end:
+            curRegion = pybedtools.Interval(s.chrom, startPos, endPos)
+            regions.append(curRegion)
+            startPos += spacing + outputLength
+            endPos = startPos + outputLength
+        if startPos < s.end:
+            # We want another region inside this segment.
+            endPos = s.end
+            startPos = endPos - outputLength
+            regions.append(pybedtools.Interval(s.chrom, startPos, endPos))
+    logging.debug("Regions created, {0:d} across genome.".format(len(regions)))
+
+    return pybedtools.BedTool(regions)
 
 def createTilingRegions(inputLength: int, outputLength: int,
                         genome: pysam.FastaFile,
@@ -25,61 +116,8 @@ def createTilingRegions(inputLength: int, outputLength: int,
     """
     # Segments are regions of the genome that contain no N nucleotides.
     # These will be split into regions in the next phase.
-    segments = []
-    logging.debug("Building segments.")
-    for chromName in sorted(genome.references):
-        chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
-        segmentStart = 0
-        inSegment = False
-        for i, c in enumerate(chromSeq):
-            if c not in 'ACGTacgt':
-                # We have hit a segment boundary.
-                if inSegment:
-                    # We should commit the current segment.
-                    segments.append(pybedtools.Interval(chromName, segmentStart, i))
-                inSegment = False
-            elif not inSegment:
-                # Start up a new segment.
-                segmentStart = i
-                inSegment = True
-
-        if inSegment:
-            # We finished the chromosome with hitting Ns.
-            segments.append(pybedtools.Interval(chromName, segmentStart, len(chromSeq)))
-    # Phase two: trim the segments.
-    logging.debug("Beginning to trim segments. {0:d} segments alive.".format(len(segments)))
-    padding = (inputLength - outputLength) // 2
-    logging.debug("Calculated padding of {0:d}".format(padding))
-
-    def shrinkSegment(s: pybedtools.Interval):
-        newEnd = s.end - padding
-        newStart = s.start + padding
-        if newEnd - newStart < outputLength:
-            return False
-        return pybedtools.Interval(s.chrom, newStart, newEnd)
-
-    shrunkSegments = pybedtools.BedTool(segments).each(shrinkSegment).saveas()
-    logging.debug("Filtered segments. {0:d} survive.".format(shrunkSegments.count()))
-
-    # Phase 3. Generate tiling regions.
-    logging.debug("Creating regions.")
-    regions = []
-    for s in shrunkSegments:
-        startPos = s.start
-        endPos = startPos + outputLength
-        while endPos < s.end:
-            curRegion = pybedtools.Interval(s.chrom, startPos, endPos)
-            regions.append(curRegion)
-            startPos += spacing + outputLength
-            endPos = startPos + outputLength
-        if startPos < s.end:
-            # We want another region inside this segment.
-            endPos = s.end
-            startPos = endPos - outputLength
-            regions.append(pybedtools.Interval(s.chrom, startPos, endPos))
-    logging.debug("Regions created, {0:d} across genome.".format(len(regions)))
-
-    return pybedtools.BedTool(regions)
+    segments = makeWhitelistSegments(genome)
+    return tileSegments(inputLength, outputLength, segments, spacing)
 
 
 def resize(interval: pybedtools.Interval, mode: str, width: int,

@@ -154,8 +154,8 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
         print("Counts pearson \t{0:10f}".format(countsPearson[0]))
         print("Counts spearman\t{0:10f}".format(countsSpearman[0]))
     else:
-        jsonDict["counts-pearson"]: countsPearson[0]
-        jsonDict["counts-spearman"]: countsSpearman[0]
+        jsonDict["counts-pearson"] = countsPearson[0]
+        jsonDict["counts-spearman"] = countsSpearman[0]
 
     if jsonOutput:
         print(json.dumps(jsonDict, indent=4))

@@ -32,6 +32,7 @@ LOCAL_HEADER = """#!/usr/bin/env zsh
 #Get bedtools on the path, this is needed for teak.
 export PATH=$PATH:/n/apps/CentOS7/bin
 
+{condastring:s}
 """
 
 SLURM_HEADER_NOGPU = """#!/usr/bin/env zsh
@@ -60,10 +61,11 @@ module load sratoolkit
 
 
 def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
-               ntasks: int, mem: int, time: str):
+               ntasks: int, mem: int, time: str, extraHeader=""):
     cmd = SLURM_HEADER_NOGPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
                                     time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
                                     workDir=config["workDir"], condastring=config["condaString"])
+    cmd += extraHeader + "\n\n"
     for i, task in enumerate(tasks):
         cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
         cmd += "    {0:s}\n".format(task)
@@ -72,13 +74,14 @@ def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
         fp.write(cmd)
 
 
-def jobsLocal(config, tasks, jobName, ntasks, mem, time):
+def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader = ""):
     condaString = config["condaString"]
 
     if condaString[:6] == "module":
         assert False, "Cannot run local jobs if the configuration specified 'ml'."
 
-    cmd = LOCAL_HEADER.format(sourcerc=config["sourceShell"])
+    cmd = LOCAL_HEADER.format(sourcerc=config["sourceShell"], condastring = condaString)
+    cmd += "\n" + extraHeader + "\n"
     for task in tasks:
         cmd += "{0:s}\n".format(task)
     with open(config["workDir"] + "/slurm/{0:s}.zsh".format(jobName), "w") as fp:
@@ -106,12 +109,14 @@ module load ucsc
 """
 
 
-def jobsGpu(config, tasks, jobName, ntasks, mem, time):
+def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader = ""):
 
     cmd = SLURM_HEADER_GPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
                                   time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
                                   workdir=config["workDir"], condastring=config["condaString"],
                                   gpuType=config["gpuType"])
+    cmd += extraHeader + "\n\n"
+
     for i, task in enumerate(tasks):
         cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
         cmd += "    {0:s}\n".format(task)
