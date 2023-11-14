@@ -1,0 +1,89 @@
+<prepare-bed-configuration> ::=
+    {<bigwig-section>,
+     "splits" : {<split-settings>},
+     "genome" : <file-name>,
+     "output-length" : <integer>,
+     "input-length" : <integer>,
+     "max-jitter" : <integer>,
+     <output-file-name-section>,
+     "resize-mode" : <resize-mode>,
+     <overlaps-section>
+     <verbosity-section>}
+
+<bigwig-section> ::=
+    "heads" : [<head-preparation-list>]
+  | (DEPRECATED) "bigwigs" : [<bigwig-preparation-list>]
+
+<overlap-section> ::=
+    "remove-overlaps" : true,
+    "overlap-max-distance" : <integer>,
+  | "remove-overlaps" : false,
+
+<head-preparation-list> ::=
+    <individual-preparation-head>
+  | <individual-preparation-head>, <head-preparation-list>
+
+<resize-mode> ::=
+    "none"
+  | "center"
+  | "start"
+
+<output-file-name-section> ::=
+    "output-prefix" : "<string>"
+  | "output-train" : <file-name>,
+    "output-val" : <file-name>,
+    "output-test" : <file-name>
+
+<individual-preparation-head> ::=
+ { "bigwig-names" : [<list-of-bigwig-files>],
+   <max-cutoff-section>,
+   <min-cutoff-section>
+   }
+
+<max-cutoff-section> ::=
+   "max-quantile" : <number>
+ | "max-counts" : <integer>
+
+<min-cutoff-section> ::=
+   "min-quantile" : <number>
+ | "min-counts" : <integer>
+
+<split-settings> ::=
+    <split-by-chromosome-settings>
+  | <split-by-name-settings>
+  | <split-by-bed-settings>
+
+<split-by-chromosome-settings> ::=
+    "train-chroms" : [<list-of-strings>],
+    "val-chroms" : [<list-of-strings> ],
+    "test-chroms" : [<list-of-strings> ],
+    "regions" : [<list-of-bed-files>]
+
+<split-by-bed-settings> ::=
+    "train-regions" : [<list-of-bed-files>],
+    "val-regions" : [<list-of-bed-files>],
+    "test-regions" : [<list-of-bed-files>]
+
+<split-by-name-settings> ::=
+    "regions" : [<list-of-bed-files>],
+    "test-regex" : "<string>",
+    "train-regex" : "<string>",
+    "val-regex" : "<string>"
+
+<list-of-bigwig-files> ::=
+    <file-name>, <list-of-bigwig-files>
+  | <file-name>
+
+<list-of-bed-files> ::=
+    <file-name>, <list-of-bed-files>
+  | <file-name>
+
+(DEPRECATED) <bigwig-preparation-list> ::=
+(DEPRECATED)    <individual-preparation-bigwig>
+(DEPRECATED)  | <individual-preparation-bigwig>, <bigwig-preparation-list>
+
+(DEPRECATED) <individual-preparation-bigwig> ::=
+(DEPRECATED)  { "file-name" : <file-name>,
+(DEPRECATED)    <max-cutoff-section>,
+(DEPRECATED)    <min-cutoff-section>
+(DEPRECATED)    }

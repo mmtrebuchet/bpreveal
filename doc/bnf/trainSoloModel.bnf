@@ -1,0 +1,52 @@
+<solo-training-input-configuration> ::=
+   {<solo-settings-section> , <data-section>,
+     <head-section>, <verbosity-section>}
+
+<solo-settings-section> ::=
+    "settings" : {<solo-settings-contents>}
+
+<data-section> ::=
+    "train-data" : <file-name>,
+    "val-data" : <file-name>
+
+<head-section> ::=
+  "heads" : [<head-list>]
+
+<head-list> ::=
+    <individual-head>
+  | <individual-head>, <head-list>
+
+<individual-head> ::=
+    { "num-tasks" : <integer>,
+      "profile-loss-weight" : <number>,
+      "counts-loss-weight" : <number>,
+      <counts-loss-frac-target>
+      "head-name" : <string>}
+
+<counts-loss-frac-target> ::=
+    <empty>
+  | "counts-loss-frac-target" : <number>
+
+<solo-settings-contents> ::=
+    {"output-prefix" : <string>,
+     "epochs" : <integer>,
+     "max-jitter" : <integer>,
+     "early-stopping-patience" : <integer>,
+     "batch-size" : <integer>,
+     "learning-rate" : <number>,
+     "learning-rate-plateau-patience" : <integer>,
+     "architecture" : <solo-architecture-specification> }
+
+<solo-architecture-specification> ::=
+    <solo-bpnet-architecture-specification>
+
+<solo-bpnet-architecture-specification> ::=
+    {"architecture-name" : "bpnet",
+    "input-length" : <integer>,
+    "output-length" : <integer>,
+    "model-name" : <string>,
+    "model-args" : <string>,
+    "filters" : <integer>,
+    "layers" : <integer>,
+    "input-filter-width" : <integer>,
+    "output-filter-width" : <integer>}

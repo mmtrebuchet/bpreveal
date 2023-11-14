@@ -1,0 +1,49 @@
+<combined-training-input-configuration> ::=
+   {<combined-settings-section> , <data-section>,
+     <combined-head-section>, <verbosity-section>}
+
+<combined-head-section> ::=
+  "heads" : [<combined-head-list>]
+
+<combined-head-list> ::=
+    <combined-individual-head>
+  | <combined-individual-head>, <combined-head-list>
+
+<combined-individual-head> ::=
+    {"num-tasks" : <integer>,
+     "profile-loss-weight" : <number>,
+     "counts-loss-weight" : <number>,
+     <counts-loss-frac-target>
+     "head-name" : <string>,
+     "use-bias-counts" : <boolean>}
+
+<combined-settings-section> ::=
+    "settings" : {<combined-settings-contents>}
+
+<combined-settings-contents> ::=
+    {"output-prefix" : "<string>",
+     "epochs" : <integer>,
+     "early-stopping-patience" : <integer>,
+     "batch-size" : <integer>,
+     "learning-rate" : <number>,
+     "learning-rate-plateau-patience" : <integer>,
+     "transformation-model" : <transformation-combined-settings>,
+     "max-jitter" : <integer>,
+     "architecture" : <combined-architecture-specification> }
+
+<transformation-combined-settings> ::=
+    {"transformation-model-file" : <file-name> }
+
+<combined-architecture-specification> ::=
+    <combined-bpnet-architecture-specification>
+
+<combined-bpnet-architecture-specification> ::=
+    {"architecture-name" : "bpnet",
+     "input-length" : <number>,
+     "output-length" : <number>,
+     "model-name" : <string>,
+     "model-args" : <string>,
+     "filters" : <number>,
+     "layers" : <number>,
+     "input-filter-width" : <number>,
+     "output-filter-width" : <number>}

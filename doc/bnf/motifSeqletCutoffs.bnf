@@ -1,0 +1,52 @@
+<motif-seqlet-cutoffs-configuration> ::=
+    {<seqlet-scanning-settings>,
+    <verbosity-section>}
+
+<seqlet-scanning-settings> ::=
+    <seqlet-tsv-section>
+    "modisco-h5" : <file-name>,
+    <seqlet-contrib-section>
+    <pattern-spec-section>,
+    "seq-match-quantile" : <float-or-null>,
+    "contrib-match-quantile" : <float-or-null>,
+    "contrib-magnitude-quantile" : <float-or-null>,
+    "trim-threshold" : <float>,
+    "trim-padding" : <integer>,
+    "background-probs" : [<float>, <float>, <float>, <float>],
+    <quantile-json-section>
+
+<float-or-null> ::=
+    <float>
+  | null
+
+<pattern-spec-section> ::=
+    "patterns" : "all"
+  | "patterns" : [<list-of-pattern-specs>]
+
+<list-of-pattern-specs> ::=
+    <pattern-spec>
+  | <pattern-spec>, <list-of-pattern-specs>
+
+<pattern-spec> ::=
+    {"metacluster-name" : <string>,
+     "pattern-name" : <string> }
+  | {"metacluster-name" : <string>,
+     "pattern-names" : [<list-of-string>]
+  | {"metacluster-name" : <string>,
+     "pattern-name" : <string>,
+     "short-name" : <string>}
+  | {"metacluster-name" : <string>,
+     "pattern-names" : [<list-of-string>],
+     "short-names" : [<list-of-string>]}
+
+<quantile-json-section> ::=
+    <empty>
+  | "quantile-json" : <file-name>,
+
+<seqlet-contrib-section> ::=
+    <empty>
+  | "modisco-contrib-h5" : <file-name>,
+
+<seqlet-tsv-section> ::=
+    <empty>
+  | "seqlets-tsv" : <file-name>,

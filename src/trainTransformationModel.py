@@ -11,11 +11,12 @@ import bpreveal.losses as losses
 from bpreveal.callbacks import getCallbacks
 import bpreveal.models as models
 import logging
+import tensorflow as tf
 
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
-               outputPrefix, plateauPatience, tensorboardDir=None):
-    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
+               outputPrefix, plateauPatience, heads, tensorboardDir=None):
+    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if (tensorboardDir is not None):
         from callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
@@ -23,6 +24,8 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
                         validation_data=valBatchGen, callbacks=callbacks)
     # Turn the learning rates into python floats for json serialization.
     history.history['lr'] = [float(x) for x in history.history['lr']]
+    lossCallback = callbacks[3]
+    history.history["counts-loss-weight"] = lossCallback.weightHistory
     return history
 
 
@@ -46,12 +49,15 @@ def main(config):
         config["heads"])
 
     profileLosses = [losses.multinomialNll] * numHeads
-    countsLosses = ['mse'] * numHeads
+    countsLosses = []
     profileWeights = []
     countsWeights = []
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
-        countsWeights.append(head["counts-loss-weight"])
+        countsWeight = tf.Variable(head["counts-loss-weight"], dtype=tf.float32)
+        head["INTERNAL_counts-loss-weight-variable"] = countsWeight
+        countsWeights.append(1)
+        countsLosses.append(losses.weightedMse(countsWeight))
 
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
@@ -79,6 +85,7 @@ def main(config):
                          config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
+                         config["heads"],
                          tensorboardDir)
 
     model.save(config["settings"]["output-prefix"] + ".model")

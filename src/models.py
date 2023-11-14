@@ -170,7 +170,7 @@ def _transformationHead(soloProfile, soloCounts, individualHead,
         case 'simple':
             profileTransformation = _buildSimpleTransformationModel(
                 profileArchitectureSpecification,
-                individualHead["head-name"] + "_profile",
+                "profile_" + individualHead["head-name"],
                 soloProfile)
         case "passthrough":
             profileTransformation = soloProfile
@@ -181,7 +181,7 @@ def _transformationHead(soloProfile, soloCounts, individualHead,
         case "simple":
             countsTransformation = _buildSimpleTransformationModel(
                 countsArchitectureSpecification,
-                individualHead["head-name"] + "_counts",
+                "logcounts_" + individualHead["head-name"],
                 soloCounts)
         case "passthrough":
             countsTransformation = soloCounts

@@ -11,11 +11,12 @@ import bpreveal.losses as losses
 import logging
 from bpreveal.callbacks import getCallbacks
 import bpreveal.models as models
+import tensorflow as tf
 
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs,
-               earlyStop, outputPrefix, plateauPatience, tensorboardDir=None):
-    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
+               earlyStop, outputPrefix, plateauPatience, heads, tensorboardDir=None):
+    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if (tensorboardDir is not None):
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
@@ -24,6 +25,9 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     # Turn the learning rate data into python floats, since they come as
     # numpy floats and those are not serializable.
     history.history['lr'] = [float(x) for x in history.history["lr"]]
+    # Add the counts loss weight history to the history json.
+    lossCallback = callbacks[3]
+    history.history["counts-loss-weight"] = lossCallback.weightHistory
     return history
 
 
@@ -44,12 +48,18 @@ def main(config):
         config["heads"], "solo")
     logging.debug("Model built.")
     profileLosses = [losses.multinomialNll] * numHeads
-    countsLosses = ['mse'] * numHeads
+    countsLosses = []
+    #countsLosses = ['mse'] * numHeads
     profileWeights = []
     countsWeights = []
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
-        countsWeights.append(head["counts-loss-weight"])
+        countsWeight = tf.Variable(head["counts-loss-weight"], dtype=tf.float32)
+        head["INTERNAL_counts-loss-weight-variable"] = countsWeight
+        # The actual loss_weights parameter will be one - weighting
+        # will be done inside the loss function proper.
+        countsWeights.append(1)
+        countsLosses.append(losses.weightedMse(countsWeight))
 
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
@@ -76,6 +86,7 @@ def main(config):
                          config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
+                         config["heads"],
                          tensorboardDir)
     logging.debug("Model trained. Saving.")
     model.save(config["settings"]["output-prefix"] + ".model")

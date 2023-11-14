@@ -1,0 +1,38 @@
+<prepare-data-configuration> ::=
+    {"genome" : <file-name>,
+     "input-length" : <integer>,
+     "output-length" : <integer>,
+     "max-jitter" : <integer>,
+     "regions" : <file-name>,
+     "output-h5" : <file-name>,
+     "reverse-complement" : <boolean>,
+     "heads" : [<prepare-data-heads-list>],
+     <verbosity-section>}
+
+<boolean> ::=
+    true
+  | false
+
+<prepare-data-heads-list> ::=
+   <prepare-data-individual-head>
+ | <prepare-data-individual-head>, <prepare-data-heads-list>
+
+<prepare-data-individual-head> ::=
+    {<revcomp-head-section>
+     "bigwig-files" : [<list-of-bigwig-file-names>] }
+
+<revcomp-head-section> ::=
+    <empty>
+  | "revcomp-task-order" : "auto",
+  | "revcomp-task-order" : [<list-of-integers>],
+
+<list-of-bigwig-file-names> ::=
+   <file-name>
+ | <file-name>, <file-name>
+
+<verbosity-section> ::=
+    "verbosity" : <verbosity-level>
+
+<verbosity-level> ::= "DEBUG"
+  | "INFO"
+  | "WARN"

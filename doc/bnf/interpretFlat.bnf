@@ -1,0 +1,22 @@
+<flat-interpretation-configuration> ::=
+    {<bed-or-fasta>,
+     "model-file" : <file-name>,
+     "input-length" : <integer>,
+     "output-length" : <integer>,
+     "heads" : <integer>,
+     "head-id" : <integer>
+     "profile-task-ids" : [<list-of-integers>],
+     "profile-h5" : <file-name>,
+     "counts-h5" : <file-name>,
+     "num-shuffles" : <integer>,
+     <verbosity-section>}
+
+<bed-or-fasta> ::=
+    "genome" : <file-name>,
+    "bed-file" : <file-name>
+ |  "fasta-file" : <file-name>
+
+
+<list-of-integers> ::=
+    <integer>
+  | <integer>, <list-of-integers>

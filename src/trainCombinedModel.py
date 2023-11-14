@@ -12,11 +12,11 @@ import bpreveal.losses as losses
 from bpreveal.callbacks import getCallbacks
 import bpreveal.models as models
 import logging
-
+import tensorflow as tf
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
-               outputPrefix, plateauPatience, tensorboardDir=None):
-    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience)
+               outputPrefix, plateauPatience, heads, tensorboardDir=None):
+    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if (tensorboardDir is not None):
         logging.info("Including logging.")
         from callbacks import tensorboardCallback
@@ -25,6 +25,8 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
                         callbacks=callbacks, max_queue_size=1000)
     # Turn the learning rates into native python float values so they can be saved to json.
     history.history['lr'] = [float(x) for x in history.history['lr']]
+    lossCallback = callbacks[3]
+    history.history["counts-loss-weight"] = lossCallback.weightHistory
     return history
 
 
@@ -48,12 +50,19 @@ def main(config):
         config["heads"], regressionModel)
     logging.debug("Created combined model.")
     profileLosses = [losses.multinomialNll] * numHeads
-    countsLosses = ['mse'] * numHeads
+    countsLosses = []
     profileWeights = []
     countsWeights = []
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
-        countsWeights.append(head["counts-loss-weight"])
+        # For adaptive loss weights, make the counts loss a keras variable so I
+        # can update it during training.
+        countsWeight = tf.Variable(head["counts-loss-weight"], dtype=tf.float32)
+        # Store the (keras) variable with the loss weight in the head dictionary.
+        # We'll need it in the callbacks, and this is a reasonable place to store it.
+        head["INTERNAL_counts-loss-weight-variable"] = countsWeight
+        countsWeights.append(1)
+        countsLosses.append(losses.weightedMse(countsWeight))
 
     residualModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
@@ -89,6 +98,7 @@ def main(config):
                          config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
+                         config["heads"],
                          tensorboardDir)
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".model")
     residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".model")

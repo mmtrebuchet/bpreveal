@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 import logging
-
+from keras import backend
 
 def multinomialNll(trueCounts, logits):
     logging.debug("Creating multinomial NLL.")
@@ -19,3 +19,19 @@ def multinomialNll(trueCounts, logits):
     sumProbs = tf.reduce_sum(logprobs)
     curLoss = -sumProbs / tf.cast(batchSize, dtype=tf.float32)
     return curLoss
+
+
+def weightedMse(weightTensor):
+    """Given a weight tensor (a tensorflow Variable of shape (1,))
+    return a loss function that calculates mean square error and multiplies
+    the error by the weight. This is used to implement the automatic
+    counts weight algorithm.
+    Returns a loss function."""
+    logging.debug("Creating weighted mse.")
+    def mse(y_true, y_pred):
+        y_pred = tf.convert_to_tensor(y_pred)
+        y_true = tf.cast(y_true, y_pred.dtype)
+        mse = backend.mean(tf.math.squared_difference(y_pred, y_true), axis=-1)
+        scaledMse = mse * weightTensor
+        return scaledMse
+    return mse

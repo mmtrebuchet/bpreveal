@@ -1,0 +1,12 @@
+<pisa-configuration> ::=
+    {"genome" : <file-name>,
+     "bed-file" : <file-name>,
+     "model-file" : <file-name>,
+     "input-length" : <integer>,
+     "output-length" : <integer>,
+     "heads" : <integer>,
+     "head-id" : <integer>,
+     "task-id" : <integer>,
+     "output-h5" : <integer>,
+     "num-shuffles" : <integer>,
+     <verbosity-section>}

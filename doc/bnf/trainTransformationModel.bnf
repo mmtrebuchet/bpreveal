@@ -1,0 +1,35 @@
+<transformation-input-configuration> ::=
+    {"settings" : <transformation-settings-section>,
+        <data-section>,
+        <head-section>, <verbosity-section>}
+
+<transformation-settings-section> ::=
+     {"output-prefix" : "<string>",
+      "epochs" : <integer>,
+      "early-stopping-patience" : <integer>,
+      "batch-size" : <integer>,
+      "learning-rate" : <number>,
+      "learning-rate-plateau-patience" : <integer>
+      "solo-model-file" : <file-name>,
+      "input-length" : <integer>,
+      "output-length" : <integer>,
+      "max-jitter" : <integer>,
+      "profile-architecture" : <transformation-architecture-specification>,
+      "counts-architecture" : <transformation-architecture-specification> }
+
+<transformation-architecture-specification> ::=
+    <simple-transformation-architecture-specification>
+  | "name" : "passthrough"
+
+<simple-transformation-architecture-specification> ::=
+    "name" : "simple",
+    "types" : [<list-of-simple-transformation-types>]
+
+<list-of-simple-transformation-types> ::=
+    <simple-transformation-type>
+  | <simple-transformation-type>, <list-of-simple-transformation-types>
+
+<simple-transformation-type> ::=
+    "linear"
+  | "sigmoid"
+  | "relu"

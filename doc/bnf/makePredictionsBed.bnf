@@ -1,0 +1,19 @@
+<prediction-input-configuration>::=
+    {<prediction-settings-section>, <prediction-bed-section>,
+    <verbosity-section>}
+
+<prediction-settings-section> ::=
+    "settings" : {
+        "output-h5" : <file-name>,
+        "genome" : <file-name>,
+        "batch-size" : <integer>,
+        "heads" : <integer>,
+        "architecture" : <prediction-model-settings> }
+
+<prediction-bed-section> ::=
+    "bed-file" : <file-name>
+
+<prediction-model-settings> ::=
+    {"model-file" : <file-name>,
+     "input-length" : <integer>,
+     "output-length" : <integer> }
