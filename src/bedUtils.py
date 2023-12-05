@@ -5,7 +5,7 @@ import pyBigWig
 import logging
 import numpy as np
 from typing import Literal
-import tqdm
+from bpreveal.utils import wrapTqdm
 
 
 def makeWhitelistSegments(genome: pysam.FastaFile,
@@ -32,7 +32,8 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
             if blackInterval.chrom not in blacklistsByChrom:
                 blacklistsByChrom[blackInterval.chrom] = []
             blacklistsByChrom[blackInterval.chrom].append(blackInterval)
-    for chromName in tqdm.tqdm(sorted(genome.references)):
+
+    for chromName in wrapTqdm(sorted(genome.references), "INFO"):
         chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
         if chromName in blacklistsByChrom:
             seqList = list(chromSeq)
@@ -85,7 +86,7 @@ def tileSegments(inputLength: int, outputLength: int,
     # Phase 3. Generate tiling regions.
     logging.debug("Creating regions.")
     regions = []
-    for s in tqdm.tqdm(shrunkSegments):
+    for s in wrapTqdm(shrunkSegments, "INFO"):
         startPos = s.start
         endPos = startPos + outputLength
         while endPos < s.end:

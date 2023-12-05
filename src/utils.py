@@ -3,6 +3,7 @@ import numpy as np
 import scipy
 import numpy.typing as npt
 import typing
+import tqdm
 
 ONEHOT_T = np.uint8
 ONEHOT_AR_T = npt.NDArray[ONEHOT_T]
@@ -90,6 +91,49 @@ def setVerbosity(userLevel: str) -> None:
         format='%(levelname)s : %(asctime)s : %(filename)s:%(lineno)d : %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
     logging.debug("Logger configured.")
+
+
+def wrapTqdm(iterable, logLevel: str | int=logging.INFO, **tqdmKwargs) -> tqdm.tqdm:
+    """Sometimes, you want to display a tqdm progress bar only if the logging level is
+    high. Call this with something you want to iterate over OR an integer giving the
+    total number of things that will be processed 
+    (correspoinding to
+    pbar = tqdm.tqdm(total=10000)
+    while condition:
+        pbar.update()
+    )
+    If iterable is an integer, then this will return a tqdm that you need to
+    call update() on, otherwise it'll return something you can use as a loop iterable.
+
+    logLevel may either be a level from the logging module (like logging.INFO) or a
+    string naming the log level (like "info")
+    """
+    if type(logLevel) is str:
+        # We were given a string, so convert that to a logging level.
+        levelMap = {"CRITICAL": logging.CRITICAL,
+                    "ERROR": logging.ERROR,
+                    "WARNING": logging.WARNING,
+                    "INFO": logging.INFO,
+                    "DEBUG": logging.DEBUG}
+        logLevel = levelMap[logLevel.upper()]
+
+    class dummyPbar:
+        """This serves as a tqdm-like object that doesn't print anything."""
+        def update(self):
+            pass
+        def close(self):
+            pass
+
+    if type(iterable) is int:
+        if logging.root.isEnabledFor(logLevel):  # type: ignore
+            return tqdm.tqdm(total=iterable, **tqdmKwargs)
+        else:
+            return dummyPbar  # type: ignore
+    else:
+        if logging.root.isEnabledFor(logLevel):  # type: ignore
+            return tqdm.tqdm(iterable, **tqdmKwargs)
+        else:
+            return iterable
 
 
 def oneHotEncode(sequence: str) -> ONEHOT_AR_T:

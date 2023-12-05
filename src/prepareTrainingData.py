@@ -72,7 +72,7 @@ def writeH5(config):
     inputLength = config["input-length"]
     jitter = config["max-jitter"]
     genome = pysam.FastaFile(config["genome"])
-    logging.debug("Opening ouptut file.")
+    logging.debug("Opening output file.")
     outFile = h5py.File(config["output-h5"], "w")
     logging.debug("Loading sequence information.")
     seqs = getSequences(regions, genome, outputLength,

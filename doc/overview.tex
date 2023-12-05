@@ -363,7 +363,8 @@ and one verbosity section.
         in mind that you need to set it even when you're training a single output head, since
         the mean squared error value of the counts prediction tends to be minuscule compared
         to the MNLL loss of the profile. Again, instead of calculating it a priori, I start
-        training with an initial guess and then refine the value later.
+        training with an initial guess and then refine the value later. In the original BPNet,
+        this parameter was called $\lambda$, and this is the name used inside the codebase.
     \item \texttt{counts-loss-frac-target}, if supplied, turns on the adaptive counts loss
         adjustment algorithm. After each epoch, the \texttt{counts-loss-weight} parameter
         is adjusted so that the fraction of the loss due to counts (for this head)
@@ -1089,45 +1090,45 @@ This is great, but you don't know beforehand what exact number you should apply 
 the counts loss in order to get your desired fraction. As an equation,
 
 \begin{equation}
-    f \equiv \frac{\alpha c}{\alpha c + p}
+    f \equiv \frac{\lambda c}{\lambda c + p}
 \end{equation}
 
 Where $f$ is the fraction of loss due to counts, $c$ is the raw counts loss, $p$ is the
-raw profile loss, and $\alpha$ is the \texttt{counts-loss-weight} parameter.
+raw profile loss, and $\lambda$ is the \texttt{counts-loss-weight} parameter.
 If you want, say, ten percent of your loss to come from counts, you need to pick
-a value of $\alpha$ so that that $f = 0.1$.
+a value of $\lambda$ so that that $f = 0.1$.
 But since we don't know the values of $c$ and $p$ that we'll get during training,
 we have to guess.
 
-The adaptive counts loss algorithm skirts this issue by updating $\alpha$ during training
+The adaptive counts loss algorithm skirts this issue by updating $\lambda$ during training
 to match your desired $f$. Starting with the value of \texttt{counts-loss-weight} you
 specify in the configuration file, the algorithm springs into action at the end of each epoch.
 
 \begin{align}
-    \alpha^\prime_{E+1} &= \frac{p f_{target}}{(1-f_{target}) c} \\
-    \alpha^{\prime\prime}_{E+1} &= \beta \alpha^\prime_{E+1} + (1 - \beta) \alpha_{E} \\
-    \gamma &\equiv \frac{\alpha^{\prime\prime}_{E+1}}{\alpha_E} \\
-    \alpha_{E+1} &= 
+    \lambda^\prime_{E+1} &= \frac{p f_{target}}{(1-f_{target}) c} \\
+    \lambda^{\prime\prime}_{E+1} &= \beta \lambda^\prime_{E+1} + (1 - \beta) \lambda_{E} \\
+    \gamma &\equiv \frac{\lambda^{\prime\prime}_{E+1}}{\lambda_E} \\
+    \lambda_{E+1} &= 
     \begin{cases}
-        2 \alpha_E & \gamma > 2 \\
-        \alpha^{\prime\prime}_{E+1} & \frac{1}{2} \le \gamma \le 2 \\
-        \frac{\alpha_E}{2} & \gamma < \frac{1}{2}
+        2 \lambda_E & \gamma > 2 \\
+        \lambda^{\prime\prime}_{E+1} & \frac{1}{2} \le \gamma \le 2 \\
+        \frac{\lambda_E}{2} & \gamma < \frac{1}{2}
     \end{cases}
 \end{align}
 
-where $\alpha_{E+1}$ is the $\alpha$ value for the next epoch, $\alpha_E$ is the current $\alpha$,
-$\alpha^{\prime}$ is the value of $\alpha$ which, given the current
+where $\lambda_{E+1}$ is the $\lambda$ value for the next epoch, $\lambda_E$ is the current $\lambda$,
+$\lambda^{\prime}$ is the value of $\lambda$ which, given the current
 profile loss $p$ and counts loss $c$, would give the fraction target $f_{target}$.
 ($f_{target}$ should be between 0 (only care about profile) and 1 (only care about counts),
 exclusive. A normal value would be something like 0.1.)
-$\alpha^{\prime\prime}$ is a smoothed version of $\alpha$, with 
-aggression parameter $\beta$. $\beta=0$ implies no change ever to $\alpha$,
-while $\beta = 1$ means that the $\alpha$ from the last epoch is ignored.
+$\lambda^{\prime\prime}$ is a smoothed version of $\lambda$, with 
+aggression parameter $\beta$. $\beta=0$ implies no change ever to $\lambda$,
+while $\beta = 1$ means that the $\lambda$ from the last epoch is ignored.
 The scripts in bpreveal use a $\beta$ parameter of 0.3. This is currently not user-configurable,
 but can be edited in \texttt{callbacks.py}.
 
-Early in training, $\alpha_E$ may be \emph{way} off from $\alpha^{\prime\prime}_{E+1}$, and
-so we clamp $\alpha_{E+1}$ to be at most a factor of two off from $\alpha_E$.
+Early in training, $\lambda_E$ may be \emph{way} off from $\lambda^{\prime\prime}_{E+1}$, and
+so we clamp $\lambda_{E+1}$ to be at most a factor of two off from $\lambda_E$.
 
 \section{PISA}\label{sec:pisa}
 The traditional method of interpretation of BPNet models asks the question,

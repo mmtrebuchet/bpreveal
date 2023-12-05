@@ -12,8 +12,7 @@
 <combined-individual-head> ::=
     {"num-tasks" : <integer>,
      "profile-loss-weight" : <number>,
-     "counts-loss-weight" : <number>,
-     <counts-loss-frac-target>
+     <counts-loss-section>,
      "head-name" : <string>,
      "use-bias-counts" : <boolean>}
 

@@ -19,9 +19,14 @@
 <individual-head> ::=
     { "num-tasks" : <integer>,
       "profile-loss-weight" : <number>,
-      "counts-loss-weight" : <number>,
-      <counts-loss-frac-target>
+      <counts-loss-section>,
       "head-name" : <string>}
+
+<counts-loss-section> ::=
+    "counts-loss-weight" : <number>
+  | "counts-loss-frac-target" : <number>
+  | "counts-loss-weight" : <number>,
+    "counts-loss-frac-target" : <number>
 
 <counts-loss-frac-target> ::=
     <empty>

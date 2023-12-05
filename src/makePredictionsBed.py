@@ -11,10 +11,9 @@ import numpy as np
 import pysam
 from keras.models import load_model
 import h5py
-import tqdm
 import bpreveal.losses as losses
 import logging
-from bpreveal.utils import ONEHOT_T, PRED_T
+from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.
@@ -36,7 +35,7 @@ def main(config):
     padding = (inputLength - outputLength) // 2
 
     logging.info("Loading regions")
-    for i, region in enumerate(regions):
+    for i, region in wrapTqdm(list(enumerate(regions))):
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
         seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
@@ -94,7 +93,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)
 
     logging.debug("Writing predictions.")
-    for headId in tqdm.tqdm(range(numHeads)):
+    for headId in wrapTqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headId))
         headGroup.create_dataset("logcounts", data=preds[numHeads + headId], dtype=PRED_T)
         headGroup.create_dataset("logits", data=preds[headId], dtype=PRED_T)

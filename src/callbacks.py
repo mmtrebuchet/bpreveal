@@ -41,7 +41,7 @@ class ApplyAdaptiveCountsLoss(Callback):
     # The logs at each epoch.
     logsHistory: list[dict]
     # The history of the counts loss weights for each head. (key is head-name)
-    weightHistory: dict[str, list]
+    λHistory: dict[str, list]
 
     def __init__(self, heads: dict, aggression: float,
                  lrPlateauCallback, earlyStopCallback, checkpointCallback):
@@ -68,9 +68,32 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback = earlyStopCallback
         self.checkpointCallback = checkpointCallback
         self.logsHistory = []
-        self.weightHistory = dict()
+        self.λHistory = dict()
         for head in heads:
-            self.weightHistory[head["head-name"]] = []
+            self.λHistory[head["head-name"]] = []
+
+    def on_train_begin(self, logs=None):
+        """At the beginning of training, see which heads are using adaptive weights.
+        For those heads, load in an initial guess for λ based on the BPNet heuristic.
+        """
+        for head in self.heads:
+            if "counts-loss-frac-target" in head:
+                if "counts-loss-weight" in head:
+                    # We've been given a starting point. Don't use the heuristic.
+                    λ = head["counts-loss-weight"]
+                    logging.debug("An initial counts-loss-weight was provided.")
+                    logging.debug("Setting λ = {0:f} for head {1:s}"
+                                  .format(λ, head["head-name"]))
+                    head["INTERNAL_λ-variable"].assign(λ)
+                else:
+                    # Get the desired λ value. INTERNAL_mean-counts is added by the 
+                    # generator, which calls addMeanCounts in its constructor.
+                    λ = head["INTERNAL_mean-counts"] * head["counts-loss-frac-target"]
+                    # Now for a bit of magic - experimentation has determined this number.
+                    λ = λ * 37.0
+                    logging.info("Estimated initial λ of {0:f} for head {1:s} based on ĉ of {2:f}"
+                        .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
+                    head["INTERNAL_λ-variable"].assign(λ)
 
     def getLosses(self, epoch: int, headName: str) -> tuple[float, float, float, float]:
         """What were the profile, counts, val_profile, and val_counts (in that order)
@@ -124,10 +147,10 @@ class ApplyAdaptiveCountsLoss(Callback):
             _, _, vpl, vcl = self.getLosses(epoch, head["head-name"])
             valTotalLoss += vpl * float(head["profile-loss-weight"])
 
-            weightVar = head["INTERNAL_counts-loss-weight-variable"]
-            curWeight = weightVar.read_value()
-            oldWeight = self.weightHistory[head["head-name"]][epoch]
-            valTotalLoss += vcl * curWeight / oldWeight
+            λVar = head["INTERNAL_λ-variable"]
+            curλ = λVar.read_value()
+            oldλ = self.λHistory[head["head-name"]][epoch]
+            valTotalLoss += vcl * curλ / oldλ
         logging.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"
                       .format(valTotalLoss, epoch, logs["val_loss"]))
         return valTotalLoss
@@ -167,60 +190,77 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.logsHistory.append(logs)
 
         for head in self.heads:
-            profileLoss, countsLoss, _, _ = self.getLosses(epoch, head["head-name"])
-            weightVar = head["INTERNAL_counts-loss-weight-variable"]
-            curWeight = weightVar.read_value()
-            self.weightHistory[head["head-name"]].append(float(curWeight))
-            countsLossRaw = countsLoss / curWeight
-            if "counts-loss-frac-target" in head and epoch > 1:
+            if epoch > 0:
+                profileLoss, countsLoss, _, _ = self.getLosses(epoch, head["head-name"])
+            else:
+                # In the first epoch, use the validation losses.
+                # Since the actual losses include extremely high
+                # values from the very first few batches.
+                _, _, profileLoss, countsLoss = self.getLosses(epoch, head["head-name"])
+
+            λVar = head["INTERNAL_λ-variable"]
+            curλ = λVar.read_value()
+            self.λHistory[head["head-name"]].append(float(curλ))
+            countsLossRaw = countsLoss / curλ
+            if "counts-loss-frac-target" in head:
                 # We want to update the loss.
 
                 # Algebra for this calculation. Let t be the goal fraction,
-                # α is the new loss weight, p is profile loss, c is (raw) counts loss.
+                # λ₁ is the new loss weight, p is profile loss, c is (raw) counts loss.
                 # f is the current counts loss fraction.
-                # f ≡ α c / (α c + p)
+                # f ≡ λ₀ c / (λ₀ c + p)
                 # We desire that t = f, so
-                # t = α c / (α c + p)
-                # α c t + p t = α c
-                # α c t - α c = - p t
-                # α c (t - 1) = - p t
-                # α c (1 - t) = p t
-                # α = p t / (c * (1 - t))
+                # t = λ₁ c / (λ₁ c + p)
+                # λ₁ c t + p t = λ₁ c
+                # λ₁ c t - λ₁ c = - p t
+                # λ₁ c (t - 1) = - p t
+                # λ₁ c (1 - t) = p t
+                # λ₁ = p t / (c * (1 - t))
                 target = head["counts-loss-frac-target"]
-                correctedWeight = target * profileLoss / (countsLossRaw * (1 - target))
+                correctedλ = target * profileLoss / (countsLossRaw * (1 - target))
                 # Approach the new target weight slowly, using exponential damping.
-                newWeight = curWeight * (1 - self.aggression) + correctedWeight * self.aggression
+                if epoch > 1:
+                    # Use exponential damping after the second epoch.
+                    newλ = curλ * (1 - self.aggression) + correctedλ * self.aggression
+                else:
+                    # Jump early in training.
+                    newλ = correctedλ
                 # If the weight would change by more than a factor of aggression, clamp it down.
-
-                if (max(newWeight, curWeight) / min(newWeight, curWeight)) > 2:
-                    logging.debug("Large weight change detected. Old: {0:f}, new {1:f}"
-                                  .format(curWeight, newWeight))
-                    if newWeight > curWeight:
-                        # N / C > 2
-                        # make N = C * 2
-                        newWeight = curWeight * 2
+                threshold = 2 if epoch > 1 else 10
+                if (max(newλ, curλ) / min(newλ, curλ)) > threshold:
+                    logging.debug("Large λ change detected. Old: {0:f}, new {1:f}"
+                                  .format(curλ, newλ))
+                    if newλ > curλ:
+                        # λ₁ / λ₀ > 2
+                        # make λ₁ = λ₀ * 2
+                        newλ = curλ * threshold
                     else:
-                        # C / N > 2
-                        # make N = C / 2
-                        newWeight = curWeight / 2
-                    logging.debug("Clamped new weight to {0:f}".format(newWeight))
-
+                        # λ₀ / λ₁ > 2
+                        # make λ₁ = λ₀ / 2
+                        newλ = curλ / threshold
+                    logging.debug("Clamped new λ to {0:f}".format(newλ))
+                    if(threshold == 10):
+                        # We jumped and had a large threshold - user should choose a better counts weight.
+                        logging.warning("A large λ change was detected in the first epoch. "
+                                        "Consider changing the starting counts-loss-weight for "
+                                        "head {0:s} to a value near {1:f}".format(head["head-name"],
+                                        correctedλ))
                 # With current loss weight, what is the loss fraction due to counts?
                 # (This doesn't enter our calculation, it's for logging.
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
 
-                logging.debug(("countsLoss: head {0:s} old cw {1:f}, new cw {2:f} (A=1: {3:f})."
-                               " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})")
-                              .format(head["head-name"], curWeight, newWeight,
-                                   correctedWeight, scaledCurFrac,
+                logging.debug(("countsLoss: head {0:s} λ₀ {1:f}, λ₁ {2:f} (A=1: {3:f})."
+                               " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})."
+                               " Epoch {8:d}")
+                              .format(head["head-name"], curλ, newλ,
+                                   correctedλ, scaledCurFrac,
                                    head["counts-loss-frac-target"],
-                                   countsLossRaw, countsLoss))
+                                   countsLossRaw, countsLoss, epoch))
 
-                weightVar.assign(newWeight)
+                λVar.assign(newλ)
         # We've updated the loss. But now we have to go mess with the callbacks so that
         # the increased loss value isn't interpreted as the model getting worse.
         self.resetCallbacks()
-
 
 def tensorboardCallback(logDir: str):
     logging.debug("Creating tensorboard callback in {0:s}".format(logDir))

@@ -27,7 +27,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     history.history['lr'] = [float(x) for x in history.history["lr"]]
     # Add the counts loss weight history to the history json.
     lossCallback = callbacks[3]
-    history.history["counts-loss-weight"] = lossCallback.weightHistory
+    history.history["counts-loss-weight"] = lossCallback.λHistory
     return history
 
 
@@ -53,12 +53,13 @@ def main(config):
     countsWeights = []
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
-        countsWeight = tf.Variable(head["counts-loss-weight"], dtype=tf.float32)
-        head["INTERNAL_counts-loss-weight-variable"] = countsWeight
+        λInit = head["counts-loss-weight"] if "counts-loss-weight" in head else 1
+        λ = tf.Variable(λInit, dtype=tf.float32)
+        head["INTERNAL_λ-variable"] = λ
         # The actual loss_weights parameter will be one - weighting
         # will be done inside the loss function proper.
         countsWeights.append(1)
-        countsLosses.append(losses.weightedMse(countsWeight))
+        countsLosses.append(losses.weightedMse(λ))
 
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),

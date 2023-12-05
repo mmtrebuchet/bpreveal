@@ -1,0 +1,25 @@
+! File internal/libushuffle.pyf
+python module libushuffle
+interface
+    subroutine shuffleStr(input, output, length, kmerSize, numShuffles)
+        intent(c) shuffleStr
+        intent(c)
+        integer intent(in) :: length
+        integer intent(in) :: kmerSize
+        integer intent(in) :: numShuffles
+        byte intent(in),dimension(length) :: input
+        byte intent(out),dimension(numShuffles, length) :: output
+    end subroutine shuffleStr
+
+    subroutine shuffleOhe(input, output, alphabetSize, length, kmerSize, numShuffles)
+        intent(c) shuffleOhe
+        intent(c)
+        integer intent(in) :: length
+        integer intent(in) :: kmerSize
+        integer intent(in) :: numShuffles
+        integer intent(in), dimension(length, alphabetSize) :: input
+        integer intent(out), dimension(numShuffles, length, alphabetSize) :: output
+    end subroutine shuffleOhe
+
+end interface
+end python module libushuffle

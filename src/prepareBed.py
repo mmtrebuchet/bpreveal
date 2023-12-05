@@ -4,7 +4,6 @@
 import json
 import pyBigWig
 import pysam
-import tqdm
 import logging
 import bpreveal.utils as utils
 import numpy as np
@@ -198,7 +197,7 @@ def validateRegions(config, regions, genome, bigwigLists):
     logging.info("    Validated inflated regions. Surviving: {0:d}".format(
         int(np.sum(validRegions))))
     bigRegionsBed = pybedtools.BedTool(bigRegionsList)
-    pbar = tqdm.tqdm(total=len(bigRegionsList) * len(bigwigLists))
+    pbar = utils.wrapTqdm(len(bigRegionsList) * len(bigwigLists))
     smallRegionsList = list(bigRegionsBed.each(resize,
                                                'center',
                                                config["output-length"] - config["max-jitter"] * 2,

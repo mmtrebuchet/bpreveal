@@ -8,7 +8,6 @@ import math
 
 plt.rcParams['font.size'] = 8
 
-
 def main():
     parser = argparse.ArgumentParser(description="Takes in a model history file (json format) "
                                                  "and generates plots of all the components of "
@@ -64,6 +63,7 @@ def main():
             lossTypesCountsWeight.append("cw_" + countsKey)
             # countsKey will be the head-name, we need to decorate it.
             countsRe = re.compile(".*logcounts_{0:s}_loss".format(countsKey))
+            profileRe = re.compile(".*profile_{0:s}_loss".format(countsKey))
             for lossPair in lossTypes:
                 typesToAdd = []
                 for lossType in lossPair:
@@ -81,9 +81,10 @@ def main():
                             totalReweightedValLosses += reweightedCountsLosses
                         else:
                             totalReweightedLosses += reweightedCountsLosses
-                    if re.search("profile", lossType):
+                    if re.search(profileRe, lossType):
                         # We found a profile loss. Add it to the totals, even though we don't
                         # need to reweight anything.
+
                         if lossType[:3] == "val":
                             totalReweightedValLosses += np.array(history[lossType])
                         else:
@@ -106,7 +107,7 @@ def main():
 def plotLosses(lossTypes, history, startFrom, countsLossWeight):
     # First, how many plots are needed?
     num_rowscols = math.ceil(len(lossTypes) ** 0.5)
-    fig, axs = plt.subplots(nrows=num_rowscols, ncols=num_rowscols, sharex=True, figsize=(10, 10))
+    fig, axs = plt.subplots(nrows=num_rowscols, ncols=num_rowscols, sharex=True, figsize=(15, 15))
     epochs = range(len(history[lossTypes[0][0]]))
     for i, lt in enumerate(lossTypes):
         allDats = []
@@ -116,7 +117,7 @@ def plotLosses(lossTypes, history, startFrom, countsLossWeight):
             allDats.extend(history[loss][startFrom:])
         ax.legend(prop={"size": 6})
         allDats.sort()
-        ax.set_ylim(allDats[0], allDats[-2])
+        ax.set_ylim(allDats[0] - 1e-6, allDats[-2] + 1e-6)
     return fig
 
 

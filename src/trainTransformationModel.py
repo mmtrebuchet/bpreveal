@@ -25,7 +25,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     # Turn the learning rates into python floats for json serialization.
     history.history['lr'] = [float(x) for x in history.history['lr']]
     lossCallback = callbacks[3]
-    history.history["counts-loss-weight"] = lossCallback.weightHistory
+    history.history["counts-loss-weight"] = lossCallback.λHistory
     return history
 
 
@@ -54,10 +54,11 @@ def main(config):
     countsWeights = []
     for head in config['heads']:
         profileWeights.append(head["profile-loss-weight"])
-        countsWeight = tf.Variable(head["counts-loss-weight"], dtype=tf.float32)
-        head["INTERNAL_counts-loss-weight-variable"] = countsWeight
+        λInit = head["counts-loss-weight"] if "counts-loss-weight" in head else 1
+        λ = tf.Variable(λInit, dtype=tf.float32)
+        head["INTERNAL_λ-variable"] = λ
         countsWeights.append(1)
-        countsLosses.append(losses.weightedMse(countsWeight))
+        countsLosses.append(losses.weightedMse(λ))
 
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),

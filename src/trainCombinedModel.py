@@ -27,7 +27,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     # Turn the learning rates into native python float values so they can be saved to json.
     history.history['lr'] = [float(x) for x in history.history['lr']]
     lossCallback = callbacks[3]
-    history.history["counts-loss-weight"] = lossCallback.weightHistory
+    history.history["counts-loss-weight"] = lossCallback.λHistory
     return history
 
 
@@ -58,12 +58,13 @@ def main(config):
         profileWeights.append(head["profile-loss-weight"])
         # For adaptive loss weights, make the counts loss a keras variable so I
         # can update it during training.
-        countsWeight = tf.Variable(head["counts-loss-weight"], dtype=tf.float32)
+        λInit = head["counts-loss-weight"] if "counts-loss-weight" in head else 1
+        λ = tf.Variable(λInit, dtype=tf.float32)
         # Store the (keras) variable with the loss weight in the head dictionary.
         # We'll need it in the callbacks, and this is a reasonable place to store it.
-        head["INTERNAL_counts-loss-weight-variable"] = countsWeight
+        head["INTERNAL_λ-variable"] = λ
         countsWeights.append(1)
-        countsLosses.append(losses.weightedMse(countsWeight))
+        countsLosses.append(losses.weightedMse(λ))
 
     residualModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),

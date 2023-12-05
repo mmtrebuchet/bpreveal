@@ -8,9 +8,8 @@ import json
 import bpreveal.utils as utils
 import numpy as np
 import h5py
-import tqdm
 import logging
-from bpreveal.utils import ONEHOT_T, PRED_T
+from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
 
 class FastaReader:
@@ -153,11 +152,7 @@ def main(config):
     writer = H5Writer(outFname, numHeads, fastaReader.numPredictions)
     logging.info("Entering prediction loop.")
     # Now we just iterate over the fasta file and submit to our batcher.
-    if config["verbosity"] in ["INFO", "DEBUG"]:
-        pbar = tqdm.tqdm(range(fastaReader.numPredictions))
-    else:
-        pbar = range(fastaReader.numPredictions)
-    for _ in pbar:
+    for _ in wrapTqdm(fastaReader.numPredictions):
         fastaReader.pop()
         batcher.submitString(fastaReader.curSequence, fastaReader.curLabel)
         while batcher.outputReady():

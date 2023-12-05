@@ -29,7 +29,26 @@ class H5BatchGenerator(keras.utils.Sequence):
         for i, h in enumerate(headList):
             self.fullData.append(np.array(dataH5["head_{0:d}".format(i)]))
         self.loadData()
+        self.addMeanCounts()
         logging.info("Batch generator initialized.")
+
+    def addMeanCounts(self):
+        """For all heads, calculate the average number of reads over all regions.
+        In the BPNet paper, it was shown that λ½ = ĉ/2, where ĉ is the average
+        number of counts in each region, and if that value of λ is used in as the
+        counts loss weight, then the profile and counts losses will be given equal weight.
+
+        For each head in self.headList, adds a new field INTERNAL_mean-counts that contains
+        the average counts over the output windows.
+        For a target counts loss weight fraction f, you can calculate an initial λ value
+        for the counts loss based on:
+        λ = f * ĉ
+        """
+        for i, head in enumerate(self.headList):
+            sumCounts = np.sum(self.fullData[i][:,self.maxJitter:-self.maxJitter,:])
+            head["INTERNAL_mean-counts"] = sumCounts / self.numRegions
+            logging.debug("For head {0:s}, mean counts is {1:f}"
+                          .format(head["head-name"], sumCounts / self.numRegions))
 
     def __len__(self) -> int:
         return math.ceil(self.numRegions / self.batchSize)
