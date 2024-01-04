@@ -1,3 +1,7 @@
+Version 4.0.0, DATEDATEDATE
+	BUG FIXES:
+	* Fixed a typo in interpretUtils.py
+
 Version 3.6.1, 2023-12-05
 	ENHANCEMENTS:
 	* Added a version of ushuffle that is compatible with python 3.11. This is

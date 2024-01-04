@@ -27,8 +27,8 @@ BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
-ENV_FLAG=-n
-ENV_NAME=bpreveal-cerebro
+ENV_FLAG=-p
+ENV_NAME=/n/projects/cm2363/public-bpreveal/4.0.0/env
 
 # CHANGE this to conda if you don't have mamba installed.
 CONDA_BIN=mamba

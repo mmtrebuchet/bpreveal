@@ -632,7 +632,7 @@ class FastaGenerator(Generator):
                 self.nowStop = True
                 break
             if (nextLine[0] == ">"):
-                self.nextSequnceId = nextLine[1:].strip()
+                self.nextSequnceID = nextLine[1:].strip()
                 break
             sequence += nextLine.strip()
         oneHotSequence = utils.oneHotEncode(sequence)
