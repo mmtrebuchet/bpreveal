@@ -5,6 +5,11 @@
 # CHANGE THESE #
 ################
 
+# I need to source my .shrc to get conda on the path.
+# CHANGE this to your own shell rc file, or it may
+# work without this line for you.
+
+source /home/cm2363/.zshrc
 #The location where you cloned the git repository.
 #CHANGE to reflect your directory.
 BPREVEAL_DIR=/n/projects/cm2363/bpreveal
@@ -12,116 +17,141 @@ BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 ENV_FLAG=-n
-ENV_NAME=bpreveal-teak
-#If you want an enironment that you load like a normal conda environment,
-#change this to:
-#ENV_FLAG=-n
-#ENV_NAME=bpreveal-testing
+ENV_NAME=bpreveal-dogwood-test
 
 #CHANGE this to conda if you don't have mamba installed.
 CONDA_BIN=mamba
-
-#I need to source my .shrc to get conda on the path.
-#CHANGE this to your own shell rc file, or it may
-#work without this line for you.
-source /home/cm2363/.zshrc
+PIP_BIN=pip
 
 
 ######################
 # DON'T CHANGE BELOW #
 ######################
 
-
 check() {
     errorVal=$?
     if [ $errorVal -eq 0 ]; then
-        echo "Command completed successfully."
+        echo "Command completed successfully"
     else
         echo "ERROR DETECTED: Last command exited with status $errorVal"
         exit
     fi
 }
 
+checkPackage() {
+    python3 -c "import $1"
+    errorVal=$?
+    if [ $errorVal -eq 0 ]; then
+        echo "$1 imported successfully."
+    else
+        echo "ERROR DETECTED: Failed to import $1"
+        exit
+    fi
+}
 
-#If you want to do CWM scanning, you may need to build the libjaccard
-#library. If you get errors regarding jaccard importing,
-#go into the src/ directory, remove jaccard.cpython-310-x86_64-linux-gnu.so,
-#and then run make with no arguments. (The conda environment will need to
-#be loaded to run this makefile.)
 
-
-#Obviously, change the name of the environment to whatever you want.
 ${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=3.11
 check
+
 conda activate ${ENV_NAME}
 check
-
-#Tensorflow expressly advises against installing with conda.
-#I'm gonna do it anyway, because it works for me.
-${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu
-check
-#You have to install the nvidia-toolkit manually to enable optimizations
-#for tensorflow.
+# You have to install the nvidia-toolkit manually to enable optimizations
+# for tensorflow.
 ${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
 check
 
-${CONDA_BIN} install --yes -c conda-forge tensorflow-probability
+# Tensorflow expressly advises against installing with conda.
+# I'm gonna do it anyway, because it works for me.
+${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
 check
+checkPackage tensorflow
+checkPackage tensorflow_probability
+
 ${CONDA_BIN} install --yes -c conda-forge matplotlib
 check
+checkPackage matplotlib
+
+# cmake is necessary to build the wheels for modiscolite.
 ${CONDA_BIN} install --yes -c conda-forge cmake
 check
 
-#A compiler is needed to build the wheel for pybedtools.
+# These will have been installed by previous code, but doesn't hurt to explicitly list them.
+${CONDA_BIN} install --yes -c conda-forge h5py
+check
+checkPackage h5py
+${CONDA_BIN} install --yes -c conda-forge tqdm
+check
+checkPackage tqdm
+
+# Before building stuff with pip, we need to make sure we have a compiler installed.
 ${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
-#pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
-#in the conda repositories. So install them through pip.
-pip install --no-input pysam pybedtools pybigwig
 check
 
-#Modisco-lite isn't in conda as of 2023-03-23.
-conda install --yes -c conda-forge cmake
+# pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
+# in the conda repositories. So install them through pip.
+${PIP_BIN} install --no-input pysam pybedtools pybigwig
 check
-pip install --no-input modisco-lite
+checkPackage pybedtools
+checkPackage pyBigWig
+checkPackage pysam
+
+# Modisco-lite isn't in conda as of 2023-03-23.
+${PIP_BIN} install --no-input modisco-lite
 check
 
-#Optional:
+# Optional:
+# 1. Install jupyter lab.
 ${CONDA_BIN} install --yes -c conda-forge jupyterlab
 check
+# 2. Install pycodestyle (used in development to check code style,
+# never needed to run bpreveal.)
 ${CONDA_BIN} install --yes -c conda-forge pycodestyle
 check
-#pip install --no-input tensorboard_plugin_profile
 
-#Snakemake doesn't have a python 3.10 version in the conda repositories.
-pip install --no-input snakemake
+# 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
+# it with pip.
+${PIP_BIN} install --no-input snakemake
 check
 
-#Installed by the above packages:
-# h5py
-# tqdm
-# pandas (by modisco)
 
-
-#Optional:
-#1. Try to build libjaccard.
+# 4. Try to build libjaccard.
+${CONDA_BIN} install --yes -c conda-forge gfortran
+check
 cd ${BPREVEAL_DIR}/src && make clean && make
 check
 
-#2. Set up bpreveal on your python path.
-${CONDA_BIN} install -c conda-forge --yes conda-build
+# 5. Set up bpreveal on your python path.
+${CONDA_BIN} install --yes -c conda-forge conda-build
 check
+
 conda develop ${BPREVEAL_DIR}/pkg
 check
 
+
 #Add binaries to your path. If you skip this, you can
 #always give the full name to the bpreveal tools.
+#N.B. If you're manually setting up your environment, running these commands will clobber
+#your shell. Once you've run them, exit and restart your shell.
+echo "export BPREVEAL_KILL_PATH=${BPREVEAL_DIR}/bin"\
+    > ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
+echo "export PATH=\$BPREVEAL_KILL_PATH:\$PATH"\
+    >> ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
 
-#echo "export BPREVEAL_OLD_PATH=\$PATH" > ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
-echo "export BPREVEAL_KILL_PATH=${BPREVEAL_DIR}/bin" > ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
-echo "export PATH=\$BPREVEAL_KILL_PATH:\$PATH" >> ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
+echo "export XLA_FLAGS=\"--xla_gpu_cuda_data_dir=${CONDA_PREFIX}\"" \
+    > ${CONDA_PREFIX}/etc/conda/activate.d/cuda_xla_activate.sh
 
+#And add a (very hacky) deactivation command that removes bpreveal from
+#your path when you deactivate the environment.
 echo "export PATH=\$(echo \$PATH | tr ':' '\n' | grep -v \$BPREVEAL_KILL_PATH | tr '\n' ':')"\
     > ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
 echo "unset BPREVEAL_KILL_PATH"\
     >> ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
+echo "unset XLA_FLAGS" \
+    > ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
+
+
+echo "*-----------------------------------*"
+echo "| BPReveal installation successful. |"
+echo "|           (probably...)           |"
+echo "*-----------------------------------*"
 

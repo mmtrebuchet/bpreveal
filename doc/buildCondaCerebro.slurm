@@ -32,20 +32,30 @@ ENV_NAME=/n/projects/cm2363/public-bpreveal/4.0.0/env
 
 # CHANGE this to conda if you don't have mamba installed.
 CONDA_BIN=mamba
-
+PIP_BIN=pip
 
 
 ######################
 # DON'T CHANGE BELOW #
 ######################
 
-
 check() {
     errorVal=$?
     if [ $errorVal -eq 0 ]; then
-        echo "Command completed successfully."
+        echo "Command completed successfully"
     else
         echo "ERROR DETECTED: Last command exited with status $errorVal"
+        exit
+    fi
+}
+
+checkPackage() {
+    python3 -c "import $1"
+    errorVal=$?
+    if [ $errorVal -eq 0 ]; then
+        echo "$1 imported successfully."
+    else
+        echo "ERROR DETECTED: Failed to import $1"
         exit
     fi
 }
@@ -63,13 +73,14 @@ check
 
 # Tensorflow expressly advises against installing with conda.
 # I'm gonna do it anyway, because it works for me.
-${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu
+${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
 check
+checkPackage tensorflow
+checkPackage tensorflow_probability
 
-${CONDA_BIN} install --yes -c conda-forge tensorflow-probability
-check
 ${CONDA_BIN} install --yes -c conda-forge matplotlib
 check
+checkPackage matplotlib
 
 # cmake is necessary to build the wheels for modiscolite.
 ${CONDA_BIN} install --yes -c conda-forge cmake
@@ -78,8 +89,10 @@ check
 # These will have been installed by previous code, but doesn't hurt to explicitly list them.
 ${CONDA_BIN} install --yes -c conda-forge h5py
 check
+checkPackage h5py
 ${CONDA_BIN} install --yes -c conda-forge tqdm
 check
+checkPackage tqdm
 
 # Before building stuff with pip, we need to make sure we have a compiler installed.
 ${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
@@ -87,11 +100,14 @@ check
 
 # pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
 # in the conda repositories. So install them through pip.
-pip install --no-input pysam pybedtools pybigwig
+${PIP_BIN} install --no-input pysam pybedtools pybigwig
 check
+checkPackage pybedtools
+checkPackage pyBigWig
+checkPackage pysam
 
 # Modisco-lite isn't in conda as of 2023-03-23.
-pip install --no-input modisco-lite
+${PIP_BIN} install --no-input modisco-lite
 check
 
 # Optional:
@@ -105,7 +121,7 @@ check
 
 # 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
 # it with pip.
-pip install --no-input snakemake
+${PIP_BIN} install --no-input snakemake
 check
 
 
@@ -143,4 +159,10 @@ echo "unset BPREVEAL_KILL_PATH"\
     >> ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
 echo "unset XLA_FLAGS" \
     > ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
+
+
+echo "*-----------------------------------*"
+echo "| BPReveal installation successful. |"
+echo "|           (probably...)           |"
+echo "*-----------------------------------*"
 
