@@ -690,6 +690,9 @@ class PatternScanner:
         self.contribFp = h5py.File(contribFname, "r")
         self.firstHit = True
         self.firstIndex = True
+        self.chromIdxToName = dict()
+        for i, name in enumerate(self.contribFp["chrom_names"]):
+            self.chromIdxToName[i] = name
 
     def scanIndex(self, idx: int) -> None:
         """Given an index into the hdf5 contribution file, extract the sequence
@@ -703,7 +706,15 @@ class PatternScanner:
                 multiprocessing.current_process().pid))
             self.firstIndex = False
         # Get all the data for this index.
-        chrom = self.contribFp["coords_chrom"][idx].decode('utf-8')
+        
+        chromIdx = self.contribFp["coords_chrom"][idx]
+        if type(chromIdx) == bytes:
+            logging.warning("Detected an importance score file from before version 4.0. "
+                            "This will be an error in BPReveal 5.0. "
+                            "Instructions for updating: Re-calculate importance scores.")
+            chrom = chromIdx.decode('utf-8')
+        else: 
+            chrom = self.chromIdxToName[chromIdx].decode('utf-8')
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')

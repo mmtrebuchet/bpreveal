@@ -213,7 +213,8 @@ class BatchPredictor:
         from collections import deque
 
         self._model: keras.Model = load_model(modelFname,
-            custom_objects={"multinomialNll": losses.multinomialNll})  # type: ignore
+            custom_objects={"multinomialNll": losses.multinomialNll,
+                            "reweightableMse": losses.dummyMse})  # type: ignore
         logging.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,

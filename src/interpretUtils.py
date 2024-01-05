@@ -373,8 +373,21 @@ class FlatH5Saver(Saver):
                 self.chromNameToIdx[chromName] = i
                 self._outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
 
-            self._outFile.create_dataset("coords_chrom", (self.numSamples, ),
-                                         dtype=h5py.string_dtype(encoding='utf-8'))
+            if (genome.nreferences <= 255):  # type: ignore
+                # If there are less than 255 chromosomes,
+                # I only need 8 bits to store the chromosome ID.
+                chromDtype = 'u1'
+            elif (genome.nreferences <= 65535):  # type: ignore
+                # If there are less than 2^16 chromosomes, I can use 16 bits.
+                chromDtype = 'u2'
+            else:
+                # If you have over four billion chromosomes, you deserve to have code
+                # that will break. So I just assume that 32 bits will be enough.
+                chromDtype = 'u4'
+            self._outFile.create_dataset("coords_chrom", (self.numSamples, ), dtype=chromDtype)
+
+            #self._outFile.create_dataset("coords_chrom", (self.numSamples, ),
+            #                             dtype=h5py.string_dtype(encoding='utf-8'))
             self._outFile.create_dataset("coords_start", (self.numSamples, ), dtype=posDtype)
             self._outFile.create_dataset("coords_end", (self.numSamples, ), dtype=posDtype)
         logging.debug("Genome data loaded.")
@@ -428,7 +441,7 @@ class FlatH5Saver(Saver):
         # Okay, now we either add the description line, or add a genomic coordinate.
         # These are not chunked, since the data aren't compressed.
         if (self.genomeFname is not None):
-            self._outFile["coords_chrom"][index] = result.passData[0]
+            self._outFile["coords_chrom"][index] = self.chromNameToIdx[result.passData[0]]
             self._outFile["coords_start"][index] = result.passData[1]
             self._outFile["coords_end"][index] = result.passData[2]
         else:
@@ -857,7 +870,8 @@ class _PisaBatcher:
         import utils
         utils.setMemoryGrowth()
         self.model = load_model(modelFname,
-                custom_objects={'multinomialNll': losses.multinomialNll})
+                custom_objects={'multinomialNll': losses.multinomialNll,
+                                'reweightableMse': losses.dummyMse})
         self.batchSize = batchSize
         self.outQueue = outQueue
         self.headId = headId
@@ -965,7 +979,8 @@ class _FlatBatcher:
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = load_model(modelFname,
-                custom_objects={'multinomialNll': losses.multinomialNll})
+                custom_objects={'multinomialNll': losses.multinomialNll,
+                                'reweightableMse': losses.dummyMse})
         self.batchSize = batchSize
         self.outQueue = outQueue
         self.headId = headId

@@ -39,7 +39,8 @@ def main(config):
     outputLength = config["settings"]["output-length"]
     numHeads = len(config["heads"])
     soloModel = load_model(config["settings"]["solo-model-file"],
-            custom_objects={'multinomialNll': losses.multinomialNll})
+            custom_objects={'multinomialNll': losses.multinomialNll,
+                            'reweightableMse': losses.dummyMse})
 
     soloModel.trainable = False  # We're in the regression phase, no training the bias model!
 

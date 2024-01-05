@@ -267,6 +267,8 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
         The program currently spits out warnings when you do this, and these
         will become an error.
         See \ref{dep:oldbigwigs}.
+    \item Using an importance hdf5 from before version 4.0.0 will now result
+        in an error instead of a deprecation warning.
 \end{itemize}
 
 \subsection{BPReveal 4.0.0}
@@ -276,7 +278,9 @@ When BPReveal 4.0.0 is released, the following breaking changes will occur:
         \texttt{interpretFlat} currently store chromosome information as
         strings, unlike all other output file formats.
         This will change so that chromosomes are numbered.
-        See \ref{dep:interpretChroms}
+        \texttt{shapToBigwig} and the motif scanning utilities now emit
+        warnings if they detect an old-style importance hdf5. This will become
+        an error in 5.0.0.
     \item The adaptive loss algorithm required me to implement a custom mse
         loss.
         In 3.6, I sneakily called it \texttt{"mse"} so you didn't have to add
@@ -785,11 +789,10 @@ If you provide \texttt{bed-file} and \texttt{genome}, the output will be
 structured as follows:
 
 \begin{itemize}
-    \item \begin{sloppypar}\texttt{chrom\_names}, a list of strings giving the
-            name of each chromosome.
-            Unlike the predictions from fasta, the \texttt{coords\_chrom}
-            columns are \emph{strings}, so the \texttt{chrom\_names} field is
-            mostly for generating bigwig headers.\end{sloppypar}
+    \item \texttt{chrom\_names}, a list of strings giving the name of each
+        chromosome.
+        \texttt{coords\_chrom} entries correspond to the order of chromosomes
+        in this dataset.
     \item \texttt{chrom\_sizes}, a list of integers giving the size of each
         chromosome.
         This is mostly here as a handy reference when you want to make a bigwig
@@ -804,9 +807,10 @@ structured as follows:
         This will have shape (num-regions,).
         As with \texttt{coords\_start}, this corresponds to the last base in the
         \emph{input} to the model.
-    \item \texttt{coords\_chrom}, the chromosome on which each region is found.
-        These are strings, and this dataset has shape (num-regions,)
-        \deprecation{This will switch to an integer chromosome number in 4.0.0}.\label{dep:interpretChroms}
+    \item \texttt{coords\_chrom}, the chromosome number on which each region is
+        found.
+        These are integer indexes into \texttt{chrom\_names}, and this dataset
+        has shape (num-regions,)
     \item \texttt{input\_seqs}, a one-hot encoded array representing the input
         sequences.
         It will have shape (num-regions x input-length x 4)

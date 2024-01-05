@@ -10,7 +10,8 @@ import bpreveal.losses as losses
 
 
 def main(modelFname, pngFile):
-    model = load_model(modelFname, custom_objects={'multinomialNll': losses.multinomialNll})
+    model = load_model(modelFname, custom_objects={'multinomialNll': losses.multinomialNll,
+                                                   'reweightableMse': losses.dummyMse})
     print(model.summary(expand_nested=True, show_trainable=True))
     if (pngFile is not None):
         from tensorflow.keras.utils import plot_model

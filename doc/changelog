@@ -1,4 +1,10 @@
 Version 4.0.0, DATEDATEDATE
+	BREAKING CHANGES:
+	* interpretFlat now produces h5 files that use integer indexes for the
+	chromosome instead of strings. Internal programs that were affected by
+	this change now emit a warning if they detect an importance file from an
+	earlier release.
+
 	BUG FIXES:
 	* Fixed a typo in interpretUtils.py
 

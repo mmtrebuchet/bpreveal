@@ -40,7 +40,8 @@ def main(config):
         seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
     model = load_model(config["settings"]["architecture"]["model-file"],
-                       custom_objects={'multinomialNll': losses.multinomialNll})
+                       custom_objects={'multinomialNll': losses.multinomialNll,
+                                       'reweightableMse': losses.dummyMse})
     logging.info("Model loaded. Predicting.")
     preds = model.predict(seqs, batch_size=batchSize, verbose=True,
                           workers=10, use_multiprocessing=True)

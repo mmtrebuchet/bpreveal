@@ -42,14 +42,23 @@ class BatchedH5Reader:
 def writeBigWig(inH5, outFname, verbose):
     bwHeader = []
     h5Reader = BatchedH5Reader(inH5, H5_CHUNK_SIZE)
+    chromIdxToName = dict()
     for i, name in enumerate(inH5["chrom_names"].asstr()):
         bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
+        chromIdxToName[i] = name
     outBw = pyBigWig.open(outFname, 'w')
     outBw.addHeader(sorted(bwHeader))
     logging.debug("Bigwig header" + str((sorted(bwHeader))))
     numRegions = inH5['coords_chrom'].shape[0]
+    if type(inH5['coords_chrom'][0]) == bytes:
+        logging.warning("You are using an old-style hdf5 file for importance scores. "
+            "Support for these files will be removed in BPReveal 5.0. "
+            "Instructions for updating: Re-calculate importance scores.")
+        coordsChrom = np.array(inH5['coords_chrom'])
+    else:
+        coordsChromIdxes = np.array(inH5['coords_chrom'])
+        coordsChrom = np.array([chromIdxToName[x] for x in coordsChromIdxes])
     # Sort the regions.
-    coordsChrom = np.array(inH5['coords_chrom'])
     coordsStart = np.array(inH5['coords_start'])
     coordsEnd   = np.array(inH5['coords_end'])
     regionOrder = sorted(range(numRegions), key=lambda x: (coordsChrom[x], coordsStart[x]))

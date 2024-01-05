@@ -39,7 +39,8 @@ def main(config):
     numHeads = len(config["heads"])
     regressionModel = load_model(
         config["settings"]["transformation-model"]["transformation-model-file"],
-        custom_objects={'multinomialNll': losses.multinomialNll})
+        custom_objects={'multinomialNll': losses.multinomialNll,
+                        'reweightableMse': losses.dummyMse})
     regressionModel.trainable = False
     logging.debug("Loaded regression model.")
     combinedModel, residualModel, transformationModel = models.combinedModel(
