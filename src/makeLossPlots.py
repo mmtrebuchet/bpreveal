@@ -8,6 +8,7 @@ import math
 
 plt.rcParams['font.size'] = 8
 
+
 def main():
     parser = argparse.ArgumentParser(description="Takes in a model history file (json format) "
                                                  "and generates plots of all the components of "

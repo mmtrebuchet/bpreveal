@@ -8,4 +8,3 @@ with open(sys.argv[1], "w") as fp:
             for line in sfp:
                 fp.write(line)
         fp.write('""")\n\n\n')
-

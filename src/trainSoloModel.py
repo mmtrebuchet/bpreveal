@@ -35,7 +35,6 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 def main(config):
     utils.setVerbosity(config["verbosity"])
     logging.debug("Initializing")
-    #utils.setMemoryGrowth()
     import jsonschema
     import bpreveal.schema
     jsonschema.validate(schema=bpreveal.schema.trainSoloModel, instance=config)

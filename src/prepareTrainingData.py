@@ -11,6 +11,7 @@ import bpreveal.utils as utils
 from typing import Literal
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
 
+
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
     # Since the order of the one-hot encoding is ACGT, if we flip the array
     # up-down, we complement the sequence, and if we flip it left-right, we

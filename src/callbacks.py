@@ -86,7 +86,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                                   .format(λ, head["head-name"]))
                     head["INTERNAL_λ-variable"].assign(λ)
                 else:
-                    # Get the desired λ value. INTERNAL_mean-counts is added by the 
+                    # Get the desired λ value. INTERNAL_mean-counts is added by the
                     # generator, which calls addMeanCounts in its constructor.
                     λ = head["INTERNAL_mean-counts"] * head["counts-loss-frac-target"]
                     # Now for a bit of magic - experimentation has determined this number.
@@ -239,8 +239,9 @@ class ApplyAdaptiveCountsLoss(Callback):
                         # make λ₁ = λ₀ / 2
                         newλ = curλ / threshold
                     logging.debug("Clamped new λ to {0:f}".format(newλ))
-                    if(threshold == 10):
-                        # We jumped and had a large threshold - user should choose a better counts weight.
+                    if threshold == 10:
+                        # We jumped and had a large threshold - user should choose
+                        # a better counts weight.
                         logging.warning("A large λ change was detected in the first epoch. "
                                         "Consider changing the starting counts-loss-weight for "
                                         "head {0:s} to a value near {1:f}".format(head["head-name"],
@@ -261,6 +262,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         # We've updated the loss. But now we have to go mess with the callbacks so that
         # the increased loss value isn't interpreted as the model getting worse.
         self.resetCallbacks()
+
 
 def tensorboardCallback(logDir: str):
     logging.debug("Creating tensorboard callback in {0:s}".format(logDir))

@@ -671,6 +671,7 @@ class Hit:
 
 class PatternScanner:
     warnedAboutOldScores = False
+
     def __init__(self, hitQueue: multiprocessing.Queue, contribFname: str,
                  patternConfig: dict) -> None:
         """hitQueue is a Multiprocessing Queue where found hits should be put().
@@ -708,7 +709,7 @@ class PatternScanner:
 
         # Get all the data for this index.
         chromIdx = self.contribFp["coords_chrom"][idx]
-        if type(chromIdx) == bytes:
+        if type(chromIdx) is bytes:
             if not self.warnedAboutOldScores:
                 logging.warning("Detected an importance score file from before version 4.0. "
                                 "This will be an error in BPReveal 5.0. "

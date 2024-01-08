@@ -45,7 +45,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         λ = f * ĉ
         """
         for i, head in enumerate(self.headList):
-            sumCounts = np.sum(self.fullData[i][:,self.maxJitter:-self.maxJitter,:])
+            sumCounts = np.sum(self.fullData[i][:, self.maxJitter:-self.maxJitter, :])
             head["INTERNAL_mean-counts"] = sumCounts / self.numRegions
             logging.debug("For head {0:s}, mean counts is {1:f}"
                           .format(head["head-name"], sumCounts / self.numRegions))

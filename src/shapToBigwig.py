@@ -50,7 +50,7 @@ def writeBigWig(inH5, outFname, verbose):
     outBw.addHeader(sorted(bwHeader))
     logging.debug("Bigwig header" + str((sorted(bwHeader))))
     numRegions = inH5['coords_chrom'].shape[0]
-    if type(inH5['coords_chrom'][0]) == bytes:
+    if type(inH5['coords_chrom'][0]) is bytes:
         logging.warning("You are using an old-style hdf5 file for importance scores. "
             "Support for these files will be removed in BPReveal 5.0. "
             "Instructions for updating: Re-calculate importance scores.")

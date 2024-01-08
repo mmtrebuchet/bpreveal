@@ -35,4 +35,4 @@
 
 <verbosity-level> ::= "DEBUG"
   | "INFO"
-  | "WARN"
+  | "WARNING"

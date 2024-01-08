@@ -34,7 +34,7 @@ H5_CHUNK_SIZE = 128
 
 # In parallel code, if something goes wrong, a queue could stay stuck forever.
 # Python's queues have a nifty timeout parameter so that they'll crash if they wait
-# too long. If a queue has been blocking for longer than this timeout, have the 
+# too long. If a queue has been blocking for longer than this timeout, have the
 # program crash.
 QUEUE_TIMEOUT = 60  # (seconds)
 
@@ -115,7 +115,7 @@ def setVerbosity(userLevel: str) -> None:
     logging.debug("Logger configured.")
 
 
-def wrapTqdm(iterable, logLevel: str | int=logging.INFO, **tqdmKwargs) -> tqdm.tqdm:
+def wrapTqdm(iterable, logLevel: str | int = logging.INFO, **tqdmKwargs) -> tqdm.tqdm:
     """Sometimes, you want to display a tqdm progress bar only if the logging level is
     high. Call this with something you want to iterate over OR an integer giving the
     total number of things that will be processed
@@ -143,6 +143,7 @@ def wrapTqdm(iterable, logLevel: str | int=logging.INFO, **tqdmKwargs) -> tqdm.t
         """This serves as a tqdm-like object that doesn't print anything."""
         def update(self):
             pass
+
         def close(self):
             pass
 

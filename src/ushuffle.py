@@ -11,6 +11,7 @@ import threading
 # in ushuffle, so there's no need for a lock between processes.
 _SHUFFLE_LOCK = threading.Lock()
 
+
 def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1) -> list[str]:
     """Given a string sequence, perform a shuffle that maintains
     the kmer distribution.
@@ -29,6 +30,7 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1) -> list[st
     for i in range(numShuffles):
         ret.append(shuffledArrays[i].tobytes().decode('utf-8'))
     return ret
+
 
 def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1) -> ONEHOT_AR_T:
     """Given a one-hot encoded sequence, perform a shuffle that
@@ -55,4 +57,3 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1) -> ON
     with _SHUFFLE_LOCK:
         shuffledSeqs = libushuffle.shuffleOhe(sequence, kmerSize, numShuffles)
     return shuffledSeqs
-
