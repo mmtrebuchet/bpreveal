@@ -11,7 +11,6 @@ import bpreveal.utils as utils
 from typing import Literal
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
 
-
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
     # Since the order of the one-hot encoding is ACGT, if we flip the array
     # up-down, we complement the sequence, and if we flip it left-right, we
@@ -109,5 +108,9 @@ if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+
+    import bpreveal.schema
+    import jsonschema
+    jsonschema.validate(instance=config, schema=bpreveal.schema.prepareTrainingData)
     utils.setVerbosity(config["verbosity"])
     writeH5(config)

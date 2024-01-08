@@ -4,9 +4,25 @@ Version 4.0.0, DATEDATEDATE
 	chromosome instead of strings. Internal programs that were affected by
 	this change now emit a warning if they detect an importance file from an
 	earlier release.
+	* The adaptive loss is now named reweightableMse, and comes from a
+	function in losses.py called weightedMse. If you're just loading a model,
+	you can specify "custom_objects={'multinomialNll': losses.multinomialNll,
+	'reweightableMse': losses.dummyMse}" when you call load_model in keras.
+	There's also a new loadModel function in utils.py that does this for you.
+
+	ENHANCEMENTS:
+	* All queues now have a timeout, so that a crash in one thread will
+	propagate through the entire program instead of freezing.
+	* Started working on json schemas to validate inputs, hopefully making
+	errors less opaque. prepareBed.py, prepareTrainingData.py, and
+	trainSoloModel.py all have schemas now.
+
 
 	BUG FIXES:
 	* Fixed a typo in interpretUtils.py
+	* The specification incorrectly stated that the warning level of verbosity
+	was "WARN", when in fact it should be "WARNING".
+
 
 Version 3.6.1, 2023-12-05
 	ENHANCEMENTS:

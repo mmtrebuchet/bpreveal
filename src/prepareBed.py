@@ -3,6 +3,7 @@
 
 import json
 import pyBigWig
+import jsonschema
 import pysam
 import logging
 import bpreveal.utils as utils
@@ -10,6 +11,7 @@ import numpy as np
 import pybedtools
 import random
 import re
+import pathlib
 from bpreveal.bedUtils import resize, sequenceChecker, getCounts, lineToInterval
 
 
@@ -256,6 +258,15 @@ def validateRegions(config, regions, genome, bigwigLists):
 
 
 def prepareBeds(config):
+    logging.info("Validating input JSON.")
+    import bpreveal.schema
+    try:
+        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed)
+    except jsonschema.ValidationError:
+        logging.warn("Detected a prepareBed json file that lists bigwigs "
+                     "instead of heads. This will be an error in BPReveal 5.0")
+        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed_old)
+
     logging.info("Starting bed file generation.")
     # FUTURE: In BPReveal 5.0, raise an error inside this if block.
     # In BPReveal 7.0, remove it entirely.

@@ -634,7 +634,7 @@ class FastaGenerator(Generator):
         logging.debug("Creating fasta iterator.")
         return self
 
-    def __next__(self) -> ONEHOT_AR_T:
+    def __next__(self) -> Query:
         if (self.nowStop):
             raise StopIteration()
         sequence = ""
@@ -689,7 +689,7 @@ class FlatBedGenerator(Generator):
         logging.debug("Creating iterator for bed generator.")
         return self
 
-    def __next__(self) -> ONEHOT_AR_T:
+    def __next__(self) -> Query:
         # Get the sequence and make a Query with it.
         if (self.readHead >= len(self.shapTargets)):
             raise StopIteration()
@@ -742,7 +742,7 @@ class PisaBedGenerator(Generator):
         logging.debug("Creating iterator for bed generator.")
         return self
 
-    def __next__(self) -> ONEHOT_AR_T:
+    def __next__(self) -> Query:
         # Get the sequence and make a Query with it.
         if (self.readHead >= len(self.shapTargets)):
             raise StopIteration()
@@ -774,13 +774,13 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                      numHeads, taskIDs, numShuffles, mode)
     logging.debug("Batcher created.")
     while (True):
-        query = inQueue.get()
+        query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
         if (query is None):
             break
         b.addSample(query)
     logging.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    outQueue.put(None)
+    outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
     if (profileFname is not None):
         profiler.create_stats()
@@ -800,13 +800,13 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     b = _PisaBatcher(modelName, batchSize, outQueue, headId, taskId, numShuffles, receptiveField)
     logging.debug("Batcher created.")
     while (True):
-        query = inQueue.get()
+        query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
         if (query is None):
             break
         b.addSample(query)
     logging.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    outQueue.put(None)
+    outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
     if (profileFname is not None):
         profiler.create_stats()
@@ -824,9 +824,9 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     generator.construct()
     for elem in generator:
         for inQueue in inQueues:
-            inQueue.put(elem)
+            inQueue.put(elem, timeout=utils.QUEUE_TIMEOUT)
     for inQueue in inQueues:
-        inQueue.put(None)
+        inQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
         inQueue.close()
     logging.debug("Done with generator, None added to queue.")
     generator.done()
@@ -845,7 +845,7 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
         profiler.enable()
     saver.construct()
     while (True):
-        rv = outQueue.get()
+        rv = outQueue.get(timeout=utils.QUEUE_TIMEOUT)
         if (rv is None):
             break
         saver.add(rv)
@@ -865,13 +865,9 @@ class _PisaBatcher:
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
         import shap
-        from keras.models import load_model
-        import losses
         import utils
         utils.setMemoryGrowth()
-        self.model = load_model(modelFname,
-                custom_objects={'multinomialNll': losses.multinomialNll,
-                                'reweightableMse': losses.dummyMse})
+        self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
         self.outQueue = outQueue
         self.headId = headId
@@ -961,7 +957,7 @@ class _PisaBatcher:
             queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
             ret = PisaResult(queryPred, queryShufPreds, querySequence,
                          queryShapScores, q.passData, q.index)
-            self.outQueue.put(ret)
+            self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
 
 
 class _FlatBatcher:
@@ -978,9 +974,7 @@ class _FlatBatcher:
         import utils
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-        self.model = load_model(modelFname,
-                custom_objects={'multinomialNll': losses.multinomialNll,
-                                'reweightableMse': losses.dummyMse})
+        self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
         self.outQueue = outQueue
         self.headId = headId
@@ -1055,8 +1049,8 @@ class _FlatBatcher:
         for i, q in enumerate(self.curBatch):
             querySequence = oneHotBuf[i, :, :]
             queryScores = scores[i, :, :]  # type: ignore
-            ret = FlatResult(querySequence, queryScores, q.passData, q.index)
-            self.outQueue.put(ret)
+            ret = FlatResult(querySequence, queryScores, q.passData, q.index)  # type: ignore
+            self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
 
 
 def combineMultAndDiffref(mult, orig_inp, bg_data):

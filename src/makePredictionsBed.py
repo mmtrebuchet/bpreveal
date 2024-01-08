@@ -9,9 +9,7 @@ import bpreveal.utils as utils
 import pybedtools
 import numpy as np
 import pysam
-from keras.models import load_model
 import h5py
-import bpreveal.losses as losses
 import logging
 from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
@@ -39,9 +37,7 @@ def main(config):
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
         seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
-    model = load_model(config["settings"]["architecture"]["model-file"],
-                       custom_objects={'multinomialNll': losses.multinomialNll,
-                                       'reweightableMse': losses.dummyMse})
+    model = utils.loadModel(config["settings"]["architecture"]["model-file"])
     logging.info("Model loaded. Predicting.")
     preds = model.predict(seqs, batch_size=batchSize, verbose=True,
                           workers=10, use_multiprocessing=True)

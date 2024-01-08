@@ -3,6 +3,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import bpreveal.utils as utils
+utils.setMemoryGrowth()
 import h5py
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
@@ -34,7 +35,10 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 def main(config):
     utils.setVerbosity(config["verbosity"])
     logging.debug("Initializing")
-    utils.setMemoryGrowth()
+    #utils.setMemoryGrowth()
+    import jsonschema
+    import bpreveal.schema
+    jsonschema.validate(schema=bpreveal.schema.trainSoloModel, instance=config)
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     numHeads = len(config["heads"])
@@ -96,6 +100,7 @@ def main(config):
 
 if (__name__ == "__main__"):
     import sys
+
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
     main(config)

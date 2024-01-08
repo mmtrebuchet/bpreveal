@@ -9,7 +9,7 @@ import bpreveal.utils as utils
 import numpy as np
 import h5py
 import logging
-from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
+from bpreveal.utils import PRED_T, wrapTqdm, QUEUE_TIMEOUT
 
 
 class FastaReader:

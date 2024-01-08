@@ -32,6 +32,27 @@ MOTIF_FLOAT_T = np.float32
 # shapToBigwig.py for an example of a chunked reader.
 H5_CHUNK_SIZE = 128
 
+# In parallel code, if something goes wrong, a queue could stay stuck forever.
+# Python's queues have a nifty timeout parameter so that they'll crash if they wait
+# too long. If a queue has been blocking for longer than this timeout, have the 
+# program crash.
+QUEUE_TIMEOUT = 60  # (seconds)
+
+
+def loadModel(modelFname: str):
+    """A simple wrapper to load up a BPReveal model.
+    modelFname is the name of the model that Keras saved earlier, typically
+    a directory.
+    Returns a Keras Model object.
+    The returned model does NOT support additional training, since it uses a
+    dummy loss."""
+    from keras.models import load_model
+    from bpreveal.losses import multinomialNll, dummyMse
+    model = load_model(modelFname,
+                       custom_objects={"multinomialNll": multinomialNll,
+                                       "reweightableMse": dummyMse})
+    return model
+
 
 def setMemoryGrowth() -> None:
     """Turn on the tensorflow option to grow memory usage as needed, instead
@@ -43,7 +64,8 @@ def setMemoryGrowth() -> None:
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
         logging.debug("GPU memory growth enabled.")
-    except Exception:
+    except Exception as inst:
+        logging.warning(str(inst))
         logging.warning("Not using GPU")
         pass
 
@@ -96,7 +118,7 @@ def setVerbosity(userLevel: str) -> None:
 def wrapTqdm(iterable, logLevel: str | int=logging.INFO, **tqdmKwargs) -> tqdm.tqdm:
     """Sometimes, you want to display a tqdm progress bar only if the logging level is
     high. Call this with something you want to iterate over OR an integer giving the
-    total number of things that will be processed 
+    total number of things that will be processed
     (correspoinding to
     pbar = tqdm.tqdm(total=10000)
     while condition:
@@ -207,14 +229,9 @@ class BatchPredictor:
         the model in any of the other BPReveal tools.
         batchSize is the number of samples that should be run simultaneously through the model."""
         logging.debug("Creating batch predictor.")
-        from keras.models import load_model
-        import keras
-        import bpreveal.losses as losses
         from collections import deque
 
-        self._model: keras.Model = load_model(modelFname,
-            custom_objects={"multinomialNll": losses.multinomialNll,
-                            "reweightableMse": losses.dummyMse})  # type: ignore
+        self._model = loadModel(modelFname)  # type: ignore
         logging.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,

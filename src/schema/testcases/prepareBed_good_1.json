@@ -1,0 +1,81 @@
+{
+    "heads": [
+        {
+            "bigwig-names": [
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/oct4/counts.pos.bw",
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/oct4/counts.neg.bw"
+            ],
+            "max-quantile": 1,
+            "min-counts": 1
+        },
+        {
+            "bigwig-names": [
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/sox2/counts.pos.bw",
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/sox2/counts.neg.bw"
+            ],
+            "max-quantile": 1,
+            "min-counts": 1
+        },
+        {
+            "bigwig-names": [
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/klf4/counts.pos.bw",
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/klf4/counts.neg.bw"
+            ],
+            "max-quantile": 1,
+            "min-counts": 1
+        },
+        {
+            "bigwig-names": [
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/nanog/counts.pos.bw",
+                "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/nanog/counts.neg.bw"
+            ],
+            "max-quantile": 1,
+            "min-counts": 1
+        }
+    ],
+    "splits": {
+        "test-chroms": [
+            "chr1",
+            "chr8",
+            "chr9"
+        ],
+        "val-chroms": [
+            "chr2",
+            "chr3",
+            "chr4"
+        ],
+        "train-chroms": [
+            "chr5",
+            "chr6",
+            "chr7",
+            "chr10",
+            "chr11",
+            "chr12",
+            "chr13",
+            "chr14",
+            "chr15",
+            "chr16",
+            "chr17",
+            "chr18",
+            "chr19"
+        ],
+        "regions": [
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/oct4/idr-optimal-set.summit.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/sox2/idr-optimal-set.summit.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/klf4/idr-optimal-set.summit.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/nanog/idr-optimal-set.summit.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/peaks-bak/oct4.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/peaks-bak/sox2.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/peaks-bak/klf4.bed",
+            "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/peaks-bak/nanog.bed"
+        ]
+    },
+    "genome": "/n/data1/genomes/indexes/mm10/mm10.fa",
+    "output-length": 1000,
+    "input-length": 3092,
+    "max-jitter": 100,
+    "output-prefix": "/n/projects/cm2363/bpreveal/test/oskn/bed/peak",
+    "resize-mode": "center",
+    "remove-overlaps": false,
+    "verbosity": "INFO"
+}

@@ -7,6 +7,7 @@ import scipy.stats
 import scipy.spatial.distance
 import tqdm
 import json
+from bpreveal.utils import QUEUE_TIMEOUT
 from multiprocessing import Process, Queue
 
 
@@ -59,11 +60,11 @@ class MetricsCalculator:
             referenceCounts = predictedCounts = np.nan
 
         ret = (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCounts, predictedCounts)
-        self.outQueue.put(ret)
+        self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
     def run(self):
         while (True):
-            match self.inQueue.get():
+            match self.inQueue.get(timeout=QUEUE_TIMEOUT):
                 case None:
                     logging.debug("Finishing calculator thread {0:d}.".format(self.tid))
                     self.finish()
@@ -85,11 +86,11 @@ def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
     logging.debug("Initializing generator.")
     regions = [Region(x) for x in open(regionsFname, 'r')]
     logging.info("Number of regions: {0:d}".format(len(regions)))
-    numberQueue.put(len(regions))
+    numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
     for i, r in enumerate(regions):
-        regionQueue.put((r, r, i))
+        regionQueue.put((r, r, i), timeout=QUEUE_TIMEOUT)
     for i in range(numThreads):
-        regionQueue.put(None)
+        regionQueue.put(None, timeout=QUEUE_TIMEOUT)
     logging.debug("Generator done.")
 
 
@@ -121,7 +122,7 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
     if not jsonOutput:
         pbar = tqdm.tqdm(pbar)
     for _ in pbar:
-        ret = outputQueue.get()
+        ret = outputQueue.get(timeout=QUEUE_TIMEOUT)
         (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCount, predictedCount) = ret
         mnlls[regionID] = mnllVal
         jsds[regionID] = jsd
@@ -180,7 +181,7 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
     # Since the number of regions is not known before starting up the regions thread, I have to
     # start the regions thread and then get a message telling me how many regions there are.
     # Clunky, but avoids re-reading the bed file.
-    numRegions = numberQueue.get()
+    numRegions = numberQueue.get(timeout=QUEUE_TIMEOUT)
 
     writerThread = Process(target=receiveThread,
         args=(numRegions, resultQueue, skipZeroes, jsonOutput,

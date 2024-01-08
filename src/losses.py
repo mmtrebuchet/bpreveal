@@ -38,15 +38,12 @@ def weightedMse(weightTensor):
         return scaledMse
     return reweightableMse
 
-def dummyMse(y_true, y_pred):
-    """Used for loading models. If you're going to train, you have to create a
-    weightedMse, since this one has no loss weight to it. But if you're just
-    predicting, you can pass this function to custom_objects when you load a
-    BPReveal model
-    Has exactly the same semantics as the 'mse' loss in Keras.
-    """
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.cast(y_true, y_pred.dtype)
-    mse = backend.mean(tf.math.squared_difference(y_pred, y_true), axis=-1)
-    return mse
 
+"""Used for loading models. If you're going to train, you have to create a
+weightedMse, since this one has no loss weight to it. But if you're just
+predicting, you can pass this function to custom_objects when you load a
+BPReveal model
+Always returns nan, so that if you do accidentally use it, all of your
+values will be poisoned.
+"""
+dummyMse = weightedMse(tf.constant(float("nan")))

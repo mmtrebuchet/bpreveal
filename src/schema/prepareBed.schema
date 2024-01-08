@@ -1,0 +1,101 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "prepareBed",
+    "description": "Schema for prepareBed.py",
+    "type": "object",
+    "properties": {
+        "heads": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "bigwig-names": {
+                        "type" : "array",
+                        "items": {"type": "string"}
+                    },
+                    "max-counts":{
+                        "type": "number"
+                    },
+                    "min-counts":{
+                        "type": "number"
+                    },
+                    "max-quantile":{
+                        "type": "number"
+                    },
+                    "min-quantile":{
+                        "type": "number"
+                    }
+                },
+                "required": ["bigwig-names"],
+                "oneOf": [
+                    {"required": ["max-counts"]},
+                    {"required": ["max-quantile"]}],
+                "oneOf": [
+                    {"required": ["min-counts"]},
+                    {"required": ["min-quantile"]}]}},
+        "splits" :{
+            "oneOf":[
+                {
+                    "type": "object",
+                    "properties": {
+                        "train-chroms": {"type": "array", "items": {"type": "string"}},
+                        "val-chroms":   {"type": "array", "items": {"type": "string"}},
+                        "test-chroms":  {"type": "array", "items": {"type": "string"}},
+                        "regions":  {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["train-chroms", "val-chroms", "test-chroms", "regions"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "train-regions": {"type": "array", "items": {"type": "string"}},
+                        "val-regions":   {"type": "array", "items": {"type": "string"}},
+                        "test-regions":  {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["train-regions", "val-regions", "test-regions"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "train-regex": {"type": "string"},
+                        "val-regex":   {"type": "string"},
+                        "test-regex":  {"type": "string"},
+                        "regions":  {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["train-regex", "val-regex", "test-regex", "regions"]
+                }]},
+        "genome": {"type": "string"},
+        "output-length": {"type": "integer"},
+        "input-length": {"type": "integer"},
+        "max-jitter": {"type": "integer"},
+        "output-prefix": {"type": "string"},
+        "output-train": {"type": "string"},
+        "output-val": {"type": "string"},
+        "output-test": {"type": "string"},
+        "resize-mode": {"type": "string", "enum": ["none", "center", "start"]},
+        "remove-overlaps": {"type": "boolean"},
+        "overlap-max-distance": {"type": "integer"},
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARN", "INFO"]}
+    },
+    "required": ["heads", "splits", "genome", "output-length", "input-length", "max-jitter",
+               "remove-overlaps",  "verbosity"],
+    "allOf": [
+        {
+            "if": {
+                "properties": {
+                    "remove-overlaps": {"const": true}}},
+            "then":{
+                "required": ["overlap-max-distance"]
+            },
+            "else":{
+                "not": {"required": ["overlap-max-distance"]}
+            }
+        },
+        {
+            "oneOf": [
+                {"required": ["output-prefix"]},
+                {"required": ["output-train", "output-val", "output-test"]}]
+        }
+    ]
+}
+

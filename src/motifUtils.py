@@ -20,7 +20,7 @@ import queue
 ENABLE_DEBUG_PROFILING = False
 import numpy.typing as npt
 from typing import Optional, Literal
-from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, wrapTqdm
+from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, wrapTqdm, QUEUE_TIMEOUT
 PROFILING_SORT_ORDER = SortKey.TIME
 
 
@@ -670,7 +670,7 @@ class Hit:
 
 
 class PatternScanner:
-
+    warnedAboutOldScores = False
     def __init__(self, hitQueue: multiprocessing.Queue, contribFname: str,
                  patternConfig: dict) -> None:
         """hitQueue is a Multiprocessing Queue where found hits should be put().
@@ -691,7 +691,7 @@ class PatternScanner:
         self.firstHit = True
         self.firstIndex = True
         self.chromIdxToName = dict()
-        for i, name in enumerate(self.contribFp["chrom_names"]):
+        for i, name in enumerate(self.contribFp["chrom_names"].asstr()):
             self.chromIdxToName[i] = name
 
     def scanIndex(self, idx: int) -> None:
@@ -705,16 +705,18 @@ class PatternScanner:
             logging.debug("Got first index for thread {0:d}".format(
                 multiprocessing.current_process().pid))
             self.firstIndex = False
+
         # Get all the data for this index.
-        
         chromIdx = self.contribFp["coords_chrom"][idx]
         if type(chromIdx) == bytes:
-            logging.warning("Detected an importance score file from before version 4.0. "
-                            "This will be an error in BPReveal 5.0. "
-                            "Instructions for updating: Re-calculate importance scores.")
+            if not self.warnedAboutOldScores:
+                logging.warning("Detected an importance score file from before version 4.0. "
+                                "This will be an error in BPReveal 5.0. "
+                                "Instructions for updating: Re-calculate importance scores.")
+                self.warnedAboutOldScores = True
             chrom = chromIdx.decode('utf-8')
-        else: 
-            chrom = self.chromIdxToName[chromIdx].decode('utf-8')
+        else:
+            chrom = self.chromIdxToName[chromIdx]
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')
@@ -742,7 +744,7 @@ class PatternScanner:
                                   hitSequence, idx,
                                   hit[2],
                                   hit[3], hit[4])
-                    self.hitQueue.put(madeHit, True, 5.0)  # Block for two seconds at most.
+                    self.hitQueue.put(madeHit, timeout=QUEUE_TIMEOUT)
                     if self.firstHit:
                         logging.debug("First hit from thread {0:d}".format(
                             multiprocessing.current_process().pid))
@@ -751,7 +753,7 @@ class PatternScanner:
     def done(self) -> None:
         self.contribFp.close()
         # Send a -1 as a signal that a thread has finished up.
-        self.hitQueue.put(-1)
+        self.hitQueue.put(-1, timeout=QUEUE_TIMEOUT)
 
 
 def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Queue,
@@ -768,7 +770,7 @@ def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Q
     wasIOne = False
     logging.debug("Started scanner {0:d}".format(multiprocessing.current_process().pid))
     while True:
-        curQuery = queryQueue.get(True, 5.0)  # Block for five seconds, then error out.
+        curQuery = queryQueue.get(timeout=QUEUE_TIMEOUT)
         if curQuery == 1 and ENABLE_DEBUG_PROFILING:
             wasIOne = True
         if curQuery == -1:
@@ -814,17 +816,17 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
         firstOne = True
         while True:
             try:
-                ret = hitQueue.get(True, 5.0)
+                ret = hitQueue.get(timeout=QUEUE_TIMEOUT)
                 if firstOne:
                     logging.debug("Writer got first hit, {0:s}".format(str(ret)))
                     firstOne = False
             except queue.Empty:
-                logging.warning("Waited over five seconds to see a hit. Either your motif is very"
+                logging.warning("Exceeded timeout waiting to see a hit. Either your motif is very"
                                 " rare, or there is a bug in the code. If you see this message"
                                 " multiple times, that's a bug.")
                 numWaits += 1
                 if numWaits > 10:
-                    logging.error("Over ten five-second waits have occurred. Aborting.")
+                    logging.error("Over ten timeouts have occurred. Aborting.")
                     raise
                 continue  # Go back to the top of the loop - we don't have a ret to process.
             if ret == -1:
@@ -881,10 +883,10 @@ def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThr
 
     for i in wrapTqdm(range(numRegions)):
         # The queries are generated by the main thread.
-        queryQueue.put(i)
+        queryQueue.put(i, timeout=QUEUE_TIMEOUT)
     logging.debug("Done adding queries to the processes. Waiting for scanners to finish.")
     for i in range(numThreads - 2):
-        queryQueue.put(-1)
+        queryQueue.put(-1, timeout=QUEUE_TIMEOUT)
 
     [x.join() for x in scannerProcesses]
     writeProc.join()

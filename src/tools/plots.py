@@ -216,7 +216,7 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
             if line.chrom == genomeWindowChrom and line.end > lowerBound\
                     and line.start < upperBound:
                 if line.name not in nameColors:
-                    nameColors[line.name] = np.array(cmapIbm[readHead]) / 256
+                    nameColors[line.name] = np.array(cmapIbm[readHead % len(cmapIbm)]) / 256
                     readHead += 1
                 annotations.append(((line.start, line.end), line.name, nameColors[line.name]))
         axAnnot = fig.add_axes([l, b + h * 5/8, w * 7/8, h * 3/8])

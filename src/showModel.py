@@ -5,13 +5,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import bpreveal.utils as utils
 utils.setMemoryGrowth()
-from keras.models import load_model
-import bpreveal.losses as losses
 
 
 def main(modelFname, pngFile):
-    model = load_model(modelFname, custom_objects={'multinomialNll': losses.multinomialNll,
-                                                   'reweightableMse': losses.dummyMse})
+    model = utils.loadModel(modelFname)
     print(model.summary(expand_nested=True, show_trainable=True))
     if (pngFile is not None):
         from tensorflow.keras.utils import plot_model

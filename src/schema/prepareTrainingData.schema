@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "prepareTrainingData",
+    "description": "Schema for prepareTrainingData.py",
+    "type": "object",
+    "properties": {
+        "genome": {"type": "string"},
+        "output-length": {"type": "integer"},
+        "input-length": {"type": "integer"},
+        "max-jitter": {"type": "integer"},
+        "regions": {"type": "string"},
+        "output-h5": {"type": "string"},
+        "reverse-complement": {"type": "boolean"},
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARN", "INFO"]},
+        "heads": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "bigwig-files": {
+                        "type" : "array",
+                        "items": {"type": "string"}
+                    },
+                    "revcomp-task-order":{
+                        "oneOf": [
+                            {"enum": ["auto"]},
+                            {"type": "array",
+                                "items": {"type": "integer"}}]
+                    }
+                },
+                "required": ["bigwig-files"]
+            }
+        }
+    },
+    "required": ["heads", "genome", "output-length", "input-length", "max-jitter",
+               "regions", "output-h5", "reverse-complement",  "verbosity"]
+}
+

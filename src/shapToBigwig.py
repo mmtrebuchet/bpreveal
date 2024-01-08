@@ -54,7 +54,7 @@ def writeBigWig(inH5, outFname, verbose):
         logging.warning("You are using an old-style hdf5 file for importance scores. "
             "Support for these files will be removed in BPReveal 5.0. "
             "Instructions for updating: Re-calculate importance scores.")
-        coordsChrom = np.array(inH5['coords_chrom'])
+        coordsChrom = np.array(inH5['coords_chrom'].asstr())
     else:
         coordsChromIdxes = np.array(inH5['coords_chrom'])
         coordsChrom = np.array([chromIdxToName[x] for x in coordsChromIdxes])
@@ -64,7 +64,7 @@ def writeBigWig(inH5, outFname, verbose):
     regionOrder = sorted(range(numRegions), key=lambda x: (coordsChrom[x], coordsStart[x]))
     startWritingAt = 0
     regionID = regionOrder[0]
-    regionChrom = coordsChrom[regionID].decode('utf-8')
+    regionChrom = coordsChrom[regionID]
     curChrom = regionChrom
     regionStart = coordsStart[regionID]
     regionStop = coordsEnd[regionID]
@@ -90,7 +90,7 @@ def writeBigWig(inH5, outFname, verbose):
 
         if (regionNumber < numRegions - 1):
             nextRegion = regionOrder[regionNumber + 1]
-            nextChrom = coordsChrom[nextRegion].decode('utf-8')
+            nextChrom = coordsChrom[nextRegion]
             nextStart = coordsStart[nextRegion]
             nextStop = coordsEnd[nextRegion]
             if (nextChrom == regionChrom and nextStart < stopWritingAt):

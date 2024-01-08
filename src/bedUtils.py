@@ -11,7 +11,7 @@ from bpreveal.utils import wrapTqdm
 def makeWhitelistSegments(genome: pysam.FastaFile,
                           blacklist: pybedtools.BedTool | None = None) -> pybedtools.BedTool:
     """Get a list of windows where it is safe to draw inputs for your model.
-    Given a genome file, go over each chromosomem and see where the Ns are.
+    Given a genome file, go over each chromosome and see where the Ns are.
     Create a BedTool that contains all regions that don't contain N.
     For example, if your genome were
     ATATATATnnnnnnnATATATATATATnnn,
@@ -147,6 +147,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
         A PyBedTools Interval object, newly allocated.
         It will preserve the chromosome, name, score, and strand
         information, but not other bed fields.
+        If the interval could not be resized, returns False.
     """
     start = interval.start
     end = interval.end

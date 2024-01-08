@@ -1,0 +1,36 @@
+{
+  "genome": "/n/data1/genomes/indexes/mm10/mm10.fa",
+  "input-length": 3092,
+  "output-length": 1000,
+  "max-jitter": 100,
+  "regions": "/n/projects/cm2363/bpreveal/test/oskn/bed/nonpeak_train.bed",
+  "output-h5": "/n/projects/cm2363/bpreveal/test/oskn/input/nonpeak_train.h5",
+  "reverse-complement": false,
+  "heads": [
+    {
+      "bigwig-files": [
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.pos.bw",
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.neg.bw"
+      ]
+    },
+    {
+      "bigwig-files": [
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.pos.bw",
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.neg.bw"
+      ]
+    },
+    {
+      "bigwig-files": [
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.pos.bw",
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.neg.bw"
+      ]
+    },
+    {
+      "bigwig-files": [
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.pos.bw",
+        "/n/projects/cm2363/bpreveal/test/oskn/bpnet-pub-local/data/chip-nexus/patchcap/counts.neg.bw"
+      ]
+    }
+  ],
+  "verbosity": "DEBUG"
+}

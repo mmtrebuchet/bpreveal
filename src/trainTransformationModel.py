@@ -5,7 +5,6 @@ import json
 import bpreveal.utils as utils
 import h5py
 from tensorflow import keras
-from keras.models import load_model
 import bpreveal.generators as generators
 import bpreveal.losses as losses
 from bpreveal.callbacks import getCallbacks
@@ -38,9 +37,7 @@ def main(config):
     inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]
     numHeads = len(config["heads"])
-    soloModel = load_model(config["settings"]["solo-model-file"],
-            custom_objects={'multinomialNll': losses.multinomialNll,
-                            'reweightableMse': losses.dummyMse})
+    soloModel = utils.loadModel(config["settings"]["solo-model-file"])
 
     soloModel.trainable = False  # We're in the regression phase, no training the bias model!
 

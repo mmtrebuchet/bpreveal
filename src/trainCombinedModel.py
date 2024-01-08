@@ -6,7 +6,6 @@ import bpreveal.utils as utils
 import h5py
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
-from keras.models import load_model
 import bpreveal.generators as generators
 import bpreveal.losses as losses
 from bpreveal.callbacks import getCallbacks
@@ -37,10 +36,8 @@ def main(config):
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     numHeads = len(config["heads"])
-    regressionModel = load_model(
-        config["settings"]["transformation-model"]["transformation-model-file"],
-        custom_objects={'multinomialNll': losses.multinomialNll,
-                        'reweightableMse': losses.dummyMse})
+    regressionModel = utils.loadModel(
+        config["settings"]["transformation-model"]["transformation-model-file"])
     regressionModel.trainable = False
     logging.debug("Loaded regression model.")
     combinedModel, residualModel, transformationModel = models.combinedModel(
