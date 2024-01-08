@@ -1,0 +1,62 @@
+{
+    "settings": {
+        "output-prefix": "/n/projects/cm2363/bpreveal/test/oskn/models/joint",
+        "epochs": 200,
+        "early-stopping-patience": 20,
+        "batch-size": 128,
+        "learning-rate": 0.004,
+        "learning-rate-plateau-patience": 5,
+        "max-jitter": 100,
+        "transformation-model": {
+            "transformation-model-file": "/n/projects/cm2363/bpreveal/test/oskn/models/transformation.model"
+        },
+        "architecture": {
+            "architecture-name": "bpnet",
+            "input-length": 3092,
+            "output-length": 1000,
+            "model-name": "joint",
+            "model-args": "",
+            "filters": 64,
+            "layers": 9,
+            "input-filter-width": 25,
+            "output-filter-width": 25
+        }
+    },
+    "train-data": "/n/projects/cm2363/bpreveal/test/oskn/input/peak_train.h5",
+    "val-data": "/n/projects/cm2363/bpreveal/test/oskn/input/peak_val.h5",
+    "heads": [
+        {
+            "num-tasks": 2,
+            "profile-loss-weight": 1,
+            "head-name": "combined_oct4",
+            "counts-loss-weight": 100,
+            "counts-loss-frac-target": 0.1,
+            "use-bias-counts": false
+        },
+        {
+            "num-tasks": 2,
+            "profile-loss-weight": 1,
+            "head-name": "combined_sox2",
+            "counts-loss-weight": 100,
+            "counts-loss-frac-target": 0.1,
+            "use-bias-counts": false
+        },
+        {
+            "num-tasks": 2,
+            "profile-loss-weight": 1,
+            "head-name": "combined_klf4",
+            "counts-loss-weight": 100,
+            "counts-loss-frac-target": 0.1,
+            "use-bias-counts": false
+        },
+        {
+            "num-tasks": 2,
+            "profile-loss-weight": 1,
+            "head-name": "combined_nanog",
+            "counts-loss-weight": 100,
+            "counts-loss-frac-target": 0.1,
+            "use-bias-counts": false
+        }
+    ],
+    "verbosity": "DEBUG"
+}

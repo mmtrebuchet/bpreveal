@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "interpretFlat",
+    "description": "Schema for interpretFlat.py",
+    "type": "object",
+    "properties": {
+        "genome": {"type" : "string"},
+        "bed-file": {"type" : "string"},
+        "fasta-file": {"type" : "string"},
+        "input-length": {"type": "integer"},
+        "output-length": {"type": "integer"},
+        "heads": {"type": "integer"},
+        "head-id": {"type": "integer"},
+        "profile-task-ids": {
+            "type" : "array",
+            "items" : {
+                "type" : "integer"}
+        },
+        "profile-h5" : {"type": "string"},
+        "counts-h5" : {"type": "string"},
+        "num-shuffles": {"type": "integer"},
+
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+    },
+    "required": ["input-length", "output-length", "heads", "head-id", "profile-task-ids",
+        "profile-h5", "counts-h5", "num-shuffles", "verbosity"],
+    "oneOf": [
+        {
+            "required": ["genome", "bed-file"],
+            "not": {"required": ["fasta-file"]}
+        },
+        {
+            "not": {"required": ["genome", "bed-file"]},
+            "required": ["fasta-file"]
+        }
+    ]
+}
+

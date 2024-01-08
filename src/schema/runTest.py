@@ -18,7 +18,8 @@ def runTest(schema, jsonFname, good):
     print(jsonFname + " tested successfully.")
 
 
-from bpreveal.schema import prepareBed, prepareTrainingData, trainSoloModel
+from bpreveal.schema import prepareBed, prepareTrainingData, trainSoloModel,\
+    trainTransformationModel, trainCombinedModel, makePredictionsBed, interpretFlat
 for goodIdx in range(2):
     runTest(prepareBed, "testcases/prepareBed_good_{0:d}.json".format(goodIdx), True)
 for goodIdx in range(3):
@@ -33,3 +34,23 @@ for goodIdx in range(1):
     runTest(trainSoloModel, "testcases/trainSoloModel_good_{0:d}.json".format(goodIdx), True)
 for badIdx in range(1):
     runTest(trainSoloModel, "testcases/trainSoloModel_bad_{0:d}.json".format(badIdx), False)
+
+
+for goodIdx in range(1):
+    runTest(trainTransformationModel,
+            "testcases/trainTransformationModel_good_{0:d}.json".format(goodIdx), True)
+
+for goodIdx in range(1):
+    runTest(trainCombinedModel,
+            "testcases/trainCombinedModel_good_{0:d}.json".format(goodIdx), True)
+for badIdx in range(1):
+    runTest(trainCombinedModel,
+            "testcases/trainCombinedModel_bad_{0:d}.json".format(badIdx), False)
+
+for goodIdx in range(1):
+    runTest(makePredictionsBed,
+            "testcases/makePredictionsBed_good_{0:d}.json".format(goodIdx), True)
+
+for goodIdx in range(1):
+    runTest(interpretFlat,
+            "testcases/interpretFlat_good_{0:d}.json".format(goodIdx), True)

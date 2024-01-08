@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "makePredictionsFasta",
+    "description": "Schema for makePredictionsFasta.py",
+    "type": "object",
+    "properties": {
+        "settings": {
+            "type": "object",
+            "properties": {
+                "output-h5": {"type": "string"},
+                "batch-size": {"type": "integer"},
+                "heads": {"type": "integer"},
+                "architecture": {
+                    "type": "object",
+                    "properties": {
+                        "input-length": {"type": "integer"},
+                        "output-length": {"type": "integer"},
+                        "model-file": {"type": "string"}
+                    },
+                    "required": ["input-length", "output-length", "model-file"]
+                }
+            },
+            "required": ["output-h5", "batch-size", "heads", "architecture"]
+        },
+        "fasta-file": {"type": "string"},
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+    },
+    "required": ["fasta-file", "settings",  "verbosity"]
+}
+

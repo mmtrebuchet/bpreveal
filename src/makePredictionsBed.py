@@ -6,6 +6,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import bpreveal.utils as utils
+utils.setMemoryGrowth()
 import pybedtools
 import numpy as np
 import pysam
@@ -19,7 +20,10 @@ from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    utils.setMemoryGrowth()
+    import jsonschema
+    import bpreveal.schema
+    jsonschema.validate(schema=bpreveal.schema.interpretFlat,
+                        instance = config)
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     batchSize = config["settings"]["batch-size"]
