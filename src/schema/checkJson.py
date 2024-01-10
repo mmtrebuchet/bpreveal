@@ -40,5 +40,5 @@ for jsonFname in args.jsons:
             try:
                 jsonschema.validate(schema=schemaMap[schema], instance=testJson)
                 print("    Validated as ", schema)
-            except:
+            except jsonschema.ValidationError:
                 pass

@@ -29,7 +29,8 @@
             "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
                 "batch-size", "learning-rate", "learning-rate-plateau-patience",
                 "solo-model-file", "input-length", "output-length",
-                "profile-architecture", "counts-architecture"]
+                "profile-architecture", "counts-architecture"],
+            "not": {"required": ["architecture", "transformation-model"]}
         },
         "heads": {
             "type": "array",
@@ -46,7 +47,8 @@
                     {"required": ["counts-loss-weight"]},
                     {"required": ["counts-loss-frac-target"]}
                 ],
-                "required": ["num-tasks", "profile-loss-weight", "head-name"]
+                "required": ["num-tasks", "profile-loss-weight", "head-name"],
+                "not": {"required": ["use-bias-counts"]}
             }
         },
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}

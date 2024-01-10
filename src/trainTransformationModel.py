@@ -30,10 +30,6 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 
 def main(config):
-    import jsonschema
-    import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.trainTransformationModel,
-                        instance=config)
     utils.setVerbosity(config["verbosity"])
     if ("sequence-input-length" in config):
         assert False, "Sequence-input-length has been renamed "\
@@ -100,4 +96,8 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import jsonschema
+    import bpreveal.schema
+    jsonschema.validate(schema=bpreveal.schema.trainTransformationModel,
+                        instance=config)
     main(config)

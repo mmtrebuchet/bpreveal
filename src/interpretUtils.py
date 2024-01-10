@@ -386,8 +386,6 @@ class FlatH5Saver(Saver):
                 chromDtype = 'u4'
             self._outFile.create_dataset("coords_chrom", (self.numSamples, ), dtype=chromDtype)
 
-            #self._outFile.create_dataset("coords_chrom", (self.numSamples, ),
-            #                             dtype=h5py.string_dtype(encoding='utf-8'))
             self._outFile.create_dataset("coords_start", (self.numSamples, ), dtype=posDtype)
             self._outFile.create_dataset("coords_end", (self.numSamples, ), dtype=posDtype)
         logging.debug("Genome data loaded.")

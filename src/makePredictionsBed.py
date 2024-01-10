@@ -20,10 +20,6 @@ from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    import jsonschema
-    import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.makePredictionsBed,
-                        instance=config)
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     batchSize = config["settings"]["batch-size"]
@@ -106,4 +102,8 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import jsonschema
+    import bpreveal.schema
+    jsonschema.validate(schema=bpreveal.schema.makePredictionsBed,
+                        instance=config)
     main(config)

@@ -138,10 +138,6 @@ class H5Writer:
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    import bpreveal.schema
-    import jsonschema
-    jsonschema.validate(schema=bpreveal.schema.makePredictionsFasta,
-                        instance=config)
     fastaFname = config["fasta-file"]
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]
@@ -175,4 +171,8 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import bpreveal.schema
+    import jsonschema
+    jsonschema.validate(schema=bpreveal.schema.makePredictionsFasta,
+                        instance=config)
     main(config)

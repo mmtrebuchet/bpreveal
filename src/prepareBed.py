@@ -258,14 +258,6 @@ def validateRegions(config, regions, genome, bigwigLists):
 
 
 def prepareBeds(config):
-    logging.info("Validating input JSON.")
-    import bpreveal.schema
-    try:
-        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed_old)
-        logging.warning("Json validated against the old prepareBed format."
-                        "This will be an error in BPReveal 5.0")
-    except jsonschema.ValidationError:
-        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed)
 
     logging.info("Starting bed file generation.")
     # FUTURE: In BPReveal 5.0, raise an error inside this if block.
@@ -362,4 +354,12 @@ if (__name__ == "__main__"):
     import sys
     config = json.load(open(sys.argv[1]))
     utils.setVerbosity(config["verbosity"])
+    logging.info("Validating input JSON.")
+    import bpreveal.schema
+    try:
+        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed_old)
+        logging.warning("Json validated against the old prepareBed format."
+                        "This will be an error in BPReveal 5.0")
+    except jsonschema.ValidationError:
+        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed)
     prepareBeds(config)

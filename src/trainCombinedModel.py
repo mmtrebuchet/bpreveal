@@ -32,10 +32,6 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 
 def main(config):
-    import jsonschema
-    import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.trainCombinedModel,
-                        instance=config)
     utils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
@@ -114,4 +110,8 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import jsonschema
+    import bpreveal.schema
+    jsonschema.validate(schema=bpreveal.schema.trainCombinedModel,
+                        instance=config)
     main(config)

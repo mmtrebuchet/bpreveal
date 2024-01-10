@@ -10,10 +10,6 @@ import logging
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    import bpreveal.schema
-    import jsonschema
-    jsonschema.validate(schema=bpreveal.schema.interpretFlat,
-                        instance=config)
     genomeFname = None
     if "bed-file" in config:
         logging.debug("Configuration specifies a bed file.")
@@ -48,4 +44,8 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import bpreveal.schema
+    import jsonschema
+    jsonschema.validate(schema=bpreveal.schema.interpretFlat,
+                        instance=config)
     main(config)

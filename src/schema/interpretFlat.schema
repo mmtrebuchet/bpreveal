@@ -19,7 +19,7 @@
         "profile-h5" : {"type": "string"},
         "counts-h5" : {"type": "string"},
         "num-shuffles": {"type": "integer"},
-
+        "DEBUG_profile-output": {"type": "string"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },
     "required": ["input-length", "output-length", "heads", "head-id", "profile-task-ids",

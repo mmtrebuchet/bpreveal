@@ -9,7 +9,7 @@ def runTest(schema, jsonFname, good):
         testJson = json.load(fp)
     try:
         jsonschema.validate(instance=testJson, schema=schema)
-    except:
+    except jsonschema.ValidationError:
         success = False
         if good:
             raise
@@ -19,7 +19,8 @@ def runTest(schema, jsonFname, good):
 
 
 from bpreveal.schema import prepareBed, prepareTrainingData, trainSoloModel, \
-    trainTransformationModel, trainCombinedModel, makePredictionsBed, interpretFlat
+    trainTransformationModel, trainCombinedModel, makePredictionsBed, interpretFlat, \
+    interpretPisa
 for goodIdx in range(2):
     runTest(prepareBed, "testcases/prepareBed_good_{0:d}.json".format(goodIdx), True)
 for goodIdx in range(3):
@@ -54,3 +55,11 @@ for goodIdx in range(1):
 for goodIdx in range(1):
     runTest(interpretFlat,
             "testcases/interpretFlat_good_{0:d}.json".format(goodIdx), True)
+
+for goodIdx in range(2):
+    runTest(interpretPisa,
+            "testcases/interpretPisa_good_{0:d}.json".format(goodIdx), True)
+
+for badIdx in range(1):
+    runTest(interpretPisa,
+            "testcases/interpretPisa_bad_{0:d}.json".format(badIdx), False)

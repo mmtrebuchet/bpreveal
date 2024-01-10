@@ -41,7 +41,9 @@
             },
             "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
                 "batch-size", "learning-rate", "learning-rate-plateau-patience",
-                "transformation-model", "architecture"]
+                "transformation-model", "architecture"],
+            "not" : {"required": ["profile-architecture", "counts-architecture"]}
+
         },
         "heads": {
             "type": "array",

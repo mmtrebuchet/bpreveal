@@ -35,9 +35,6 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 def main(config):
     utils.setVerbosity(config["verbosity"])
     logging.debug("Initializing")
-    import jsonschema
-    import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.trainSoloModel, instance=config)
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     numHeads = len(config["heads"])
@@ -102,4 +99,7 @@ if (__name__ == "__main__"):
 
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import jsonschema
+    import bpreveal.schema
+    jsonschema.validate(schema=bpreveal.schema.trainSoloModel, instance=config)
     main(config)

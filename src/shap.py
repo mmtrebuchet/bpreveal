@@ -298,9 +298,11 @@ class TFDeepExplainer:
                     bg_data = self.data
                 # tile the inputs to line up with the reference data samples
                 tiled_X = [np.tile(X[idx][j:j + 1],
-                           (bg_data[idx].shape[0],) + tuple([1 for k in range(len(X[idx].shape) - 1)]))
+                           (bg_data[idx].shape[0],)
+                           + tuple([1 for k in range(len(X[idx].shape) - 1)]))
                     for idx in range(len(X))]
-                joint_input = [np.concatenate([tiled_X[idx], bg_data[idx]], 0) for idx in range(len(X))]
+                joint_input = [np.concatenate([tiled_X[idx], bg_data[idx]], 0)
+                    for idx in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind),

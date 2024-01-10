@@ -185,10 +185,11 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     # values, the chr() call will fail.
     oneHotArray = oneHotSequence.astype(ONEHOT_T)
 
-    ret = oneHotArray[:, 0] * ord('A') + \
-          oneHotArray[:, 1] * ord('C') + \
-          oneHotArray[:, 2] * ord('G') + \
-          oneHotArray[:, 3] * ord('T')
+    ret = \
+        oneHotArray[:, 0] * ord('A') + \
+        oneHotArray[:, 1] * ord('C') + \
+        oneHotArray[:, 2] * ord('G') + \
+        oneHotArray[:, 3] * ord('T')
     return ret.tobytes().decode('ascii')
 
 

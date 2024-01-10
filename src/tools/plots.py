@@ -11,10 +11,10 @@ import bpreveal.motifUtils as motifUtils
 _seqCmap = {"A": (0, 158, 115), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
 
 cmapIbm = [[100, 143, 255],
-           [120,  94, 240],
-           [220,  38, 127],
-           [254,  97,   0],
-           [255, 176,   0]]
+           [120, 94, 240],
+           [220, 38, 127],
+           [254, 97, 0],
+           [255, 176, 0]]
 
 
 def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq') -> None:
