@@ -28,8 +28,9 @@
                         "layers": {"type": "integer"},
                         "input-filter-width": {"type": "integer"},
                         "output-filter-width": {"type": "integer"}},
-                    "required": ["architecture-name", "input-length", "output-length", "model-name",
-                        "filters", "layers", "input-filter-width", "output-filter-width"]}
+                    "required": ["architecture-name", "input-length", "output-length",
+                        "model-name", "filters", "layers", "input-filter-width",
+                        "output-filter-width"]}
             },
             "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
                 "batch-size", "learning-rate", "learning-rate-plateau-patience",

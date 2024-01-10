@@ -1,0 +1,14 @@
+{
+    "model-file": "/n/projects/cm2363/bpreveal/test/oskn/models/joint_residual.model",
+    "sequence-fasta": "/n/projects/cm2363/bpreveal/test/oskn/shap/pisa_regions.fa",
+    "bed-file": "aoeu.bed",
+    "genome": "aoeu.fasta",
+    "num-shuffles": 20,
+    "head-id": 3,
+    "task-id": 1,
+    "output-h5": "/n/projects/cm2363/bpreveal/test/oskn/shap/pisa_nanog_negative.h5",
+    "input-length": 3092,
+    "output-length": 1000,
+    "make-predictions": true,
+    "verbosity": "WARNING"
+}

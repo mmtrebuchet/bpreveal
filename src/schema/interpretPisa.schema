@@ -1,0 +1,35 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "interpretPisa",
+    "description": "Schema for interpretPisa.py",
+    "type": "object",
+    "properties": {
+        "genome": {"type" : "string"},
+        "bed-file": {"type" : "string"},
+        "fasta-file": {"type" : "string"},
+        "sequence-fasta": {"type": "string"},
+        "input-length": {"type": "integer"},
+        "output-length": {"type": "integer"},
+        "head-id": {"type": "integer"},
+        "task-id": {"type": "integer"},
+        "output-h5" : {"type": "string"},
+        "num-shuffles": {"type": "integer"},
+
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+    },
+    "required": ["input-length", "output-length", "head-id", "task-id",
+        "output-h5", "num-shuffles", "verbosity"],
+    "oneOf": [
+        {
+            "required": ["genome", "bed-file"],
+            "not": {"anyOf": [{"required": ["fasta-file"]},
+                              {"required": ["sequence-fasta"]}]}
+        },
+        {
+            "not": {"required": ["genome", "bed-file"]},
+            "oneOf" : [{"required": ["fasta-file"]},
+                                    {"required": ["sequence-fasta"]}]
+        }
+    ]
+}
+

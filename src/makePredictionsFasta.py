@@ -141,7 +141,7 @@ def main(config):
     import bpreveal.schema
     import jsonschema
     jsonschema.validate(schema=bpreveal.schema.makePredictionsFasta,
-                        instance = config)
+                        instance=config)
     fastaFname = config["fasta-file"]
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]

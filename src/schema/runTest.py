@@ -18,7 +18,7 @@ def runTest(schema, jsonFname, good):
     print(jsonFname + " tested successfully.")
 
 
-from bpreveal.schema import prepareBed, prepareTrainingData, trainSoloModel,\
+from bpreveal.schema import prepareBed, prepareTrainingData, trainSoloModel, \
     trainTransformationModel, trainCombinedModel, makePredictionsBed, interpretFlat
 for goodIdx in range(2):
     runTest(prepareBed, "testcases/prepareBed_good_{0:d}.json".format(goodIdx), True)

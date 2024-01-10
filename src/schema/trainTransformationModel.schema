@@ -28,7 +28,7 @@
             },
             "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
                 "batch-size", "learning-rate", "learning-rate-plateau-patience",
-                "solo-model-file", "input-length", "output-length", 
+                "solo-model-file", "input-length", "output-length",
                 "profile-architecture", "counts-architecture"]
         },
         "heads": {
@@ -59,7 +59,8 @@
                     "type": "object",
                     "properties": {
                         "name": {"type": "string", "enum": ["passthrough"]}
-                    }
+                    },
+                    "required": ["name"]
                 },
                 {
                     "type": "object",
@@ -72,7 +73,8 @@
                                 "enum" : ["linear", "sigmoid", "relu"]
                             }
                         }
-                    }
+                    },
+                    "required": ["name", "types"]
                 }
             ]
         }

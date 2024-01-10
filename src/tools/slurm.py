@@ -86,8 +86,13 @@ def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     cmd += "\n" + extraHeader + "\n"
     for task in tasks:
         cmd += "{0:s}\n".format(task)
-    with open(config["workDir"] + "/slurm/{0:s}.zsh".format(jobName), "w") as fp:
+    scriptFname = config["workDir"] + "/slurm/{0:s}.zsh".format(jobName)
+    with open(scriptFname, "w") as fp:
         fp.write(cmd)
+    import os
+    from stat import S_IREAD, S_IWRITE, S_IEXEC, S_IRGRP, S_IROTH
+    #Chmod the file to rwxr--r--.
+    os.chmod(scriptFname, mode=S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IROTH)
 
 
 SLURM_HEADER_GPU = """#!/usr/bin/env zsh

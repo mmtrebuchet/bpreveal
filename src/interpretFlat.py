@@ -13,7 +13,7 @@ def main(config):
     import bpreveal.schema
     import jsonschema
     jsonschema.validate(schema=bpreveal.schema.interpretFlat,
-                        instance = config)
+                        instance=config)
     genomeFname = None
     if "bed-file" in config:
         logging.debug("Configuration specifies a bed file.")

@@ -71,6 +71,10 @@ ${CONDA_BIN} install --yes -c conda-forge matplotlib
 check
 checkPackage matplotlib
 
+${CONDA_BIN} install --yes -c conda-forge jsonschema
+check
+checkPackage jsonschema
+
 # cmake is necessary to build the wheels for modiscolite.
 ${CONDA_BIN} install --yes -c conda-forge cmake
 check
@@ -79,12 +83,16 @@ check
 ${CONDA_BIN} install --yes -c conda-forge h5py
 check
 checkPackage h5py
+
 ${CONDA_BIN} install --yes -c conda-forge tqdm
 check
 checkPackage tqdm
 
 # Before building stuff with pip, we need to make sure we have a compiler installed.
 ${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
+check
+
+${CONDA_BIN} install --yes -c bioconda bedtools
 check
 
 # pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions

@@ -105,7 +105,7 @@ class TFDeepExplainer:
             self.model_output = model[1]
         else:
             assert False, str(type(model)) + " is not currently a supported model type!"
-        assert type(self.model_output) != list, \
+        assert type(self.model_output) is not list, \
             "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, \
             "The model output must be a vector or a single value!"
@@ -115,11 +115,11 @@ class TFDeepExplainer:
 
         # check if we have multiple inputs
         self.multi_input = True
-        if type(self.model_inputs) != list or len(self.model_inputs) == 1:
+        if (type(self.model_inputs) is not list) or len(self.model_inputs) == 1:
             self.multi_input = False
-            if type(self.model_inputs) != list:
+            if type(self.model_inputs) is not list:
                 self.model_inputs = [self.model_inputs]
-        if type(data) != list and (hasattr(data, '__call__') is False):
+        if (type(data) is not list) and (hasattr(data, '__call__') is False):
             data = [data]
         self.data = data
 
@@ -255,12 +255,12 @@ class TFDeepExplainer:
 
         # check if we have multiple inputs
         if not self.multi_input:
-            if type(X) == list and len(X) != 1:
+            if (type(X) is list) and len(X) != 1:
                 assert False, "Expected a single tensor as model input!"
-            elif type(X) != list:
+            elif type(X) is not list:
                 X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert type(X) is list, "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), \
             "Number of model inputs (%d) does not match the number given (%d)!" \
             % (len(self.model_inputs), len(X))
@@ -291,16 +291,16 @@ class TFDeepExplainer:
                 pbar = tqdm.tqdm(pbar)
             for j in pbar:
                 if (hasattr(self.data, '__call__')):
-                    bg_data = self.data([X[l][j] for l in range(len(X))])
-                    if type(bg_data) != list:
+                    bg_data = self.data([X[idx][j] for idx in range(len(X))])
+                    if type(bg_data) is not list:
                         bg_data = [bg_data]
                 else:
                     bg_data = self.data
                 # tile the inputs to line up with the reference data samples
-                tiled_X = [np.tile(X[l][j:j + 1],
-                           (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape) - 1)]))
-                    for l in range(len(X))]
-                joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
+                tiled_X = [np.tile(X[idx][j:j + 1],
+                           (bg_data[idx].shape[0],) + tuple([1 for k in range(len(X[idx].shape) - 1)]))
+                    for idx in range(len(X))]
+                joint_input = [np.concatenate([tiled_X[idx], bg_data[idx]], 0) for idx in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind),
@@ -309,14 +309,14 @@ class TFDeepExplainer:
                 # combine the multipliers with the difference from reference
                 # to get the final attributions
                 phis_j = self.combine_mult_and_diffref(
-                    mult=[sample_phis[l][:-bg_data[l].shape[0]]
-                          for l in range(len(X))],
-                    orig_inp=[X[l][j] for l in range(len(X))],
+                    mult=[sample_phis[idx][:-bg_data[idx].shape[0]]
+                          for idx in range(len(X))],
+                    orig_inp=[X[idx][j] for idx in range(len(X))],
                     bg_data=bg_data)
 
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
-                    phis[l][j] = phis_j[l]
+                for idx in range(len(X)):
+                    phis[idx][j] = phis_j[idx]
 
             output_phis.append(phis[0] if not self.multi_input else phis)
         if not self.multi_output:
@@ -525,7 +525,7 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
 
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
-    assert input_ind0 == 0 and input_ind1 == 1,\
+    assert input_ind0 == 0 and input_ind1 == 1, \
         "TODO: Can't yet handle double inputs that are not first!"
     xout, rout = tf.split(op.outputs[0], 2)
     xin0, rin0 = tf.split(op.inputs[input_ind0], 2)
@@ -567,7 +567,7 @@ def linearity_1d_handler(input_ind, explainer, op, *grads):
     # and is measured from the end of the list)
     for i in range(len(op.inputs)):
         if i != input_ind:
-            assert not explainer._variable_inputs(op)[i],\
+            assert not explainer._variable_inputs(op)[i], \
                 str(i) + "th input to " + op.name + " cannot vary!"
     return explainer.orig_grads[op.type](op, *grads)
 
@@ -582,7 +582,7 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     # make sure the given inputs don't vary (negative is measured from the end of the list)
     for i in range(len(op.inputs)):
         if i in input_inds or i - len(op.inputs) in input_inds:
-            assert not explainer._variable_inputs(op)[i],\
+            assert not explainer._variable_inputs(op)[i], \
                 str(i) + "th input to " + op.name + " cannot vary!"
     return explainer.orig_grads[op.type](op, *grads)
 

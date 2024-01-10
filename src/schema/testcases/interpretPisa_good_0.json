@@ -1,0 +1,11 @@
+{
+    "model-file": "/n/projects/mw2098/analysis/mnase_timecourse/models/fold3_2to3.model",
+    "fasta-file": "/dev/shm/pisa.fa",
+    "num-shuffles": 20,
+    "head-id": 0,
+    "task-id": 0,
+    "output-h5": "/dev/shm/wt_pisa3.h5",
+    "output-length": 1000,
+    "input-length": 3056,
+    "verbosity": "WARNING"
+}

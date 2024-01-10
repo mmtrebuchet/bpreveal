@@ -261,11 +261,11 @@ def prepareBeds(config):
     logging.info("Validating input JSON.")
     import bpreveal.schema
     try:
-        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed)
-    except jsonschema.ValidationError:
-        logging.warn("Detected a prepareBed json file that lists bigwigs "
-                     "instead of heads. This will be an error in BPReveal 5.0")
         jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed_old)
+        logging.warning("Json validated against the old prepareBed format."
+                        "This will be an error in BPReveal 5.0")
+    except jsonschema.ValidationError:
+        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed)
 
     logging.info("Starting bed file generation.")
     # FUTURE: In BPReveal 5.0, raise an error inside this if block.

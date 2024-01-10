@@ -1,0 +1,13 @@
+{
+    "genome": "/n/data1/genomes/S_cerevisiae/sacCer3/all_chr.fa",
+    "bed-file": "bed/splitpeak00",
+    "model-file": "../models/joint_residual.model",
+    "input-length": 3092,
+    "output-length": 1000,
+    "heads": 1,
+    "head-id": 0,
+    "task-id": 0,
+    "output-h5": "shap/pisa_3_split_00.h5",
+    "num-shuffles": 20,
+    "verbosity": "DEBUG"
+}

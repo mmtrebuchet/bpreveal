@@ -52,7 +52,7 @@ the steps:
     \item Make predictions from the model with \progref{makePredictionsBed}.
     \item Generate importance scores, either one-dimensionally, with
         \progref{interpretFlat}, or by making two-dimensional PISA plots with
-        \progref{interpretPisaBed}
+        \progref{interpretPisa}
     \item Run MoDISco to extract motifs (using \progref{shapToNumpy} the
         external \texttt{tfmodisco-lite} package)
     \item Use the motif mapping tools \progref{motifSeqletCutoffs},
@@ -162,10 +162,8 @@ These are the guidelines for code design in BPReveal:
         BPNet.
         Hypothetical contributions for each base are written to a
         modisco-compatible h5.
-    \item [\progref{interpretPisaBed}] Runs an all-to-all shap analysis on the
-        given regions.
-    \item [\progref{interpretPisaFasta}] Runs an all-to-all shap analysis on
-        the given sequences.
+    \item [\progref{interpretPisa}] Runs an all-to-all shap analysis on the
+        given bed regions or fasta sequences.
     \item [\progref{motifSeqletCutoffs}] Loads the output from
         \texttt{modiscolite} and calculates cutoff values to use during motif
         scanning.
@@ -201,6 +199,9 @@ These are the guidelines for code design in BPReveal:
     \item [\progref{motifAddQuantiles}] Takes the output from
         \progref{motifScan} and adds quantile information for determining how
         good your motif matches were.
+    \item [\progref{checkJson}] Take a json file and make sure that it's valid
+        input for one of the BPReveal programs. Can also be used to identify
+        which BPReveal program a json belongs to.\label{prog:checkJson}
 \end{description}
 
 \subsection{Libraries}
@@ -219,6 +220,9 @@ These are the guidelines for code design in BPReveal:
     \item [interpretUtils.py] Functions for getting interpretation scores.
         Contains a streaming system for calculating pisa and flat importance
         scores.
+    \item [schema] A set of JSON schemas that validate the inputs to the
+        BPReveal programs. These are used to make sure that incorrect inputs
+        trigger errors early, and that those errors are clearer to the user.
 \end{description}
 
 \newpage
@@ -244,6 +248,7 @@ You can also install these with pip.
     \item \texttt{matplotlib}, for rendering the loss plots
         by \texttt{makeLossPlots}.
     \item \texttt{tqdm}, for progress bars.
+    \item \texttt{jsonschema}, for checking the validity of inputs.
 \end{itemize}
 
 You can, of course, install any other packages you like.
@@ -839,20 +844,32 @@ h5 to a bigwig, since it doesn't contain coordinate information.
 
 
 \newpage
-\subsection{Interpret PISA from bed regions: \texttt{interpretPisaBed}}\label{prog:interpretPisaBed}
+\subsection{Interpret pairwise importances with PISA: \texttt{interpretPisa}}\label{prog:interpretPisa}
 
 This is the JSON file given to the PISA interpretation tool. PISA is described
 in \ref{sec:pisa}.
-This tool wants a bed file, but this file represents the *individual bases* that
+If you provide a bed file, but this file represents the *individual bases* that
 should be shapped.
 There is no restriction on the number of regions, nor on their length.
 If you are interested in the effects of a particular motif, then you'd put the
 region surrounding that motif in the bed file, making it as large as you want
-to see the interactions you're interested in.
+to see the interactions you're interested in
+
+You can also supply the sequences directly with a fasta file.
+Since PISA calculates shap scores for a single base, this tool always calculates
+the pisa scores for the \emph{leftmost} base in the output window.
+PISA is described in \ref{sec:pisa}.
+
+Suppose the input length is 3090 bp, and the output is 1000 bp.
+In this case, the receptive field is 2091 bp, and there are 1045 bp of overhang
+on each end of the input sequence.
+So, for each input sequence, this program will assign shap scores to the 1046th
+base (one-indexed) of the input sequence.
+.
 
 \subsubsection{Input specification}
 
-\lstinputlisting{bnf/interpretPisaBed.bnf}
+\lstinputlisting{bnf/interpretPisa.bnf}
 
 \subsubsection{Output specification}
 
@@ -863,21 +880,6 @@ It produces an hdf5 format which is organized as follows:
         used to generate the data.
     \item \texttt{task-id}, an integer giving the task number within the
         specified head.
-    \item \texttt{chrom\_names}, a list of strings giving the name of each
-        chromosome.
-        This is used to figure out which chromosome each number in
-        \texttt{coords\_chrom} corresponds to.
-    \item \texttt{chrom\_sizes}, a list of integers giving the size of each
-        chromosome.
-        This is mostly here as a handy reference when you want to make a bigwig
-        file.
-    \item \texttt{coords\_base}, the center point for each of the regions in the
-        table of PISA values.
-    \item \texttt{coords\_chrom}, the chromosome on which each PISA vector is
-        found.
-        This is a list of integers.
-        The width of the integer data type may vary from run to run, and is
-        calculated based on the number of chromosomes in the genome file.
     \item \texttt{input\_predictions}, a (numSamples,) array of the logit value
         of the target base when that sequence is run through the network.
     \item \texttt{shuffle\_predictions}, a (numSamples, numShuffles) array of
@@ -896,55 +898,36 @@ It produces an hdf5 format which is organized as follows:
 
 \end{itemize}
 
-
-\newpage
-
-\subsection{Interpret PISA from fasta: \texttt{interpetPisaFasta}}\label{prog:interpretPisaFasta}
-
-This is the JSON file given to the PISA fasta tool, instead of fetching
-sequences based on a bed file and a genome, you supply the sequences directly.
-Since PISA calculates shap scores for a single base, this tool always calculates
-the pisa scores for the \emph{leftmost} base in the output window.
-PISA is described in \ref{sec:pisa}.
-
-Suppose the input length is 3090 bp, and the output is 1000 bp.
-In this case, the receptive field is 2091 bp, and there are 1045 bp of overhang
-on each end of the input sequence.
-So, for each input sequence, this program will assign shap scores to the 1046th
-base (one-indexed) of the input sequence.
-
-\subsubsection{Input specification}
-\lstinputlisting{bnf/interpretPisaFasta.bnf}
-
-\subsubsection{Output specification}
-
-It produces an hdf5 format file which is organized as follows:
+If you specified a bed file with input regions, it will also have these datasets:
 
 \begin{itemize}
-    \item \texttt{head-id}, an integer representing which head of the model was
-        used to generate the data.
-    \item \texttt{task-id}, an integer giving the task number within the
-        specified head.
+    \item \texttt{chrom\_names}, a list of strings giving the name of each
+        chromosome.
+        This is used to figure out which chromosome each number in
+        \texttt{coords\_chrom} corresponds to.
+    \item \texttt{chrom\_sizes}, a list of integers giving the size of each
+        chromosome.
+        This is mostly here as a handy reference when you want to make a bigwig
+        file.
+    \item \texttt{coords\_base}, the center point for each of the regions in the
+        table of PISA values.
+    \item \texttt{coords\_chrom}, the chromosome on which each PISA vector is
+        found.
+        This is a list of integers.
+        The width of the integer data type may vary from run to run, and is
+        calculated based on the number of chromosomes in the genome file.
+\end{itemize}
+
+If, however, you gave a fasta file of input sequences, it will instead have the
+following dataset:
+
+\begin{itemize}
     \item \texttt{descriptions}, a string taken from the fasta file.
         These are the comment (\texttt{>}) lines, and are stored without the
         leading \texttt{>}.
         This will have shape (numSamples,)
-    \item \texttt{sequence}, the one-hot encoded input sequences.
-        Note that these only cover the receptive field of the model, so they are
-        not as wide as the input.
-        This will have shape (numSamples x receptiveField x 4).
-    \item \texttt{input\_predictions}, the logit predicted for the base being
-        shapped.
-        This will have shape (numSamples,).
-    \item \texttt{shap}, the shap scores.
-        This will have shape (numSamples x receptiveField x 4).
-    \item \texttt{shuffle\_predictions}, the predicted logit of the target base
-        on the shuffled input sequences.
-        This will have shape (numSamples, numShuffles).
+
 \end{itemize}
-
-
-
 
 \newpage
 

@@ -82,6 +82,11 @@ ${CONDA_BIN} install --yes -c conda-forge matplotlib
 check
 checkPackage matplotlib
 
+#jsonschema is used to validate input jsons.
+${CONDA_BIN} install --yes -c conda-forge jsonschema
+check
+checkPackage jsonschema
+
 # cmake is necessary to build the wheels for modiscolite.
 ${CONDA_BIN} install --yes -c conda-forge cmake
 check
