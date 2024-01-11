@@ -10,8 +10,8 @@
         0,
         1
     ],
-    "profile-h5": "/n/projects/cm2363/bpreveal/test/oskn/shap/klf4_profile.h5",
-    "counts-h5": "/n/projects/cm2363/bpreveal/test/oskn/shap/klf4_counts.h5",
+    "profile-h5": "/dev/shm/klf4_profile.h5",
+    "counts-h5": "/dev/shm/klf4_counts.h5",
     "num-shuffles": 20,
     "verbosity": "DEBUG"
 }

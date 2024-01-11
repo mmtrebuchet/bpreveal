@@ -859,13 +859,11 @@ You can also supply the sequences directly with a fasta file.
 Since PISA calculates shap scores for a single base, this tool always calculates
 the pisa scores for the \emph{leftmost} base in the output window.
 PISA is described in \ref{sec:pisa}.
-
 Suppose the input length is 3090 bp, and the output is 1000 bp.
 In this case, the receptive field is 2091 bp, and there are 1045 bp of overhang
 on each end of the input sequence.
 So, for each input sequence, this program will assign shap scores to the 1046th
 base (one-indexed) of the input sequence.
-.
 
 \subsubsection{Input specification}
 

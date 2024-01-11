@@ -9,6 +9,9 @@ doc/overview.toc
 doc/overview.out
 src/__pycache__
 src/tools/__pycache__
+src/schema/__pycache__
+src/schema/__init__.py
 doc/img
 **/*.bw
 **/*.so
+

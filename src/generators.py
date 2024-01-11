@@ -4,7 +4,7 @@ import math
 import logging
 import time
 import h5py
-from bpreveal.utils import ONEHOT_T, MODEL_ONEHOT_T
+from bpreveal.utils import MODEL_ONEHOT_T
 
 
 class H5BatchGenerator(keras.utils.Sequence):
@@ -26,7 +26,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         # Similar to the prediction script outputs, the heads are all separate,
         # and are named "head_N", where N is 0,1,2, etc.
         self.fullData = []
-        for i, h in enumerate(headList):
+        for i, _ in enumerate(headList):
             self.fullData.append(np.array(dataH5["head_{0:d}".format(i)]))
         self.loadData()
         self.addMeanCounts()
@@ -61,7 +61,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.batchVals = []
         self.batchCounts = []
         regionsRemaining = self.numRegions
-        for i in range(len(self)):
+        for _ in range(len(self)):
             # Build an empty sequence array. Note we have to special-case the last round
             # in case the number of regions is not divisible by batch size.
             if (regionsRemaining > self.batchSize):
@@ -117,7 +117,7 @@ class H5BatchGenerator(keras.utils.Sequence):
             batchVals = self.batchVals[batchIdx]
             batchCounts = self.batchCounts[batchIdx]
             batchSeqs[batchRegionIdx, :] = tmpSequence
-            for headIdx, head in enumerate(self.headList):
+            for headIdx, _ in enumerate(self.headList):
                 batchVals[headIdx][batchRegionIdx, :] = tmpData[headIdx]
                 batchCounts[headIdx][batchRegionIdx] = \
                     np.log(np.sum(tmpData[headIdx]))

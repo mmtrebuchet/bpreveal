@@ -1,4 +1,4 @@
-Version 4.0.0, DATEDATEDATE
+Version 4.0.0, 2023-01-24
 	BREAKING CHANGES:
 	* interpretFlat now produces h5 files that use integer indexes for the
 	chromosome instead of strings. Internal programs that were affected by
@@ -10,19 +10,38 @@ Version 4.0.0, DATEDATEDATE
 	'reweightableMse': losses.dummyMse}" when you call load_model in keras.
 	There's also a new loadModel function in utils.py that does this for you.
 
+	DEPRECATIONS:
+	* interpretPisaBed and interpretPisaFasta have been merged into one
+	program, interpretPisa. Symlinks exist in the bin/ directory; using one
+	will generate a warning until 6.0.0, when the symlinks will be removed.
+	* interpretPisa now expects a property called "fasta-file", (consistent
+	with interpretFlat), instead of the old "sequence-fasta" property.
+	This will generate a warning until 6.0.0, when it will become an error.
+	* The old json format for prepareBed has produced a warning since 3.3.1.
+	It will be an error in 5.0.0
+	* Using an old-style importance score hdf5 (with string chromosome names)
+	is now a warning, and will become an error in 6.0.0.
+
+
 	ENHANCEMENTS:
 	* All queues now have a timeout, so that a crash in one thread will
 	propagate through the entire program instead of freezing.
 	* Started working on json schemas to validate inputs, hopefully making
-	errors less opaque. prepareBed.py, prepareTrainingData.py, and
-	trainSoloModel.py all have schemas now. (Thanks to Melanie for lighting
-	the fire that led to this!)
+	errors less opaque. All of the programs except the motif scanners have
+	schemas now. (Thanks to Melanie for lighting the fire that led to this!)
+	* Plenty of code cleanups and tweaks.
 
 
 	BUG FIXES:
 	* Fixed a typo in interpretUtils.py (Thanks, Haining!)
 	* The specification incorrectly stated that the warning level of verbosity
 	was "WARN", when in fact it should be "WARNING".
+	* Fixed the install script to use tensorflow 2.15, which requires cuda 12.
+	* The automatic memory allocation in interpretFlat
+	(utils.py/limitMemoryUsage) worked incorrectly if running on a MIG gpu.
+	This has been remedied with an extremely ugly hack that looks at
+	CUDA_VISIBLE_DEVICES and sees if there's a MIG entry. If so, it estimates
+	the available memory based on the MIG type's name (like 3g.20gb).
 
 	CONTRIBUTORS:
 	Charles McAnany, Haining Jiang, Melanie Weilert

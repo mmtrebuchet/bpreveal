@@ -11,7 +11,6 @@ import numpy as np
 import pybedtools
 import random
 import re
-import pathlib
 from bpreveal.bedUtils import resize, sequenceChecker, getCounts, lineToInterval
 
 

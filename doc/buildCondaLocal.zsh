@@ -57,12 +57,16 @@ conda activate ${ENV_NAME}
 check
 # You have to install the nvidia-toolkit manually to enable optimizations
 # for tensorflow.
-${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
-check
+#${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
+#check
 
 # Tensorflow expressly advises against installing with conda.
 # I'm gonna do it anyway, because it works for me.
-${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
+#${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
+#check
+pip install 'tensorflow[and-cuda]'
+check
+pip install tensorflow-probability
 check
 checkPackage tensorflow
 checkPackage tensorflow_probability

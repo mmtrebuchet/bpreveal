@@ -1,84 +1,129 @@
 # BPReveal
-BPReveal is a suite of tools for building and interpreting sequence-to-profile models of
-biological data. The model architectures are based on chrombpnet, which is in turn based on 
-BPNet.
+BPReveal is a suite of tools for building and interpreting sequence-to-profile
+models of biological data. The model architectures are based on chrombpnet,
+which is in turn based on BPNet.
 
 # Components
-BPReveal is designed as a set of command-line tools that can be flexibly combined for many
-analysis tasks.
-A precise specification for each tool can be found in [this overview document](doc/overview.pdf).
+BPReveal is designed as a set of command-line tools that can be flexibly
+combined for many analysis tasks. A precise specification for each tool can be
+found in [this overview document](doc/overview.pdf).
 
-You can find a tutorial for training a model on transcription factor data in mouse
-in [this document](doc/osknExample.pdf)
+You can find a tutorial for training a model on transcription factor data in
+mouse in [this document](doc/osknExample.pdf)
+
+## Organization
+BPReveal follows a traditional Unix-style directory structure:
+- `bin` contains the executables. This is added to your path when you use one
+    of the provided scripts to build a conda environment.
+- `doc` contains examples of using the package along with a formal
+    specification of all the file types and programs.
+- `pkg` is a silly folder that is added to your python search path, letting you
+    `import bpreveal.utils` without having to mess about with $PYTHONPATH.
+- `src` contains all the programs.
+    - `src/schema` contains the json schema that are used to validate the input
+        to the programs.
+    - `src/internal` contains source code that must be compiled using the f2py
+        routines in numpy.
+    - `src/tools` contains a hodgepodge of scripts that are useful for specific
+        tasks. These are not actively maintained and tested, but may be useful.
+- `test` contains the files that are used in the demonstration notebooks. Note
+    that `test` is not committed to the git repository - it's many gigabytes
+    of data files. If you're on the Stowers network, you can find this directory
+    at `/n/projects/cm2363/bpreveal/test`.
+
 
 ## Programs
 
 The main programs are the following ones:
 - Data preparation
-    - `prepareBed` takes your called peaks and your data bigwigs generates a bed file of
-        regions that the model can train on.
-    - `prepareTrainingData` takes a bed file and data bigwigs and generates an hdf5 file
-        that the training commands can understand. You can also create this hdf5 yourself
-        if your data aren't in bigwig and bed format.
+    - `prepareBed` takes your called peaks and your data bigwigs generates a
+        bed file of regions that the model can train on.
+    - `prepareTrainingData` takes a bed file and data bigwigs and generates an
+        hdf5 file that the training commands can understand. You can also
+        create this hdf5 yourself if your data aren't in bigwig and bed format.
+
 - Model training
-    - `trainSoloModel` trains a model in the usual BPNet style - given DNA sequence and
-        profiles of data, it creates a model for predicting the profiles from sequence.
-    - `trainTransformationModel` is used to regress out biases from experimental data.
-        It trains up a very simple regression to map a model of bias data onto actual experimental
-        results.
-    - `trainCombinedModel` trains up a model that incorporates bias data, allowing you to see
-        what the underlying biology would look like with experimental biases.
+    - `trainSoloModel` trains a model in the usual BPNet style - given DNA
+        sequence and profiles of data, it creates a model for predicting the
+        profiles from sequence.
+    - `trainTransformationModel` is used to regress out biases from
+        experimental data. It trains up a very simple regression to map a model
+        of bias data onto actual experimental results.
+    - `trainCombinedModel` trains up a model that incorporates bias data,
+        allowing you to see what the underlying biology would look like with
+        experimental biases.
+
 - Predicting
-    - `makePredictionsBed` and `makePredictionsFasta` take a trained model and use it to make
-        predictions on the sequences you give it. These are output in hdf5 format.
-    - `predictToBigwig` converts an hdf5 file from the `makePredictionsBed` script into a 
-        bigwig you can load into a genome browser.
+    - `makePredictionsBed` and `makePredictionsFasta` take a trained model and
+        use it to make predictions on the sequences you give it. These are
+        output in hdf5 format.
+    - `predictToBigwig` converts an hdf5 file from the `makePredictionsBed`
+        script into a bigwig you can load into a genome browser.
+
 - Interpreting the model's reasoning
-    - `interpretFlat` generates importance scores in the same way as the original BPNet paper.
-        These scores can be used with modisco to discover motifs.
-    - `interpretPisaFast` and `interpretPisaBed` perform pairwise interpretation, letting you see
-        exactly how each part of the input sequence causes each part of the output. See the main
-        BPReveal paper for details on using PISA.
-    - `shapToBigwig` and `shapToNumpy` dump the importance scores from `interpretFlat` into other
-        formats. The bigwig files can be loaded in a genome browser, and the numpy files can be
-        used with modisco.
+    - `interpretFlat` generates importance scores in the same way as the
+        original BPNet paper. These scores can be used with modisco to discover
+        motifs.
+    - `interpretPisa` performs pairwise interpretation, letting you see exactly
+        how each part of the input sequence causes each part of the output. See
+        the main BPReveal paper for details on using PISA.
+    - `shapToBigwig` and `shapToNumpy` dump the importance scores from
+        `interpretFlat` into other formats. The bigwig files can be loaded in a
+        genome browser, and the numpy files can be used with modisco.
+
 - Working with motifs
-    - `modiscolite`, a separate package, is used to derive motifs from importance score data.
-        The required inputs for modisco can be generated with `shapToNumpy`.
-    - `motifSeqletCutoffs` reads in the output from modiscolite and calculates cutoff values
-        for mapping motif instances in the genome.
-    - `motifScan` looks at genome-wide importance scores (from `interpretFlat`) and identifies
-        occurrences of the motifs identified by modisco (and selected by `motifSeqletCutoffs`).
-    - `motifAddQuantiles` takes the outputs from `motifSeqletCutoffs` and `motifScan` and adds
-        some useful quantile metadata.
+    - `modiscolite`, a separate package, is used to derive motifs from
+        importance score data. The required inputs for modisco can be generated
+        with `shapToNumpy`.
+    - `motifSeqletCutoffs` reads in the output from modiscolite and calculates
+        cutoff values for mapping motif instances in the genome.
+    - `motifScan` looks at genome-wide importance scores (from `interpretFlat`)
+        and identifies occurrences of the motifs identified by modisco (and
+        selected by `motifSeqletCutoffs`).
+    - `motifAddQuantiles` takes the outputs from `motifSeqletCutoffs` and
+        `motifScan` and adds some useful quantile metadata.
+
 - Miscellaneous routines
-    - `lengthCalc` takes in your desired network architecture and tells you how many bases will
-        be in the input window. It assumes a traditional BPNet-style architecture.
-    - `makeLossPlots` is a handy tool to see how the model performed during training.
-    - `metrics` takes in a ground-truth data set (say, experimental data) and compares it to
-        another data set (say, a prediction from BPReveal). It can work with any two bigwig files,
-        so it can also assist in comparing results from other methods.
+    - `lengthCalc` takes in your desired network architecture and tells you how
+        many bases will be in the input window. It assumes a traditional
+        BPNet-style architecture.
+    - `makeLossPlots` is a handy tool to see how the model performed during
+        training.
+    - `metrics` takes in a ground-truth data set (say, experimental data) and
+        compares it to another data set (say, a prediction from BPReveal). It
+        can work with any two bigwig files, so it can also assist in comparing
+        results from other methods.
     - `showModel` generates a pretty picture of your model architecture.
+    - `checkJson` can be used to quickly make sure that your json file is
+        valid.
 
 
 ## Libraries
 Several libraries are part of BPReveal core.
 
-- `utils.py` provides general utilities, such as converting from and to one-hot-encoded sequence,
-    making predictions efficiently, and configuring the GPU.
-- `gaOptimize.py` implements a genetic algorithm that can evolve sequences with desired profiles.
-    To use it, you constrain the number of mutations it can make, and it tries to find the best
-    fit to your target limited by that number of mutations. It also supports insertion and
-    deletion mutations, so it can try to change the spacing between motifs.
-- `pisa.py` contains routines for calculating PISA values. It is mostly designed to work with
-    `interpretPisaFlat and `interpretPisaBed`, but can be used on its own in your code.
-- `interpretUtils.py` contains routines for calculating importance scores efficiently.
+- `utils.py` provides general utilities, such as converting from and to
+    one-hot-encoded sequence, making predictions efficiently, and configuring
+    the GPU.
+- `bedUtils.py` provides a few helper functions for bed files, like tiling a
+    genome with windows.
+- `gaOptimize.py` implements a genetic algorithm that can evolve sequences with
+    desired profiles. To use it, you constrain the number of mutations it can
+    make, and it tries to find the best fit to your target limited by that
+    number of mutations. It also supports insertion and deletion mutations, so
+    it can try to change the spacing between motifs.
+- `interpretUtils.py` contains routines for calculating importance scores
+    efficiently. These utilities are not particularly user-friendly.
+- `ushuffle.py` is a wrapper around the ushuffle C library for performing
+    shuffles of sequences that preserve k-mer distributions. It is used to
+    generate background sequences for interpretation.
 
-Other libraries that are more specialized are located in [a separate directory](src/tools).
-These may assume particular data formats, or particular directory structures.
+Other libraries that are more specialized are located in
+[a separate directory](src/tools). These may assume particular data formats,
+or particular directory structures.
 
 # Installing
-To install BPReveal, EDIT and then run one of the `buildConda` scripts in the [doc](doc)
-directory. If you're using the Cerebro cluster at Stowers, run `buildCondaCerebro`. If
-you're installing BPReveal on a local machine, run `buildCondaLocal`.
+To install BPReveal, EDIT and then run one of the `buildConda` scripts in the
+[doc](doc) directory. If you're using the Cerebro cluster at Stowers, run
+`buildCondaCerebro`. If you're installing BPReveal on a local machine, run
+`buildCondaLocal`.
 

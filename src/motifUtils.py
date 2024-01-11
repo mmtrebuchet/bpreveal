@@ -625,7 +625,6 @@ class MiniPattern:
         Fourth, the contribution match score of the importance scores at that position.
         Finally, the sequence match score against the pattern at that position.
         """
-
         hitsPos = self._scanOneWay(sequence, scores, self.cwm, self.pssm, '+')
         hitsNeg = self._scanOneWay(sequence, scores, self.rcwm, self.rpssm, '-')
         return hitsPos + hitsNeg
@@ -705,7 +704,6 @@ class PatternScanner:
         if self.firstIndex:
             logging.debug("Got first index for thread {0:d}".format(
                 multiprocessing.current_process().pid))
-            self.firstIndex = False
 
         # Get all the data for this index.
         chromIdx = self.contribFp["coords_chrom"][idx]
@@ -718,13 +716,22 @@ class PatternScanner:
             chrom = chromIdx.decode('utf-8')
         else:
             chrom = self.chromIdxToName[chromIdx]
+            if self.firstIndex:
+                logging.debug("First index, found chrom {0:s}".format(str(chrom)))
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')
         contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order='C')
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
+            if self.firstIndex:
+                logging.debug("Scanning patten {0:s}".format(pattern.shortName))
+
             hits = pattern.scan(oneHotSequence, contribScores)
+            if self.firstIndex:
+                logging.debug("Completed scanning {0:s}".format(pattern.shortName))
+            if self.firstIndex:
+                print(hits)
             if len(hits) > 0:
                 # Hey, we found something!
                 for hit in hits:
@@ -750,6 +757,9 @@ class PatternScanner:
                         logging.debug("First hit from thread {0:d}".format(
                             multiprocessing.current_process().pid))
                         self.firstHit = False
+        if self.firstIndex:
+            logging.debug("First pattern complete.")
+        self.firstIndex = False
 
     def done(self) -> None:
         self.contribFp.close()

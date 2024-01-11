@@ -891,7 +891,7 @@ class _PisaBatcher:
 
     def generateShuffles(self, model_inputs):
         rng = np.random.default_rng(seed=355687)
-        shuffles = [rng.permutation(model_inputs[0], axis=0) for x in range(self.numShuffles)]
+        shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
         shuffles = np.array(shuffles)
         return [shuffles]
 
@@ -953,7 +953,7 @@ class _PisaBatcher:
             queryShufPreds = outBasePreds[shuffleReadHead:shuffleReadHead + self.numShuffles]
             shuffleReadHead += self.numShuffles
             queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
-            ret = PisaResult(queryPred, queryShufPreds, querySequence,
+            ret = PisaResult(queryPred, queryShufPreds, querySequence,  # type: ignore
                          queryShapScores, q.passData, q.index)
             self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
 
@@ -967,8 +967,6 @@ class _FlatBatcher:
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
         import shap
-        from keras.models import load_model
-        import losses
         import utils
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -1008,7 +1006,7 @@ class _FlatBatcher:
 
     def generateShuffles(self, model_inputs):
         rng = np.random.default_rng(seed=355687)
-        shuffles = [rng.permutation(model_inputs[0], axis=0) for x in range(self.numShuffles)]
+        shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
         shuffles = np.array(shuffles)
         return [shuffles]
 

@@ -73,14 +73,36 @@ def setMemoryGrowth() -> None:
 def limitMemoryUsage(fraction: float, offset: float) -> None:
     # Limit tensorflow to use only the given fraction of memory.
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
+    import os
     import subprocess as sp
-    cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
-    ret = sp.run(cmd, capture_output=True)
-    line = ret.stdout.decode('utf-8').split('\n')[1]
-    logging.debug("Memory usage limited based on {0:s}".format(line))
-    lsp = line.split(' ')
-    total = float(lsp[0])
-    free = float(lsp[2])
+    import re
+    free = total = 0.0
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        # Do we have a MIG GPU? If so, I need to get its memory available from its name.
+        if len(os.environ["CUDA_VISIBLE_DEVICES"]) > 10:
+            if os.environ["CUDA_VISIBLE_DEVICES"][:3] == "MIG":
+                # Yep, it's a MIG. Grab its properties from nvidia-smi.
+                logging.debug("Found a MIG card, attempting to guess memory "
+                              "available based on name.")
+                cmd = ["nvidia-smi", "-L"]
+                ret = sp.run(cmd, capture_output=True)
+                lines = ret.stdout.decode('utf-8').split('\n')
+                matchRe = re.compile(r".*MIG.* ([0-9]+)g\.([0-9]+)gb.*{0:s}.*".format(
+                                     os.environ["CUDA_VISIBLE_DEVICES"]))
+                if (smiOut := re.match(matchRe, lines[1])):
+                    total = free = float(smiOut[2]) * 1024  # Convert to MiB
+                    logging.debug("Found {0:f} GB of memory.".format(total))
+                else:
+                    assert False, "Could not parse nvidia-smi line: " + lines[1]
+    if total == 0.0:
+        # We didn't find memory in CUDA_VISIBLE_DEVICES.
+        cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
+        ret = sp.run(cmd, capture_output=True)
+        line = ret.stdout.decode('utf-8').split('\n')[1]
+        logging.debug("Memory usage limited based on {0:s}".format(line))
+        lsp = line.split(' ')
+        total = float(lsp[0])
+        free = float(lsp[2])
     assert total * fraction < free, "Attempting to request more memory than is free!"
 
     import tensorflow as tf

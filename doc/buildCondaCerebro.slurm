@@ -6,7 +6,7 @@
 #SBATCH --time=1:00:00
 #SBATCH --output=log%j.log
 #SBATCH --partition=gpu
-#SBATCH --gres gpu:a100_3g.20gb:1
+#SBATCH --gres gpu:a100_3g.20gb:0
 
 # This is a script that you can run on Cerebro (the cluster at Stowers)
 # to install bpreveal. If you're not on a cluster, see the buildCondaLocal.zsh
@@ -68,13 +68,16 @@ conda activate ${ENV_NAME}
 check
 # You have to install the nvidia-toolkit manually to enable optimizations
 # for tensorflow.
-${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
-check
+#${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
+#check
 
 # Tensorflow expressly advises against installing with conda.
 # I'm gonna do it anyway, because it works for me.
-${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
-check
+#${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
+#check
+
+pip install 'tensorflow[and-cuda]'
+pip install tensorflow_probability
 checkPackage tensorflow
 checkPackage tensorflow_probability
 

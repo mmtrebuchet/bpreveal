@@ -5,7 +5,7 @@ import random
 from typing import List, Tuple, TypeAlias, Callable, Optional
 import numpy.typing as npt
 import bpreveal.utils as utils
-from bpreveal.utils import PRED_T, ONEHOT_T, ONEHOT_AR_T, PRED_AR_T
+from bpreveal.utils import PRED_AR_T
 import numpy as np
 import matplotlib.pyplot as plt
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť

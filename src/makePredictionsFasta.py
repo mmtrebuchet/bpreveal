@@ -10,7 +10,7 @@ utils.setMemoryGrowth()
 import numpy as np
 import h5py
 import logging
-from bpreveal.utils import PRED_T, wrapTqdm, QUEUE_TIMEOUT
+from bpreveal.utils import PRED_T, wrapTqdm
 
 
 class FastaReader:
