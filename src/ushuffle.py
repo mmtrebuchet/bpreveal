@@ -11,8 +11,11 @@ import threading
 # in ushuffle, so there's no need for a lock between processes.
 _SHUFFLE_LOCK = threading.Lock()
 
+# Set up the RNG.
+libushuffle.initialize()
 
-def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1) -> list[str]:
+def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
+                  seed: int|None = None) -> list[str]:
     """Given a string sequence, perform a shuffle that maintains
     the kmer distribution.
     This is adapted from ushuffle.
@@ -25,6 +28,8 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1) -> list[st
     """
     ar = np.frombuffer(sequence.encode('utf-8'), dtype=np.int8)
     with _SHUFFLE_LOCK:
+        if seed is not None:
+            libushuffle.seedRng(seed)
         shuffledArrays = libushuffle.shuffleStr(ar, kmerSize, numShuffles)
     ret = []
     for i in range(numShuffles):
@@ -32,7 +37,8 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1) -> list[st
     return ret
 
 
-def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1) -> ONEHOT_AR_T:
+def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
+               seed: int | None = None) -> ONEHOT_AR_T:
     """Given a one-hot encoded sequence, perform a shuffle that
     maintains the kmer distribution.
     sequence should have shape (length, alphabetLength)
@@ -55,5 +61,7 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1) -> ON
     assert sequence.shape[1] <= 8, "Cannot ushuffle a one-hot encoded sequence with "\
                                    "an alphabet of more than 8 characters."
     with _SHUFFLE_LOCK:
+        if seed is not None:
+            libushuffle.seedRng(seed)
         shuffledSeqs = libushuffle.shuffleOhe(sequence, kmerSize, numShuffles)
     return shuffledSeqs

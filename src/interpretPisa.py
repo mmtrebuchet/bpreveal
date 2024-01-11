@@ -16,6 +16,7 @@ def main(config):
             logging.warning("DEPRECATION: You are referring to the fasta file in your pisa JSON as "
                             "sequence-fasta. This is deprecated, please change the parameter "
                             "name to fasta-file. This will be an error in BPReveal 5.0.0.")
+            config["fasta-file"] = config["sequence-fasta"]
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
         genome = None
     else:

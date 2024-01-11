@@ -165,6 +165,9 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
             shearMat = pisaDats
     cutStartX = cutMiddle - cutLengthX // 2
     cutStartY = cutMiddle - cutLengthY // 2
+    genomeStartX =  cutMiddle - cutLengthX // 2 + genomeWindowStart
+    genomeEndX =  cutMiddle + cutLengthX // 2 + genomeWindowStart
+
     plotMat = shearMat[cutStartY:cutStartY + cutLengthY,
                        cutStartX:cutStartX + cutLengthX]
     plotMat *= math.log10(math.e)*10
@@ -265,6 +268,10 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
                 if line.name not in nameColors:
                     nameColors[line.name] = np.array(cmapIbm[readHead % len(cmapIbm)]) / 256
                     readHead += 1
+                if line.start < genomeStartX:
+                    line.start = genomeStartX
+                if line.end > genomeEndX:
+                    line.end = genomeEndX
                 annotations.append(((line.start, line.end), line.name, nameColors[line.name]))
         offset = -boxHeight * 1.3
         lastR = 0
@@ -321,7 +328,7 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
     #axCbar.set_axis_off()
     cbar = plt.colorbar(mappable = pisaCax, cax=axCbar)
     bottom, top = axCbar.get_ylim()
-    axCbar.set_yticks(cbar.get_ticks(), cbar.get_ticks(), fontsize=fontsize)
+    axCbar.set_yticks(cbar.get_ticks(), ['{0:0.2f}'.format(x) for x in cbar.get_ticks()], fontsize=fontsize)
     axCbar.set_ylim(bottom, top)
     axCbar.set_xlabel("PISA effect\n(dB fold-change)", fontsize=fontsize, fontfamily='serif')
 

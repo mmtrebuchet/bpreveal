@@ -17,9 +17,19 @@ interface
         integer intent(in) :: length
         integer intent(in) :: kmerSize
         integer intent(in) :: numShuffles
-        integer intent(in), dimension(length, alphabetSize) :: input
-        integer intent(out), dimension(numShuffles, length, alphabetSize) :: output
+        integer intent(in) :: alphabetSize
+        byte intent(in), dimension(length, alphabetSize) :: input
+        byte intent(out), dimension(numShuffles, length, alphabetSize) :: output
     end subroutine shuffleOhe
 
+    subroutine initialize()
+        intent(c) initialize
+    end subroutine initialize()
+
+    subroutine seedRng(seed)
+        intent(c) seedRng
+        intent(c)
+        integer intent(in) :: seed
+    end subroutine
 end interface
 end python module libushuffle
