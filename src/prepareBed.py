@@ -356,9 +356,9 @@ if (__name__ == "__main__"):
     logging.info("Validating input JSON.")
     import bpreveal.schema
     try:
-        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed_old)
+        bpreveal.schema.prepareBed_old.validate(config)
         logging.warning("Json validated against the old prepareBed format."
                         "This will be an error in BPReveal 5.0")
     except jsonschema.ValidationError:
-        jsonschema.validate(instance=config, schema=bpreveal.schema.prepareBed)
+        bpreveal.schema.prepareBed.validate(config)
     prepareBeds(config)

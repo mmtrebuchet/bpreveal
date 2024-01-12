@@ -20,7 +20,8 @@
                     "required": ["input-length", "output-length", "model-file"]
                 }
             },
-            "required": ["output-h5", "batch-size", "heads", "architecture"]
+            "required": ["output-h5", "batch-size", "heads", "architecture"],
+            "not": {"required": ["genome"]}
         },
         "fasta-file": {"type": "string"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}

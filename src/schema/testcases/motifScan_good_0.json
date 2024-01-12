@@ -1,0 +1,9 @@
+{
+    "scan-settings": {
+        "scan-contrib-h5": "/n/projects/cm2363/bpnet-nucleosomes/work/biasModels/pisaSubtract/shap/shap_residual_profile.h5",
+        "hits-tsv": "/n/projects/cm2363/bpnet-nucleosomes/work/biasModels/pisaSubtract/scan/hits_profile.tsv",
+        "num-threads": 24
+    },
+    "seqlet-cutoff-json": "/n/projects/cm2363/bpnet-nucleosomes/work/biasModels/pisaSubtract/scan/profile_motifs.json",
+    "verbosity": "INFO"
+}

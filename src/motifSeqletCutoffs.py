@@ -34,4 +34,6 @@ if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
+    import bpreveal.schema
+    bpreveal.schema.motifSeqletCutoffs.validate(config)
     motifSeqletCutoffsMain(config)

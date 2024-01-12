@@ -14,6 +14,7 @@
         "task-id": {"type": "integer"},
         "output-h5" : {"type": "string"},
         "num-shuffles": {"type": "integer"},
+        "kmer-size": {"type": "integer"},
         "DEBUG_profile-output" : {"type": "string"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },

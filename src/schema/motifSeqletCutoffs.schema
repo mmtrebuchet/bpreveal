@@ -1,0 +1,68 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "motifSeqletCutoffs",
+    "description": "Schema for motifSeqletCutoffs.py",
+    "definitions": {
+        "seqlet-scanning-settings": {
+            "type": "object",
+            "properties": {
+                "seqlets-tsv": {"type": "string"},
+                "modisco-h5": {"type": "string"},
+                "modisco-contrib-h5": {"type": "string"},
+                "seq-match-quantile": {"type": ["number", "null"]},
+                "contrib-match-quantile": {"type": ["number", "null"]},
+                "contrib-magnitude-quantile": {"type": ["number", "null"]},
+                "trim-threshold": {"type": "number"},
+                "trim-padding": {"type": "integer"},
+                "background-probs": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems" : 4,
+                    "items": {"type": "number"}},
+                "quantile-json": {"type": "string"},
+                "patterns": {
+                    "oneOf":[
+                        {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/pattern-spec-section"}
+                        },
+                        {"type": "string", "enum": ["all"]}
+                    ]
+                }
+            },
+            "required": ["modisco-h5", "seq-match-quantile", "contrib-match-quantile",
+                "contrib-magnitude-quantile", "trim-threshold", "trim-padding",
+                "background-probs", "patterns"]
+        },
+        "pattern-spec-section": {
+            "type": "object",
+            "properties" : {
+                "metacluster-name" : {"type": "string"},
+                "pattern-name" : {"type": "string"},
+                "pattern-names" : {"type": "array", "items" : {"type": "string"}},
+                "short-name": {"type": "string"},
+                "short-names" : {"type": "array", "items" : {"type": "string"}}
+            },
+            "required": ["metacluster-name"],
+            "oneOf":[
+                {"allOf": [
+                        {"required": ["pattern-name"]},
+                        {"not" : {"anyOf": [{"required": ["pattern-names"]},
+                                            {"required": ["short-names"]}]}}]},
+                {"allOf": [
+                        {"required": ["pattern-names"]},
+                        {"not" : {"anyOf": [{"required": ["pattern-name"]},
+                                            {"required": ["short-name"]}]}}]}]
+        }
+    },
+
+    "type": "object",
+    "properties": {
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+    },
+    "allOf": [
+            {"$ref" : "#/definitions/seqlet-scanning-settings"},
+            {"required": ["verbosity"]}
+    ]
+}
+

@@ -1,3 +1,12 @@
+Version 4.0.1
+	ENHANCEMENTS:
+	* Added the option to specify the kmer size for the shuffles in shap value
+	calculations. interpretFlat and interpretPisa now have an optional
+	"kmer-size" parameter in their configuration jsons. If omitted, the
+	default (non-kmer-preserving) shuffle is performed.
+	* All BPReveal programs that take JSON input now check that input against
+	a schema.
+
 Version 4.0.0, 2023-01-24
 	BREAKING CHANGES:
 	* interpretFlat now produces h5 files that use integer indexes for the

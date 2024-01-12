@@ -110,8 +110,6 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
-    import jsonschema
     import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.trainCombinedModel,
-                        instance=config)
+    bpreveal.schema.trainCombinedModel.validate(config)
     main(config)

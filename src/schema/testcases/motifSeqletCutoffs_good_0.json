@@ -1,0 +1,35 @@
+{
+    "seqlets-tsv": "/n/projects/cm2363/bpreveal/test/oskn/modisco/nanog_profile/seqlets_nanog_profile.tsv",
+    "modisco-h5": "/n/projects/cm2363/bpreveal/test/oskn/modisco/nanog_profile/modisco.h5",
+    "modisco-contrib-h5": "/n/projects/cm2363/bpreveal/test/oskn/shap/nanog_profile.h5",
+    "patterns": [
+        {
+            "metacluster-name": "pos_patterns",
+            "pattern-names": [
+                "pattern_0",
+                "pattern_1",
+                "pattern_2",
+                "pattern_3"
+            ],
+            "short-names": [
+                "nanog",
+                "sox2",
+                "octsox",
+                "nanog?"
+            ]
+        }
+    ],
+    "seq-match-quantile": 0.2,
+    "contrib-match-quantile": 0.2,
+    "contrib-magnitude-quantile": 0.2,
+    "trim-threshold": 0.3,
+    "trim-padding": 1,
+    "background-probs": [
+        0.29000000000000004,
+        0.21,
+        0.21,
+        0.29000000000000004
+    ],
+    "quantile-json": "/n/projects/cm2363/bpreveal/test/oskn/scan/nanog_profile_motifs.json",
+    "verbosity": "INFO"
+}

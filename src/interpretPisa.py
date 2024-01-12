@@ -10,6 +10,12 @@ import logging
 def main(config):
     utils.setVerbosity(config["verbosity"])
     receptiveField = config["input-length"] - config["output-length"]
+    kmerSize = 1
+    if "kmer-size" in config:
+        kmerSize = config["kmer-size"]
+    else:
+        logging.info("Did not find a kmer-size property in configuration file. "
+                     "Using default kmer-size of 1.")
     if "fasta-file" in config or "sequence-fasta" in config:
         # We're doing a fasta run.
         if "sequence-fasta" in config:
@@ -37,7 +43,7 @@ def main(config):
 
     batcher = interpretUtils.PisaRunner(config["model-file"], config["head-id"], config["task-id"],
                               10, generator, writer, config["num-shuffles"],
-                              receptiveField, profileFname)
+                              receptiveField, kmerSize, profileFname)
     batcher.run()
 
 
@@ -50,8 +56,6 @@ if (__name__ == "__main__"):
             "interpretPisa. These old program names will be removed in BPReveal 5.0.0.")
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
-    import jsonschema
     import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.interpretPisa,
-                        instance=config)
+    bpreveal.schema.interpretPisa.validate(config)
     main(config)

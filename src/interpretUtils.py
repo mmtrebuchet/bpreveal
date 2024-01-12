@@ -2,7 +2,7 @@
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '4'
-import utils
+import bpreveal.utils as utils
 import pysam
 import numpy as np
 import numpy.typing as npt
@@ -13,8 +13,8 @@ import logging
 import pybedtools
 import multiprocessing
 import abc
-
-from utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T
+import bpreveal.ushuffle as ushuffle
+from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T
 # Use a low-precision floating point format for importance scores.
 
 
@@ -161,7 +161,8 @@ class FlatRunner:
 
     def __init__(self, modelFname: str, headId: int, numHeads: int, taskIDs: list[int],
                  batchSize: int, generator: Generator, profileSaver: Saver,
-                 countsSaver: Saver, numShuffles: int, profileFname: Optional[str] = None):
+                 countsSaver: Saver, numShuffles: int, kmerSize: int,
+                 profileFname: Optional[str] = None):
         """modelFname is the name of the model on disk
         headId and taskIDs are the head and tasks to shap, obviously.
             Typically, you'd want to interpret all of the tasks in a head, so for a two-task
@@ -194,11 +195,11 @@ class FlatRunner:
 
         self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._profileInQueue, self._profileOutQueue,
-                  headId, numHeads, taskIDs, numShuffles, "profile",
+                  headId, numHeads, taskIDs, numShuffles, "profile", kmerSize,
                   ap("_profile.dat")))
         self._countsBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._countsInQueue, self._countsOutQueue,
-                  headId, numHeads, taskIDs, numShuffles, "counts",
+                  headId, numHeads, taskIDs, numShuffles, "counts", kmerSize,
                   ap("_counts.dat")))
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
@@ -242,7 +243,7 @@ class PisaRunner:
 
     def __init__(self, modelFname: str, headId: int, taskId: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
-                 receptiveField: int, profileFname: Optional[str] = None):
+                 receptiveField: int, kmerSize: int, profileFname: Optional[str] = None):
         """modelFname is the name of the model on disk
         headId and taskID are the head and task to shap, obviously,
         batchSize is the *shap* batch size, which should be your usual batch size divided
@@ -274,6 +275,7 @@ class PisaRunner:
                                                     args=(modelFname, batchSize,
                                                           self._inQueue, self._outQueue, headId,
                                                           taskId, numShuffles, receptiveField,
+                                                          kmerSize,
                                                           ap("batcher.dat")))
         self._saver = saver
 
@@ -761,7 +763,7 @@ class PisaBedGenerator(Generator):
 
 def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headId: int, numHeads: int,
-                       taskIDs: list[int], numShuffles: int, mode: str,
+                       taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int,
                        profileFname: Optional[str] = None):
     logging.debug("Starting flat batcher thread.")
     import cProfile
@@ -769,7 +771,7 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     if (profileFname is not None):
         profiler.enable()
     b = _FlatBatcher(modelName, batchSize, outQueue, headId,
-                     numHeads, taskIDs, numShuffles, mode)
+                     numHeads, taskIDs, numShuffles, mode, kmerSize)
     logging.debug("Batcher created.")
     while (True):
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
@@ -788,14 +790,15 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headId: int, taskId: int,
-                       numShuffles: int, receptiveField: int,
+                       numShuffles: int, receptiveField: int, kmerSize : int,
                        profileFname: Optional[str] = None):
     logging.debug("Starting batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
     if (profileFname is not None):
         profiler.enable()
-    b = _PisaBatcher(modelName, batchSize, outQueue, headId, taskId, numShuffles, receptiveField)
+    b = _PisaBatcher(modelName, batchSize, outQueue, headId, taskId, numShuffles,
+                     receptiveField, kmerSize)
     logging.debug("Batcher created.")
     while (True):
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
@@ -858,7 +861,8 @@ class _PisaBatcher:
     """The workhorse of this stack, it accepts queries until its internal storage is full,
     then predicts them all at once, and runs shap."""
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
-                 headId: int, taskId: int, numShuffles: int, receptiveField: int):
+                 headId: int, taskId: int, numShuffles: int, receptiveField: int,
+                 kmerSize : int):
         logging.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
@@ -873,6 +877,7 @@ class _PisaBatcher:
         self.curBatch = []
         self.numShuffles = numShuffles
         self.receptiveField = receptiveField
+        self.kmerSize = kmerSize
         logging.debug("Batcher prepared, creating explainer.")
         # This slice....
         # Oh, this slice is a doozy!
@@ -890,10 +895,16 @@ class _PisaBatcher:
         logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, model_inputs):
-        rng = np.random.default_rng(seed=355687)
-        shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
-        shuffles = np.array(shuffles)
-        return [shuffles]
+        if self.kmerSize == 1:
+            rng = np.random.default_rng(seed=355687)
+            shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
+            shuffles = np.array(shuffles)
+            return [shuffles]
+        else:
+            shuffles = ushuffle.shuffleOHE(model_inputs[0], self.kmerSize, self.numShuffles,
+                                           seed = 355687)
+            return [shuffles]
+
 
     def addSample(self, query: Query):
         self.curBatch.append(query)
@@ -962,17 +973,19 @@ class _FlatBatcher:
     """The workhorse of this stack, it accepts queries until its internal storage is full,
     then predicts them all at once, and runs shap."""
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
-                 headId: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str):
+                 headId: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
+                 kmerSize: int):
         logging.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
-        import shap
-        import utils
+        import bpreveal.shap as shap
+        import bpreveal.utils as utils
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
         self.outQueue = outQueue
+        self.kmerSize = kmerSize
         self.headId = headId
         self.taskIDs = taskIDs
         self.curBatch = []
@@ -1005,10 +1018,15 @@ class _FlatBatcher:
         logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, model_inputs):
-        rng = np.random.default_rng(seed=355687)
-        shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
-        shuffles = np.array(shuffles)
-        return [shuffles]
+        if self.kmerSize == 1:
+            rng = np.random.default_rng(seed=355687)
+            shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
+            shuffles = np.array(shuffles)
+            return [shuffles]
+        else:
+            shuffles = ushuffle.shuffleOHE(model_inputs[0], self.kmerSize, self.numShuffles,
+                                           seed = 355687)
+            return [shuffles]
 
     def addSample(self, query: Query):
         self.curBatch.append(query)

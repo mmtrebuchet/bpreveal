@@ -102,8 +102,6 @@ if (__name__ == "__main__"):
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
-    import jsonschema
     import bpreveal.schema
-    jsonschema.validate(schema=bpreveal.schema.makePredictionsBed,
-                        instance=config)
+    bpreveal.schema.makePredictionsBed.validate(config)
     main(config)

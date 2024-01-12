@@ -11,6 +11,13 @@ import logging
 def main(config):
     utils.setVerbosity(config["verbosity"])
     genomeFname = None
+    kmerSize = 1
+    if "kmer-size" in config:
+        kmerSize = config["kmer-size"]
+    else:
+        logging.info("Did not find a kmer-size property in config. "
+                     "Using default value of 1.")
+
     if "bed-file" in config:
         logging.debug("Configuration specifies a bed file.")
         genomeFname = config["genome"]
@@ -36,7 +43,8 @@ def main(config):
 
     batcher = interpretUtils.FlatRunner(config["model-file"], config["head-id"], config["heads"],
                                         config["profile-task-ids"], 10, generator, profileWriter,
-                                        countsWriter, config["num-shuffles"], profileFname)
+                                        countsWriter, config["num-shuffles"], kmerSize,
+                                        profileFname)
     batcher.run()
 
 
@@ -45,7 +53,5 @@ if (__name__ == "__main__"):
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
     import bpreveal.schema
-    import jsonschema
-    jsonschema.validate(schema=bpreveal.schema.interpretFlat,
-                        instance=config)
+    bpreveal.schema.interpretFlat.validate(config)
     main(config)

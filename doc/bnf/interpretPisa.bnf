@@ -7,6 +7,7 @@
      "output-h5" : <file-name>,
      "output-length" : <integer>,
      "input-length" : <integer>,
+     <kmer-size-section>
      <verbosity-section>}
 
 <bed-or-fasta> ::=
@@ -15,3 +16,6 @@
   | "fasta-file" : <file-name>
   | "sequence-fasta" : <file-name> (DEPRECATED)
 
+<kmer-size-section> ::=
+    "kmer-size" : <integer>,
+  | <empty>

@@ -2,9 +2,8 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "makePredictionsBed",
     "description": "Schema for makePredictionsBed.py",
-    "type": "object",
-    "properties": {
-        "settings": {
+    "definitions": {
+        "prediction-settings-section": {
             "type": "object",
             "properties": {
                 "output-h5": {"type": "string"},
@@ -22,7 +21,12 @@
                 }
             },
             "required": ["output-h5", "genome", "batch-size", "heads", "architecture"]
-        },
+        }
+    },
+
+    "type": "object",
+    "properties": {
+        "settings": {"$ref": "/schemas/makePredictionsBed#definitions/prediction-settings-section"},
         "bed-file": {"type": "string"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },

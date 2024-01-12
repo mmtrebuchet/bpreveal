@@ -9,6 +9,7 @@
      "profile-h5" : <file-name>,
      "counts-h5" : <file-name>,
      "num-shuffles" : <integer>,
+     <kmer-size-section>
      <verbosity-section>}
 
 <bed-or-fasta> ::=
@@ -20,3 +21,7 @@
 <list-of-integers> ::=
     <integer>
   | <integer>, <list-of-integers>
+
+<kmer-size-section> ::=
+    "kmer-size" : <integer>,
+  | <empty>

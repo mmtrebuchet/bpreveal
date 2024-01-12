@@ -172,7 +172,5 @@ if (__name__ == "__main__"):
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)
     import bpreveal.schema
-    import jsonschema
-    jsonschema.validate(schema=bpreveal.schema.makePredictionsFasta,
-                        instance=config)
+    bpreveal.schema.makePredictionsFasta.validate(config)
     main(config)
