@@ -6,6 +6,8 @@ Version 4.0.1
 	default (non-kmer-preserving) shuffle is performed.
 	* All BPReveal programs that take JSON input now check that input against
 	a schema.
+	* There are now easy functions that you can use to make predictions and
+	get interpretation scores in utils.py.
 
 Version 4.0.0, 2023-01-24
 	BREAKING CHANGES:
