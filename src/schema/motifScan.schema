@@ -2,24 +2,56 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "motifScan",
     "description": "Schema for motifScan.py",
-
     "type": "object",
     "properties": {
-        "seqlet-cutoff-json": {"type": "string"},
+        "seqlet-cutoff-json": {
+            "type": "string"
+        },
         "seqlet-cutoff-settings": {
-            "$ref": "/schemas/motifSeqletCutoffs#definitions/seqlet-scanning-settings"},
+            "$ref": "/schemas/motifSeqletCutoffs#definitions/seqlet-scanning-settings"
+        },
         "scan-settings": {
             "type": "object",
-            "properties":{
-                "scan-contrib-h5": {"type": "string"},
-                "hits-tsv": {"type": "string"},
-                "num-threads": {"type": "integer"}
+            "properties": {
+                "scan-contrib-h5": {
+                    "type": "string"
+                },
+                "hits-tsv": {
+                    "type": "string"
+                },
+                "num-threads": {
+                    "type": "integer"
+                }
             },
-            "required": ["scan-contrib-h5", "hits-tsv", "num-threads"]
+            "required": [
+                "scan-contrib-h5",
+                "hits-tsv",
+                "num-threads"
+            ]
         },
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {
+            "type": "string",
+            "enum": [
+                "DEBUG",
+                "WARNING",
+                "INFO"
+            ]
+        }
     },
-    "oneOf": [{"required": ["seqlet-cutoff-json"]},
-              {"required": ["seqlet-cutoff-settings"]}],
-    "required": ["verbosity", "scan-settings"]
+    "oneOf": [
+        {
+            "required": [
+                "seqlet-cutoff-json"
+            ]
+        },
+        {
+            "required": [
+                "seqlet-cutoff-settings"
+            ]
+        }
+    ],
+    "required": [
+        "verbosity",
+        "scan-settings"
+    ]
 }

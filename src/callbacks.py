@@ -1,5 +1,4 @@
 import logging
-from tensorflow import keras
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 import re

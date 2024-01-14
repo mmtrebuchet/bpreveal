@@ -13,8 +13,8 @@ args = parser.parse_args()
 
 
 from bpreveal.schema import schemaMap
-
-
+fnameByMatchedSchema = dict()
+failedFnames = []
 for jsonFname in args.jsons:
     with open(jsonFname, "r") as fp:
         testJson = json.load(fp)
@@ -26,9 +26,19 @@ for jsonFname in args.jsons:
         for schema in schemaMap.keys():
             try:
                 schemaMap[schema].validate(testJson)
-                print("    " + jsonFname + " →", schema)
+                # print("    " + jsonFname + " →", schema)
                 anyPassed = True
+                if schema not in fnameByMatchedSchema:
+                    fnameByMatchedSchema[schema] = []
+                fnameByMatchedSchema[schema].append(jsonFname)
+
             except jsonschema.ValidationError:
                 pass
         if not anyPassed:
             print(jsonFname + " Failed to validate")
+for schemaName in fnameByMatchedSchema.keys():
+    print("    " + schemaName + "")
+    for fname in fnameByMatchedSchema[schemaName]:
+        print("        →" + fname)
+for fname in failedFnames:
+    print(fname + " FAILED to validate")

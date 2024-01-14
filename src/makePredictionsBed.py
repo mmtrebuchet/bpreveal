@@ -90,10 +90,10 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)
 
     logging.debug("Writing predictions.")
-    for headId in wrapTqdm(range(numHeads)):
-        headGroup = outFile.create_group("head_{0:d}".format(headId))
-        headGroup.create_dataset("logcounts", data=preds[numHeads + headId], dtype=PRED_T)
-        headGroup.create_dataset("logits", data=preds[headId], dtype=PRED_T)
+    for headID in wrapTqdm(range(numHeads)):
+        headGroup = outFile.create_group("head_{0:d}".format(headID))
+        headGroup.create_dataset("logcounts", data=preds[numHeads + headID], dtype=PRED_T)
+        headGroup.create_dataset("logits", data=preds[headID], dtype=PRED_T)
     outFile.close()
     logging.info("File saved.")
 

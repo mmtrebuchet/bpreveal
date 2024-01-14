@@ -163,6 +163,7 @@ def wrapTqdm(iterable, logLevel: str | int = logging.INFO, **tqdmKwargs) -> tqdm
 
     class dummyPbar:
         """This serves as a tqdm-like object that doesn't print anything."""
+
         def update(self):
             pass
 
@@ -215,6 +216,147 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     return ret.tobytes().decode('ascii')
 
 
+def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_AR_T:
+    """
+    The easy (and very slow!) way to make predictions with your model.
+    Spawns a separate process to make a single batch of predictions,
+    then shuts it down. Why make it complicated? Because it frees the
+    GPU after it's done so other programs and stuff can use it.
+    Arguments:
+        sequences is a list of strings that the model will make
+        predictions with. If you pass in a single string containing
+        a sequence to predict on, that's okay, too. sequences should be as
+        long as the receptive field of your model.
+        modelFname is the name of the Keras model that should be used.
+    Returns an array of profiles, unless you passed in a string for sequences,
+    in which case it returns a single array containing the predicted profile.
+    The shape of the array will be (numSequences x outputLength) if you passed
+    in an iterable of strings (like a list of strings), and it will be
+    (outputLength,) if you passed in a single string.
+    """
+    singleReturn = False
+    if type(sequences) is str:
+        sequences = [sequences]
+        singleReturn = True
+    else:
+        # In case we got some weird iterable, turn it into a list.
+        sequences = list(sequences)
+
+    def predictThread(seqs, model, outQueue):
+        setMemoryGrowth()
+        remainingToRead = len(seqs)
+        bp = BatchPredictor(model, 64)
+        preds = []
+        for s in seqs:
+            bp.submitString(s, 1)
+            while bp.outputReady():
+                preds.append(bp.getOutput())
+                remainingToRead -= 1
+        for _ in range(remainingToRead):
+            preds.append(bp.getOutput())
+        for p in preds:
+            logits, logcounts = p[0]
+            outQueue.put(logitsToProfile(logits, logcounts))
+    import multiprocessing as mp
+    resultQueue = mp.Queue()
+    proc = mp.Process(target=predictThread,
+                      args=(sequences, modelFname, resultQueue))
+    proc.start()
+    ret = []
+    for _ in range(len(sequences)):
+        ret.append(resultQueue.get())
+    proc.join()
+    if singleReturn:
+        return ret[0]
+    else:
+        return np.array(ret, dtype=PRED_T)
+
+
+def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
+                      heads: int, headID: int, taskIDs: list[int],
+                      numShuffles: int = 20, kmerSize: int = 1,
+                      keepHypotheticals: bool = False) -> dict[str, npt.NDArray]:
+    """Spins up an entire interpret pipeline just to interpret your sequences.
+    You should only use this for quick one-off things since it is EXTREMELY
+    slow.
+    sequences is a list (or technically any Iterable) of strings, and the
+        returned importance scores will be in an order that corresponds
+        to your sequences.
+        You can also provide just one string, in which case the return type
+        will change: The first (length-one) dimension will be stripped.
+    modelFname is the name of the BPReveal model on disk.
+    heads is the TOTAL number of heads that the model has.
+    headID is the index of the head of the model that you want interpreted.
+    taskIDs is the list of tasks that should be included in the profile score
+        calculation. For most cases, you'd want a list of all the tasks,
+        like [0,1].
+    numShuffles is the number of shuffled sequences that are used to calculate
+        shap values.
+    kmerSize is the length of kmers for which the distribution should be preserved
+        during the shuffle. If 1, shuffle each base independently. If 2, preserve
+        the distribution of dimers, etc.
+    keepHypotheticals controls whether the output contains hypothetical
+        contribution scores or just the actual ones.
+
+    Returns a dict.
+    If you passed in an iterable of strings (like a list), then the output's first
+    dimension will be the number of sequences and it will depend on keepHypotheticals:
+        If keepHypotheticals is True, then it will be structured so:
+            {"profile": array of shape (numSequences x inputLength x 4),
+             "counts": array of shape (numSequences x inputLength x 4),
+             "sequence": array of shape (numSequences x inputLength x 4)}
+            This dict has the same meaning as shap scores stored in an
+            interpretFlat hdf5.
+
+        If keepHypotheticals is False (the default), then the
+            shap scores will be condensed down to the normal scores that we plot
+            in a genome browser.:
+            {"profile": array of shape (numSequences x inputLength),
+             "counts": array of shape (numSequences x inputLength)}
+    However, if sequences was a string instead of an iterable, then the numSequences
+    dimension will be suppressed:
+        For keepHypotheticals == True, you get
+            {"profile": array of shape (inputLength x 4),
+             "counts": array of shape (inputLength x 4),
+             "sequence": array of shape (inputLength x 4)}
+        and if keepHypotheticals is False, you get:
+            {"profile": array of shape (inputLength,),
+             "counts": array of shape (inputLength,)}
+
+    """
+    from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
+    logging.debug("Starting interpretation of sequences.")
+    singleReturn = False
+    if type(sequences) is str:
+        sequences = [sequences]
+        singleReturn = True
+    generator = ListGenerator(sequences)
+    profileSaver = FlatListSaver(generator.numSamples, generator.inputLength)
+    countsSaver = FlatListSaver(generator.numSamples, generator.inputLength)
+    batcher = FlatRunner(modelFname, headID, heads, taskIDs, 1, generator,
+                         profileSaver, countsSaver, numShuffles, kmerSize)
+    batcher.run()
+    logging.debug("Interpretation complete. Organizing outputs.")
+    if keepHypotheticals:
+        if singleReturn:
+            return {"profile": profileSaver.shap[0],
+                    "counts": countsSaver.shap[0],
+                    "sequence": profileSaver.seq[0]}
+        else:
+            return {"profile": profileSaver.shap,
+                    "counts": countsSaver.shap,
+                    "sequence": profileSaver.seq}
+    # Collapse down the hypothetical importances.
+    profileOneHot = profileSaver.shap * profileSaver.seq
+    countsOneHot = countsSaver.shap * countsSaver.seq
+    profile = np.sum(profileOneHot, axis=2)
+    counts = np.sum(countsOneHot, axis=2)
+    if singleReturn:
+        return {"profile": profile[0], "counts": counts[0]}
+    else:
+        return {"profile": profile, "counts": counts}
+
+
 def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
                     logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float32]:
     """
@@ -245,6 +387,7 @@ class BatchPredictor:
     Note that the getOutput() method returns *one* result at a time, and
     you have to call getOutput() once for every time you called one of the
     submit methods. """
+
     def __init__(self, modelFname: str, batchSize: int) -> None:
         """Starts up the BatchPredictor. This will load your model,
         and get ready to make predictions.

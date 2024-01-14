@@ -16,7 +16,7 @@ class Region:
         self.end = end
         self.h5Idx = h5Idx
 
-    def getValues(self, h5fp, mode, head, taskId):
+    def getValues(self, h5fp, mode, head, taskID):
         headLogits = h5fp["head_{0:d}".format(head)]["logits"]
         headLogcounts = h5fp["head_{0:d}".format(head)]["logcounts"]
 
@@ -26,12 +26,12 @@ class Region:
                 # Logits will have shape (output-width x numTasks)
                 logCounts = headLogcounts[self.h5Idx]
                 headProfile = utils.logitsToProfile(logits, logCounts)
-                taskProfile = headProfile[:, taskId]
+                taskProfile = headProfile[:, taskID]
                 profile = taskProfile
             case 'logits':
-                profile = headLogits[self.h5Idx, :, taskId]
+                profile = headLogits[self.h5Idx, :, taskID]
             case 'mnlogits':
-                profile = headLogits[self.h5Idx, :, taskId]
+                profile = headLogits[self.h5Idx, :, taskID]
                 profile -= np.mean(profile)
             case 'logcounts':
                 profile = np.zeros((self.end - self.start)) + headLogcounts[self.h5Idx]
@@ -42,21 +42,21 @@ class Region:
 
 def getChromInserts(arg):
     """Packs all the arguments into one so it's easier to use with pool.map()."""
-    regionList, h5Fname, headId, taskId, mode = arg
+    regionList, h5Fname, headID, taskID, mode = arg
     with h5py.File(h5Fname, "r") as h5fp:
-        vec = getChromVector(regionList, h5fp, headId, taskId, mode)
+        vec = getChromVector(regionList, h5fp, headID, taskID, mode)
         inserts = vectorToListOfInserts(vec)
     logging.info("Finished region {0:s}".format(str(regionList[0].chromIdx)))
     return inserts
 
 
-def getChromVector(regionList, h5fp, headId, taskId, mode):
+def getChromVector(regionList, h5fp, headID, taskID, mode):
     chromSize = h5fp["chrom_sizes"][regionList[0].chromIdx]
     regionCounts = np.zeros((chromSize,), dtype=np.uint16)
     regionValues = np.zeros((chromSize,), dtype=np.float32)
     for r in regionList:
         regionCounts[r.start:r.end] += 1
-        regionValues[r.start:r.end] += r.getValues(h5fp, mode, headId, taskId)
+        regionValues[r.start:r.end] += r.getValues(h5fp, mode, headID, taskID)
     regionCounts[regionCounts == 0] = 1
     return regionValues / regionCounts
 
@@ -110,9 +110,9 @@ def buildRegionList(inH5):
     return regionsByChrom
 
 
-def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate, numThreads):
+def writeBigWig(inH5Fname, outFname, headID, taskID, mode, verbose, negate, numThreads):
     inH5 = h5py.File(inH5Fname, "r")
-    logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headId, taskId))
+    logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headID, taskID))
     bwHeader = []
     for i, name in enumerate(inH5["chrom_names"].asstr()):
         bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
@@ -127,7 +127,7 @@ def writeBigWig(inH5Fname, outFname, headId, taskId, mode, verbose, negate, numT
     # The order of the list is sorted(regionsByChrom.keys())
     chromRegionLists = []
     for chromIdx in chromList:
-        chromRegionLists.append((regionsByChrom[chromIdx], inH5Fname, headId, taskId, mode))
+        chromRegionLists.append((regionsByChrom[chromIdx], inH5Fname, headID, taskID, mode))
     logging.info("Extracted list of regions to process.")
     logging.info("Beginning to extract profile data.")
 
@@ -168,9 +168,9 @@ def main():
     parser.add_argument("--h5", help='The name of the hdf5-format file to be read in.')
     parser.add_argument("--bw", help='The name of the bigwig file that should be written.')
     parser.add_argument("--head-id", help="Which head number do you want data for?",
-                        dest='headId', type=int)
+                        dest='headID', type=int)
     parser.add_argument("--task-id", help='Which task in that head do you want?',
-                        dest='taskId', type=int)
+                        dest='taskID', type=int)
     parser.add_argument("--mode",
                         help='What do you want written? Options are "profile", meaning you '
                         'want (softmax(logits) * exp(logcounts)), or "logits", meaning you '
@@ -189,7 +189,7 @@ def main():
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
-    writeBigWig(args.h5, args.bw, args.headId, args.taskId, args.mode, args.verbose,
+    writeBigWig(args.h5, args.bw, args.headID, args.taskID, args.mode, args.verbose,
                 args.negate, args.numThreads)
 
 

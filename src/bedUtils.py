@@ -1,7 +1,6 @@
 """Some utilities for dealing with bed files"""
 import pybedtools
 import pysam
-import pyBigWig
 import logging
 import numpy as np
 from typing import Literal

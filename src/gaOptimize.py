@@ -28,6 +28,13 @@ IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 Corruptor: TypeAlias = tuple[int, str]
 Profile: TypeAlias = List[Tuple[PRED_AR_T, float]]
 
+_seqCmap = {"A": (0, 158, 115), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
+for k in "ACGT":
+    _seqCmap[k] = tuple((x / 255 for x in _seqCmap[k]))
+corruptorColors = {"A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "T": _seqCmap["T"],
+                   "d": "black",
+                   "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
+
 
 def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int, int]]:
     """Given a list of corruptor tuples, like [(1354, 'C'), (1514, 'Ť'), (1693, 'd')],
@@ -168,7 +175,9 @@ class Organism:
         one, returns -1 if this organism comes first, and returns 0
         if the two organisms have the same corruptors.
         Note that this does not compare profile or score!"""
-        for i in range(len(self.corruptors)):
+
+        for i in range(min(len(self.corruptors),
+                           len(other.corruptors))):
             mine = self.corruptors[i]
             them = other.corruptors[i]
             if mine[0] < them[0]:
@@ -184,6 +193,10 @@ class Organism:
                 elif mine[1] > them[1]:
                     # My letter is later.
                     return 1
+        if len(self.corruptors) > len(other.corruptors):
+            return 1
+        elif len(self.corruptors) < len(other.corruptors):
+            return -1
         # We have identical corruptors, we are the same organism.
         return 0
 
@@ -265,6 +278,7 @@ class Organism:
 
 class Population:
     """This is the main class for running the sequence optimization GA."""
+
     def __init__(self, initialSequence: str, inputLength: int, populationSize: int,
                  numCorruptors: int, allowedCorruptors: List[Corruptor],
                  checkCorruptors: Callable[[List[Corruptor]], bool],
@@ -550,6 +564,9 @@ def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
         If c0[1] in "ACGT", then c1[1] in "ǍČǦŤ"
             (If you have a SNP, the only other thing
              at that position must be an insertion.)"""
+    if len(corruptorList) == 0:
+        # The wild-type organism is valid by definition.
+        return True
     prev = corruptorList[0]
     for c in corruptorList[1:]:
         if prev[0] > c[0]:
@@ -611,9 +628,6 @@ def plotTraces(posTraces: List[Tuple[PRED_AR_T, str, str]],
         h = boxHeight  # Just for brevity.
         ax.fill([l, l, r, r], [-h, h, h, -h], annot[2], label=annot[1])
 
-    corruptorColors = {"A": "green", "C": "orange", "G": "blue", "T": "red",
-                       "d": "black",
-                       "Ǎ": "green", "Č": "orange", "Ǧ": "blue", "Ť": "red"}
     for cor in corruptors:
         left = cor[0] - 5
         right = cor[0] + 5

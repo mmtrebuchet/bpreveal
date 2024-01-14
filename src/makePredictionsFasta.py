@@ -75,20 +75,20 @@ class H5Writer:
         # up to 100 entries before actually committing to the hdf5 file.
         # This optimization means that the program is now GPU-limited and not
         # h5py-limited, which is how things should be.
-        for headId in range(self.numHeads):
-            headGroup = self._fp.create_group("head_{0:d}".format(headId))
+        for headID in range(self.numHeads):
+            headGroup = self._fp.create_group("head_{0:d}".format(headID))
             # These are the storage buffers for incoming data.
             headBuffer = [np.empty((self.writeChunkSize, ), dtype=PRED_T),  # counts
-                          np.empty((self.writeChunkSize, ) + sampleOutputs[headId].shape,
+                          np.empty((self.writeChunkSize, ) + sampleOutputs[headID].shape,
                                    dtype=PRED_T)]  # profile
             self.headBuffers.append(headBuffer)
             headGroup.create_dataset("logcounts", (self.numPredictions,),
                                      dtype=PRED_T,
                                      chunks=(self.writeChunkSize,))
             headGroup.create_dataset("logits",
-                                     ((self.numPredictions,) + sampleOutputs[headId].shape),
+                                     ((self.numPredictions,) + sampleOutputs[headID].shape),
                                      dtype=PRED_T,
-                                     chunks=((self.writeChunkSize,) + sampleOutputs[headId].shape))
+                                     chunks=((self.writeChunkSize,) + sampleOutputs[headID].shape))
         logging.debug("Initialized datasets.")
 
     def addEntry(self, batcherOut):
@@ -103,11 +103,11 @@ class H5Writer:
 
         self._descriptionList.append(label)
 
-        for headId in range(self.numHeads):
-            logits = logitsLogcounts[headId]
-            logcounts = logitsLogcounts[headId + self.numHeads]
-            self.headBuffers[headId][0][self.batchWriteHead] = logcounts
-            self.headBuffers[headId][1][self.batchWriteHead] = logits
+        for headID in range(self.numHeads):
+            logits = logitsLogcounts[headID]
+            logcounts = logitsLogcounts[headID + self.numHeads]
+            self.headBuffers[headID][0][self.batchWriteHead] = logcounts
+            self.headBuffers[headID][1][self.batchWriteHead] = logits
         self.batchWriteHead += 1
         # Have we filled our storage buffers? If so, write them out.
         if self.batchWriteHead == self.writeChunkSize:
@@ -117,9 +117,9 @@ class H5Writer:
         # Actually write the data out to the backing hdf5 file.
         start = self.writeHead
         stop = start + self.batchWriteHead
-        for headId in range(self.numHeads):
-            headGroup = self._fp["head_{0:d}".format(headId)]
-            headBuffer = self.headBuffers[headId]
+        for headID in range(self.numHeads):
+            headGroup = self._fp["head_{0:d}".format(headID)]
+            headBuffer = self.headBuffers[headID]
             headGroup["logits"][start:stop] = headBuffer[1][:self.batchWriteHead]
             headGroup["logcounts"][start:stop] = headBuffer[0][:self.batchWriteHead]
         self.writeHead += self.batchWriteHead
