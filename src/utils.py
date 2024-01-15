@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import numpy as np
 import scipy
 import numpy.typing as npt
@@ -38,6 +39,8 @@ H5_CHUNK_SIZE = 128
 # program crash.
 QUEUE_TIMEOUT = 60  # (seconds)
 
+GLOBAL_TENSORFLOW_LOADED = False
+
 
 def loadModel(modelFname: str):
     """A simple wrapper to load up a BPReveal model.
@@ -51,6 +54,8 @@ def loadModel(modelFname: str):
     model = load_model(modelFname,
                        custom_objects={"multinomialNll": multinomialNll,
                                        "reweightableMse": dummyMse})
+    global GLOBAL_TENSORFLOW_LOADED
+    GLOBAL_TENSORFLOW_LOADED = True
     return model
 
 
@@ -68,6 +73,8 @@ def setMemoryGrowth() -> None:
         logging.warning(str(inst))
         logging.warning("Not using GPU")
         pass
+    global GLOBAL_TENSORFLOW_LOADED
+    GLOBAL_TENSORFLOW_LOADED = True
 
 
 def limitMemoryUsage(fraction: float, offset: float) -> None:
@@ -112,6 +119,8 @@ def limitMemoryUsage(fraction: float, offset: float) -> None:
         gpus[0],
         [tf.config.LogicalDeviceConfiguration(memory_limit=useMem)])
     logging.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
+    global GLOBAL_TENSORFLOW_LOADED
+    GLOBAL_TENSORFLOW_LOADED = True
 
 
 def loadChromSizes(fname: str) -> dict[str, int]:
@@ -235,6 +244,8 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
     (outputLength,) if you passed in a single string.
     """
     singleReturn = False
+    assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
+
     if type(sequences) is str:
         sequences = [sequences]
         singleReturn = True
@@ -259,8 +270,11 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
             outQueue.put(logitsToProfile(logits, logcounts))
     import multiprocessing as mp
     resultQueue = mp.Queue()
+    # daemon=True makes it so that the child process dies if the parent dies
+    # which is useful if something goes wrong.
     proc = mp.Process(target=predictThread,
-                      args=(sequences, modelFname, resultQueue))
+                      args=(sequences, modelFname, resultQueue),
+                      daemon=True)
     proc.start()
     ret = []
     for _ in range(len(sequences)):
@@ -325,6 +339,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
 
     """
     from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
+    assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
     logging.debug("Starting interpretation of sequences.")
     singleReturn = False
     if type(sequences) is str:
@@ -388,13 +403,18 @@ class BatchPredictor:
     you have to call getOutput() once for every time you called one of the
     submit methods. """
 
-    def __init__(self, modelFname: str, batchSize: int) -> None:
-        """Starts up the BatchPredictor. This will load your model,
-        and get ready to make predictions.
-        modelFname is the name of the BPReveal model that you want
-        to make predictions from. It's the same name you give for
-        the model in any of the other BPReveal tools.
-        batchSize is the number of samples that should be run simultaneously through the model."""
+    def __init__(self, modelFname: str, batchSize: int, start: bool = True) -> None:
+        """Starts up the BatchPredictor. This will load your model,and get
+        ready to make predictions.
+        modelFname is the name of the BPReveal model that you want to make
+        predictions from. It's the same name you give for the model in any of
+        the other BPReveal tools.
+
+        batchSize is the number of samples that should be run simultaneously
+        through the model.
+        start is unused, but present here to give BatchPredictor the same API
+        as ThreadedBatchPredictor.
+        """
         logging.debug("Creating batch predictor.")
         from collections import deque
 
@@ -408,6 +428,17 @@ class BatchPredictor:
         self._outQueue = deque()
         self._inWaiting = 0
         self._outWaiting = 0
+        del start  # We don't refer to start.
+
+    def __enter__(self):
+        """Using this batcher with a context manager does nothing."""
+        pass
+
+    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
+        """If this batcher was used in a context manager, exiting does nothing, but raises
+        any exceptions that happened."""
+        if exceptionType is not None:
+            raise Exception(exceptionType + "\n" + exceptionValue + '\n' + exceptionTraceback)
 
     def clear(self) -> None:
         """If you've left your predictor in some weird state, you can reset it
@@ -496,9 +527,15 @@ class BatchPredictor:
             self._outWaiting += 1
 
     def outputReady(self) -> bool:
-        """Is there any output ready for you? Returns True if you can safely call
-        getOutput(), and False otherwise."""
+        """Is there any output ready for you? Returns True if a prediction has been
+        made and is waiting for you in the output queue, and False otherwise."""
         return self._outWaiting > 0
+
+    def empty(self) -> bool:
+        """Can you get output from this Batcher? Returns False if calling outputReady()
+        would give you data. This will be the case if there's data in the input queue
+        but the prediction hasn't been run."""
+        return self._outWaiting == 0 and self._inWaiting == 0
 
     def getOutput(self) -> tuple[list, typing.Any]:
         """Returns one of the predictions made by the model.
@@ -537,3 +574,184 @@ class BatchPredictor:
         ret = self._outQueue.pop()
         self._outWaiting -= 1
         return ret
+
+
+class ThreadedBatchPredictor:
+    """Mirrors the API of the BachPredictor class, but runs predictions in a
+    separate thread. This can give you a performance boost, and also lets you
+    shut down the predictor thread when you don't need it.
+    Supports the with statement to only turn on the batcher when you're using it,
+    or you can leave it running in the background.
+
+    Usage examples:
+
+    predictor = utils.ThreadedBatchPredictor(modelFname, 64, start=True)
+    # Use as you would a normal batchPredictor
+    # When not needed any more:
+    predictor.stop()
+
+    Alternatively, you can use this as a context manager.
+    predictor = utils.ThreadedBatchPredictor(modelFname, 64, start=False)
+
+    with predictor:
+        # use as a normal BatchPredictor.
+    # On leaving the context, the predictor is shut down.
+
+    """
+
+    def __init__(self, modelFname: str, batchSize: int, start=False) -> None:
+        """Starts up the BatchPredictor. This will load your model,
+        and get ready to make predictions.
+        modelFname is the name of the BPReveal model that you want
+        to make predictions from. It's the same name you give for
+        the model in any of the other BPReveal tools.
+        batchSize is the number of samples that should be run simultaneously through the model."""
+        logging.debug("Creating threaded batch predictor.")
+        self._batchSize = batchSize
+        self._modelFname = modelFname
+        self._batchSize = batchSize
+        # Since I'll be putting things in and taking them out often,
+        # I'm going to use a queue data structure, where those operations
+        # are efficient.
+        self._batcher = None
+        self.running = False
+        if start:
+            self.start()
+
+    def __enter__(self):
+        """Used in a context manager, this is the first thing that gets called
+        inside a with statement."""
+        self.start()
+
+    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
+        """When leaving a context manager's with statement, shut down the batcher."""
+        self.stop()
+        if exceptionType is not None:
+            raise Exception(exceptionType + "\n" + exceptionValue + '\n' + exceptionTraceback)
+
+    def start(self):
+        """Spin up the batcher thread. If you submit sequences without starting the batcher,
+        this method will be called automatically (with a warning).
+        """
+        if not self.running:
+            logging.debug("Starting threaded batcher.")
+            assert self._batcher is None, "Attempting to start a new batcher when an old "\
+                "one is still alive."
+            self._inQueue = multiprocessing.Queue()
+            self._outQueue = multiprocessing.Queue()
+            self._batcher = multiprocessing.Process(target=_batcherThread,
+                args=(self._modelFname, self._batchSize, self._inQueue, self._outQueue),
+                daemon=True)
+            self._batcher.start()
+            self._inFlight = 0
+            self.running = True
+        else:
+            logging.warning("Attempted to start a batcher that was already running.")
+
+    def __del__(self):
+        """General cleanup - kill off the child process when this object goes out of scope."""
+        logging.debug("Destructor called.")
+        if self.running:
+            self.stop()
+
+    def stop(self):
+        """Shut down the processor thread."""
+        if self.running:
+            logging.debug("Shutting down threaded batcher.")
+            self._inQueue.put("shutdown")
+            self._inQueue.close()
+            self._outQueue.close()
+            if self._batcher is not None:
+                self._batcher.join(1)  # Wait one second.
+                if self._batcher.exitcode is None:
+                    # The process failed to die. Kill it more forcefully.
+                    self._batcher.terminate()
+                self._batcher.join(1)  # Wait one second.
+                self._batcher.close()
+            del self._inQueue
+            del self._batcher
+            del self._outQueue
+            # Explicitly set None so that start won't panic.
+            self._batcher = None
+            self.running = False
+        else:
+            logging.warning("Attempting to stop a batcher that is already stopped.")
+
+    def clear(self):
+        """Resets the batcher, emptying any queues and reloading the model."""
+        if self.running:
+            self.stop()
+        self.start()
+
+    def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
+        """Sequence is an (input-length x 4) ndarray containing the
+        one-hot encoded sequence to predict.
+        label is any object, and it will be returned with the prediction."""
+        if not self.running:
+            logging.warning("Submitted a query when the batcher is stopped. Starting.")
+            self.start()
+        self._inQueue.put((sequence, label), True, QUEUE_TIMEOUT)
+        self._inFlight += 1
+
+    def submitString(self, sequence: str, label: typing.Any) -> None:
+        """Submits a given sequence for prediction.
+        sequence is a string of length input-length, and
+        label is any object. Label will be returned to you with the
+        prediction. """
+        seqOhe = oneHotEncode(sequence)
+        self.submitOHE(seqOhe, label)
+
+    def outputReady(self) -> bool:
+        """Is there any output ready for you? Returns True if the batcher is sitting
+        on results, and False otherwise."""
+        return not self._outQueue.empty()
+
+    def empty(self) -> bool:
+        """Is it possible to getOutput()? This will be true if predictions haven't
+        been made yet, but they would be made if you asked for output."""
+        return self._inFlight == 0
+
+    def getOutput(self) -> tuple[list, typing.Any]:
+        """Same semantics as BatchPredictor.getOutput"""
+        if self._outQueue.empty():
+            if self._inFlight:
+                # There are inputs that have not been processed. Run the batch.
+                self._inQueue.put("finishBatch")
+            else:
+                assert False, "There are no outputs ready, and the input queue is empty."
+        ret = self._outQueue.get(True, QUEUE_TIMEOUT)
+        self._inFlight -= 1
+        return ret
+
+
+def _batcherThread(modelFname, batchSize, inQueue, outQueue):
+    assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
+        "after loading tensorflow."
+    logging.debug("Starting subthread")
+    setMemoryGrowth()
+    # Instead of reinventing the wheel, the thread that actually runs the batches
+    # just creates a BatchPredictor.
+    batcher = BatchPredictor(modelFname, batchSize)
+    predsInFlight = 0
+    while True:
+        # No timeout because this batcher could be waiting for a very long time to get
+        # inputs.
+        inVal = inQueue.get(True)
+        match inVal:
+            case (oheSequence, label):
+                batcher.submitOHE(oheSequence, label)
+                predsInFlight += 1
+                # If there's an answer and the out queue can handle it, go ahead
+                # and send it.
+                while not outQueue.full() and batcher.outputReady():
+                    outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
+                    predsInFlight -= 1
+            case "finishBatch":
+                while predsInFlight:
+                    outPred = batcher.getOutput()
+                    outQueue.put(outPred, True, QUEUE_TIMEOUT)
+                    predsInFlight -= 1
+            case "shutdown":
+                # End the thread.
+                logging.debug("Shutdown signal received.")
+                return

@@ -730,8 +730,6 @@ class PatternScanner:
             hits = pattern.scan(oneHotSequence, contribScores)
             if self.firstIndex:
                 logging.debug("Completed scanning {0:s}".format(pattern.shortName))
-            if self.firstIndex:
-                print(hits)
             if len(hits) > 0:
                 # Hey, we found something!
                 for hit in hits:
@@ -879,10 +877,11 @@ def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThr
     for i in range(numThreads - 2):
         scanProc = multiprocessing.Process(target=scannerThread,
                                            args=[queryQueue, hitQueue, contribH5Fname,
-                                                 patternConfig])
+                                                 patternConfig], daemon=True)
         scannerProcesses.append(scanProc)
     writeProc = multiprocessing.Process(target=writerThread,
-                                        args=[hitQueue, numThreads - 2, tsvFname])
+                                        args=[hitQueue, numThreads - 2, tsvFname],
+                                        daemon=True)
     logging.info("Starting threads.")
     [x.start() for x in scannerProcesses]
 

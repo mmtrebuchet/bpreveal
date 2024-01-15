@@ -217,21 +217,26 @@ class FlatRunner:
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._profileInQueue, self._countsInQueue], generator,
-                  ap("_gen.dat")))
+                  ap("_gen.dat")),
+            daemon=True)
 
         self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._profileInQueue, self._profileOutQueue,
                   headID, numHeads, taskIDs, numShuffles, "profile", kmerSize,
-                  ap("_profile.dat")))
+                  ap("_profile.dat")),
+            daemon=True)
         self._countsBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._countsInQueue, self._countsOutQueue,
                   headID, numHeads, taskIDs, numShuffles, "counts", kmerSize,
-                  ap("_counts.dat")))
+                  ap("_counts.dat")),
+            daemon=True)
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._profileOutQueue, profileSaver, ap("_profileWrite.dat")))
+            args=(self._profileOutQueue, profileSaver, ap("_profileWrite.dat")),
+            daemon=True)
         self._countsSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._countsOutQueue, countsSaver, ap("_countsWrite.dat")))
+            args=(self._countsOutQueue, countsSaver, ap("_countsWrite.dat")),
+            daemon=True)
         if profileFname is not None:
             import pstats
             for end in ["_gen", "_profile", "_counts", "_profileWrite", "_countsWrite"]:
@@ -298,13 +303,15 @@ class PisaRunner:
             return profileFname + txt
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._inQueue], generator, ap("_generate.dat")))
+            args=([self._inQueue], generator, ap("_generate.dat")),
+            daemon=True)
         self._batchThread = multiprocessing.Process(target=_pisaBatcherThread,
                                                     args=(modelFname, batchSize,
                                                           self._inQueue, self._outQueue, headID,
                                                           taskID, numShuffles, receptiveField,
                                                           kmerSize,
-                                                          ap("batcher.dat")))
+                                                          ap("batcher.dat")),
+                                                    daemon=True)
         self._saver = saver
 
     def run(self):

@@ -6,7 +6,6 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import bpreveal.utils as utils
-utils.setMemoryGrowth()
 import numpy as np
 import h5py
 import logging
@@ -148,23 +147,24 @@ def main(config):
     # Before we can build the output dataset in the hdf5 file, we need to
     # know how many fasta regions we will be asked to predict.
     fastaReader = FastaReader(fastaFname)
-    batcher = utils.BatchPredictor(modelFname, batchSize)
+    batcher = utils.ThreadedBatchPredictor(modelFname, batchSize)
     writer = H5Writer(outFname, numHeads, fastaReader.numPredictions)
     logging.info("Entering prediction loop.")
     # Now we just iterate over the fasta file and submit to our batcher.
-    for _ in wrapTqdm(fastaReader.numPredictions):
-        fastaReader.pop()
-        batcher.submitString(fastaReader.curSequence, fastaReader.curLabel)
-        while batcher.outputReady():
+    with batcher:
+        for _ in wrapTqdm(range(fastaReader.numPredictions)):
+            fastaReader.pop()
+            batcher.submitString(fastaReader.curSequence, fastaReader.curLabel)
+            while batcher.outputReady():
+                # We've just run a batch. Write it out.
+                writer.addEntry(batcher.getOutput())
+        # Done with the main loop, clean up the batcher.
+        logging.debug("Done with main loop.")
+        # batcher.runBatch()
+        while not batcher.empty():  # batcher.outputPossible():
             # We've just run a batch. Write it out.
             writer.addEntry(batcher.getOutput())
-    # Done with the main loop, clean up the batcher.
-    logging.debug("Done with main loop.")
-    batcher.runBatch()
-    while batcher.outputReady():
-        # We've just run a batch. Write it out.
-        writer.addEntry(batcher.getOutput())
-    writer.close()
+        writer.close()
 
 
 if (__name__ == "__main__"):

@@ -357,16 +357,8 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
     axPisa.plot([0, cutLengthX], [0, cutLengthX], 'k--', lw=0.5)
     axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
                       fontfamily='serif', labelpad=-5)
-    # And let's get the sequence for that:
-    # minorTickLabelsX = ['+' + str(int(x)) for x in minorTicksX][1:-1]
-    # minorTickLabelsY = ['+' + str(int(x - extent[3])) for x in minorTicksY][1:-1]
     ticksX, tickLabelsX = getCoordinateTicks(genomeStartX, genomeEndX, 10, True)
 
-    # axPisa.set_yticks([axStartY, axStopY],
-    #                  [str(genomeWindowStart + cutStartY),
-    #                   str(genomeWindowStart + cutStartY + cutLengthY)],
-    #                  fontsize=fontSizeMajorTick)
-    # axPisa.set_yticks(minorTicksY[1:-1], minorTickLabelsY, fontsize=fontsize, minor=True)
     ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart + cutStartY,
                       genomeWindowStart + cutStartY + cutLengthY, 10, True)
     ticksY = [x + axStartY for x in ticksY]

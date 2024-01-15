@@ -169,12 +169,14 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
     if not jsonOutput:
         print("reference {0:s} predicted {1:s} regions {2:s}".format(reference, predicted, regions))
     regionThread = Process(target=regionGenThread,
-                           args=(regions, regionQueue, threads, numberQueue))
+                           args=(regions, regionQueue, threads, numberQueue),
+                           daemon=True)
     processorThreads = []
     for i in range(threads):
         logging.debug("Creating thread {0:d}".format(i))
         newThread = Process(target=calculatorThread,
-                            args=(reference, predicted, applyAbs, regionQueue, resultQueue, i))
+                            args=(reference, predicted, applyAbs, regionQueue, resultQueue, i),
+                            daemon=True)
         processorThreads.append(newThread)
         newThread.start()
     regionThread.start()
@@ -185,7 +187,8 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
 
     writerThread = Process(target=receiveThread,
         args=(numRegions, resultQueue, skipZeroes, jsonOutput,
-        {"reference": reference, "predicted": predicted, "regions": regions}))
+        {"reference": reference, "predicted": predicted, "regions": regions}),
+        daemon=True)
 
     writerThread.start()
     writerThread.join()

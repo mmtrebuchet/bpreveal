@@ -2,7 +2,8 @@ import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import random
-from typing import List, Tuple, TypeAlias, Callable, Optional
+import matplotlib.colors
+from typing import TypeAlias, Callable, Optional
 import numpy.typing as npt
 import bpreveal.utils as utils
 from bpreveal.utils import PRED_AR_T
@@ -26,7 +27,7 @@ CORRUPTOR_TO_IDX = {"A": 0, "C": 1, "G": 2, "T": 3,
 IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 
 Corruptor: TypeAlias = tuple[int, str]
-Profile: TypeAlias = List[Tuple[PRED_AR_T, float]]
+Profile: TypeAlias = list[tuple[PRED_AR_T, float]]
 
 _seqCmap = {"A": (0, 158, 115), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
 for k in "ACGT":
@@ -36,7 +37,7 @@ corruptorColors = {"A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "
                    "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
 
 
-def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int, int]]:
+def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
     """Given a list of corruptor tuples, like [(1354, 'C'), (1514, 'Ť'), (1693, 'd')],
     convert that to an integer list that can be easily saved. This list will have the format
     [ [1354, 1], [1514, 7], [1693, 8] ]
@@ -49,7 +50,7 @@ def corruptorsToArray(corruptorList: List[Corruptor]) -> List[Tuple[int, int]]:
     return ret
 
 
-def arrayToCorruptors(corruptorArray: List[Tuple[int, int]]) -> List[Corruptor]:
+def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[Corruptor]:
     """The inverse of corruptorsToArray, takes an array of numerical corruptors in the form
     [ [1354, 1], [1514, 7], [1693, 8] ]
     and generates the canonical list with letters, as used in the rest of the code.
@@ -65,7 +66,7 @@ def arrayToCorruptors(corruptorArray: List[Tuple[int, int]]) -> List[Corruptor]:
     return ret
 
 
-def stringToCorruptorList(corruptorStr: str) -> List[Corruptor]:
+def stringToCorruptorList(corruptorStr: str) -> list[Corruptor]:
     """Takes a string representing a list of corruptors and generates
     the actual list as a python object. For example, if the string is
         "[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]"
@@ -90,8 +91,9 @@ class Organism:
     input sequence."""
     profile: Profile
     score: float
+    corruptors: list[Corruptor]
 
-    def __init__(self, corruptors: List[Corruptor]) -> None:
+    def __init__(self, corruptors: list[Corruptor]) -> None:
         """Construct an organism with the given corruptors.
         """
 
@@ -149,7 +151,7 @@ class Organism:
         fullSequence = "".join(seq) + initialSequence[readHead:]
         return fullSequence[:inputLength]
 
-    def setScore(self, scoreFn: Callable[[Profile, List[Corruptor]], float]) -> None:
+    def setScore(self, scoreFn: Callable[[Profile, list[Corruptor]], float]) -> None:
         assert self.profile is not None, \
             "Attempting to score organism with no profile."
         self.score = scoreFn(self.profile, self.corruptors)
@@ -200,8 +202,8 @@ class Organism:
         # We have identical corruptors, we are the same organism.
         return 0
 
-    def mutated(self, allowedCorruptors: List[Corruptor],
-                checkCorruptors: Callable[[List[Corruptor]], bool]) -> 'Organism':
+    def mutated(self, allowedCorruptors: list[Corruptor],
+                checkCorruptors: Callable[[list[Corruptor]], bool]) -> 'Organism':
         """This is something you may want to override in a subclass.
         This returns a NEW organism that has one changed corruptor.
         It chooses one of its current corruptors at random, and then changes
@@ -231,7 +233,7 @@ class Organism:
         return Organism(candidateCorruptors)  # type: ignore
 
     def mixed(self, other: 'Organism',
-              checkCorruptors: Callable[[List[Corruptor]], bool]) -> 'Organism':
+              checkCorruptors: Callable[[list[Corruptor]], bool]) -> 'Organism':
         """This is also something you may wish to override in a subclass.
         Currently, it pools the corruptors from self and other, and then
         randomly selects numCorruptors of them. If that passes checkCorruptors,
@@ -280,9 +282,9 @@ class Population:
     """This is the main class for running the sequence optimization GA."""
 
     def __init__(self, initialSequence: str, inputLength: int, populationSize: int,
-                 numCorruptors: int, allowedCorruptors: List[Corruptor],
-                 checkCorruptors: Callable[[List[Corruptor]], bool],
-                 fitnessFn: Callable[[Profile, List[Corruptor]], float],
+                 numCorruptors: int, allowedCorruptors: list[Corruptor],
+                 checkCorruptors: Callable[[list[Corruptor]], bool],
+                 fitnessFn: Callable[[Profile, list[Corruptor]], float],
                  numSurvivingParents: int, predictor: utils.BatchPredictor):
         """This is a heck of a constructor, but you need to make a
         lot of choices to use the GA.
@@ -381,16 +383,23 @@ class Population:
     def runCalculation(self) -> None:
         """Runs the current population through the model, assigns scores
         to each organism, and sorts the organisms by score."""
-
+        numInFlight = 0
         for i, organism in enumerate(self.organisms):
             self.predictor.submitString(
                 organism.getSequence(self.initialSequence, self.inputLength),
                 i)
+            numInFlight += 1
+            while self.predictor.outputReady():
+                ret = self.predictor.getOutput()
+                self.organisms[ret[1]].profile = ret[0]
+                self.organisms[ret[1]].setScore(self.fitnessFn)
+                numInFlight -= 1
 
-        for i in range(self.populationSize):
+        while numInFlight:
             ret = self.predictor.getOutput()
             self.organisms[ret[1]].profile = ret[0]
             self.organisms[ret[1]].setScore(self.fitnessFn)
+            numInFlight -= 1
 
         self.organisms.sort(key=lambda x: x.score)
 
@@ -408,7 +417,7 @@ class Population:
             toChoose = self.populationSize - 1
         return self.organisms[toChoose]
 
-    def _choose2(self) -> Tuple[Organism, Organism]:
+    def _choose2(self) -> tuple[Organism, Organism]:
         """Randomly choose two of the organisms in the population.
         This guarantees that the two organisms will be different.
         You may want to override this in a subclass to change the
@@ -462,9 +471,9 @@ class Population:
         self.organisms = list(ret)
 
 
-def getCandidateCorruptorList(sequence: str, regions: Optional[List[Tuple[int, int]]] = None,
+def getCandidateCorruptorList(sequence: str, regions: Optional[list[tuple[int, int]]] = None,
                               allowDeletion: bool = True,
-                              allowInsertion: bool = True) -> List[Corruptor]:
+                              allowInsertion: bool = True) -> list[Corruptor]:
     """Given a sequence (a string), this generates a list of tuples
     that contain all of the possible corruptors for each position in the
     sequence. It will have the format
@@ -508,7 +517,7 @@ def getCandidateCorruptorList(sequence: str, regions: Optional[List[Tuple[int, i
     return ret
 
 
-def anyCorruptorsCloserThan(corList: List[Corruptor], distance: int) -> bool:
+def anyCorruptorsCloserThan(corList: list[Corruptor], distance: int) -> bool:
     """A utility function that you can integrate into checkCorruptors
     to see if any corruptors are close to each other. Given a sorted
     list of corruptors (each corruptor a tuple of (position, effect)),
@@ -525,8 +534,8 @@ def anyCorruptorsCloserThan(corList: List[Corruptor], distance: int) -> bool:
     return False
 
 
-def removeCorruptors(corruptorList: List[Corruptor],
-                     corsToRemove: List[Corruptor]) -> List[Corruptor]:
+def removeCorruptors(corruptorList: list[Corruptor],
+                     corsToRemove: list[Corruptor]) -> list[Corruptor]:
     """Given a candidate corruptor list, like from getCandidateCorruptorList, and
     a list of tuples giving disallowed corruptors, return a new candidate corruptor
     list where those disallowed corruptors are removed.
@@ -551,7 +560,7 @@ def removeCorruptors(corruptorList: List[Corruptor],
     return ret
 
 
-def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
+def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
     """ A utility to make sure that a list of corruptors
     is fundamentally sound. A valid list satisfies the
     following properties:
@@ -587,11 +596,15 @@ def validCorruptorList(corruptorList: List[Corruptor]) -> bool:
     return True
 
 
-def plotTraces(posTraces: List[Tuple[PRED_AR_T, str, str]],
-               negTraces: List[Tuple[PRED_AR_T, str, str]],
+ANNOTATION_T = tuple[tuple[int, int], str, str] \
+    | tuple[tuple[int, int], str, str, float, float]
+
+
+def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
+               negTraces: list[tuple[PRED_AR_T, str, str]],
                xvals: npt.NDArray[np.float32],
-               annotations: List[Tuple[Tuple[int, int], str, str]],
-               corruptors: List[Corruptor],
+               annotations: list[ANNOTATION_T],
+               corruptors: list[Corruptor],
                ax: plt.Axes) -> None:
     """Generate a nice little plot including pips for corruptors and boxes for
     annotations.
@@ -624,21 +637,37 @@ def plotTraces(posTraces: List[Tuple[PRED_AR_T, str, str]],
     for negTrace in negTraces:
         ax.plot(xvals, -negTrace[0] - boxHeight, label=negTrace[1], color=negTrace[2])
     for annot in annotations:
-        l, r = annot[0]
-        h = boxHeight  # Just for brevity.
-        ax.fill([l, l, r, r], [-h, h, h, -h], annot[2], label=annot[1])
+        match annot:
+            case ((l, r), label, color):
+                h = boxHeight  # Just for brevity.
+                ax.fill([l, l, r, r], [-h, h, h, -h], color, label=label)
+            case ((l, r), label, color, startFrac, stopFrac):
+                bottom = -boxHeight + (2 * boxHeight * startFrac)
+                top = -boxHeight + (2 * boxHeight * stopFrac)
+                ax.fill([l, l, r, r], [bottom, top, top, bottom], color, label=label)
 
     for cor in corruptors:
-        left = cor[0] - 5
-        right = cor[0] + 5
-        h = boxHeight  # Just for brevity.
-        if cor[1] in "ACGT":
+        match cor:
+            case (pos, corType):
+                bottom = -boxHeight
+                top = boxHeight
+            case (pos, corType, startFrac, stopFrac):
+                bottom = -boxHeight + (2 * boxHeight * startFrac)
+                top = -boxHeight + (2 * boxHeight * stopFrac)
+
+        left = pos - 5
+        right = pos + 5
+        # left = cor[0] - 5
+        # right = cor[0] + 5
+        # h = boxHeight  # Just for brevity.
+        midPt = (bottom + top) / 2
+        if corType in "ACGT":
             # Use a diamond for SNPs.
             corXvals = [left, cor[0], right, cor[0]]
-            corYvals = [0, h, 0, -h]
+            corYvals = [midPt, top, midPt, bottom]
         else:
             # Use a wedge for deletions
             corXvals = [left, left + 4, left, right, right - 4, right]
-            corYvals = [-h, 0, h, h, 0, -h]
-        ax.fill(corXvals, corYvals, corruptorColors[cor[1]])
+            corYvals = [bottom, midPt, top, top, midPt, bottom]
+        ax.fill(corXvals, corYvals, matplotlib.colors.to_hex(corruptorColors[corType]))
     ax.legend()

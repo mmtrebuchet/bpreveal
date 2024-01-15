@@ -14,8 +14,9 @@ _SHUFFLE_LOCK = threading.Lock()
 # Set up the RNG.
 libushuffle.initialize()
 
+
 def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
-                  seed: int|None = None) -> list[str]:
+                  seed: int | None = None) -> list[str]:
     """Given a string sequence, perform a shuffle that maintains
     the kmer distribution.
     This is adapted from ushuffle.
