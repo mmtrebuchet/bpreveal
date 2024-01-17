@@ -22,7 +22,7 @@ class FastaReader:
         # First, scan over the file and count how many sequences are in it.
         logging.info("Counting number of samples.")
         with open(fastaFname, "r") as fp:
-            for line in fp:
+            for line in wrapTqdm(fp):
                 line = line.strip()  # Get rid of newlines.
                 if len(line) == 0:
                     continue  # There is a blank line. Ignore it.
@@ -147,23 +147,31 @@ def main(config):
     # Before we can build the output dataset in the hdf5 file, we need to
     # know how many fasta regions we will be asked to predict.
     fastaReader = FastaReader(fastaFname)
-    batcher = utils.ThreadedBatchPredictor(modelFname, batchSize)
+    if "num-threads" in config:
+        batcher = utils.ThreadedBatchPredictor(modelFname, batchSize,
+                                               numThreads=config["num-threads"])
+    else:
+        batcher = utils.BatchPredictor(modelFname, batchSize)
     writer = H5Writer(outFname, numHeads, fastaReader.numPredictions)
     logging.info("Entering prediction loop.")
     # Now we just iterate over the fasta file and submit to our batcher.
     with batcher:
-        for _ in wrapTqdm(range(fastaReader.numPredictions)):
+        pbar = wrapTqdm(fastaReader.numPredictions)
+        for _ in range(fastaReader.numPredictions):
             fastaReader.pop()
             batcher.submitString(fastaReader.curSequence, fastaReader.curLabel)
             while batcher.outputReady():
                 # We've just run a batch. Write it out.
-                writer.addEntry(batcher.getOutput())
+                ret = batcher.getOutput()
+                pbar.update()
+                writer.addEntry(ret)
         # Done with the main loop, clean up the batcher.
         logging.debug("Done with main loop.")
-        # batcher.runBatch()
-        while not batcher.empty():  # batcher.outputPossible():
+        while not batcher.empty():
             # We've just run a batch. Write it out.
-            writer.addEntry(batcher.getOutput())
+            ret = batcher.getOutput()
+            pbar.update()
+            writer.addEntry(ret)
         writer.close()
 
 

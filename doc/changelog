@@ -8,6 +8,14 @@ Version 4.0.1
 	a schema.
 	* There are now easy functions that you can use to make predictions and
 	get interpretation scores in utils.py.
+	* A new ThreadedBatchPredictor runs predictions in another thread, and
+	lets you hold it in a context manager so that it shuts down and starts up
+	when you need it.
+	* Lots of enhancements to the pisa plotting tools!
+
+	BUG FIXES:
+	* makePredictionsFasta used a non-iterable tqdm object as an iterable in a
+	loop. This has been fixed.
 
 Version 4.0.0, 2023-01-24
 	BREAKING CHANGES:

@@ -39,6 +39,12 @@ H5_CHUNK_SIZE = 128
 # program crash.
 QUEUE_TIMEOUT = 60  # (seconds)
 
+
+# This gets set to True if you use any of the tensorflow-importing functions in this
+# file. If you import tensorflow in a parent process, child processes will not be able
+# to use tensorflow, because tensorflow is dumb like that. Tools like the easy® functions
+# and the threaded batcher check to see if Tensorflow has been loaded in the parent process
+# before they spawn children.
 GLOBAL_TENSORFLOW_LOADED = False
 
 
@@ -191,28 +197,51 @@ def wrapTqdm(iterable, logLevel: str | int = logging.INFO, **tqdmKwargs) -> tqdm
             return iterable
 
 
-def oneHotEncode(sequence: str) -> ONEHOT_AR_T:
+def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
     """Converts the string sequence into a one-hot encoded numpy array.
        The returned array will have shape (len(sequence), 4).
        The columns are, in order, A, C, G, and T.
        This function will error out if your sequence contains any
-       characters other than ACGTacgt, so N nucleotides are rejected."""
-
-    ret = np.empty((len(sequence), 4), dtype=ONEHOT_T)
+       characters other than ACGTacgt, so N nucleotides are rejected.
+       If allowN is set to True, then any letters that are not in
+       "ACGTacgt" will be encoded to [0, 0, 0, 0].
+       if allowN is False (the default) then any characters other than
+       "ACGTacgt" will raise an AssertionError.
+       The mapping is as follows:
+       Aa → [1, 0, 0, 0]
+       Cc → [0, 1, 0, 0]
+       Gg → [0, 0, 1, 0]
+       Tt → [0, 0, 0, 1]
+       Other → [0, 0, 0, 0]
+    """
+    if allowN:
+        initFunc = np.zeros
+    else:
+        initFunc = np.empty
+    ret = initFunc((len(sequence), 4), dtype=ONEHOT_T)
     ordSeq = np.fromstring(sequence, np.int8)  # type:ignore
     ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
     ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
     ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
     ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord('t'))
-    assert (np.sum(ret) == len(sequence)), \
-        "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
+    if not allowN:
+        assert (np.sum(ret) == len(sequence)), \
+            "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
     return ret
 
 
 def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     """Given an array representing a one-hot encoded sequence, convert it back
     to a string. The input shall have shape (sequenceLength, 4), and the output
-    will be a Python string. """
+    will be a Python string.
+    The decoding is performed based on the following mapping:
+    [1, 0, 0, 0] → A
+    [0, 1, 0, 0] → C
+    [0, 0, 1, 0] → G
+    [0, 0, 0, 1] → T
+    [0, 0, 0, 0] → N
+
+    """
     # Convert to an int8 array, since if we get floating point
     # values, the chr() call will fail.
     oneHotArray = oneHotSequence.astype(ONEHOT_T)
@@ -222,6 +251,8 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
         oneHotArray[:, 1] * ord('C') + \
         oneHotArray[:, 2] * ord('G') + \
         oneHotArray[:, 3] * ord('T')
+    # Anything that was not encoded is N.
+    ret[ret == 0] = ord('N')
     return ret.tobytes().decode('ascii')
 
 
@@ -417,7 +448,9 @@ class BatchPredictor:
         """
         logging.debug("Creating batch predictor.")
         from collections import deque
-
+        if not GLOBAL_TENSORFLOW_LOADED:
+            # We haven't loaded Tensorflow yet.
+            setMemoryGrowth()
         self._model = loadModel(modelFname)  # type: ignore
         logging.debug("Model loaded.")
         self._batchSize = batchSize
@@ -467,17 +500,23 @@ class BatchPredictor:
         seqOhe = oneHotEncode(sequence)
         self.submitOHE(seqOhe, label)
 
-    def runBatch(self) -> None:
+    def runBatch(self, maxSamples: int | None = None) -> None:
         """This actually runs the batch. Normally, this will be called
         by the submit functions, and it will also be called if you ask
         for output and the output queue is empty (assuming there are
-        sequences waiting in the input queue.)"""
+        sequences waiting in the input queue.)
+        maxSamples, if provided is the maximum number of samples to
+        run in this batch. It should probably be a multiple of the
+        batch size."""
         if self._inWaiting == 0:
             # There are no samples to process right now, so return
             # (successfully) immediately.
             logging.info("runBatch was called even though there was nothing to do.")
             return
-        numSamples = self._inWaiting
+        if maxSamples is None:
+            numSamples = self._inWaiting
+        else:
+            numSamples = min(self._inWaiting, maxSamples)
         labels = []
         firstElem = self._inQueue.pop()
         labels.append(firstElem[1])
@@ -490,7 +529,7 @@ class BatchPredictor:
         # With that ugliness out of the way, now I just populate the rest of
         # the prediction table.
         writeHead = 1
-        while self._inWaiting:
+        for i in range(numSamples - 1):
             nextElem = self._inQueue.pop()
             modelInputs[writeHead] = nextElem[0]
             labels.append(nextElem[1])
@@ -597,9 +636,12 @@ class ThreadedBatchPredictor:
         # use as a normal BatchPredictor.
     # On leaving the context, the predictor is shut down.
 
+    The batcher guarantees that the order in which you get results is the same as
+    the order you submitted them in, but this could change in the future!
     """
 
-    def __init__(self, modelFname: str, batchSize: int, start=False) -> None:
+    def __init__(self, modelFname: str, batchSize: int, start: bool = False,
+                 numThreads: int = 1) -> None:
         """Starts up the BatchPredictor. This will load your model,
         and get ready to make predictions.
         modelFname is the name of the BPReveal model that you want
@@ -613,7 +655,8 @@ class ThreadedBatchPredictor:
         # Since I'll be putting things in and taking them out often,
         # I'm going to use a queue data structure, where those operations
         # are efficient.
-        self._batcher = None
+        self._batchers = None
+        self._numThreads = numThreads
         self.running = False
         if start:
             self.start()
@@ -627,7 +670,9 @@ class ThreadedBatchPredictor:
         """When leaving a context manager's with statement, shut down the batcher."""
         self.stop()
         if exceptionType is not None:
-            raise Exception(exceptionType + "\n" + exceptionValue + '\n' + exceptionTraceback)
+            return False
+        del exceptionValue  # Disable unused warning
+        del exceptionTraceback  # Disable unused warning
 
     def start(self):
         """Spin up the batcher thread. If you submit sequences without starting the batcher,
@@ -635,16 +680,27 @@ class ThreadedBatchPredictor:
         """
         if not self.running:
             logging.debug("Starting threaded batcher.")
-            assert self._batcher is None, "Attempting to start a new batcher when an old "\
-                "one is still alive."
-            self._inQueue = multiprocessing.Queue()
-            self._outQueue = multiprocessing.Queue()
-            self._batcher = multiprocessing.Process(target=_batcherThread,
-                args=(self._modelFname, self._batchSize, self._inQueue, self._outQueue),
-                daemon=True)
-            self._batcher.start()
+            assert self._batchers is None, "Attempting to start a new batcher when an old "\
+                "one is still alive." + str(self._batchers)
+            self._inQueues = []
+            self._outQueues = []
+            self._batchers = []
+
+            for _ in range(self._numThreads):
+                nextInQueue = multiprocessing.Queue(10000)
+                nextOutQueue = multiprocessing.Queue(10000)
+                self._inQueues.append(nextInQueue)
+                self._outQueues.append(nextOutQueue)
+                nextBatcher = multiprocessing.Process(target=_batcherThread,
+                    args=(self._modelFname, self._batchSize, nextInQueue, nextOutQueue),
+                    daemon=True)
+                nextBatcher.start()
+                self._batchers.append(nextBatcher)
             self._inFlight = 0
+            self._inQueueIdx = 0
             self.running = True
+            from collections import deque
+            self._outQueueOrder = deque()
         else:
             logging.warning("Attempted to start a batcher that was already running.")
 
@@ -658,21 +714,24 @@ class ThreadedBatchPredictor:
         """Shut down the processor thread."""
         if self.running:
             logging.debug("Shutting down threaded batcher.")
-            self._inQueue.put("shutdown")
-            self._inQueue.close()
-            self._outQueue.close()
-            if self._batcher is not None:
-                self._batcher.join(1)  # Wait one second.
-                if self._batcher.exitcode is None:
+            if self._batchers is None:
+                assert False, "Attempting to shut down a running ThreadedBatchPredictor" \
+                    "When its _batchers is None"
+            for i in range(self._numThreads):
+                self._inQueues[i].put("shutdown")
+                self._inQueues[i].close()
+                self._batchers[i].join(1)  # Wait one second.
+                if self._batchers[i].exitcode is None:
                     # The process failed to die. Kill it more forcefully.
-                    self._batcher.terminate()
-                self._batcher.join(1)  # Wait one second.
-                self._batcher.close()
-            del self._inQueue
-            del self._batcher
-            del self._outQueue
+                    self._batchers[i].terminate()
+                self._batchers[i].join(1)  # Wait one second.
+                self._batchers[i].close()
+                self._outQueues[i].close()
+            del self._inQueues
+            del self._batchers
+            del self._outQueues
             # Explicitly set None so that start won't panic.
-            self._batcher = None
+            self._batchers = None
             self.running = False
         else:
             logging.warning("Attempting to stop a batcher that is already stopped.")
@@ -690,7 +749,11 @@ class ThreadedBatchPredictor:
         if not self.running:
             logging.warning("Submitted a query when the batcher is stopped. Starting.")
             self.start()
-        self._inQueue.put((sequence, label), True, QUEUE_TIMEOUT)
+        q = self._inQueues[self._inQueueIdx]
+        query = (sequence, label)
+        q.put(query, True, QUEUE_TIMEOUT)
+        self._outQueueOrder.appendleft(self._inQueueIdx)
+        self._inQueueIdx = (self._inQueueIdx + 1) % self._numThreads
         self._inFlight += 1
 
     def submitString(self, sequence: str, label: typing.Any) -> None:
@@ -704,7 +767,10 @@ class ThreadedBatchPredictor:
     def outputReady(self) -> bool:
         """Is there any output ready for you? Returns True if the batcher is sitting
         on results, and False otherwise."""
-        return not self._outQueue.empty()
+        if self._inFlight:
+            outIdx = self._outQueueOrder[-1]
+            return not self._outQueues[outIdx].empty()
+        return False
 
     def empty(self) -> bool:
         """Is it possible to getOutput()? This will be true if predictions haven't
@@ -712,14 +778,15 @@ class ThreadedBatchPredictor:
         return self._inFlight == 0
 
     def getOutput(self) -> tuple[list, typing.Any]:
-        """Same semantics as BatchPredictor.getOutput"""
-        if self._outQueue.empty():
+        """Same semantics as BatchPredictor.getOutput."""
+        nextQueueIdx = self._outQueueOrder.pop()
+        if self._outQueues[nextQueueIdx].empty():
             if self._inFlight:
                 # There are inputs that have not been processed. Run the batch.
-                self._inQueue.put("finishBatch")
+                self._inQueues[nextQueueIdx].put("finishBatch")
             else:
                 assert False, "There are no outputs ready, and the input queue is empty."
-        ret = self._outQueue.get(True, QUEUE_TIMEOUT)
+        ret = self._outQueues[nextQueueIdx].get(True, QUEUE_TIMEOUT)
         self._inFlight -= 1
         return ret
 
@@ -728,18 +795,37 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
         "after loading tensorflow."
     logging.debug("Starting subthread")
+    import queue
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches
     # just creates a BatchPredictor.
     batcher = BatchPredictor(modelFname, batchSize)
     predsInFlight = 0
+    numWaits = 0
     while True:
         # No timeout because this batcher could be waiting for a very long time to get
         # inputs.
-        inVal = inQueue.get(True)
+        try:
+            inVal = inQueue.get(True, 0.1)
+        except queue.Empty:
+            numWaits += 1
+            # There was no input. Are we sitting on predictions that we could go ahead and make?
+            if batcher._inWaiting > batcher._batchSize / numWaits:
+                # division by numWeights so that if you wait a long time, it will even
+                # run a partial batch.
+                # Nope, go ahead and give the batcher a spin while we wait.
+                batcher.runBatch(maxSamples=batchSize)
+                while not outQueue.full() and batcher.outputReady():
+                    outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
+                    predsInFlight -= 1
+            continue
+        numWaits = 0
         match inVal:
-            case (oheSequence, label):
-                batcher.submitOHE(oheSequence, label)
+            case (sequence, label):
+                if type(sequence) is str:
+                    batcher.submitString(sequence, label)
+                else:
+                    batcher.submitOHE(sequence, label)
                 predsInFlight += 1
                 # If there's an answer and the out queue can handle it, go ahead
                 # and send it.

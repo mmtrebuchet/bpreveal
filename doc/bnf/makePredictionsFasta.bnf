@@ -1,6 +1,8 @@
 <prediction-fasta-input-configuration> ::=
-    { <prediction-fasta-settings-section>, <prediction-fasta-input-section>,
-        <verbosity-section> }
+    { <prediction-fasta-settings-section>,
+      <prediction-fasta-input-section>,
+      <prediction-fasta-threads-section>
+      <verbosity-section> }
 
 <prediction-fasta-settings-section> ::=
     "settings" : {
@@ -11,3 +13,7 @@
 
 <prediction-fasta-input-section> ::=
     "fasta-file" : <file-name>
+
+<prediction-fasta-threads-section> ::=
+    "num-threads" : <integer>,
+  | <empty>

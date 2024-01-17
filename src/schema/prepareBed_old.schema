@@ -10,7 +10,7 @@
                 "type": "object",
                 "properties": {
                     "file-name": {
-                        "type" : "string"
+                        "type": "string"
                     },
                     "max-counts":{
                         "type": "number"
@@ -26,13 +26,16 @@
                     }
                 },
                 "required": ["file-name"],
-                "oneOf": [
-                    {"required": ["max-counts"]},
-                    {"required": ["max-quantile"]}],
-                "oneOf": [
-                    {"required": ["min-counts"]},
-                    {"required": ["min-quantile"]}]}},
-        "splits" :{
+                "allOf": [
+                    {"oneOf": [
+                        {"required": ["max-counts"]},
+                        {"required": ["max-quantile"]}]},
+                    {"oneOf": [
+                        {"required": ["min-counts"]},
+                        {"required": ["min-quantile"]}]}]
+            }
+        },
+        "splits":{
             "oneOf":[
                 {
                     "type": "object",

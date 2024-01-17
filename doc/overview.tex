@@ -277,7 +277,7 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 \end{itemize}
 
 \subsection{BPReveal 4.0.0}
-When BPReveal 4.0.0 is released, the following breaking changes will occur:
+The following breaking changes occurred when BPReveal 4.0.0 was released:
 \begin{itemize}
     \item The chromosome list in the hdf5 files produced by
         \texttt{interpretFlat} currently store chromosome information as
@@ -671,6 +671,17 @@ memory.
 \subsubsection{Input specification}
 
 \lstinputlisting{bnf/makePredictionsFasta.bnf}
+
+\subsubsection{Parameter notes}
+
+\begin{enumerate}
+    \item \texttt{num-threads} gives the number of concurrent threads to use for
+        predicting. If specified, a ThreadedBatchPredictor will be used. Otherwise, a
+        regular BatchPredictor. This should have no effect other than a slight performance
+        gain with complicated models. Setting this too high (above three or so) may cause
+        you to run out of GPU memory.
+\end{enumerate}
+
 
 \subsubsection{Output specification}
 

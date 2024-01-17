@@ -24,6 +24,7 @@
             "not": {"required": ["genome"]}
         },
         "fasta-file": {"type": "string"},
+        "num-threads": {"type": "integer"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },
     "required": ["fasta-file", "settings",  "verbosity"]

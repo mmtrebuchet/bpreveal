@@ -4,18 +4,18 @@
     "description": "Schema for interpretPisa.py",
     "type": "object",
     "properties": {
-        "genome": {"type" : "string"},
-        "bed-file": {"type" : "string"},
-        "fasta-file": {"type" : "string"},
+        "genome": {"type": "string"},
+        "bed-file": {"type": "string"},
+        "fasta-file": {"type": "string"},
         "sequence-fasta": {"type": "string"},
         "input-length": {"type": "integer"},
         "output-length": {"type": "integer"},
         "head-id": {"type": "integer"},
         "task-id": {"type": "integer"},
-        "output-h5" : {"type": "string"},
+        "output-h5": {"type": "string"},
         "num-shuffles": {"type": "integer"},
         "kmer-size": {"type": "integer"},
-        "DEBUG_profile-output" : {"type": "string"},
+        "DEBUG_profile-output": {"type": "string"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },
     "required": ["input-length", "output-length", "head-id", "task-id",
@@ -28,7 +28,7 @@
         },
         {
             "not": {"required": ["genome", "bed-file"]},
-            "oneOf" : [{"required": ["fasta-file"]},
+            "oneOf": [{"required": ["fasta-file"]},
                                     {"required": ["sequence-fasta"]}]
         }
     ]

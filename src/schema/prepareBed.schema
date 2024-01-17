@@ -10,7 +10,7 @@
                 "type": "object",
                 "properties": {
                     "bigwig-names": {
-                        "type" : "array",
+                        "type": "array",
                         "items": {"type": "string"}
                     },
                     "max-counts":{
@@ -27,13 +27,17 @@
                     }
                 },
                 "required": ["bigwig-names"],
-                "oneOf": [
-                    {"required": ["max-counts"]},
-                    {"required": ["max-quantile"]}],
-                "oneOf": [
-                    {"required": ["min-counts"]},
-                    {"required": ["min-quantile"]}]}},
-        "splits" :{
+                "allOf": [
+                    {"oneOf": [
+                        {"required": ["max-counts"]},
+                        {"required": ["max-quantile"]}]},
+                    {"oneOf": [
+                        {"required": ["min-counts"]},
+                        {"required": ["min-quantile"]}]}
+                ]
+            }
+        },
+        "splits":{
             "oneOf":[
                 {
                     "type": "object",

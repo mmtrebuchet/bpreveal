@@ -19,7 +19,7 @@
                 "architecture": {
                     "type": "object",
                     "properties": {
-                        "architecture-name": {"type" : "string", "enum": ["bpnet"]},
+                        "architecture-name": {"type": "string", "enum": ["bpnet"]},
                         "input-length": {"type": "integer"},
                         "output-length": {"type": "integer"},
                         "model-name": {"type": "string"},

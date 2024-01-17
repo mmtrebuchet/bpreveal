@@ -17,7 +17,7 @@
                 "background-probs": {
                     "type": "array",
                     "minItems": 4,
-                    "maxItems" : 4,
+                    "maxItems": 4,
                     "items": {"type": "number"}},
                 "quantile-json": {"type": "string"},
                 "patterns": {
@@ -36,22 +36,22 @@
         },
         "pattern-spec-section": {
             "type": "object",
-            "properties" : {
-                "metacluster-name" : {"type": "string"},
-                "pattern-name" : {"type": "string"},
-                "pattern-names" : {"type": "array", "items" : {"type": "string"}},
+            "properties": {
+                "metacluster-name": {"type": "string"},
+                "pattern-name": {"type": "string"},
+                "pattern-names": {"type": "array", "items": {"type": "string"}},
                 "short-name": {"type": "string"},
-                "short-names" : {"type": "array", "items" : {"type": "string"}}
+                "short-names": {"type": "array", "items": {"type": "string"}}
             },
             "required": ["metacluster-name"],
             "oneOf":[
                 {"allOf": [
                         {"required": ["pattern-name"]},
-                        {"not" : {"anyOf": [{"required": ["pattern-names"]},
+                        {"not": {"anyOf": [{"required": ["pattern-names"]},
                                             {"required": ["short-names"]}]}}]},
                 {"allOf": [
                         {"required": ["pattern-names"]},
-                        {"not" : {"anyOf": [{"required": ["pattern-name"]},
+                        {"not": {"anyOf": [{"required": ["pattern-name"]},
                                             {"required": ["short-name"]}]}}]}]
         }
     },
@@ -61,7 +61,7 @@
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },
     "allOf": [
-            {"$ref" : "#/definitions/seqlet-scanning-settings"},
+            {"$ref": "#/definitions/seqlet-scanning-settings"},
             {"required": ["verbosity"]}
     ]
 }

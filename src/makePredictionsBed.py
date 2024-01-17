@@ -5,9 +5,9 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
+import pybedtools
 import bpreveal.utils as utils
 utils.setMemoryGrowth()
-import pybedtools
 import numpy as np
 import pysam
 import h5py

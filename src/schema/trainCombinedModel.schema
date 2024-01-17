@@ -18,15 +18,15 @@
                 "learning-rate-plateau-patience": {"type": "integer"},
                 "transformation-model": {
                     "type": "object",
-                    "properties" : {
-                        "transformation-model-file" : {"type": "string"}
+                    "properties": {
+                        "transformation-model-file": {"type": "string"}
                     },
-                    "required" : ["transformation-model-file"]
+                    "required": ["transformation-model-file"]
                 },
                 "architecture": {
                     "type": "object",
                     "properties": {
-                        "architecture-name": {"type" : "string", "enum": ["bpnet"]},
+                        "architecture-name": {"type": "string", "enum": ["bpnet"]},
                         "input-length": {"type": "integer"},
                         "output-length": {"type": "integer"},
                         "model-name": {"type": "string"},
@@ -42,7 +42,7 @@
             "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
                 "batch-size", "learning-rate", "learning-rate-plateau-patience",
                 "transformation-model", "architecture"],
-            "not" : {"required": ["profile-architecture", "counts-architecture"]}
+            "not": {"required": ["profile-architecture", "counts-architecture"]}
 
         },
         "heads": {
@@ -55,7 +55,7 @@
                     "head-name": {"type": "string"},
                     "counts-loss-weight": {"type": "number"},
                     "counts-loss-frac-target": {"type": "number"},
-                    "use-bias-counts" : {"type": "boolean"}
+                    "use-bias-counts": {"type": "boolean"}
                 },
                 "anyOf": [
                     {"required": ["counts-loss-weight"]},

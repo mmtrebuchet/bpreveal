@@ -4,20 +4,20 @@
     "description": "Schema for interpretFlat.py",
     "type": "object",
     "properties": {
-        "genome": {"type" : "string"},
-        "bed-file": {"type" : "string"},
-        "fasta-file": {"type" : "string"},
+        "genome": {"type": "string"},
+        "bed-file": {"type": "string"},
+        "fasta-file": {"type": "string"},
         "input-length": {"type": "integer"},
         "output-length": {"type": "integer"},
         "heads": {"type": "integer"},
         "head-id": {"type": "integer"},
         "profile-task-ids": {
-            "type" : "array",
-            "items" : {
-                "type" : "integer"}
+            "type": "array",
+            "items": {
+                "type": "integer"}
         },
-        "profile-h5" : {"type": "string"},
-        "counts-h5" : {"type": "string"},
+        "profile-h5": {"type": "string"},
+        "counts-h5": {"type": "string"},
         "num-shuffles": {"type": "integer"},
         "kmer-size": {"type": "integer"},
         "DEBUG_profile-output": {"type": "string"},
