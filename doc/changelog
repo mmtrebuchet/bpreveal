@@ -1,4 +1,4 @@
-Version 4.0.1
+Version 4.0.1, 2024-01-17
 	ENHANCEMENTS:
 	* Added the option to specify the kmer size for the shuffles in shap value
 	calculations. interpretFlat and interpretPisa now have an optional
@@ -17,7 +17,7 @@ Version 4.0.1
 	* makePredictionsFasta used a non-iterable tqdm object as an iterable in a
 	loop. This has been fixed.
 
-Version 4.0.0, 2023-01-24
+Version 4.0.0, 2024-01-10
 	BREAKING CHANGES:
 	* interpretFlat now produces h5 files that use integer indexes for the
 	chromosome instead of strings. Internal programs that were affected by
