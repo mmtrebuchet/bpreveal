@@ -111,7 +111,6 @@ if __name__ == "__main__":
         config = json.load(configFp)
 
     import bpreveal.schema
-    import jsonschema
-    jsonschema.validate(instance=config, schema=bpreveal.schema.prepareTrainingData)
+    bpreveal.schema.prepareTrainingData.validate(config)
     utils.setVerbosity(config["verbosity"])
     writeH5(config)
