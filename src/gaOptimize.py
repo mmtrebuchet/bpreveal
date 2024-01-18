@@ -636,6 +636,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
         ax.plot(xvals, posTrace[0] + boxHeight, label=posTrace[1], color=posTrace[2])
     for negTrace in negTraces:
         ax.plot(xvals, -negTrace[0] - boxHeight, label=negTrace[1], color=negTrace[2])
+    usedLabels = []
     for annot in annotations:
         match annot:
             case ((l, r), label, color):
@@ -644,7 +645,11 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
             case ((l, r), label, color, startFrac, stopFrac):
                 bottom = -boxHeight + (2 * boxHeight * startFrac)
                 top = -boxHeight + (2 * boxHeight * stopFrac)
-                ax.fill([l, l, r, r], [bottom, top, top, bottom], color, label=label)
+                if (color, label) not in usedLabels:
+                    ax.fill([l, l, r, r], [bottom, top, top, bottom], color, label=label)
+                    usedLabels.append((color, label))
+                else:
+                    ax.fill([l, l, r, r], [bottom, top, top, bottom], color)
 
     for cor in corruptors:
         match cor:
