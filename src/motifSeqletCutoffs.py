@@ -5,7 +5,11 @@ import bpreveal.utils as utils
 import json
 
 
-def motifSeqletCutoffsMain(config):
+def main(config):
+    """Determine the cutoffs based on modisco outputs.
+
+    :param config: A JSON object based on the motifSeqletCutoffs specification.
+    """
     utils.setVerbosity(config["verbosity"])
     logging.info("Starting seqlet analysis")
     # First, make the pattern objects.
@@ -36,4 +40,4 @@ if __name__ == "__main__":
         config = json.load(configFp)
     import bpreveal.schema
     bpreveal.schema.motifSeqletCutoffs.validate(config)
-    motifSeqletCutoffsMain(config)
+    main(config)

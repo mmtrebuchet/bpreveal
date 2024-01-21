@@ -1212,7 +1212,10 @@ the chrom, start, and end columns are meaningless.
 Note that the first six columns define a bed file, and a simple \texttt{cut}
 command can generate a viewable bed file from these tsvs:
 
-\lstinputlisting{bnf/motifAddQuantiles.bnf}
+\begin{lstlisting}
+    cat scan.tsv | cut -f 1-6 | tail -n +2 > scan.bed
+\end{lstlisting}
+
 
 Note that the hits from scanning can contain duplicates.
 This can happen if the same bases appear in multiple regions (i.e., there is

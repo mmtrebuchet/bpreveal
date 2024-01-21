@@ -1,3 +1,4 @@
+"""A set of callbacks useful for training a model."""
 import logging
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
@@ -5,6 +6,15 @@ import re
 
 
 def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads):
+    """Return a set of callbacks for your model.
+
+    :param earlyStop: The ``early-stopping-patience`` from the config file.
+    :param outputPrefix: The ``output-prefix`` for the model, including directory.
+    :param plateauPatience: The ``learning-rate-plateau-patience`` from the config file.
+    :param heads: The heads list for your model, to which adaptive loss λ tensors
+        have been added.
+    :return: A list of Keras callbacks that you should use to train your model.
+    """
     logging.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
                       earlyStop, outputPrefix, plateauPatience))
@@ -28,11 +38,37 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
 
 
 class ApplyAdaptiveCountsLoss(Callback):
-    """This updates the counts loss weights in your model on the fly, so that you can specify a
+    """Implements the adaptive counts loss algorithm.
+
+    This updates the counts loss weights in your model on the fly, so that you can specify a
     target fraction of the loss that is due to counts, and the model will automatically update
     the weight. It currently does not update profile weights, so you can't yet automatically
     balance the losses in a multitask model.
-    (You can still manually specify them in the config json, of course!)"""
+    (You can still manually specify them in the config json, of course!)
+
+    :param heads: Is straight from the json, except with "INTERNAL_counts-loss-weight-variable"
+        entries in each head. If present, these variables are the Keras Variables that contain the
+        loss weights. These will be updated in this callback.
+    :param aggression: A number from 0 to 1.
+    :param lrPlateauCallback: The learning rate plateau callback that your model is going to use.
+    :param earlyStopCallback: The early stopping callback that your model is going to use.
+    :param checkpointCallback: The checkpoint callback that your model is going to use.
+
+
+    ``aggression`` determines how aggressively the counts loss
+    will be re-weighted. Lower values indicate slower changes, and a value of 1.0 means that
+    the old loss should be completely discarded at each iteration.
+    (If the newly calculated loss weight is ever off by over a factor of two, it's clamped to
+    be exactly twice (or half) of the old weight, so that gross instability in the early stages
+    doesn't cause the model to explode.)
+
+    The three callbacks are the others used in the model, and the model should run them BEFORE
+    this callback is executed.
+    This callback messes with their internal state (naughty, naughty!) because changing the
+    loss weights could cause the model's loss value to go up even though the model hasn't
+    gotten any worse.
+    """
+
     # Straight from the json, with "INTERNAL_counts-loss-weight-variable".
     heads: dict
     # 0 = don't change weights, 1 = ignore history, change weights very fast.
@@ -44,21 +80,7 @@ class ApplyAdaptiveCountsLoss(Callback):
 
     def __init__(self, heads: dict, aggression: float,
                  lrPlateauCallback, earlyStopCallback, checkpointCallback):
-        """Heads is straight from the json, except with "INTERNAL_counts-loss-weight-variable"
-        entries in each head. If present, these variables are the Keras Variables that contain the
-        loss weights. These will be updated in this callback.
-        aggression is a number from 0 to 1. It determines how aggressively the counts loss
-        will be re-weighted. Lower values indicate slower changes, and a value of 1.0 means that
-        the old loss should be completely discarded at each iteration.
-        (If the newly calculated loss weight is ever off by over a factor of two, it's clamped to
-        be exactly twice (or half) of the old weight, so that gross instability in the early stages
-        doesn't cause the model to explode.)
-        The three callbacks are the others used in the model, and should be run BEFORE
-        this callback is executed.
-        This callback messes with their internal state (naughty, naughty!) because changing the
-        loss weights could cause the model's loss value to go up even though the model hasn't
-        gotten any worse.
-        """
+        """Build the callback."""
         super().__init__()
         self.heads = heads
         logging.debug(heads)
@@ -72,7 +94,11 @@ class ApplyAdaptiveCountsLoss(Callback):
             self.λHistory[head["head-name"]] = []
 
     def on_train_begin(self, logs=None):
-        """At the beginning of training, see which heads are using adaptive weights.
+        """Set up the initial guesses for λ.
+
+        :param logs: Ignored.
+
+        At the beginning of training, see which heads are using adaptive weights.
         For those heads, load in an initial guess for λ based on the BPNet heuristic.
         """
         for head in self.heads:
@@ -95,15 +121,19 @@ class ApplyAdaptiveCountsLoss(Callback):
                     head["INTERNAL_λ-variable"].assign(λ)
 
     def getLosses(self, epoch: int, headName: str) -> tuple[float, float, float, float]:
-        """What were the profile, counts, val_profile, and val_counts (in that order)
+        """Get what the losses actually were in a previous epoch using that epoch's λ values.
+
+        :param epoch: The epoch for which you'd like losses.
+        :param headName: The head for which you'd like losses.
+        :return: A tuple with four losses: (profile, counts, val_profile, val_counts).
+
+        What were the profile, counts, val_profile, and val_counts (in that order)
         losses at the given epoch? The counts weight returned from this function
         uses the counts weight in use at the given epoch.
         This method assumes that the validation and training losses
         match some regexes, and these are based on layer names. If someone
         got really goofy with head names (e.g., one head named "x" and another
         named "profile_x", then this could get messed up.
-        Returns a tuple of floats, representing the four losses
-        (profile, counts, val_profile, val_counts) at the given epoch.
         """
         epochLosses = self.logsHistory[epoch]
         profileRe = r".*profile_{0:s}_loss".format(headName)
@@ -138,6 +168,14 @@ class ApplyAdaptiveCountsLoss(Callback):
         return ret
 
     def whatWouldValLossBe(self, epoch):
+        """Determine a previous epoch's validation loss but use the current λ values to do it.
+
+        :param epoch: The epoch number where you'd like to know what the loss would have been.
+        :return: A float giving the corrected validation loss at that epoch.
+
+        Had we been using the current λ in a previous epoch, what would
+        its validation loss have been?
+        """
         # Using the current heads, determine what the loss would have been at the given epoch.
         # (Since we store the loss history, this is pretty easy.)
         logs = self.logsHistory[epoch]
@@ -155,26 +193,30 @@ class ApplyAdaptiveCountsLoss(Callback):
         return valTotalLoss
 
     def resetCallbacks(self):
-        """This is the squirreliest method here. The other callbacks that track model progression
+        """Manipulate the other callbacks so they don't break when λ changes.
+
+        This is the squirreliest method here. The other callbacks that track model progression
         track the loss of the model at the record-setting epoch. But the definition of loss itself
         is changing during the training, so we need to update their stored idea of what the model's
         loss was during the training.
-        For example, consider the following scenario:
-        raw_loss  loss_weight  scaled_loss
-        10          1           10
-        9           1           9
-        8           1           8
-        7           2           14
-        6           2           12
-        5           2           10
+
+        For example, consider the following scenario::
+
+            raw_loss  loss_weight  scaled_loss
+            10          1           10
+            9           1           9
+            8           1           8
+            7           2           14
+            6           2           12
+            5           2           10
+
         A callback that was tracking the loss, looking for the minimum, would claim
         that the best epoch was epoch 3, where the scaled loss was eight.
         We need to go into that callback and say, "no, with our current loss weight,
         the loss on epoch three would *actually* have been 16." so that the
-        callback thinks that the loss of 14 on epoch 4 is an improvement."""
-
+        callback thinks that the loss of 14 on epoch 4 is an improvement.
+        """
         # Find which epoch set the record.
-
         recordEpoch = self.earlyStopCallback.best_epoch
         # Now, set the callbacks to have a corrected loss at the record-setting epoch.
         correctedLoss = self.whatWouldValLossBe(recordEpoch)
@@ -185,6 +227,12 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.checkpointCallback.best = correctedLoss
 
     def on_epoch_end(self, epoch, logs=None):
+        """Update the other callbacks and calculate a new λ.
+
+        :param epoch: The epoch number that just finished.
+        :param logs: The history logs from the last epoch.
+
+        """
         assert logs is not None, "Cannot work with empty logs!"
         self.logsHistory.append(logs)
 
@@ -264,6 +312,10 @@ class ApplyAdaptiveCountsLoss(Callback):
 
 
 def tensorboardCallback(logDir: str):
+    """For debugging, generate a callback that updates TensorBoard.
+
+    :param logDir: The directory where you'd like the logs to be stored.
+    """
     logging.debug("Creating tensorboard callback in {0:s}".format(logDir))
     from tensorflow.keras.callbacks import TensorBoard
     return TensorBoard(log_dir=logDir,

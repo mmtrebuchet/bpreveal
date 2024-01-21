@@ -1,5 +1,4 @@
 #include <math.h>
-#include <stdio.h>
 
 #define FLOAT_T float
 

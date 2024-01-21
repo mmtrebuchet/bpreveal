@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+"""A script to generate importance scores in the style of the original BPNet."""
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import bpreveal.utils as utils
@@ -9,6 +9,10 @@ import logging
 
 
 def main(config):
+    """Run the interpretation.
+
+    :param config: A JSON object matching the interpretFlat specification.
+    """
     utils.setVerbosity(config["verbosity"])
     genomeFname = None
     kmerSize = 1

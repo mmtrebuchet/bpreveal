@@ -13,6 +13,7 @@ from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SI
 
 
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
+    """Reverse-complement the given sequence."""
     # Since the order of the one-hot encoding is ACGT, if we flip the array
     # up-down, we complement the sequence, and if we flip it left-right, we
     # reverse it. So reverse complement of the one hot sequence is just:
@@ -59,9 +60,9 @@ def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
                 stop = region.stop + jitter
                 bwVals = np.nan_to_num(fp.values(chrom, start, stop))
                 if (not revcomp):
-                    headVals[j        , :, i         ] = bwVals
+                    headVals[j        , :, i         ] = bwVals  # noqa
                 else:
-                    headVals[j * 2    , :, i         ] = bwVals
+                    headVals[j * 2    , :, i         ] = bwVals  # noqa
                     headVals[j * 2 + 1, :, revcomp[i]] = np.flip(bwVals)
     return headVals
 
@@ -103,6 +104,10 @@ def writeH5(config):
         logging.debug("Added data for head {0:d}".format(i))
     outFile.close()
     logging.info("File created; closing.")
+
+
+def main(config):
+    writeH5(config)
 
 
 if __name__ == "__main__":

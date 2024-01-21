@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""A little utility to plot loss values during training."""
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +10,8 @@ import math
 plt.rcParams['font.size'] = 8
 
 
-def main():
+def getParser() -> argparse.ArgumentParser:
+    """Generate the argument parser."""
     parser = argparse.ArgumentParser(description="Takes in a model history file (json format) "
                                                  "and generates plots of all the components of "
                                                  "the loss during training.")
@@ -35,7 +37,12 @@ def main():
             help="(optional) Instead of plotting all the loss components, "
                  "just show the total loss.",
             action='store_true')
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    """Make the plots"""
+    args = getParser().parse_args()
 
     with open(args.json, 'r') as fp:
         history = json.load(fp)
@@ -106,6 +113,7 @@ def main():
 
 
 def plotLosses(lossTypes, history, startFrom, countsLossWeight):
+    """Given all the loss data, plot them in a grid."""
     # First, how many plots are needed?
     num_rowscols = math.ceil(len(lossTypes) ** 0.5)
     fig, axs = plt.subplots(nrows=num_rowscols, ncols=num_rowscols, sharex=True, figsize=(15, 15))

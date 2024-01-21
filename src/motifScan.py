@@ -5,7 +5,11 @@ import bpreveal.utils as utils
 import json
 
 
-def cwmScanMain(config):
+def main(config):
+    """Run the scan.
+
+    :param config: A JSON object matching the motifScan specification.
+    """
     utils.setVerbosity(config["verbosity"])
     if "seqlet-cutoff-settings" in config:
         assert "seqlet-cutoff-json" not in config, "You cannot name a seqlet-cutoff-json to " \
@@ -58,4 +62,4 @@ if __name__ == "__main__":
         config = json.load(configFp)
     import bpreveal.schema
     bpreveal.schema.motifScan.validate(config)
-    cwmScanMain(config)
+    main(config)

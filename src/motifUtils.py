@@ -26,9 +26,17 @@ PROFILING_SORT_ORDER = SortKey.TIME
 
 def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
                      standardSorted: Optional[bool] = False) -> npt.NDArray[MOTIF_FLOAT_T]:
-    """For each sample in samples (samples is an array of shape (N,)), in
+    """Get each sample's quantile in standard array.
+
+    :param standard: The reference array.
+    :param sample: The values that will be placed among the standard.
+    :param standardSorted: Is the standard array already sorted?
+    :return: For each sample in `samples`, what quantile of `standard` would it fall in?
+
+    For each sample in samples (samples is an array of shape (N,)), in
     which quantile of the array of standards (of shape (M,)) would
     that sample fall?
+
     For example, if standard were [1,2,3,5, 100],
     then a sample of 1 would be in the 0 quantile (since it'd fall at the
     beginning of the array of standards) while a sample of 10 would be somewhere
@@ -47,7 +55,6 @@ def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
     It doesn't change the behavior of this function, but it can speed it up since
     this function will otherwise have to sort the array of standards.
     """
-
     if not standardSorted:
         standard = np.sort(standard)
     standardQuantiles = np.linspace(0, 1, num=standard.shape[0], endpoint=True, dtype=MOTIF_FLOAT_T)
@@ -66,6 +73,10 @@ def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
 
 
 def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
+    """Run the sliding dotproduct algorithm used in the original BPNet.
+
+    It's just a convolution.
+    """
     # The funny slice here is because scipy.signal.correlate doesn't collapse the
     # length-one dimension that is a result of both sequences having the same
     # second dimension.
@@ -73,7 +84,9 @@ def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArr
 
 
 def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
-    """Given a position probability matrix, which gives the probability of each
+    """Turn a position probability matrix into a position weight matrix.
+
+    Given a position probability matrix, which gives the probability of each
     base at each position, convert that into a position weight matrix, which gives
     the information (in bits) contained at each position.
 
@@ -90,7 +103,9 @@ def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTI
 
 
 def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
-    """Given a position probability matrix, convert that to a pssm array,
+    """Turn a position probability matrix into an information content matrix.
+
+    Given a position probability matrix, convert that to a pssm array,
     which is a measure of the information contained by each base.
     This method adds a small (1%) pseudocount at each position.
 
@@ -98,8 +113,8 @@ def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOT
     backgroundProbs is an array of shape (4,), with the same meaning as in
     ppmToPwm.
 
-    Returns the pssm, an array of shape (motifLength, 4)"""
-
+    Returns the pssm, an array of shape (motifLength, 4)
+    """
     # Add some pseudo counts and re-normalize
     ppm = ppm + 0.01
     ppm = ppm / np.sum(ppm, axis=1, keepdims=True)
@@ -109,8 +124,16 @@ def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOT
 
 def cwmTrimPoints(cwm: npt.NDArray,
                   trimThreshold: float, padding: int) -> tuple[int, int]:
-    """Given a cwm and a threshold, give the slice coordinates that should be used
-    to remove bases with low contribution. For example:
+    """Find where the motif actually is inside a CWM.
+
+    :param cwm: is a ndarray of shape (cwmlength, 4)
+    :param trimThreshold: is a floating point number. The lower this is,
+        the more flanking bases will be kept.
+    :return: the start and stop indices of the trimmed motif
+
+
+    Given a cwm and a threshold, give the slice coordinates that should be used
+    to remove bases with low contribution. For example::
 
                C
                C A  A
@@ -118,12 +141,14 @@ def cwmTrimPoints(cwm: npt.NDArray,
               AC ATCA
         nnnnTnACGATCAGnnnnn
         0123456789012345678
+
     where the number of letters indicates the importance, should be trimmed to get rid
     of the noisy (n) bases, and also maybe the flanking T and G.
     We calculate the maximum contribution (in this case, the stack of 5 Cs)
     and trim off all bases on the outside that are below trimThreshold*maxContrib
     If trimThreshold were 0.25, then any bases with less than 1.25 contribution would be
-    trimmed, like so:
+    trimmed, like so::
+
          C
          C A  A
          C A CA
@@ -133,25 +158,24 @@ def cwmTrimPoints(cwm: npt.NDArray,
 
     If padding is set to zero, then this function will return (6,13), the indices of the passing
     bases. (Note that it goes to 13, not 12, because Python slices go *up to* the second index.
-    We add padding to each side. If padding were 3, then the returned indices would be
-         C
-         C A  A
-         C A CA
-        AC ATCA
-     nTnACGATCAgnn
-     3456789012345
-     and the returned indexes would be (3,16)
+    We add padding to each side. If padding were 3, then the returned indices would be::
 
-    cwm is a ndarray of shape (cwmlength, 4)
-    trimThreshold is a floating point number. The lower this is,
-        the more flanking bases will be kept.
+            C
+            C A  A
+            C A CA
+            AC ATCA
+        nTnACGATCAgnn
+        3456789012345
 
-    returns the start and stop indices of the trimmed motif, so:
-    start, stop = cwmTrimPoints(cwm, threshold)
-    newCwm = cwm[start:stop,:]
+    and the returned indexes would be (3,16)
+
+    The returned start and stop coordinates are a tuple, so::
+
+        start, stop = cwmTrimPoints(cwm, threshold)
+        newCwm = cwm[start:stop,:]
+
     (the : in the second axis is because the cwm will have shape (length, 4)
     """
-
     cwmSums = np.sum(np.abs(cwm), axis=1)
     cutoffValue = np.max(cwmSums) * trimThreshold
 
@@ -168,8 +192,12 @@ def cwmTrimPoints(cwm: npt.NDArray,
 
 
 class Pattern:
-    """A pattern is a simple data storage class, representing a Modisco pattern and
-    information about its seqlets and quantiles and stuff."""
+    """A pattern is a simple data storage class.
+
+    It represents a Modisco pattern and
+    information about its seqlets and quantiles and stuff.
+    """
+
     # The name of the metacluster, like "neg_patterns" or "pos_patterns"
     metaclusterName: str
     # The name of the pattern (i.e., motif), like "pattern_0"
@@ -252,8 +280,8 @@ class Pattern:
 
     def loadCwm(self, modiscoFp: h5py.File, trimThreshold: float,
                 padding: int, backgroundProbs: npt.NDArray[MOTIF_FLOAT_T]) -> None:
-        """Given an opened hdf5 file object, load up the contribution scores for this
-        pattern.
+        """Given an opened hdf5 file object, load up the contribution scores for this pattern.
+
         trimThreshold and padding are used to trim the motifs, see cwmTrimPoints
         for documentation on those parameters.
 
@@ -284,7 +312,9 @@ class Pattern:
         return jaccard.slidingJaccard(seqlet, cwm)
 
     def loadSeqlets(self, modiscoFp: h5py.File) -> None:
-        """This function loads up all the seqlet data from the modisco file and calculates
+        """Load seqlets from the modisco hdf5.
+
+        This function loads up all the seqlet data from the modisco file and calculates
         quantile values for information content match, contribution jaccard match,
         and contribution L1 match.
         """
@@ -315,37 +345,45 @@ class Pattern:
     def getCutoffs(self, quantileSeqMatch: float,
                    quantileContribMatch: float,
                    quantileContribMagnitude: float) -> None:
-        """Given the quantile values you want to use as cutoffs, actually
+        """Calculate cutoff values given target quantiles.
+
+        Given the quantile values you want to use as cutoffs, actually
         look at the seqlet data and pick the right parameters. If you want to choose
         your own quantile cutoffs, set the cutoffSeqMatch, cutoffContribMatch,
-        and cutoffContribMagnitude members of this object."""
+        and cutoffContribMagnitude members of this object.
+        """
         if quantileSeqMatch is not None:
-            self.cutoffSeqMatch = np.quantile(self.seqletSeqMatches, quantileSeqMatch)
+            self.cutoffSeqMatch =\
+                np.quantile(self.seqletSeqMatches, quantileSeqMatch)  # type: ignore
         if quantileContribMatch is not None:
-            self.cutoffContribMatch = np.quantile(self.seqletContribMatches, quantileContribMatch)
+            self.cutoffContribMatch =\
+                np.quantile(self.seqletContribMatches, quantileContribMatch)  # type: ignore
         if quantileContribMagnitude is not None:
-            self.cutoffContribMagnitude = np.quantile(self.seqletContribMagnitudes,
-                                                      quantileContribMagnitude)
+            self.cutoffContribMagnitude =\
+                np.quantile(self.seqletContribMagnitudes, quantileContribMagnitude)  # type: ignore
 
     def seqletInfoIterator(self):
-        """An iterator (meaning you can use it as the range in a for loop)
+        """Make an iterator to go over the seqlets.
+
+        An iterator (meaning you can use it as the range in a for loop)
         that goes over every seqlet and returns a dictionary of information about it.
         This is useful when you want to write those seqlets to a file.
-        Returns a dictionary of
-        {   "chrom" : <string>,
-            "start" : <integer>,
-            "end" : <integer>,
-            "short-name" : <string>,
-            "contrib-magnitude" : <float>,
-            "strand" : <character>,
+        Returns a dictionary of::
 
-            "metacluster-name" : <string>,
-            "pattern-name" : <string>
-            "sequence" : <string>,
-            "index" : <integer>,
-            "seq-match" : <float>,
-            "contrib-match" : <float>
-        }
+            {   "chrom" : <string>,
+                "start" : <integer>,
+                "end" : <integer>,
+                "short-name" : <string>,
+                "contrib-magnitude" : <float>,
+                "strand" : <character>,
+
+                "metacluster-name" : <string>,
+                "pattern-name" : <string>
+                "sequence" : <string>,
+                "index" : <integer>,
+                "seq-match" : <float>,
+                "contrib-match" : <float>
+            }
         """
         for i in range(self.numSeqlets):
             ret = dict()
@@ -367,20 +405,26 @@ class Pattern:
             yield ret
 
     def loadSeqletCoordinates(self, contribH5fp: h5py.File) -> None:
-        """This method is incomplete because we haven't fixed a bug in tfmodisco-lite that allows
+        """Break stuff.
+
+        This method is incomplete because we haven't fixed a bug in tfmodisco-lite that allows
         us to recover the genomic coordinates of the seqlets identified by modisco.
         When it is done, it will use the seqlet indexes from the modisco output to look
         up the genomic coordinates of each seqlet and create three new fields in this object:
         seqletChroms, seqletGenomicStarts, seqletGenomicEnds.
 
         """
+        del contribH5fp
         self.seqletChroms = ["UNDEFINED" for _ in range(self.numSeqlets)]
         self.seqletGenomicStarts = np.array([-10000 for _ in range(self.numSeqlets)])
         self.seqletGenomicEnds = np.array([-10000 for _ in range(self.numSeqlets)])
 
     def getScanningInfo(self) -> dict:
-        """Get a dictionary (that can be converted to json) containing
-        all the information needed to map motifs by cwm scanning."""
+        """Get what you need to know to scan CWMs.
+
+        Get a dictionary (that can be converted to json) containing
+        all the information needed to map motifs by cwm scanning.
+        """
         return {"metacluster-name": self.metaclusterName,
                 "pattern-name": self.patternName,
                 "short-name": self.shortName,
@@ -391,18 +435,20 @@ class Pattern:
                 "contrib-magnitude-cutoff": self.cutoffContribMagnitude}
 
 
-def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str, patternSpec: dict,
-                  quantileSeqMatch: float, quantileContribMatch: float,
-                  quantileContribMagnitude: float, trimThreshold: float,
-                  trimPadding: int, backgroundProbs: npt.NDArray[MOTIF_FLOAT_T],
+def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
+                  patternSpec: list[dict] | Literal["all"], quantileSeqMatch: float,
+                  quantileContribMatch: float, quantileContribMagnitude: float,
+                  trimThreshold: float, trimPadding: int,
+                  backgroundProbs: npt.NDArray[MOTIF_FLOAT_T],
                   outputSeqletsFname: Optional[str] = None) -> list[dict]:
     """Given a modisco hdf5 file, go over the seqlets and establish the quantile boundaries.
+
     If you give hard cutoffs for information content and L1 norm match, this function need not
     be called.
 
-    modiscoH5Name is a string giving the name of the modisco output hdf5.
+    :param modiscoH5Name: Gives the name of the modisco output hdf5.
 
-    contribH5Name is the name of the hdf5 file that was generated by interpretFlat.py.
+    :param contribH5Name: The name of the hdf5 file that was generated by interpretFlat.py.
         This file contains genomic coordinates of the seqlets, and is used to determine the
         location of each seqlet identified by modisco.
         FIXME TODO FIXME:
@@ -410,37 +456,40 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str, patternSpec: dict,
         All seqlets will be reported as being on chromosome chr1 and will have a meaningless
         position.
 
-    patternSpec is either a list of dicts, or the string "all". See makePatternObjects for how
+    :param patternSpec: Either a list of dicts, or the string "all". See makePatternObjects for how
         this parameter is interpreted.
 
-    quantileSeqMatch is the information content shared between the PSSM (which is based on
+    :param quantileSeqMatch: The information content shared between the PSSM (which is based on
         nucleotide frequency, NOT contribution scores. A lower value means allow sequences
         which are a worse match to the PSSM.
-    quantileContribMatch gives the similarity required between the contribution scores of
+    :param quantileContribMatch: The similarity required between the contribution scores of
         each seqlet and the cwm of the pattern (i.e., motif). Lower means let through worse
         matches to the contribution scores.
-    quantileContribMagnitude gives the cutoff in terms of total importance for a seqlet for
+    :param quantileContribMagnitude: gives the cutoff in terms of total importance for a seqlet for
         it to be considered. A low value means that seqlets that have low total contribution
         (sum(abs(contrib scores))) can still be considered hits.
 
-    trimThreshold and trimBuffer give the cutoffs for trimming off uninformative flanks of the cwms.
-        See cwmTrimPoints for details of these parameters.
+    :param trimThreshold: Gives how aggressive the flank-trimming will be.
+    :param trimBuffer: Gisve the padding to be added to the flanks.
+        See :func:`bpreveal.motifUtils.cwmTrimPoints` for details of these parameters.
 
-    backgroundProbs is an array of shape (4,) of floats that gives the background distribution for
-        each base in the genome. See ppmToPwm and pwmToPssm for details on this argument.
+    :param backgroundProbs: An array of shape (4,) of floats that gives the background
+        distribution for each base in the genome. See :func:`ppmToPwm` and
+        :func:`pwmToPssm` for details on this argument.
 
-    outputSeqletsFname, if provided, gives a name for a file where the all of the seqlets in the
-        Modisco output should be saved as a tsv file.
+    :param outputSeqletsFname: (Optional) Gives a name for a file where the all of the
+        seqlets in the Modisco output should be saved as a tsv file.
 
-    Returns a list of dicts that will be needed by the cwm scanning utility.
-        It is structured as follows:
-        [{  "metacluster-name" : <string>,
-            "pattern-name" : <string>,
-            "cwm" : < array of floats of shape (length, 4) >,
-            "pssm" : < array of floats of shape (length, 4) >,
-            "seq-match-cutoff" : <float-or-null>,
-            "contrib-match-cutoff" : <float-or-null>,
-            "contrib-magnitude-cutoff" : <float-or-null> },
+    :return: A list of dicts that will be needed by the cwm scanning utility.
+
+    The returned list is structured as follows::
+        [{"metacluster-name": <string>,
+        "pattern-name": <string>,
+        "cwm": <array of floats of shape (length, 4)>,
+        "pssm": <array of floats of shape (length, 4)>,
+        "seq-match-cutoff": <float-or-null>,
+        "contrib-match-cutoff": <float-or-null>,
+        "contrib-magnitude-cutoff": <float-or-null> },
         ...
         ]
 
@@ -495,23 +544,32 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str, patternSpec: dict,
     return ret
 
 
-def makePatternObjects(patternSpec: dict, modiscoH5Fname: str) -> list[Pattern]:
-    """Get a list of patterns to scan. If patternSpec is a list,
-    it may have one of two forms:
-    [ {"metacluster-name" : <string>,
-       "pattern-name" : <string>,
-     ??"short-name" : <string> ??
-       },
-      ...
-    ]
+def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str) -> list[Pattern]:
+    """Get a list of patterns to scan.
+
+    :param patternspec: The pattern specs from the config json.
+    :type patternspec: list[dict] | "all"
+    :param modiscoH5Fname: The name of the hdf5-format file generated by MoDISco.
+
+    If patternSpec is a list, it may have one of two forms::
+
+        [ {"metacluster-name" : <string>,
+        "pattern-name" : <string>,
+        ??"short-name" : <string> ??
+        },
+        ...
+        ]
+
     where each entry gives one metacluster with ONE pattern,
-    or it may give multiple patterns as a list:
-    [ {"metacluster-name" : <string>,
-       "pattern-names" : [<string>, ...],
-     ??"short-names" : [<string>,...]??
-      },
-      ...
-    ]
+    or it may give multiple patterns as a list::
+
+        [ {"metacluster-name" : <string>,
+        "pattern-names" : [<string>, ...],
+        ??"short-names" : [<string>,...]??
+        },
+        ...
+        ]
+
     (Note the 's' in pattern-names, as opposed to the singular pattern-name above.)
     short-name, or short-names, is an optional parameter. If given, then instead of the
     patterns being named "pos_2", they will have the name you give, which could be something
@@ -519,7 +577,8 @@ def makePatternObjects(patternSpec: dict, modiscoH5Fname: str) -> list[Pattern]:
 
     Alternatively, patternSpec may be the string "all"
     in which case all patterns in the modisco hdf5 file will be scanned.
-    (And the short names will be pos_0, pos_1, ...)"""
+    (And the short names will be pos_0, pos_1, ...)
+    """
     patterns = []
     if patternSpec == "all":
         logging.debug("Loading full pattern information since patternSpec was all")
@@ -528,6 +587,7 @@ def makePatternObjects(patternSpec: dict, modiscoH5Fname: str) -> list[Pattern]:
                 for patternName in modiscoFp[metaclusterName].keys():
                     patterns.append(Pattern(metaclusterName, patternName))
     else:
+        patternSpec: list[dict] = patternSpec  # type: ignore
         for metaclusterSpec in patternSpec:
             logging.debug("Initializing patterns {0:s}".format(str(metaclusterSpec)))
             if "pattern-names" in metaclusterSpec:
@@ -551,14 +611,16 @@ def makePatternObjects(patternSpec: dict, modiscoH5Fname: str) -> list[Pattern]:
 
 
 class MiniPattern:
-    """During the CWM scanning step, the full Pattern class is unnecessary, since it
+    """A smaller pattern object for the scanners to use.
+
+    During the CWM scanning step, the full Pattern class is unnecessary, since it
     loads up a lot of seqlet data. This lightweight class is designed to be used inside
     the scanning threads. It represents one pattern, and can quickly scan sequences and
-    contribution score tracks against its pattern. """
+    contribution score tracks against its pattern.
+    """
 
     def __init__(self, config: dict) -> None:
         """The config here is from the pattern json generated by the quantile script."""
-
         self.metaclusterName = config["metacluster-name"]
         self.patternName = config["pattern-name"]
         self.shortName = config["short-name"]
@@ -802,12 +864,16 @@ def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Q
 
 def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname: str) -> None:
     """This thread runs concurrently with however many scanners you're using.
+
     It reads from hitQueue and saves out any hits to a csv file, a bed file, or both.
-    scannerThreads is an integer giving the number of scanners running concurrently.
+
+    :param hitQueue: The queue that the scanners will write to.
+    :param scannerThreads: gives the number of scanners running concurrently.
         Why does the writer need to know this? Because each scanner sends a special flag
         down the queue when it's done, and the writer needs to know how many of these
         special values to expect before it knows that all the scanners have finished.
-    tsvFname is the name of the tsv file that should be written."""
+    :param tsvFname: The name of the tsv file that should be written.
+    """
     pr = cProfile.Profile()
     if ENABLE_DEBUG_PROFILING:
         pr.enable()

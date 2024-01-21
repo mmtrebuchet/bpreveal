@@ -194,7 +194,7 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
     writerThread.join()
 
 
-def main():
+def getParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Take two bigwig-format files and calculate "
                                                  "an assortment of metrics on their contents.")
     parser.add_argument("--reference",
@@ -222,7 +222,11 @@ def main():
             help="Use the absolute value of the entries in the bigwig. Useful if one bigwig "
                  "contains negative values.",
             action='store_true', dest='applyAbs')
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = getParser().parse_args()
     if (args.verbose):
         logging.basicConfig(level=logging.INFO)
     else:

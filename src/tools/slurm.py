@@ -72,11 +72,16 @@ def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
         cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
         cmd += "    {0:s}\n".format(task)
         cmd += "fi\n\n"
-    with open(config["workDir"] + "/slurm/{0:s}.slurm".format(jobName), "w") as fp:
+    outFname = config["workDir"] + "/slurm/{0:s}.slurm".format(jobName)
+    with open(outFname, "w") as fp:
         fp.write(cmd)
+    return outFname
 
 
 def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
+    del ntasks
+    del mem
+    del time
     condaString = config["condaString"]
 
     if condaString[:6] == "module":
@@ -128,5 +133,66 @@ def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
         cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(i + 1)
         cmd += "    {0:s}\n".format(task)
         cmd += "fi\n\n"
-    with open(config["workDir"] + "/slurm/{0:s}.slurm".format(jobName), "w") as fp:
+    outFname = config["workDir"] + "/slurm/{0:s}.slurm".format(jobName)
+    with open(outFname, "w") as fp:
         fp.write(cmd)
+    return outFname
+
+
+def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None):
+    """A jobspec is a tuple of (str, [str,str,str,...])
+    where the first string is the name of the slurm file to run.
+    The strings after it are the names of the slurm files that the
+    job needs to finish before it can run (i.e., its dependencies).
+    Writes a bash script (NOT A SLURM FILE) that sbatches all of the
+    given jobs with dependencies taken into account.
+    """
+    outFname = config["workDir"] + "/slurm/{0:s}.zsh".format(wholeJobName)
+    jobsRemaining = jobspecs[:]
+    jobOrder = []
+    depsSatisfied = []
+    while len(jobsRemaining):
+        newRemaining = []
+        for js in jobsRemaining:
+            job, deps = js
+            addJob = True
+            for dep in deps:
+                if dep not in depsSatisfied:
+                    addJob = False
+            if addJob:
+                depsSatisfied.append(job)
+                jobOrder.append(js)
+            else:
+                newRemaining.append(js)
+        assert len(newRemaining) < len(jobsRemaining), "Failed to satisfy jobs: " \
+            + str(jobsRemaining) + " with dependencies: " + str(depsSatisfied)
+        jobsRemaining = newRemaining
+
+    jobToDepNumber = dict()
+    i = 1
+    for jobSpec in jobOrder:
+        job, deps = jobSpec
+        jobToDepNumber[job] = i
+        i += 1
+
+    with open(outFname, "w") as fp:
+        fp.write("#!/usr/bin/env zsh\n")
+        for jobSpec in jobOrder:
+            job, deps = jobSpec
+            # First, create the dependency string.
+            if baseJobId is not None:
+                depStr = " --dependency=afterok:{0:d}".format(baseJobId)
+            else:
+                depStr = ""
+            if len(deps):
+                depStr = " --dependency=afterok"
+                if baseJobId is not None:
+                    depStr += ":{0:d}".format(baseJobId)
+                for dep in deps:
+                    depStr = depStr + ":${{DEP_{0:d}}}".format(jobToDepNumber[dep])
+            batchStr = "sbatch" + depStr + " {0:s}".format(job)
+            fp.write(batchStr + "\n")
+            fp.write(("DEP_{0:d}=$(squeue -u $(whoami) | awk '{{print $1}}' |"
+                "sed 's/_.*//'| sort -n | tail -n 1)\n").format(jobToDepNumber[job]))
+            fp.write("echo \"job '{0:s}' got dependency ${{DEP_{1:d}}}\"\n".
+                     format(job, jobToDepNumber[job]))

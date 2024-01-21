@@ -4,10 +4,13 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import bpreveal.utils as utils
-utils.setMemoryGrowth()
+import argparse
+if __name__ == "__main__":
+    utils.setMemoryGrowth()
 
 
-def main(modelFname, pngFile):
+def main(modelFname: str, pngFile: str | None):
+    """Read in the model named by modelFname, show it as text, and optionally save as a png."""
     model = utils.loadModel(modelFname)
     print(model.summary(expand_nested=True, show_trainable=True))
     if (pngFile is not None):
@@ -16,10 +19,14 @@ def main(modelFname, pngFile):
                 show_layer_names=True, expand_nested=True, show_layer_activations=True)
 
 
+def getParser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(description="Show a text description of your "
+                                 "model and optionally save it to a png file.")
+    ap.add_argument("--model", help="The name of the Keras model file to show.")
+    ap.add_argument("--png", help="(optional) The name of the png-format image to save.")
+    return ap
+
+
 if (__name__ == "__main__"):
-    import sys
-    if (len(sys.argv) > 2):
-        pngFile = sys.argv[2]
-    else:
-        pngFile = None
-    main(sys.argv[1], pngFile)
+    args = getParser().parse_args()
+    main(args.model, args.png)

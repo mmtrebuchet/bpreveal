@@ -66,10 +66,10 @@ def loadModel(modelFname: str):
 
 
 def setMemoryGrowth() -> None:
-    """Turn on the tensorflow option to grow memory usage as needed, instead
-       of allocating the whole GPU. All of the main programs in BPReveal
-       do this, so that you can use your GPU for other stuff as you work
-       with models."""
+    """Turn on the tensorflow option to grow memory usage as needed.
+
+    All of the main programs in BPReveal do this, so that you can
+    use your GPU for other stuff as you work with models."""
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
     try:
@@ -147,20 +147,30 @@ def setVerbosity(userLevel: str) -> None:
                 "INFO": logging.INFO,
                 "DEBUG": logging.DEBUG}
     logging.basicConfig(level=levelMap[userLevel],
-        format='%(levelname)s : %(asctime)s : %(filename)s:%(lineno)d : %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+                        format='%(levelname)s : %(asctime)s :'
+                        '%(filename)s:%(lineno)d : %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
     logging.debug("Logger configured.")
 
 
-def wrapTqdm(iterable, logLevel: str | int = logging.INFO, **tqdmKwargs) -> tqdm.tqdm:
-    """Sometimes, you want to display a tqdm progress bar only if the logging level is
+def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,
+             **tqdmKwargs) -> tqdm.tqdm | typing.Iterable:
+    """Create a tqdm logger or a dummy, based on current logging level.
+
+    :param iterable: The thing to be wrapped, or the number to be counted to.
+    :param logLevel: The log level at which you'd like the tqdm to print progress.
+    :param tqdmKwargs: Additional keyward arguments passed to tqdm.
+    :return: Either a tqdm that will do logging, or an iterable that won't log.
+
+    Sometimes, you want to display a tqdm progress bar only if the logging level is
     high. Call this with something you want to iterate over OR an integer giving the
-    total number of things that will be processed
-    (correspoinding to
-    pbar = tqdm.tqdm(total=10000)
-    while condition:
-        pbar.update()
-    )
+    total number of things that will be processed (correspoinding to::
+
+        pbar = tqdm.tqdm(total=10000)
+        while condition:
+            pbar.update()
+        )
+
     If iterable is an integer, then this will return a tqdm that you need to
     call update() on, otherwise it'll return something you can use as a loop iterable.
 
@@ -192,9 +202,9 @@ def wrapTqdm(iterable, logLevel: str | int = logging.INFO, **tqdmKwargs) -> tqdm
             return dummyPbar  # type: ignore
     else:
         if logging.root.isEnabledFor(logLevel):  # type: ignore
-            return tqdm.tqdm(iterable, **tqdmKwargs)
+            return tqdm.tqdm(iterable, **tqdmKwargs)  # type: ignore
         else:
-            return iterable
+            return iterable  # type: ignore
 
 
 def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
@@ -257,22 +267,23 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
 
 
 def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_AR_T:
-    """
-    The easy (and very slow!) way to make predictions with your model.
+    """The easy (and very slow!) way to make predictions with your model.
+
+    :param sequences: The DNA sequence(s) that you want to predict on.
+    :param modelFname: The name of the Keras model to use.
+    :return: An array of profiles or a single profile, depending on ``sequences``
+
     Spawns a separate process to make a single batch of predictions,
     then shuts it down. Why make it complicated? Because it frees the
     GPU after it's done so other programs and stuff can use it.
-    Arguments:
-        sequences is a list of strings that the model will make
-        predictions with. If you pass in a single string containing
-        a sequence to predict on, that's okay, too. sequences should be as
-        long as the receptive field of your model.
-        modelFname is the name of the Keras model that should be used.
-    Returns an array of profiles, unless you passed in a string for sequences,
-    in which case it returns a single array containing the predicted profile.
-    The shape of the array will be (numSequences x outputLength) if you passed
-    in an iterable of strings (like a list of strings), and it will be
-    (outputLength,) if you passed in a single string.
+    If ``sequences`` is a single string containing a sequence to predict
+    on, that's okay, it will be treated as a length-one list of sequences
+    to predict. ``sequences`` should be as long as the receptive field of
+    your model.
+
+    The shape of the returned array will be (numSequences x outputLength)
+    if you passed in an iterable of strings (like a list of strings), and
+    it will be (outputLength,) if you passed in a single string.
     """
     singleReturn = False
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
@@ -322,52 +333,63 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
                       numShuffles: int = 20, kmerSize: int = 1,
                       keepHypotheticals: bool = False) -> dict[str, npt.NDArray]:
     """Spins up an entire interpret pipeline just to interpret your sequences.
+
     You should only use this for quick one-off things since it is EXTREMELY
     slow.
-    sequences is a list (or technically any Iterable) of strings, and the
+
+    :param sequences: is a list (or technically any Iterable) of strings, and the
         returned importance scores will be in an order that corresponds
         to your sequences.
         You can also provide just one string, in which case the return type
         will change: The first (length-one) dimension will be stripped.
-    modelFname is the name of the BPReveal model on disk.
-    heads is the TOTAL number of heads that the model has.
-    headID is the index of the head of the model that you want interpreted.
-    taskIDs is the list of tasks that should be included in the profile score
+    :param modelFname: The name of the BPReveal model on disk.
+    :param heads: The TOTAL number of heads that the model has.
+    :param headID: The index of the head of the model that you want interpreted.
+    :param taskIDs: The list of tasks that should be included in the profile score
         calculation. For most cases, you'd want a list of all the tasks,
-        like [0,1].
-    numShuffles is the number of shuffled sequences that are used to calculate
+        like ``[0,1]``.
+    :param numShuffles: The number of shuffled sequences that are used to calculate
         shap values.
-    kmerSize is the length of kmers for which the distribution should be preserved
+    :param kmerSize: The length of kmers for which the distribution should be preserved
         during the shuffle. If 1, shuffle each base independently. If 2, preserve
         the distribution of dimers, etc.
-    keepHypotheticals controls whether the output contains hypothetical
+    :param keepHypotheticals: Controls whether the output contains hypothetical
         contribution scores or just the actual ones.
 
-    Returns a dict.
+    :return: A dict containing the importance scores.
+
     If you passed in an iterable of strings (like a list), then the output's first
     dimension will be the number of sequences and it will depend on keepHypotheticals:
-        If keepHypotheticals is True, then it will be structured so:
+
+    * If keepHypotheticals is True, then it will be structured so::
+
             {"profile": array of shape (numSequences x inputLength x 4),
              "counts": array of shape (numSequences x inputLength x 4),
              "sequence": array of shape (numSequences x inputLength x 4)}
-            This dict has the same meaning as shap scores stored in an
-            interpretFlat hdf5.
 
-        If keepHypotheticals is False (the default), then the
-            shap scores will be condensed down to the normal scores that we plot
-            in a genome browser.:
-            {"profile": array of shape (numSequences x inputLength),
-             "counts": array of shape (numSequences x inputLength)}
+      This dict has the same meaning as shap scores stored in an
+      interpretFlat hdf5.
+
+    * If keepHypotheticals is False (the default), then the
+      shap scores will be condensed down to the normal scores that we plot
+      in a genome browser::
+
+          {"profile": array of shape (numSequences x inputLength),
+           "counts": array of shape (numSequences x inputLength)}
+
     However, if sequences was a string instead of an iterable, then the numSequences
     dimension will be suppressed:
-        For keepHypotheticals == True, you get
-            {"profile": array of shape (inputLength x 4),
-             "counts": array of shape (inputLength x 4),
-             "sequence": array of shape (inputLength x 4)}
-        and if keepHypotheticals is False, you get:
-            {"profile": array of shape (inputLength,),
-             "counts": array of shape (inputLength,)}
 
+    * For keepHypotheticals == True, you get::
+
+          {"profile": array of shape (inputLength x 4),
+           "counts": array of shape (inputLength x 4),
+           "sequence": array of shape (inputLength x 4)}
+
+    * and if keepHypotheticals is False, you get::
+
+          {"profile": array of shape (inputLength,),
+           "counts": array of shape (inputLength,)}
     """
     from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
@@ -432,19 +454,21 @@ class BatchPredictor:
 
     Note that the getOutput() method returns *one* result at a time, and
     you have to call getOutput() once for every time you called one of the
-    submit methods. """
+    submit methods.
+
+    :param modelFname: The name of the BPReveal model that you want to make
+        predictions from. It's the same name you give for the model in any of
+        the other BPReveal tools.
+    :param batchSize: is the number of samples that should be run simultaneously
+        through the model.
+    :param start: Ignored, but present here to give BatchPredictor the same API
+        as ThreadedBatchPredictor.
+
+    """
 
     def __init__(self, modelFname: str, batchSize: int, start: bool = True) -> None:
         """Starts up the BatchPredictor. This will load your model,and get
         ready to make predictions.
-        modelFname is the name of the BPReveal model that you want to make
-        predictions from. It's the same name you give for the model in any of
-        the other BPReveal tools.
-
-        batchSize is the number of samples that should be run simultaneously
-        through the model.
-        start is unused, but present here to give BatchPredictor the same API
-        as ThreadedBatchPredictor.
         """
         logging.debug("Creating batch predictor.")
         from collections import deque
@@ -474,7 +498,9 @@ class BatchPredictor:
             raise Exception(exceptionType + "\n" + exceptionValue + '\n' + exceptionTraceback)
 
     def clear(self) -> None:
-        """If you've left your predictor in some weird state, you can reset it
+        """Reset the predictor.
+
+        If you've left your predictor in some weird state, you can reset it
         by calling clear(). This empties all the queues."""
         self._inQueue.clear()
         self._outQueue.clear()
@@ -482,9 +508,12 @@ class BatchPredictor:
         self._outWaiting = 0
 
     def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
-        """Sequence is an (input-length x 4) ndarray containing the
-        one-hot encoded sequence to predict.
-        label is any object, and it will be returned with the prediction."""
+        """Submit a one-hot-encoded sequence.
+
+        :param sequence: An (input-length x 4) ndarray containing the
+            one-hot encoded sequence to predict.
+        :param label: Any object; it will be returned with the prediction.
+        """
         self._inQueue.appendleft((sequence, label))
         self._inWaiting += 1
         if self._inWaiting > self._batchSize * 64:
@@ -494,20 +523,26 @@ class BatchPredictor:
 
     def submitString(self, sequence: str, label: typing.Any) -> None:
         """Submits a given sequence for prediction.
-        sequence is a string of length input-length, and
-        label is any object. Label will be returned to you with the
-        prediction. """
+
+        :param sequence: A string of length input-length
+        :param label: Any object. Label will be returned to you with the
+            prediction.
+        """
         seqOhe = oneHotEncode(sequence)
         self.submitOHE(seqOhe, label)
 
     def runBatch(self, maxSamples: int | None = None) -> None:
-        """This actually runs the batch. Normally, this will be called
+        """This actually runs the batch.
+
+        Normally, this will be called
         by the submit functions, and it will also be called if you ask
         for output and the output queue is empty (assuming there are
         sequences waiting in the input queue.)
-        maxSamples, if provided is the maximum number of samples to
-        run in this batch. It should probably be a multiple of the
-        batch size."""
+
+        :param maxSamples: (Optional) The maximum number of samples to
+            run in this batch. It should probably be a multiple of the
+            batch size.
+        """
         if self._inWaiting == 0:
             # There are no samples to process right now, so return
             # (successfully) immediately.
@@ -566,43 +601,53 @@ class BatchPredictor:
             self._outWaiting += 1
 
     def outputReady(self) -> bool:
-        """Is there any output ready for you? Returns True if a prediction has been
-        made and is waiting for you in the output queue, and False otherwise."""
+        """Is there any output ready for you?
+
+        :return: True if the batcher is sitting on results, and False otherwise.
+        """
         return self._outWaiting > 0
 
     def empty(self) -> bool:
-        """Can you get output from this Batcher? Returns False if calling outputReady()
-        would give you data. This will be the case if there's data in the input queue
-        but the prediction hasn't been run."""
+        """Is it possible to getOutput()?
+
+        :return: True if predictions haven't been made yet, but
+            they would be made if you asked for output."""
         return self._outWaiting == 0 and self._inWaiting == 0
 
     def getOutput(self) -> tuple[list, typing.Any]:
         """Returns one of the predictions made by the model.
+
         This implementation guarantees that predictions will be returned in
         the same order as they were submitted, but you should not rely on that
         in the future. Instead, you should use a label when you submit your
         sequences and use that to determine order.
-        The output will be a two-tuple.
-        The first element will be a list of length numHeads*2, representing the
-        output from the model. Since the output of the model will always have
-        a dimension representing the batch size, and this function only returns
-        the result of running a single sequence, the dimension representing
-        the batch size is removed. In other words, running the model on a
-        single example would give a logits output of shape
-        (1 x output-length x num-tasks).
-        But this function will remove that, so you will get an array of shape
-        (output-length x numTasks)
-        As with calling the model directly, the first numHeads elements are the
-        logits arrays, and then come the logcounts for each head.
-        You can pass the logits and logcounts values to utils.logitsToProfile
-        to get your profile.
-        Going back to the outer tuple, the second element will be the label you
-        passed in with the original sequence.
-        Graphically:
-        ( [<head-1-logits>, <head-2-logits>, ...
-           <head-1-logcounts>, <head-2-logcounts>, ...
-          ],
-          label)
+
+        :return: A two-tuple.
+
+        * The first element will be a list of length numHeads*2, representing the
+          output from the model. Since the output of the model will always have
+          a dimension representing the batch size, and this function only returns
+          the result of running a single sequence, the dimension representing
+          the batch size is removed. In other words, running the model on a
+          single example would give a logits output of shape
+          (1 x output-length x num-tasks).
+          But this function will remove that, so you will get an array of shape
+          (output-length x numTasks)
+          As with calling the model directly, the first numHeads elements are the
+          logits arrays, and then come the logcounts for each head.
+          You can pass the logits and logcounts values to utils.logitsToProfile
+          to get your profile.
+
+        * The second element will be the label you
+          passed in with the original sequence.
+
+        Graphically::
+
+            ( [<head-1-logits>, <head-2-logits>, ...
+               <head-1-logcounts>, <head-2-logcounts>, ...
+              ],
+              label)
+
         """
         if not self._outWaiting:
             if self._inWaiting:
@@ -616,38 +661,40 @@ class BatchPredictor:
 
 
 class ThreadedBatchPredictor:
-    """Mirrors the API of the BachPredictor class, but runs predictions in a
-    separate thread. This can give you a performance boost, and also lets you
+    """Mirrors the API of the BachPredictor class, but runs predictions in a separate thread.
+
+    This can give you a performance boost, and also lets you
     shut down the predictor thread when you don't need it.
     Supports the with statement to only turn on the batcher when you're using it,
     or you can leave it running in the background.
 
-    Usage examples:
+    Usage examples::
 
-    predictor = utils.ThreadedBatchPredictor(modelFname, 64, start=True)
-    # Use as you would a normal batchPredictor
-    # When not needed any more:
-    predictor.stop()
+        predictor = utils.ThreadedBatchPredictor(modelFname, 64, start=True)
+        # Use as you would a normal batchPredictor
+        # When not needed any more:
+        predictor.stop()
 
-    Alternatively, you can use this as a context manager.
-    predictor = utils.ThreadedBatchPredictor(modelFname, 64, start=False)
+    Alternatively, you can use this as a context manager::
 
-    with predictor:
-        # use as a normal BatchPredictor.
-    # On leaving the context, the predictor is shut down.
+        predictor = utils.ThreadedBatchPredictor(modelFname, 64, start=False)
+
+        with predictor:
+            # use as a normal BatchPredictor.
+        # On leaving the context, the predictor is shut down.
 
     The batcher guarantees that the order in which you get results is the same as
     the order you submitted them in, but this could change in the future!
+
+    :param modelFname: The name of the model to use to make predictions.
+    :param batchSize: The number of samples to calculate at once.
+    :param start: Should the predictor start right away?
+    :param numThreads: How many predictors should be spawned?
+
     """
 
     def __init__(self, modelFname: str, batchSize: int, start: bool = False,
                  numThreads: int = 1) -> None:
-        """Starts up the BatchPredictor. This will load your model,
-        and get ready to make predictions.
-        modelFname is the name of the BPReveal model that you want
-        to make predictions from. It's the same name you give for
-        the model in any of the other BPReveal tools.
-        batchSize is the number of samples that should be run simultaneously through the model."""
         logging.debug("Creating threaded batch predictor.")
         self._batchSize = batchSize
         self._modelFname = modelFname
@@ -675,7 +722,9 @@ class ThreadedBatchPredictor:
         del exceptionTraceback  # Disable unused warning
 
     def start(self):
-        """Spin up the batcher thread. If you submit sequences without starting the batcher,
+        """Spin up the batcher thread.
+
+        If you submit sequences without starting the batcher,
         this method will be called automatically (with a warning).
         """
         if not self.running:
@@ -692,8 +741,9 @@ class ThreadedBatchPredictor:
                 self._inQueues.append(nextInQueue)
                 self._outQueues.append(nextOutQueue)
                 nextBatcher = multiprocessing.Process(target=_batcherThread,
-                    args=(self._modelFname, self._batchSize, nextInQueue, nextOutQueue),
-                    daemon=True)
+                                                      args=(self._modelFname, self._batchSize,
+                                                            nextInQueue, nextOutQueue),
+                                                      daemon=True)
                 nextBatcher.start()
                 self._batchers.append(nextBatcher)
             self._inFlight = 0
@@ -743,9 +793,12 @@ class ThreadedBatchPredictor:
         self.start()
 
     def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
-        """Sequence is an (input-length x 4) ndarray containing the
-        one-hot encoded sequence to predict.
-        label is any object, and it will be returned with the prediction."""
+        """Submit a one-hot-encoded sequence.
+
+        :param sequence: An (input-length x 4) ndarray containing the
+            one-hot encoded sequence to predict.
+        :param label: Any object; it will be returned with the prediction.
+        """
         if not self.running:
             logging.warning("Submitted a query when the batcher is stopped. Starting.")
             self.start()
@@ -758,23 +811,29 @@ class ThreadedBatchPredictor:
 
     def submitString(self, sequence: str, label: typing.Any) -> None:
         """Submits a given sequence for prediction.
-        sequence is a string of length input-length, and
-        label is any object. Label will be returned to you with the
-        prediction. """
+
+        :param sequence: A string of length input-length
+        :param label: Any object. Label will be returned to you with the
+            prediction.
+        """
         seqOhe = oneHotEncode(sequence)
         self.submitOHE(seqOhe, label)
 
     def outputReady(self) -> bool:
-        """Is there any output ready for you? Returns True if the batcher is sitting
-        on results, and False otherwise."""
+        """Is there any output ready for you?
+
+        :return: True if the batcher is sitting on results, and False otherwise.
+        """
         if self._inFlight:
             outIdx = self._outQueueOrder[-1]
             return not self._outQueues[outIdx].empty()
         return False
 
     def empty(self) -> bool:
-        """Is it possible to getOutput()? This will be true if predictions haven't
-        been made yet, but they would be made if you asked for output."""
+        """Is it possible to getOutput()?
+
+        :return: True if predictions haven't been made yet, but
+            they would be made if you asked for output."""
         return self._inFlight == 0
 
     def getOutput(self) -> tuple[list, typing.Any]:
@@ -821,7 +880,7 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
             continue
         numWaits = 0
         match inVal:
-            case (sequence, label):
+            case(sequence, label):
                 if type(sequence) is str:
                     batcher.submitString(sequence, label)
                 else:

@@ -1,15 +1,22 @@
-# This file contains the custom layers that are needed for the various models.
-
+"""This file contains the custom layers that are needed for the various models."""
 import tensorflow as tf
 from tensorflow import keras
 
 
 class LinearRegression(keras.layers.Layer):
-    """A simple layer that performs a linear regression on its inputs:
-    out = input * slope + offset
-    where slope and offset are two (scalar) parameters."""
+    """A simple layer that performs a linear regression on its inputs.
+
+    Implements the following formula::
+
+        out = input * slope + offset
+
+    where slope and offset are two (scalar) parameters.
+
+    :param kwargs: Passed to the keras Layer initializer.
+    """
 
     def __init__(self, **kwargs):
+        """Construct."""
         super(LinearRegression, self).__init__(**kwargs)
         slope_init = tf.ones_initializer()
         self.slope = tf.Variable(
@@ -24,4 +31,5 @@ class LinearRegression(keras.layers.Layer):
             name='offset')
 
     def call(self, inputs):
+        """Actually perform the calculation."""
         return inputs * self.slope + self.offset

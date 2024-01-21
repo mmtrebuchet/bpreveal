@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""A script to generate PISA scores."""
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import bpreveal.utils as utils
@@ -8,6 +9,10 @@ import logging
 
 
 def main(config):
+    """Run the calculation.
+
+    :param config: A JSON object matching the interpretPisa specification.
+    """
     utils.setVerbosity(config["verbosity"])
     receptiveField = config["input-length"] - config["output-length"]
     kmerSize = 1

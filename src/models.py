@@ -7,15 +7,16 @@ import logging
 
 def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
     """This is a single output head for a solo model.
-        individualHead is taken straight from the configuration json.
-        outputFilterWidth is also taken from the configuration json.
 
-        Returns:
-        A tuple of (profile, counts), each one is a keras Layer.
-        The profile layer is a (batch x) number-of-tracks x output-width tensor
-            containing the logits for each track.
-        The counts layer is a (batch x 1) scalar-valued layer containing the total
-            counts for the current head.
+    :param individualHead: Taken straight from the configuration json.
+    :param outputFilterWidth: Also taken from the configuration json.
+
+    :return: A tuple of (profile, counts), each one is a keras Layer.
+
+        * The profile layer is a (batch x) number-of-tracks x output-width tensor
+          containing the logits for each track.
+        * The counts layer is a (batch x 1) scalar-valued layer containing the total
+          counts for the current head.
     """
     logging.debug("Initializing head {0:s}".format(individualHead["head-name"]))
     numOutputs = individualHead["num-tasks"]
@@ -36,19 +37,22 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
 def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth,
               outputFilterWidth, headList, modelName):
     """This is the classic BPNet architecture.
-    inputLength is the length of the one-hot encoded DNA sequence.
-    outputLength is the width of the predicted profile.
-    numFilters is the number of convolutional filters used at each layer.
-    numLayers is the number of dilated convolutions.
-    inputFilterWidth is the width of the first convolutional layer, the one looking for motifs.
-    outputFilterWidth is the width of the profile head convolutional filter at the very
-        bottom of the network.
-    taskInfo is taken directly from a <bigwig-list> in the configuration JSON.
 
-    Returns the TF model where:
+    :param inputLength: is the length of the one-hot encoded DNA sequence.
+    :param outputLength: is the width of the predicted profile.
+    :param numFilters: is the number of convolutional filters used at each layer.
+    :param numLayers: is the number of dilated convolutions.
+    :param inputFilterWidth: is the width of the first convolutional layer,
+        the one looking for motifs.
+    :param outputFilterWidth: is the width of the profile head convolutional filter at the very
+        bottom of the network.
+    :param taskInfo: is taken directly from a <bigwig-list> in the configuration JSON.
+
+    :return: A TF model.
+
     Input to this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA.
-    Output is a list of
-        (profilePreds, profilePreds, profilePreds,... , countPreds, countPreds, countPreds...)
+    Output is a list of (profilePreds, profilePreds, profilePreds,... ,
+    countPreds, countPreds, countPreds...).
     profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the
     logits of the profile values for each task.
     countsPreds is a tensor of shape (batch x numTasks) containing the log counts for each task.
@@ -110,35 +114,35 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
             case "linear":
                 activationLayers.append(
                     layers.LinearRegression(
-                            name='regress_linear_{0:s}'.format(headName))
-                        (inputLayer))
+                            name='regress_linear_{0:s}'.format(headName))  # noqa
+                        (inputLayer))  # noqa
             case 'sigmoid':
                 inputLinear = layers.LinearRegression(
                         name='sigmoid_in_linear_{0:s}'.format(headName))\
-                    (inputLayer)
+                    (inputLayer)  # noqa
                 sigmoided = keras.layers.Activation(
-                        activation=keras.activations.sigmoid,
+                        activation=keras.activations.sigmoid,  # noqa
                         name='sigmoid_activation_{0:s}'.format(headName))\
                     (inputLinear)
                 outputLinear = layers.LinearRegression(
                         name='sigmoid_out_linear_{0:s}'.format(headName))\
-                    (sigmoided)
+                    (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
             case 'relu':
                 inputLinear = layers.LinearRegression(
                         name='relu_in_linear_{0:s}'.format(headName))\
-                    (inputLayer)
+                    (inputLayer)  # noqa
                 sigmoided = keras.layers.Activation(
-                        activation=keras.activations.relu,
+                        activation=keras.activations.relu,  # noqa
                         name='relu_activation_{0:s}'.format(headName))\
-                    (inputLinear)
+                    (inputLinear)  # noqa
                 outputLinear = layers.LinearRegression(
                         name='relu_out_linear_{0:s}'.format(headName))\
-                    (sigmoided)
+                    (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
             case _:
                 raise ValueError("The simple layer type you gave ({0:s}) is not supported"
-                        .format(layerType))
+                        .format(layerType))  # noqa
     if (len(activationLayers) > 1):
         sumLayer = keras.layers.Add(name='regress_sum_{0:s}'.format(headName))(activationLayers)
     else:
@@ -209,7 +213,7 @@ def transformationModel(soloModel, profileArchitectureSpecification,
     numHeads = len(headList)
     for i, individualHead in enumerate(headList):
         profileHead, countsHead = _transformationHead(
-                soloModel.outputs[i],
+                soloModel.outputs[i],  # noqa
                 soloModel.outputs[i + numHeads],
                 individualHead,
                 profileArchitectureSpecification,
@@ -224,8 +228,10 @@ def transformationModel(soloModel, profileArchitectureSpecification,
 
 def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth,
                   outputFilterWidth, headList, biasModel):
-    """
-    This builds a standard bpnet model, but then adds in the bias at the very end:
+    """Build a combined model.
+
+    This builds a standard bpnet model, but then adds in the bias at the very end::
+
             ,-----------------SEQUENCE------------------,
             V                                           ,
         Cropdown step                                   V
@@ -240,34 +246,36 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
                              _____V_____
                              |COMBINED |
                              |_________|
-        Since you'll usually want to isolate the bias-free model (AKA residual model),
-        that is returned separately.
-    Parameters:
-        inputLength is the length of the one-hot encoded DNA sequence (which must be the
-            same for the bias model and the residual model).
-        outputLength is the width of the predicted profile.
-        numFilters is the number of convolutional filters used at each layer in the residual model.
-        numLayers is the number of dilated convolutions in the residual model.
-        inputFilterWidth is the width of the first convolutional layer in the residual model,
-            the one looking for motifs.
-        outputFilterWidth is the width of the profile head convolutional filter in the residual
-            model at the very bottom of the network.
-        headList is taken straight from the config json.
-        biasModel is a keras model that goes from sequence to transformed bias. This is the file
-            that is saved when you generate the transformation model, and internally comprises
-            both the solo model and a transformation.
 
-    Returns:
-        Two Keras models.
-        The first is the combined output, i.e., the COMBINED node in the graph above. Input to
-        this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA. Output is a list of
-        (profilePreds, profilePreds, profilePreds,... , countPreds, countPreds, countPreds...)
-        profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the
-        logits of the profile values for each task. countsPreds is a tensor of shape
-        (batch x numTasks) containing the log counts for each task.
+    Since you'll usually want to isolate the bias-free model (AKA residual model),
+    that is returned separately.
 
-        The second is the bias-free model, RESIDUAL MODEL in the graph above.
-        It has the same input and output shapes as the COMBINED model.
+    :param inputLength: The length of the one-hot encoded DNA sequence (which must be the
+        same for the bias model and the residual model).
+    :param outputLength: The width of the predicted profile.
+    :param numFilters: The number of convolutional filters used at each layer in the residual model.
+    :param numLayers: The number of dilated convolutions in the residual model.
+    :param inputFilterWidth: The width of the first convolutional layer in the residual model,
+        the one looking for motifs.
+    :param outputFilterWidth: The width of the profile head convolutional filter in the residual
+        model at the very bottom of the network.
+    :param headList: Taken straight from the config json.
+    :param biasModel: A keras model that goes from sequence to transformed bias. This is the file
+        that is saved when you generate the transformation model, and internally comprises
+        both the solo model and a transformation.
+
+    :return: Two Keras models.
+
+        * The first is the combined output, i.e., the COMBINED node in the graph above. Input to
+          this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA.
+          Output is a list of (profilePreds, profilePreds, profilePreds,... ,
+          countPreds, countPreds, countPreds...).
+          profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the
+          logits of the profile values for each task. countsPreds is a tensor of shape
+          (batch x numTasks) containing the log counts for each task.
+
+        * The second is the bias-free model, RESIDUAL MODEL in the graph above.
+          It has the same input and output shapes as the COMBINED model.
 
     It is an error to call this function with an inconsistent network structure,
     such as an input that is too long.
@@ -288,7 +296,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
     assert cropFlankSize >= 0, 'Bias model inputs are larger than residual inputs'
     croppedInputLayer = tf.keras.layers.Cropping1D(cropFlankSize,
                                                    name='auto_crop_input_tensor')\
-                                                (inputLayer[0])
+                                                (inputLayer[0])  # noqa
     readyBiasHeads = biasModel([croppedInputLayer])
 
     logging.debug("Bias heads")
@@ -305,7 +313,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
         # Just straight-up add the logit tensors.
         addProfile = keras.layers.Add(
                 name='combined_add_profile_{0:s}'.format(individualHead["head-name"]))\
-            ([readyBiasHeads[i], residualModel.outputs[i]])
+            ([readyBiasHeads[i], residualModel.outputs[i]])  # noqa
         if (individualHead["use-bias-counts"]):
             # While we add logits, we have to convert from log space to linear space
             # This is because we want to model
@@ -314,20 +322,20 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
             # TODO: Rewrite this using tf.math.reduce_logsumexp, since it would avoid some
             # numerical stability problems.
             absBiasCounts = keras.layers.Activation(
-                    tf.math.exp,
+                    tf.math.exp,  # noqa
                     name='combined_exponentiate_bias_{0:s}'.format(individualHead["head-name"]))\
-                (readyBiasHeads[i + numHeads])
+                (readyBiasHeads[i + numHeads])  # noqa
             absResidualCounts = keras.layers.Activation(
-                    tf.math.exp,
+                    tf.math.exp,  # noqa
                     name='combined_exp_residual_{0:s}'.format(individualHead["head-name"])) \
-                (residualModel.outputs[i + numHeads])
+                (residualModel.outputs[i + numHeads])  # noqa
             absCombinedCounts = keras.layers.Add(
                     name='combined_add_counts_{0:s}'.format(individualHead["head-name"])) \
-                ([absBiasCounts, absResidualCounts])
+                ([absBiasCounts, absResidualCounts])  # noqa
             addCounts = keras.layers.Activation(
-                    tf.math.log,
+                    tf.math.log,  # noqa
                     name='combined_log_counts_{0:s}'.format(individualHead["head-name"]))\
-                (absCombinedCounts)
+                (absCombinedCounts)  # noqa
         else:
             # The user doesn't want the counts value from the regression used,
             # just the profile part. This is useful when the concept of a

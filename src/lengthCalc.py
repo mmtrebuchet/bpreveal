@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
+"""A utility to calculate the input and output length of BPReveal models."""
 import argparse
 
 
-def length_calc_argparser():
-    """Command line arguments for the length_calc script.
-        Returns:
-        argparse.ArgumentParser
-    """
+def getParser() -> argparse.ArgumentParser:
+    """Command line arguments for the length_calc script."""
     parser = argparse.ArgumentParser(description="Calculates the input sequence "
-        "length required to run BPNet for a given configuration and output width. "
+        "length required to run BPReveal for a given configuration and output width. "
         "The required length is written to stdout.")
 
     parser.add_argument("--output-len",
@@ -17,6 +15,7 @@ def length_calc_argparser():
                  "sequence length. Exactly one of --input-len or --output-len "
                  "must be specified.",
             dest='outputLen',
+            metavar='OL',
             type=int)
 
     parser.add_argument("--input-len",
@@ -26,6 +25,7 @@ def length_calc_argparser():
                  "program will print a negative number and throw an error. "
                  "Exactly one of --input-len or --output-len must be specified.",
             dest='inputLen',
+            metavar='IL',
             type=int)
 
     parser.add_argument("--n-dil-layers",
@@ -33,6 +33,7 @@ def length_calc_argparser():
                  "typically on the order of 10.",
             dest='nDilLayers',
             type=int,
+            metavar='NL',
             required=True)
 
     parser.add_argument("--initial-convolution-widths",
@@ -42,12 +43,14 @@ def length_calc_argparser():
             dest="initialConvolutionWidths",
             type=int,
             nargs='+',
+            metavar='ICW',
             required=False)
 
     parser.add_argument("--conv1-kernel-size",
             help="The size of the first convolution in the network, typically on the order of 25",
             dest='conv1KernelSize',
             type=int,
+            metavar="C1KS",
             required=False)
 
     parser.add_argument("--profile-kernel-size",
@@ -55,6 +58,7 @@ def length_calc_argparser():
                  "typically on the order of 75.",
             dest='profileKernelSize',
             type=int,
+            metavar='PKS',
             required=True)
     parser.add_argument("--verbose",
             help="Display the receptive field at each level of the network",
@@ -64,20 +68,20 @@ def length_calc_argparser():
 
 
 def get_length_difference(n_dil_layers, initial_convolution_widths, profile_kernel_size, verbose):
-    """Given a BPNet architecture, calculate how much longer the input sequence will be than
-    the predicted profile.
-        Args:
-            n_dil_layers : The number of dilated convolutional layers in BPNet.
-            initial_convolution_widths : The widths of the convolutional kernels preceding the
-                dilated convolutions. In the original BPNet, this was a single layer of width
-                25, so this argument would be [25].
-            profile_kernel_size : The width of the final kernel that generates the profiles,
-                typically around 75.
-        Returns:
-            An integer representing the number of extra bases in the input compared to the width of
-            the predicted profile. Divide by two to get the overhang on each side of the input.
-    """
+    """Determine the padding on each size of the output.
 
+    Given a BPNet architecture, calculate how much longer the input sequence will be than
+    the predicted profile.
+
+    :param n_dil_layers: The number of dilated convolutional layers in BPNet.
+    :param initial_convolution_widths: The widths of the convolutional kernels preceding the
+        dilated convolutions. In the original BPNet, this was a single layer of width
+        25, so this argument would be [25].
+    :param profile_kernel_size: The width of the final kernel that generates the profiles,
+        typically around 75.
+    :return: An integer representing the number of extra bases in the input compared to the width of
+        the predicted profile. Divide by two to get the overhang on each side of the input.
+    """
     overhang = 0
     for convWidth in initial_convolution_widths:
         # First, remove the conv1 layer. The layer width must be odd.
@@ -118,21 +122,21 @@ def get_length_difference(n_dil_layers, initial_convolution_widths, profile_kern
 
 def getOutputLength(seq_len, n_dil_layers, initial_convolution_widths,
                     profile_kernel_size, verbose):
-    """Given a BPNet architecture and a length of the input sequence, calculate the width of the
+    """Determine how long the output will be.
+
+    Given a BPNet architecture and a length of the input sequence, calculate the width of the
     predicted profile.
 
-        Args:
-            seq_len : The length of the input sequence, in bp.
-            n_dil_layers : The number of dilated convolutional layers in BPNet.
-            initial_convolution_widths : The widths of the convolutional kernels preceding
-                the dilated convolutions. In the original BPNet, this was a single layer of
-                width 25, so this argument would be [25].
-            profile_kernel_size : The width of the final kernel that generates the profiles,
-                typically around 75.
-        Returns:
-            An integer representing the width of the profile that will be calculated. If this
-            value is zero or lower, then no bases will have their profile predicted and the
-            model is invalid.
+    :param seq_len: : The length of the input sequence, in bp.
+    :param n_dil_layers: : The number of dilated convolutional layers in BPNet.
+    :param initial_convolution_widths: : The widths of the convolutional kernels preceding
+        the dilated convolutions. In the original BPNet, this was a single layer of
+        width 25, so this argument would be [25].
+    :param profile_kernel_size: : The width of the final kernel that generates the profiles,
+        typically around 75.
+    :return: An integer representing the width of the profile that will be calculated. If this
+        value is zero or lower, then no bases will have their profile predicted and the
+        model is invalid.
     """
     return seq_len \
         - get_length_difference(n_dil_layers, initial_convolution_widths,
@@ -141,19 +145,19 @@ def getOutputLength(seq_len, n_dil_layers, initial_convolution_widths,
 
 def getInputLength(out_pred_len, n_dil_layers, initial_convolution_widths,
                    profile_kernel_size, verbose):
-    """Given a BPNet architecture and a length of the output profile, calculate the width of the
+    """Given an output length, calculate input length.
+
+    Given a BPNet architecture and a length of the output profile, calculate the width of the
     input sequence necessary to get that profile..
 
-        Args:
-            out_pred_len : The length of the output profile, in bp.
-            n_dil_layers : The number of dilated convolutional layers in BPNet.
-            initial_convolution_widths : The widths of the convolutional kernels preceding
-                the dilated convolutions. In the original BPNet, this was a single layer of
-                width 25, so this argument would be [25].
-            profile_kernel_size : The width of the final kernel that generates the profiles,
-                typically around 75.
-        Returns:
-            An integer representing the width of the sequence necessary to calculate the profile.
+    :param out_pred_len: : The length of the output profile, in bp.
+    :param n_dil_layers: : The number of dilated convolutional layers in BPNet.
+    :param initial_convolution_widths: : The widths of the convolutional kernels preceding
+        the dilated convolutions. In the original BPNet, this was a single layer of
+        width 25, so this argument would be [25].
+    :param profile_kernel_size: : The width of the final kernel that generates the profiles,
+        typically around 75.
+    :return: An integer representing the width of the sequence necessary to calculate the profile.
     """
     return out_pred_len \
         + get_length_difference(n_dil_layers, initial_convolution_widths,
@@ -161,7 +165,8 @@ def getInputLength(out_pred_len, n_dil_layers, initial_convolution_widths,
 
 
 def length_calc_main():
-    parser = length_calc_argparser()
+    """Run the calculation."""
+    parser = getParser()
     args = parser.parse_args()
     if (args.conv1KernelSize is not None):
         args.initialConvolutionWidths = [args.conv1KernelSize]

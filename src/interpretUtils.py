@@ -19,14 +19,17 @@ import ctypes
 
 
 class Query:
-    """This is what is passed to the batcher. It has two things.
-    sequence is the (INPUT_LENGTH, 4) one-hot encoded sequence of the current base.
-    passData, as with Result objects, is either a tuple of (chromName, position)
-    (for when you have a bed file) or a string with a fasta description line
-    (for when you're starting with a fasta).
-    index, an integer, indicates which output slot this data should be put in.
-    Since there's no guarantee that the results will arrive in order, we have to
-    track which query was which.
+    """This is what is passed to the batcher.
+
+    It has three things.
+
+    :param sequence: The (INPUT_LENGTH, 4) one-hot encoded sequence of the current base.
+    :param passData: As with Result objects, is either a tuple of (chromName, position)
+        (for when you have a bed file) or a string with a fasta description line
+        (for when you're starting with a fasta).
+    :param index: An integer, indicates which output slot this data should be put in.
+        Since there's no guarantee that the results will arrive in order, we have to
+        track which query was which.
     """
     sequence: ONEHOT_AR_T
     passData: Any
@@ -47,28 +50,32 @@ class Result:
 
 
 class PisaResult(Result):
-    """This is the output from shapping a single base. It contains a few things.
-    inputPrediction is a scalar floating point value, of the predicted logit
-    from the input sequence at the base that was being shapped.
+    """This is the output from shapping a single base.
 
-    shufflePredictions is a (numShuffles,) numpy array of the logits
-    returned by running predictions on the reference sequence, again evaluated
-    at the position of the base that was being shapped.
+    It contains a few things.
 
-    sequence is a (RECEPTIVE_FIELD, 4) numpy array of the one-hot encoded input sequence.
+    :param inputPrediction: A scalar floating point value, of the predicted logit
+        from the input sequence at the base that was being shapped.
 
-    shap is a (RECEPTIVE_FIELD, 4) numpy array of shap scores.
+    :param shufflePredictions: A (numShuffles,) numpy array of the logits
+        returned by running predictions on the reference sequence, again evaluated
+        at the position of the base that was being shapped.
 
-    passData is data that is not touched by the batcher, but added by the generator
-    and necessary for creating the output file.
-    If the generator is reading from a bed file, then it is a tuple of (chromName, position)
-    and that data should be used to populate the coords_chrom and coords_base fields.
-    If the generator was using a fasta file, it is the title line from the original fasta,
-    with its leading '>' removed.
+    :param sequence: is a (RECEPTIVE_FIELD, 4) numpy array of the
+        one-hot encoded input sequence.
 
-    index, an int, indicates which address the data should be stored at in the output hdf5.
-    Since there's no order guarantee when you're receiving data, we have to keep track
-    of the order in the original input.
+    :param shap: is a (RECEPTIVE_FIELD, 4) numpy array of shap scores.
+
+    :param passData: is data that is not touched by the batcher, but added by
+        the generator and necessary for creating the output file.
+        If the generator is reading from a bed file, then it is a tuple of (chromName, position)
+        and that data should be used to populate the coords_chrom and coords_base fields.
+        If the generator was using a fasta file, it is the title line from the original fasta,
+        with its leading '>' removed.
+
+    :param index: Indicates which address the data should be stored at in the output hdf5.
+        Since there's no order guarantee when you're receiving data, we have to keep track
+        of the order in the original input.
     """
 
     def __init__(self, inputPrediction: npt.NDArray[np.float32],
@@ -87,17 +94,18 @@ class PisaResult(Result):
 
 class FlatResult(Result):
     """A Result object that is given to savers for flat interpretation analysis.
-    sequence is a one-hot encoded array of the sequence that was explained, of shape
-    (input-length, 4)
-    shap is an array of shape (input-length, 4), containing the shap scores.
 
-    passData is a (picklable) object that is passed through from the generator.
+    :param sequence: A one-hot encoded array of the sequence that was explained, of shape
+        (input-length, 4)
+    :param shap: An array of shape (input-length, 4), containing the shap scores.
+
+    :param passData: is a (picklable) object that is passed through from the generator.
         For bed-based interpretations, it will be a three-tuple of (chrom, start, end)
         (The start and end positions correspond to the INPUT to the model, so they are inflated
         with respect to the bed file.)
         For fasta-based interpretations it will be a string.
 
-    index, an int, gives the position in the output hdf5 where the scores should be saved.
+    :param index: Gives the position in the output hdf5 where the scores should be saved.
     """
 
     def __init__(self, sequence: ONEHOT_AR_T,
@@ -141,6 +149,7 @@ class Generator:
 
 class Saver:
     """The saver runs in the main thread, so it's safe to open files and stuff in __init__.
+
     Descendants of this class shall receive Results from the batcher and save them to an
     appropriate structure, usually on disk.
     The user creates a Saver object in the main thread, and then the saver gets
@@ -178,29 +187,33 @@ class Saver:
 
 
 class FlatRunner:
-    """I try to avoid class-based wrappers around simple things, but this is not simple.
+    """Runs shap scores.
+
+    I try to avoid class-based wrappers around simple things, but this is not simple.
     This class creates threads to read in data, and then creates a thread that runs interpretation
     samples in batches. Finally, it takes the results from the interpretation thread and saves
-    those out to an hdf5-format file."""
+    those out to an hdf5-format file.
+
+    :param modelFname: is the name of the model on disk
+    :param headID: The head to shap.
+    :param taskIDs: The tasks to shap, obviously.
+        Typically, you'd want to interpret all of the tasks in a head, so for a two-task
+        head, taskIDs would be [0,1].
+    :param batchSize: is the *shap* batch size, which should be your usual batch size divided
+        by the number of shuffles. (since the original sequence and shuffles are run together)
+    :param generator: is a Generator object that will be passed to _generatorThread
+    :param saver: is a Saver object that will be used to save out the data.
+    :param numShuffles: is the number of reference sequences that should be generated for each
+        shap evaluation. (I recommend 20 or so)
+    :param profileFname: is an optional parameter. If provided, profiling data (i.e., performance
+        of this code) will be written to the given file name. Note that this has
+        nothing to do with genomic profiles, it's just benchmarking data for this code.
+    """
 
     def __init__(self, modelFname: str, headID: int, numHeads: int, taskIDs: list[int],
                  batchSize: int, generator: Generator, profileSaver: Saver,
                  countsSaver: Saver, numShuffles: int, kmerSize: int,
                  profileFname: Optional[str] = None):
-        """modelFname is the name of the model on disk
-        headID and taskIDs are the head and tasks to shap, obviously.
-            Typically, you'd want to interpret all of the tasks in a head, so for a two-task
-            head, taskIDs would be [0,1].
-        batchSize is the *shap* batch size, which should be your usual batch size divided
-            by the number of shuffles. (since the original sequence and shuffles are run together)
-        generator is a Generator object that will be passed to _generatorThread
-        saver is a Saver object that will be used to save out the data.
-        numShuffles is the number of reference sequences that should be generated for each
-            shap evaluation. (I recommend 20 or so)
-        profileFname is an optional parameter. If provided, profiling data (i.e., performance
-            of this code) will be written to the given file name. Note that this has
-            nothing to do with genomic profiles, it's just benchmarking data for this code.
-        """
         logging.info("Initializing interpretation runner.")
         self._profileSaver = profileSaver
         self._countsSaver = countsSaver
@@ -272,26 +285,28 @@ class PisaRunner:
     """I try to avoid class-based wrappers around simple things, but this is not simple.
     This class creates threads to read in data, and then creates a thread that runs pisa
     samples in batches. Finally, it takes the results from the pisa thread and saves
-    those out to an hdf5-format file."""
+    those out to an hdf5-format file.
+
+    :param modelFname: is the name of the model on disk
+    :param headID: The head to shap.
+    :param taskID: The task to shap.
+    :param batchSize: is the *shap* batch size, which should be your usual batch size divided
+        by the number of shuffles. (since the original sequence and shuffles are run together)
+    :param generator: is a Generator object that will be passed to _generatorThread
+    :param saver: is a Saver object that will be used to save out the data.
+    :param numShuffles: is the number of reference sequences that should be generated for each
+        shap evaluation. (I recommend 20 or so)
+    :param receptiveField: is the receptive field of the model. To save on writing a lot of
+        zeroes, the result objects only contain bases that are in the receptive field
+        of the base being shapped.
+    :param profileFname: is an optional parameter. If provided, profiling data (i.e., performance
+        of this code) will be written to the given file name. Note that this has
+        nothing to do with genomic profiles, it's just benchmarking data for this code.
+    """
 
     def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
                  receptiveField: int, kmerSize: int, profileFname: Optional[str] = None):
-        """modelFname is the name of the model on disk
-        headID and taskID are the head and task to shap, obviously,
-        batchSize is the *shap* batch size, which should be your usual batch size divided
-            by the number of shuffles. (since the original sequence and shuffles are run together)
-        generator is a Generator object that will be passed to _generatorThread
-        saver is a Saver object that will be used to save out the data.
-        numShuffles is the number of reference sequences that should be generated for each
-            shap evaluation. (I recommend 20 or so)
-        receptiveField is the receptive field of the model. To save on writing a lot of
-            zeroes, the result objects only contain bases that are in the receptive field
-            of the base being shapped.
-        profileFname is an optional parameter. If provided, profiling data (i.e., performance
-            of this code) will be written to the given file name. Note that this has
-            nothing to do with genomic profiles, it's just benchmarking data for this code.
-        """
         logging.info("Initializing pisa runner.")
         self._inQueue = multiprocessing.Queue(1000)
         self._outQueue = multiprocessing.Queue(1000)
@@ -332,14 +347,22 @@ class PisaRunner:
 
 
 class FlatListSaver(Saver):
-    """Since the Saver is created in its own thread, just storing the results
+    """A simple Saver that holds the results in memory so you can use them immediately.
+
+    Since the Saver is created in its own thread, just storing the results
     in this object doesn't work - they get removed when the writer
     process completes.
     So we need to create some shared memory. This Saver takes care of that
     for sequences and shap scores, but discards passData, since we don't know
     a priori how large passData objects will be. In a typical use case, you'd
     use this in situations where you already know which sequence is which,
-    so saving passData doesn't really make sense anyway."""
+    so saving passData doesn't really make sense anyway.
+
+    :param numSamples: The total number of samples that this saver will get.
+        It has to know this during construction so it can allocate
+        enough memory.
+    :param inputLength: The input length of the model.
+    """
 
     inputLength: int
     numSamples: int
@@ -364,7 +387,9 @@ class FlatListSaver(Saver):
         logging.debug("Constructed child thread flat list saver.")
 
     def parentFinish(self):
-        """This must be called to load the shap data from the child,
+        """Extract the data from the child process.
+
+        This must be called to load the shap data from the child,
         since it's currently packed away inside a linear array.
         I could just expose _outShapArray, but this reorganizes it in a much
         more intuitive way."""
@@ -396,7 +421,17 @@ class FlatListSaver(Saver):
 
 
 class FlatH5Saver(Saver):
-    """Saves the shap scores to the output file. """
+    """Saves the shap scores to the output file.
+
+    :param outputFname: is the name of the hdf5-format file that the shap scores will
+        be deposited in.
+    :param numSamples: is the number of regions (i.e., bases) that pisa will be run on.
+        This is needed because we store reference predictions.
+    :param genome: (Optional) Gives the name of a fasta-format file that contains
+        the genome of the organism. If provided, then chromosome name and size information
+        will be included in the output, and, additionally, two other datasets will be
+        created: coords_chrom, and coords_base.
+    """
     CHUNK_SHAPE: tuple[int, int, int]
     _outputFname: str
     numSamples: int
@@ -409,14 +444,6 @@ class FlatH5Saver(Saver):
 
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
                  genome: Optional[str] = None, useTqdm: bool = False):
-        """
-        OutputFname is the name of the hdf5-format file that the shap scores will be deposited in.
-        numSamples is the number of regions (i.e., bases) that pisa will be run on.
-        This is needed because we store reference predictions.
-        genome, an optional parameter, gives the name of a fasta-format file that contains
-            the genome of the organism. If provided, then chromosome name and size information
-            will be included in the output, and, additionally, two other datasets will be
-            created: coords_chrom, and coords_base. """
         self.CHUNK_SHAPE = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
         self._outputFname = outputFname
         self.numSamples = numSamples
@@ -446,13 +473,14 @@ class FlatH5Saver(Saver):
 
     def _loadGenome(self):
         """Does a few things.
-        First, it creates chrom_names and chrom_sizes datasets in the output hdf5.
-            These two datasets just contain the (string) names and (unsigned) sizes for each one.
-        Second, it populates these datasets.
-        Third, it creates two datasets: coords_chrom and coords_base, which store, for every
-            shap value calculated, what chromosome it was on, and where on that chromosome
-            it was. These fields are populated during data receipt, because we don't have
-            an ordering guarantee when we get data from the batcher.
+
+        1. It creates chrom_names and chrom_sizes datasets in the output hdf5.
+          These two datasets just contain the (string) names and (unsigned) sizes for each one.
+        2. It populates these datasets.
+        3. It creates two datasets: coords_chrom and coords_base, which store, for every
+           shap value calculated, what chromosome it was on, and where on that chromosome
+           it was. These fields are populated during data receipt, because we don't have
+           an ordering guarantee when we get data from the batcher.
         """
         import pysam
         logging.info("Loading genome information.")
@@ -549,19 +577,21 @@ class FlatH5Saver(Saver):
 
 
 class PisaH5Saver(Saver):
-    """Saves the shap scores to the output file. """
+    """Saves the shap scores to the output file.
+
+    :param outputFname: is the name of the hdf5-format file that the shap scores
+        will be deposited in.
+    :param numSamples: is the number of regions (i.e., bases) that pisa will be run on.
+    :param numShuffles: is the number of shuffles that are used to generate the reference.
+        This is needed because we store reference predictions.
+    :param genome: an optional parameter, gives the name of a fasta-format file that contains
+        the genome of the organism. If provided, then chromosome name and size information
+        will be included in the output, and, additionally, two other datasets will be
+        created: coords_chrom, and coords_base.
+        """
 
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
                  genome: Optional[str] = None, useTqdm: bool = False):
-        """
-        OutputFname is the name of the hdf5-format file that the shap scores will be deposited in.
-        numSamples is the number of regions (i.e., bases) that pisa will be run on.
-        numShuffles is the number of shuffles that are used to generate the reference.
-        This is needed because we store reference predictions.
-        genome, an optional parameter, gives the name of a fasta-format file that contains
-            the genome of the organism. If provided, then chromosome name and size information
-            will be included in the output, and, additionally, two other datasets will be
-            created: coords_chrom, and coords_base. """
         logging.info("Initializing saver.")
         self._outputFname = outputFname
         self.numSamples = numSamples
@@ -607,13 +637,14 @@ class PisaH5Saver(Saver):
 
     def _loadGenome(self):
         """Does a few things.
-        First, it creates chrom_names and chrom_sizes datasets in the output hdf5.
-            These two datasets just contain the (string) names and (unsigned) sizes for each one.
-        Second, it populates these datasets.
-        Third, it creates two datasets: coords_chrom and coords_base, which store, for every
-            shap value calculated, what chromosome it was on, and where on that chromosome
-            it was. These fields are populated during data receipt, because we don't have
-            an ordering guarantee when we get data from the batcher.
+
+        1. It creates chrom_names and chrom_sizes datasets in the output hdf5.
+           These two datasets just contain the (string) names and (unsigned) sizes for each one.
+        2. It populates these datasets.
+        3. It creates two datasets: coords_chrom and coords_base, which store, for every
+           shap value calculated, what chromosome it was on, and where on that chromosome
+           it was. These fields are populated during data receipt, because we don't have
+           an ordering guarantee when we get data from the batcher.
         """
         import pysam
         logging.info("Loading genome information.")
@@ -706,18 +737,20 @@ class PisaH5Saver(Saver):
 
 class ListGenerator(Generator):
     """A very simple Generator that is initialized with an iterable of strings.
+
     (A list of strings is an iterable, but this works with generator functions
-    and other things too!)"""
+    and other things too!)
+
+    :param sequences: Any iterable that yields strings, like a list of strings.
+        Note that this function immediately converts whatever you pass in
+        into a list, so very large iterables will consume a lot of memory.
+    :param passDataList: (optional) Will be passed through the batcher to
+        the saver.
+
+    """
 
     def __init__(self, sequences: Iterable[str],
                  passDataList: Optional[list] = None):
-        """
-        sequences is any iterable that yields strings, like a list of strings.
-            Note that this function immediately converts whatever you pass in
-            into a list, so very large iterables will consume a lot of memory.
-        PassDataList, if provided, will be passed through the batcher to
-            the saver.
-        """
         self._sequences = list(sequences)
         self.numSamples = len(self._sequences)
         self.inputLength = len(self._sequences[0])

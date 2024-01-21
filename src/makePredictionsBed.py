@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+"""A script to make predictions using a bed file and a genome."""
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
@@ -7,7 +7,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import pybedtools
 import bpreveal.utils as utils
-utils.setMemoryGrowth()
+if __name__ == "__main__":
+    utils.setMemoryGrowth()
 import numpy as np
 import pysam
 import h5py
@@ -19,6 +20,10 @@ from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
 
 def main(config):
+    """Run the predictions.
+
+    :param config: A JSON object satisfying the makePredictionsBed specification.
+    """
     utils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
@@ -46,11 +51,14 @@ def main(config):
 
 
 def writePreds(regions, preds, outFile, numHeads, genome):
-    """Regions is the BedTool taken from the config's bed file.
-    preds is the output of the model's predict function, no transformations.
-    outputTrackList is straight from the json file.
-    numheads is the number of output heads.
-    chromSizes is a dict mapping chromosome names to size. """
+    """Write the predictions to an HDF5.
+
+    :param regions: The BedTool taken from the config's bed file.
+    :param preds: The output of the model's predict function, no transformations.
+    :param outputTrackList: Straight from the json file.
+    :param numheads: The number of output heads.
+    :param chromSizes: A dict mapping chromosome names to size.
+    """
     logging.info("Writing predictions")
     stringDtype = h5py.string_dtype(encoding='utf-8')
     outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
@@ -87,7 +95,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     logging.debug("Datasets created. Populating regions.")
     outFile.create_dataset('coords_chrom', dtype=chromDtype, data=chromDset)
     outFile.create_dataset('coords_start', dtype=chromPosDtype, data=startDset)
-    outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)
+    outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)  # noqa
 
     logging.debug("Writing predictions.")
     for headID in wrapTqdm(range(numHeads)):

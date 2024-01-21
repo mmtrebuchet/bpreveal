@@ -3,10 +3,10 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import bpreveal.utils as utils
-utils.setMemoryGrowth()
+if __name__ == "__main__":
+    utils.setMemoryGrowth()
 import h5py
 from tensorflow import keras
-from tensorflow.keras.backend import int_shape
 import bpreveal.generators as generators
 import bpreveal.losses as losses
 from bpreveal.callbacks import getCallbacks

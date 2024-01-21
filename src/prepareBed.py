@@ -16,8 +16,15 @@ from bpreveal.bedUtils import resize, sequenceChecker, getCounts, lineToInterval
 
 def loadRegions(config):
     """Given a configuration (see the specification), return four PyBedTools BedTool objects.
-    The first will consist of the training regions, the second will be the validation regions, then
-    the test regions, and finally any regions that were rejected on loading."""
+
+    :param config: A JSON object satisfying the prepareBed specification.
+    :return: Four BedTools:
+
+        1. The first will consist of the training regions,
+        2. the second will be the validation regions,
+        3. then the test regions,
+        4. finally any regions that were rejected on loading.
+    """
     trainRegions = []
     testRegions = []
     valRegions = []
@@ -101,8 +108,14 @@ def loadRegions(config):
 
 
 def removeOverlaps(config, regions, genome):
-    """Takes in the list of regions, resizes each to the minimum size, and if there are overlaps,
-        randomly chooses one of the overlapping regions."""
+    """ Remove overlaps among the given regions.
+
+    :param config: Straight from the JSON.
+    :param regions: A BedTool (or list of Intervals)
+    :param genome: A FastaFile (not string) giving the genome.
+
+    Takes in the list of regions, resizes each to the minimum size, and if there are overlaps,
+    randomly chooses one of the overlapping regions."""
     # Resize the regions down to the minimum size.
     resizedRegions = regions.each(resize,
                                   config['resize-mode'],
@@ -137,10 +150,19 @@ def removeOverlaps(config, regions, genome):
 
 def validateRegions(config, regions, genome, bigwigLists):
     """The workhorse of this program.
+
+    :param config: Straight from the JSON.
+    :param regions: A BedTool or list.
+    :param genome: A FastaFile (not the name as a str.)
+    :param bigwigLists: The data files to use.
+    :return: Two BedTools, one for regions that passed the filters and another for
+        those that failed.
+
     Given a config (see the spec), a BedTool of regions, an open pysam FastaFile, and a list of
     bigwigs to check, filter down the regions so that they satisfy the configuration.
     Returns two BedTools: The first contains the regions that passed the filters, and the second
-    contains the rejected regions."""
+    contains the rejected regions.
+    """
     # First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of
     # the regions to the minimum size, then sort them and remove overlaps.
     if (config["remove-overlaps"]):
@@ -257,6 +279,10 @@ def validateRegions(config, regions, genome, bigwigLists):
 
 
 def prepareBeds(config):
+    """The main function of this script.
+
+    :param config: A JSON object matching the prepareBed specification.
+    """
 
     logging.info("Starting bed file generation.")
     # FUTURE: In BPReveal 5.0, raise an error inside this if block.
@@ -349,6 +375,11 @@ def prepareBeds(config):
     logging.info("Regions saved.")
 
 
+def main(config):
+    """Run the program."""
+    prepareBeds(config)
+
+
 if (__name__ == "__main__"):
     import sys
     config = json.load(open(sys.argv[1]))
@@ -361,4 +392,4 @@ if (__name__ == "__main__"):
                         "This will be an error in BPReveal 5.0")
     except jsonschema.ValidationError:
         bpreveal.schema.prepareBed.validate(config)
-    prepareBeds(config)
+    main(config)
