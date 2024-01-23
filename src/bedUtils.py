@@ -194,7 +194,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
     end = interval.end
     match mode:
         case "none":
-            if (end - start != width):
+            if end - start != width:
                 assert False, \
                        "An input region is not the expected width: {0:s}".format(str(interval))
         case "center":
@@ -206,7 +206,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
             end = start + width
         case _:
             assert False, "Unsupported resize mode: {0:s}".format(mode)
-    if (start <= 0 or end >= genome.get_reference_length(interval.chrom)):
+    if start <= 0 or end >= genome.get_reference_length(interval.chrom):
         return False  # We're off the edge of the chromosome.
     return pybedtools.Interval(interval.chrom, start, end, name=interval.name,
                                score=interval.score, strand=interval.strand)
@@ -238,7 +238,7 @@ def sequenceChecker(interval: pybedtools.Interval, genome: pysam.FastaFile) -> b
         ``False`` otherwise.
     """
     seq = genome.fetch(interval.chrom, interval.start, interval.end)
-    if (len(seq.upper().lstrip('ACGT')) != 0):
+    if len(seq.upper().lstrip('ACGT')) != 0:
         # There were letters that aren't regular bases. (probably Ns)
         return False
     return True

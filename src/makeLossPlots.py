@@ -47,15 +47,15 @@ def main():
     with open(args.json, 'r') as fp:
         history = json.load(fp)
 
-    if (args.total_only):
+    if args.total_only:
         lossTypes = [['loss', 'val_loss']]
     else:
         lossTypes = []
         for lt in history.keys():
             if lt == 'counts-loss-weight':
                 continue
-            if (not re.search('val', lt)):
-                if (("val_" + lt) in history):
+            if not re.search('val', lt):
+                if ("val_" + lt) in history:
                     lossTypes.append([lt, "val_" + lt])
                 else:
                     lossTypes.append([lt,])
@@ -130,5 +130,5 @@ def plotLosses(lossTypes, history, startFrom, countsLossWeight):
     return fig
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()

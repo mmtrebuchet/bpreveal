@@ -1,5 +1,5 @@
 import numpy as np
-import bpreveal.internal.libushuffle as libushuffle
+from bpreveal.internal import libushuffle
 from bpreveal.utils import ONEHOT_AR_T
 import threading
 
@@ -47,14 +47,14 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
     Internally, this function packs the bits at each position into a character, and the
     resulting string is shuffled and then unpacked. For this reason, it is possible to have
     more than one letter be hot at one position, or even to have no letters hot at a position.
-    For example, this one-hot encoded sequence is valid input:
+    For example, this one-hot encoded sequence is valid input::
 
-    Pos A C G T
-    0   1 0 0 0
-    1   0 1 0 0
-    2   1 0 1 0
-    3   0 1 1 1
-    4   0 0 0 0
+        Pos A C G T
+        0   1 0 0 0
+        1   0 1 0 0
+        2   1 0 1 0
+        3   0 1 1 1
+        4   0 0 0 0
 
     This is adapted from ushuffle.
     Returns an array of shape (numShuffles, length, alphabetLength)

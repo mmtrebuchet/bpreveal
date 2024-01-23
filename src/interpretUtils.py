@@ -2,7 +2,7 @@
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '4'
-import bpreveal.utils as utils
+from bpreveal import utils
 import pysam
 import numpy as np
 import numpy.typing as npt
@@ -12,7 +12,7 @@ import h5py
 import logging
 import pybedtools
 import multiprocessing
-import bpreveal.ushuffle as ushuffle
+from bpreveal import ushuffle
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
     H5_CHUNK_SIZE, MODEL_ONEHOT_T
 import ctypes
@@ -177,13 +177,11 @@ class Saver:
         to close shared memory, so this function is guaranteed to be called
         by the Runners."""
         logging.debug("Called parentFinish on the base Saver class.")
-        pass
 
     def done(self):
         """Called when the batcher is complete (indicated by putting a None in its output queue).
         Now is the time to close all of your files."""
         logging.debug("Called done on the base Saver class.")
-        pass
 
 
 class FlatRunner:
@@ -464,7 +462,7 @@ class FlatH5Saver(Saver):
                                      (self.numSamples, self.inputLength, 4),
                                      dtype=ONEHOT_T, chunks=self.CHUNK_SHAPE,
                                      compression='gzip')
-        if (self.genomeFname is not None):
+        if self.genomeFname is not None:
             self._loadGenome()
         else:
             self._outFile.create_dataset("descriptions", (self.numSamples,),
@@ -482,7 +480,6 @@ class FlatH5Saver(Saver):
            it was. These fields are populated during data receipt, because we don't have
            an ordering guarantee when we get data from the batcher.
         """
-        import pysam
         logging.info("Loading genome information.")
         with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
@@ -493,7 +490,7 @@ class FlatH5Saver(Saver):
             for chromName in genome.references:
                 # Are any chromosomes longer than 2^31 bp long? If so (even though it's unlikely),
                 # I must increase the storage size for positions.
-                if (genome.get_reference_length(chromName) > 2**31):
+                if genome.get_reference_length(chromName) > 2**31:
                     posDtype = 'u8'
 
             self._outFile.create_dataset("chrom_sizes", (genome.nreferences, ), dtype=posDtype)
@@ -503,11 +500,11 @@ class FlatH5Saver(Saver):
                 self.chromNameToIdx[chromName] = i
                 self._outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
 
-            if (genome.nreferences <= 255):  # type: ignore
+            if genome.nreferences <= 255:  # type: ignore
                 # If there are less than 255 chromosomes,
                 # I only need 8 bits to store the chromosome ID.
                 chromDtype = 'u1'
-            elif (genome.nreferences <= 65535):  # type: ignore
+            elif genome.nreferences <= 65535:  # type: ignore
                 # If there are less than 2^16 chromosomes, I can use 16 bits.
                 chromDtype = 'u2'
             else:
@@ -568,7 +565,7 @@ class FlatH5Saver(Saver):
 
         # Okay, now we either add the description line, or add a genomic coordinate.
         # These are not chunked, since the data aren't compressed.
-        if (self.genomeFname is not None):
+        if self.genomeFname is not None:
             self._outFile["coords_chrom"][index] = self.chromNameToIdx[result.passData[0]]
             self._outFile["coords_start"][index] = result.passData[1]
             self._outFile["coords_end"][index] = result.passData[2]
@@ -626,9 +623,9 @@ class PisaH5Saver(Saver):
                                      dtype=ONEHOT_T, chunks=self.CHUNK_SHAPE,
                                      compression='gzip')
         self.pbar = None
-        if (self._useTqdm):
+        if self._useTqdm:
             self.pbar = tqdm.tqdm(total=self.numSamples)
-        if (self.genomeFname is not None):
+        if self.genomeFname is not None:
             self._loadGenome()
         else:
             self._outFile.create_dataset("descriptions", (self.numSamples,),
@@ -646,7 +643,6 @@ class PisaH5Saver(Saver):
            it was. These fields are populated during data receipt, because we don't have
            an ordering guarantee when we get data from the batcher.
         """
-        import pysam
         logging.info("Loading genome information.")
         with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
@@ -657,7 +653,7 @@ class PisaH5Saver(Saver):
             for chromName in genome.references:
                 # Are any chromosomes longer than 2^31 bp long? If so (even though it's unlikely),
                 # I must increase the storage size for positions.
-                if (genome.get_reference_length(chromName) > 2**31):
+                if genome.get_reference_length(chromName) > 2**31:
                     posDtype = 'u8'
 
             self._outFile.create_dataset("chrom_sizes", (genome.nreferences, ), dtype=posDtype)
@@ -667,11 +663,11 @@ class PisaH5Saver(Saver):
                 self.chromNameToIdx[chromName] = i
                 self._outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
 
-            if (genome.nreferences <= 255):  # type: ignore
+            if genome.nreferences <= 255:  # type: ignore
                 # If there are less than 255 chromosomes,
                 # I only need 8 bits to store the chromosome ID.
                 chromDtype = 'u1'
-            elif (genome.nreferences <= 65535):  # type: ignore
+            elif genome.nreferences <= 65535:  # type: ignore
                 # If there are less than 2^16 chromosomes, I can use 16 bits.
                 chromDtype = 'u2'
             else:
@@ -684,12 +680,12 @@ class PisaH5Saver(Saver):
 
     def done(self):
         logging.debug("Saver closing.")
-        if (self.pbar is not None):
+        if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
 
     def add(self, result: PisaResult):
-        if (self.pbar is not None):
+        if self.pbar is not None:
             self.pbar.update()
         index = result.index
         # Which chunk does this result go in?
@@ -728,7 +724,7 @@ class PisaH5Saver(Saver):
         # self._outFile["sequence"][index, :, :] = result.sequence
         # self._outFile["shap"][index, :, :] = result.shap
         # Okay, now we either add the description line, or add a genomic coordinate.
-        if (self.genomeFname is not None):
+        if self.genomeFname is not None:
             self._outFile["coords_chrom"][index] = self.chromNameToIdx[result.passData[0]]
             self._outFile["coords_base"][index] = result.passData[1]
         else:
@@ -792,7 +788,7 @@ class FastaGenerator(Generator):
 
         with open(fastaFname, "r") as fp:
             for line in fp:
-                if (len(line) > 0 and line[0] == ">"):
+                if len(line) > 0 and line[0] == ">":
                     numRegions += 1
         # Iterate through the input file real quick and find out how many regions I'll have.
         self.numRegions = numRegions
@@ -815,16 +811,16 @@ class FastaGenerator(Generator):
         return self
 
     def __next__(self) -> Query:
-        if (self.nowStop):
+        if self.nowStop:
             raise StopIteration()
         sequence = ""
         prevSequenceID = self.nextSequenceID
-        while (True):
+        while True:
             nextLine = self.fastaFile.readline()
-            if (len(nextLine) == 0):
+            if len(nextLine) == 0:
                 self.nowStop = True
                 break
-            if (nextLine[0] == ">"):
+            if nextLine[0] == ">":
                 self.nextSequnceID = nextLine[1:].strip()
                 break
             sequence += nextLine.strip()
@@ -872,7 +868,7 @@ class FlatBedGenerator(Generator):
 
     def __next__(self) -> Query:
         # Get the sequence and make a Query with it.
-        if (self.readHead >= len(self.shapTargets)):
+        if self.readHead >= len(self.shapTargets):
             raise StopIteration()
         r = self.shapTargets[self.readHead]
         padding = (self.inputLength - self.outputLength) // 2
@@ -925,7 +921,7 @@ class PisaBedGenerator(Generator):
 
     def __next__(self) -> Query:
         # Get the sequence and make a Query with it.
-        if (self.readHead >= len(self.shapTargets)):
+        if self.readHead >= len(self.shapTargets):
             raise StopIteration()
         curChrom, curStart = self.shapTargets[self.readHead]
         padding = (self.inputLength - self.outputLength) // 2
@@ -949,21 +945,21 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     logging.debug("Starting flat batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.enable()
     b = _FlatBatcher(modelName, batchSize, outQueue, headID,
                      numHeads, taskIDs, numShuffles, mode, kmerSize)
     logging.debug("Batcher created.")
-    while (True):
+    while True:
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
-        if (query is None):
+        if query is None:
             break
         b.addSample(query)
     logging.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
     outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
     logging.debug("Batcher thread finished.")
@@ -976,21 +972,21 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     logging.debug("Starting batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.enable()
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
                      receptiveField, kmerSize)
     logging.debug("Batcher created.")
-    while (True):
+    while True:
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
-        if (query is None):
+        if query is None:
             break
         b.addSample(query)
     logging.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
     outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
     logging.debug("Batcher thread finished.")
@@ -1000,7 +996,7 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
                      profileFname: Optional[str] = None):
     import cProfile
     profiler = cProfile.Profile()
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.enable()
     logging.debug("Starting generator thread.")
     generator.construct()
@@ -1013,7 +1009,7 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     logging.debug("Done with generator, None added to queue.")
     generator.done()
     logging.debug("Generator thread finished.")
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
 
@@ -1023,17 +1019,17 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
     logging.debug("Saver thread started.")
     import cProfile
     profiler = cProfile.Profile()
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.enable()
     saver.construct()
-    while (True):
+    while True:
         rv = outQueue.get(timeout=utils.QUEUE_TIMEOUT)
-        if (rv is None):
+        if rv is None:
             break
         saver.add(rv)
     saver.done()
     logging.debug("Saver thread finished.")
-    if (profileFname is not None):
+    if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
 
@@ -1048,8 +1044,7 @@ class _PisaBatcher:
         logging.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
-        import shap
-        import utils
+        from bpreveal import shap
         utils.setMemoryGrowth()
         self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
@@ -1089,11 +1084,11 @@ class _PisaBatcher:
 
     def addSample(self, query: Query):
         self.curBatch.append(query)
-        if (len(self.curBatch) >= self.batchSize):
+        if len(self.curBatch) >= self.batchSize:
             self.finishBatch()
 
     def finishBatch(self):
-        if (len(self.curBatch)):
+        if len(self.curBatch):
             self.runPrediction()
             self.curBatch = []
 
@@ -1146,7 +1141,7 @@ class _PisaBatcher:
             shuffleReadHead += self.numShuffles
             queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
             ret = PisaResult(queryPred, queryShufPreds, querySequence,  # type: ignore
-                         queryShapScores, q.passData, q.index)
+                             queryShapScores, q.passData, q.index)
             self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
 
 
@@ -1160,8 +1155,7 @@ class _FlatBatcher:
         logging.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
-        import bpreveal.shap as shap
-        import bpreveal.utils as utils
+        from bpreveal import shap
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = utils.loadModel(modelFname)
@@ -1212,11 +1206,11 @@ class _FlatBatcher:
 
     def addSample(self, query: Query):
         self.curBatch.append(query)
-        if (len(self.curBatch) >= self.batchSize):
+        if len(self.curBatch) >= self.batchSize:
             self.finishBatch()
 
     def finishBatch(self):
-        if (len(self.curBatch)):
+        if len(self.curBatch):
             self.runPrediction()
             self.curBatch = []
 
@@ -1253,7 +1247,7 @@ def combineMultAndDiffref(mult, orig_inp, bg_data):
     # This is copied from Zahoor's code.
     projected_hypothetical_contribs = \
         np.zeros_like(bg_data[0]).astype('float')
-    assert (len(orig_inp[0].shape) == 2)
+    assert len(orig_inp[0].shape) == 2
     for i in range(4):  # We're going to go over all the base possibilities.
         hypothetical_input = np.zeros_like(orig_inp[0]).astype('float')
         hypothetical_input[:, i] = 1.0

@@ -2,15 +2,15 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
-import bpreveal.utils as utils
+from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 import h5py
 from tensorflow import keras
-import bpreveal.generators as generators
-import bpreveal.losses as losses
+from bpreveal import generators
+from bpreveal import losses
+from bpreveal import models
 from bpreveal.callbacks import getCallbacks
-import bpreveal.models as models
 import logging
 import tensorflow as tf
 
@@ -18,7 +18,7 @@ import tensorflow as tf
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
                outputPrefix, plateauPatience, heads, tensorboardDir=None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
-    if (tensorboardDir is not None):
+    if tensorboardDir is not None:
         from callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
     history = model.fit(trainBatchGen, epochs=epochs,
@@ -32,7 +32,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    if ("sequence-input-length" in config):
+    if "sequence-input-length" in config:
         assert False, "Sequence-input-length has been renamed "\
                       "input-length in transformation config files."
     inputLength = config["settings"]["input-length"]
@@ -77,7 +77,7 @@ def main(config):
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized. Training.")
     tensorboardDir = None
-    if ("tensorboard-log-dir" in config):
+    if "tensorboard-log-dir" in config:
         tensorboardDir = config["tensorboard-log-dir"]
 
     history = trainModel(model, inputLength, outputLength, trainGenerator,
@@ -93,7 +93,7 @@ def main(config):
         json.dump(history.history, fp, ensure_ascii=False, indent=4)
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)

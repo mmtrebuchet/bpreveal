@@ -78,7 +78,6 @@ def setMemoryGrowth() -> None:
     except Exception as inst:
         logging.warning(str(inst))
         logging.warning("Not using GPU")
-        pass
     global GLOBAL_TENSORFLOW_LOADED
     GLOBAL_TENSORFLOW_LOADED = True
 
@@ -98,7 +97,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> None:
                 logging.debug("Found a MIG card, attempting to guess memory "
                               "available based on name.")
                 cmd = ["nvidia-smi", "-L"]
-                ret = sp.run(cmd, capture_output=True)
+                ret = sp.run(cmd, capture_output=True, check=True)
                 lines = ret.stdout.decode('utf-8').split('\n')
                 matchRe = re.compile(r".*MIG.* ([0-9]+)g\.([0-9]+)gb.*{0:s}.*".format(
                                      os.environ["CUDA_VISIBLE_DEVICES"]))
@@ -110,7 +109,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> None:
     if total == 0.0:
         # We didn't find memory in CUDA_VISIBLE_DEVICES.
         cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
-        ret = sp.run(cmd, capture_output=True)
+        ret = sp.run(cmd, capture_output=True, check=True)
         line = ret.stdout.decode('utf-8').split('\n')[1]
         logging.debug("Memory usage limited based on {0:s}".format(line))
         lsp = line.split(' ')
@@ -134,7 +133,7 @@ def loadChromSizes(fname: str) -> dict[str, int]:
     ret = dict()
     with open(fname, 'r') as fp:
         for line in fp:
-            if (len(line) > 2):
+            if len(line) > 2:
                 chrom, size = line.split()
                 ret[chrom] = int(size)
     return ret
@@ -310,13 +309,12 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
         for p in preds:
             logits, logcounts = p[0]
             outQueue.put(logitsToProfile(logits, logcounts))
-    import multiprocessing as mp
-    resultQueue = mp.Queue()
+    resultQueue = multiprocessing.Queue()
     # daemon=True makes it so that the child process dies if the parent dies
     # which is useful if something goes wrong.
-    proc = mp.Process(target=predictThread,
-                      args=(sequences, modelFname, resultQueue),
-                      daemon=True)
+    proc = multiprocessing.Process(target=predictThread,
+                                   args=(sequences, modelFname, resultQueue),
+                                   daemon=True)
     proc.start()
     ret = []
     for _ in range(len(sequences)):
@@ -489,7 +487,6 @@ class BatchPredictor:
 
     def __enter__(self):
         """Using this batcher with a context manager does nothing."""
-        pass
 
     def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
         """If this batcher was used in a context manager, exiting does nothing, but raises
@@ -720,6 +717,7 @@ class ThreadedBatchPredictor:
             return False
         del exceptionValue  # Disable unused warning
         del exceptionTraceback  # Disable unused warning
+        return True
 
     def start(self):
         """Spin up the batcher thread.

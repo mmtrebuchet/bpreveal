@@ -12,6 +12,9 @@ src/tools/__pycache__
 src/schema/__pycache__
 src/schema/__init__.py
 doc/img
+html/_*
+html/api
+html/*.rst
 **/*.bw
 **/*.so
 

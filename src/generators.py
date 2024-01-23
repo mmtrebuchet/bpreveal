@@ -34,6 +34,7 @@ class H5BatchGenerator(keras.utils.Sequence):
 
     def addMeanCounts(self):
         """For all heads, calculate the average number of reads over all regions.
+
         In the BPNet paper, it was shown that λ½ = ĉ/2, where ĉ is the average
         number of counts in each region, and if that value of λ is used in as the
         counts loss weight, then the profile and counts losses will be given equal weight.
@@ -64,7 +65,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         for _ in range(len(self)):
             # Build an empty sequence array. Note we have to special-case the last round
             # in case the number of regions is not divisible by batch size.
-            if (regionsRemaining > self.batchSize):
+            if regionsRemaining > self.batchSize:
                 curBatchSize = self.batchSize
             else:
                 curBatchSize = regionsRemaining
@@ -101,7 +102,7 @@ class H5BatchGenerator(keras.utils.Sequence):
             #               x numTasks)
             # so this slice takes the ith region of each of the head datasets.
             tmpData = [x[i, :, :] for x in self.fullData]
-            if (self.maxJitter > 0):
+            if self.maxJitter > 0:
                 jitterOffset = self.rng.integers(0, self.maxJitter * 2 + 1)
                 tmpSequence = tmpSequence[jitterOffset:jitterOffset + self.inputLength, :]
                 for j in range(len(tmpData)):

@@ -1,4 +1,120 @@
 #!/usr/bin/env python3
+"""Generates test, train, and validation splits and optionally performs some filtering.
+
+
+BNF
+---
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/prepareBed.bnf
+
+
+Parameter Notes
+---------------
+
+bigwig-names
+    A list of the data bigwigs that correspond to this head.
+    For example, these might be the positive and negative strands of a ChIP-nexus
+    sample.
+
+resize-mode
+    specifies where in the regions in the bed file the output regions should
+    be centered.
+    Note that this program assumes your bed files are in bed3 format, that
+    is, (chrom, start, stop).
+    If you have additional columns with information like peak offset, those
+    data will be ignored.
+
+max-quantile, min-quantile
+    The max and min quantile values, if provided, will be used to
+    threshold which regions are included in the output.
+    First, all of the counts in the given regions are computed (which takes
+    a while!), and then the given quantile is computed.
+    All regions exceeding that value are not included in the output files.
+
+max-counts, min-counts
+    Similarly, if max and min counts are given, all regions having more
+    (or fewer) reads than the given number will be excluded.
+
+output-prefix
+    Specifies the base name for the output bed files. You can use either
+    output-prefix OR list all three output-train, output-val, and output-test.
+    If you specify output-prefix, then five bed files will be made, called
+    ``output-prefix_train.bed``, ``output-prefix_val.bed``,
+    ``output-prefix_test.bed``, ``output-prefix_all.bed``, and
+    ``output-prefix_reject.bed``
+
+output-train, output-val, output-test
+    If you give these file names, then the training, validition and test splits
+    will be written to these three files, respectively.
+
+regions
+    Needed for splits by chromosome or by regex. This is a bed file of every
+    possible region that you might want to train on.
+
+train-chroms, val-chroms, test-chroms
+    Split up your input regions by chromosome.
+
+train-regex, val-regex, test-regex
+    If you use a regex, then the name field of each bed line will be matched
+    against each of the three regexes.
+    The line will be added to the split where it matches.
+    If a bed line matches more than one regex, that will raise an error.
+    If a line matches no regexes, it is added to the rejects.
+
+train-regions, val-regions, test-regions
+    You may provide a specific bed file for each of the splits. In this case,
+    the regions in each of these files are used to construct each respective
+    split.
+
+remove-overlaps
+    flag can be set to ``true`` if you'd
+    like to exclude overlapping regions.
+    This is done by resizing all regions down to
+    ``overlap-max-distance``, and then, if multiple regions have an
+    overlap, one is deleted at random.
+    If ``remove-overlaps`` is ``false``, then
+    it is an error to set ``overlap-max-distance``.
+
+
+Additional information
+----------------------
+
+Counts windowing
+^^^^^^^^^^^^^^^^
+
+I should mention that the maximum and minimum counts are not compared across the
+same window.
+When comparing a region against the maximum counts value, all counts within a
+window of size ``input-length + 2*jitter`` are added up.
+This way, if you have a crazy-huge spike just outside your region, that region
+will be rejected if the jittering could include it in the training data.
+Conversely, for minimum counts, the counts within a window of length
+``output-length - 2*jitter`` will be considered.
+This way, no matter what jitter value is selected, there will be at least the
+given number of counts in the region.
+
+Most columns ignored
+^^^^^^^^^^^^^^^^^^^^
+
+prepareBed takes a very lenient approach to validating your bed files.
+It will not check that the score column in your file is numeric, nor will
+it check to see if you have flipped some columns in your input file.
+
+
+DEPRECATIONS
+------------
+
+The old ``bigwigs`` format was deprecated in BPReveal 4.0.0 and will be
+removed in BPReveal 5.0.0
+
+The ``remove-overlaps`` field became mandatory in BPReveal 3.0.0.
+
+API
+---
+
+"""
 # This file contains several helper functions for dealing with bed files.
 
 import json
@@ -6,7 +122,7 @@ import pyBigWig
 import jsonschema
 import pysam
 import logging
-import bpreveal.utils as utils
+from bpreveal import utils
 import numpy as np
 import pybedtools
 import random
@@ -36,11 +152,11 @@ def loadRegions(config):
             for bedFile in regionFnames:
                 for line in open(bedFile):
                     if r := lineToInterval(line):
-                        if (r.chrom in trainChroms):
+                        if r.chrom in trainChroms:
                             trainRegions.append(r)
-                        elif (r.chrom in valChroms):
+                        elif r.chrom in valChroms:
                             valRegions.append(r)
-                        elif (r.chrom in testChroms):
+                        elif r.chrom in testChroms:
                             testRegions.append(r)
                         else:
                             numRejected += 1
@@ -74,20 +190,20 @@ def loadRegions(config):
                         foundTrain = False
                         foundVal = False
                         foundTest = False
-                        if (trainRegex.search(r.name) is not None):
+                        if trainRegex.search(r.name) is not None:
                             foundTrain = True
                             trainRegions.append(r)
-                        if (valRegex.search(r.name) is not None):
+                        if valRegex.search(r.name) is not None:
                             assert not foundTrain, "Region {0:s} matches multiple "\
                                                    "regexes.".format(line)
                             foundVal = True
                             valRegions.append(r)
-                        if (testRegex.search(r.name) is not None):
+                        if testRegex.search(r.name) is not None:
                             assert not (foundTrain or foundVal), "Region {0:s} matches "\
                                                                  "multiple regexes.".format(line)
                             foundTest = True
                             testRegions.append(r)
-                        if (not (foundTrain or foundVal or foundTest)):
+                        if not (foundTrain or foundVal or foundTest):
                             numRejected += 1
                             logging.debug("        Rejected region {0:s} because it didn't match "
                                           "any of your split regexes.".format(line.strip()))
@@ -125,21 +241,21 @@ def removeOverlaps(config, regions, genome):
     piles = []
     curPile = [sortedRegions[0]]
     for r in sortedRegions:
-        if (curPile[0].chrom == r.chrom and curPile[0].end > r.start):
+        if curPile[0].chrom == r.chrom and curPile[0].end > r.start:
             # We have an overlap.
             curPile.append(r)
         else:
             # No overlap, commit and reset the pile.
             piles.append(curPile)
             curPile = [r]
-    if (len(curPile)):
+    if len(curPile):
         piles.append(curPile)
     ret = []
     rejects = []
     for pile in piles:
         selectedIdx = random.randrange(0, len(pile))
         for i, elem in enumerate(pile):
-            if (i == selectedIdx):
+            if i == selectedIdx:
                 ret.append(elem)
             else:
                 logging.debug("        Rejected region {0:s} because it overlaps.".format(
@@ -165,7 +281,7 @@ def validateRegions(config, regions, genome, bigwigLists):
     """
     # First, I want to eliminate any regions that are duplicates. To do this, I'll resize all of
     # the regions to the minimum size, then sort them and remove overlaps.
-    if (config["remove-overlaps"]):
+    if config["remove-overlaps"]:
         noOverlapRegions, initialRejects = removeOverlaps(config, regions, genome)
         noOverlapRegions = noOverlapRegions.saveas()
         initialRejects = initialRejects.saveas()
@@ -173,7 +289,7 @@ def validateRegions(config, regions, genome, bigwigLists):
         logging.info("    Removed overlaps, {0:d} regions remain.".format(noOverlapRegions.count()))
     else:
         initialRegions = regions
-        if ("overlap-max-distance" in config):
+        if "overlap-max-distance" in config:
             logging.warning("    You have set remove-overlaps to false, but you still provided an"
                             " overlap-max-distance parameter. This parameter is meaningless.")
         logging.debug("    Skipping region overlap removal.")
@@ -191,8 +307,8 @@ def validateRegions(config, regions, genome, bigwigLists):
     # So go over every region and measure its counts (unless max-quantile == 1)
     # and reject regions that are over-full on reads.
     for i, headSpec in enumerate(config["heads"]):
-        if ("max-quantile" in headSpec):
-            if (headSpec["max-quantile"] == 1):
+        if "max-quantile" in headSpec:
+            if headSpec["max-quantile"] == 1:
                 # Don't reject any regions. Since validRegions starts with all ones
                 # (i.e., all regions are valid), we just jump to the next head to see
                 # if we need to look at max counts there.
@@ -201,7 +317,7 @@ def validateRegions(config, regions, genome, bigwigLists):
         bigCounts = np.zeros((len(bigRegionsList),))
         for j, r in enumerate(bigRegionsList):
             bigCounts[j] = getCounts(r, bigwigLists[i])
-        if ("max-counts" in headSpec):
+        if "max-counts" in headSpec:
             maxCounts = headSpec["max-counts"]
         else:
             maxCounts = np.quantile(bigCounts, [headSpec["max-quantile"]])[0]
@@ -209,7 +325,7 @@ def validateRegions(config, regions, genome, bigwigLists):
                                                                  str(headSpec["bigwig-names"])))
         numReject = 0
         for regionIdx in range(len(bigRegionsList)):
-            if (bigCounts[regionIdx] > maxCounts):
+            if bigCounts[regionIdx] > maxCounts:
                 numReject += 1
                 validRegions[regionIdx] = 0
         logging.debug("    Rejected {0:f}% of regions for having too many"
@@ -227,14 +343,14 @@ def validateRegions(config, regions, genome, bigwigLists):
                                                genome).saveas())
     for i, headSpec in enumerate(config["heads"]):
         # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
-        if ("min-quantile" in headSpec):
-            if (headSpec["min-quantile"] == 0):
+        if "min-quantile" in headSpec:
+            if headSpec["min-quantile"] == 0:
                 continue
         smallCounts = np.zeros((len(smallRegionsList),))
         for j, r in enumerate(smallRegionsList):
             smallCounts[j] = getCounts(r, bigwigLists[i])
             pbar.update()
-        if ("min-counts" in headSpec):
+        if "min-counts" in headSpec:
             minCounts = headSpec["min-counts"]
         else:
             minCounts = np.quantile(smallCounts, [headSpec["min-quantile"]])[0]
@@ -244,7 +360,7 @@ def validateRegions(config, regions, genome, bigwigLists):
         for regionIdx in range(len(bigRegionsList)):
             # within len(bigRegions) in case a region was lost during the resize - we want that to
             # crash because resizing down should never invalidate a region due to sequence problems.
-            if (smallCounts[regionIdx] < minCounts):
+            if smallCounts[regionIdx] < minCounts:
                 numReject += 1
                 validRegions[regionIdx] = 0
         logging.debug("    Rejected {0:f}% of small regions."
@@ -266,12 +382,12 @@ def validateRegions(config, regions, genome, bigwigLists):
     filteredRegions = []
     rejectedRegions = []
     for i, r in enumerate(outRegionsBed):
-        if (validRegions[i] == 1):
+        if validRegions[i] == 1:
             filteredRegions.append(r)
         else:
             rejectedRegions.append(r)
     logging.info("    Total surviving regions: {0:d}".format(len(filteredRegions)))
-    if (config["remove-overlaps"]):
+    if config["remove-overlaps"]:
         rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions), postmerge=False)
     else:
         rejects = pybedtools.BedTool(rejectedRegions)
@@ -330,7 +446,7 @@ def prepareBeds(config):
     genome = pysam.FastaFile(config["genome"])
     (trainRegions, valRegions, testRegions, rejectRegions) = loadRegions(config)
     logging.debug("Regions loaded.")
-    if ("output-prefix" in config):
+    if "output-prefix" in config:
         outputTrainFname = config["output-prefix"] + "_train.bed"
         outputValFname = config["output-prefix"] + "_val.bed"
         outputTestFname = config["output-prefix"] + "_test.bed"
@@ -341,7 +457,7 @@ def prepareBeds(config):
         outputValFname = config["output-val"]
         outputTestFname = config["output-test"]
         outputAllFname = config["output-all"]
-        if ("output-reject" in config):
+        if "output-reject" in config:
             outputRejectFname = config["output-reject"]
         else:
             outputRejectFname = False
@@ -365,7 +481,7 @@ def prepareBeds(config):
     validTest.saveas(outputTestFname)
     validAll = validTrain.cat(validVal, postmerge=False).cat(validTest, postmerge=False).sort()
     validAll.saveas(outputAllFname)
-    if (outputRejectFname):
+    if outputRejectFname:
         allRejects = rejectRegions\
             .cat(rejectTrain, postmerge=False)\
             .cat(rejectVal, postmerge=False)\
@@ -375,12 +491,7 @@ def prepareBeds(config):
     logging.info("Regions saved.")
 
 
-def main(config):
-    """Run the program."""
-    prepareBeds(config)
-
-
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     import sys
     config = json.load(open(sys.argv[1]))
     utils.setVerbosity(config["verbosity"])
@@ -392,4 +503,4 @@ if (__name__ == "__main__"):
                         "This will be an error in BPReveal 5.0")
     except jsonschema.ValidationError:
         bpreveal.schema.prepareBed.validate(config)
-    main(config)
+    prepareBeds(config)

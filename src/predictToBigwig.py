@@ -6,7 +6,7 @@ import argparse
 import logging
 import tqdm
 import multiprocessing
-import bpreveal.utils as utils
+from bpreveal import utils
 
 
 class Region:
@@ -189,7 +189,7 @@ def getParser() -> argparse.ArgumentParser:
 
 def main():
     args = getParser().parse_args()
-    if (args.verbose):
+    if args.verbose:
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
@@ -197,5 +197,5 @@ def main():
                 args.negate, args.numThreads)
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()

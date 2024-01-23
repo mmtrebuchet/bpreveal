@@ -3,7 +3,7 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-import bpreveal.utils as utils
+from bpreveal import utils
 import argparse
 if __name__ == "__main__":
     utils.setMemoryGrowth()
@@ -13,7 +13,7 @@ def main(modelFname: str, pngFile: str | None):
     """Read in the model named by modelFname, show it as text, and optionally save as a png."""
     model = utils.loadModel(modelFname)
     print(model.summary(expand_nested=True, show_trainable=True))
-    if (pngFile is not None):
+    if pngFile is not None:
         from tensorflow.keras.utils import plot_model
         plot_model(model, pngFile, show_shapes=True, show_dtype=True,
                 show_layer_names=True, expand_nested=True, show_layer_activations=True)
@@ -27,6 +27,6 @@ def getParser() -> argparse.ArgumentParser:
     return ap
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     args = getParser().parse_args()
     main(args.model, args.png)

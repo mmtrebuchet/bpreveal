@@ -39,6 +39,7 @@ def weightedMse(weightTensor):
     return reweightableMse
 
 
+dummyMse = weightedMse(tf.constant(float("nan")))
 """Used for loading models. If you're going to train, you have to create a
 weightedMse, since this one has no loss weight to it. But if you're just
 predicting, you can pass this function to custom_objects when you load a
@@ -46,4 +47,3 @@ BPReveal model
 Always returns nan, so that if you do accidentally use it, all of your
 values will be poisoned.
 """
-dummyMse = weightedMse(tf.constant(float("nan")))

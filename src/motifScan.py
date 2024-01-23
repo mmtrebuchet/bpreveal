@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import logging
-import bpreveal.motifUtils as motifUtils
-import bpreveal.utils as utils
+from bpreveal import motifUtils
+from bpreveal import utils
 import json
 
 

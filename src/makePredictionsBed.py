@@ -6,7 +6,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import pybedtools
-import bpreveal.utils as utils
+from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 import numpy as np
@@ -106,7 +106,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     logging.info("File saved.")
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)

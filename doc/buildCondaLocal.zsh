@@ -17,12 +17,18 @@ BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 ENV_FLAG=-n
-ENV_NAME=bpreveal-teak
+ENV_NAME=bpreveal-doctest
 
 #CHANGE this to conda if you don't have mamba installed.
 CONDA_BIN=mamba
 PIP_BIN=pip
 
+# Do you want to install Jupyter?
+INSTALL_JUPYTER=true
+
+#Do you want the tools used for development?
+# These are needed to run the code quality checks and build the html documentation.
+INSTALL_DEVTOOLS=true
 
 ######################
 # DON'T CHANGE BELOW #
@@ -111,14 +117,29 @@ checkPackage pysam
 ${PIP_BIN} install --no-input modisco-lite
 check
 
-# Optional:
 # 1. Install jupyter lab.
-${CONDA_BIN} install --yes -c conda-forge jupyterlab
-check
-# 2. Install pycodestyle (used in development to check code style,
+if [ "$INSTALL_JUPYTER" = true ] ; then
+    ${CONDA_BIN} install --yes -c conda-forge jupyterlab
+    check
+fi
+
+
+# 2. Install flake8 (used in development to check code style,
 # never needed to run bpreveal.)
-${CONDA_BIN} install --yes -c conda-forge pycodestyle
-check
+if [ "$INSTALL_DEVTOOLS" = true ] ; then
+    ${CONDA_BIN} install --yes -c conda-forge flake8
+    check
+    ${CONDA_BIN} install --yes -c conda-forge pydocstyle
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx_rtd_theme
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx-argparse
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx-autodoc-typehints
+    check
+fi
 
 # 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
 # it with pip.

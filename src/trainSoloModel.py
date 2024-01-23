@@ -2,23 +2,23 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
-import bpreveal.utils as utils
+from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 import h5py
 from tensorflow import keras
-import bpreveal.generators as generators
-import bpreveal.losses as losses
+from bpreveal import generators
+from bpreveal import losses
 import logging
 from bpreveal.callbacks import getCallbacks
-import bpreveal.models as models
+from bpreveal import models
 import tensorflow as tf
 
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs,
                earlyStop, outputPrefix, plateauPatience, heads, tensorboardDir=None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
-    if (tensorboardDir is not None):
+    if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
     history = model.fit(trainBatchGen, epochs=epochs,
@@ -79,7 +79,7 @@ def main(config):
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logging.info("Generators initialized.")
     tensorboardDir = None
-    if ("tensorboard-log-dir" in config):
+    if "tensorboard-log-dir" in config:
         tensorboardDir = config["tensorflow-log-dir"]
     history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator,
                          config["settings"]["epochs"],
@@ -94,7 +94,7 @@ def main(config):
         json.dump(history.history, fp, ensure_ascii=False, indent=4)
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     import sys
 
     with open(sys.argv[1], "r") as configFp:

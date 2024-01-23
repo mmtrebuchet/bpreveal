@@ -5,7 +5,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
-import bpreveal.utils as utils
+from bpreveal import utils
 import numpy as np
 import h5py
 import logging
@@ -87,7 +87,7 @@ class H5Writer:
             headGroup.create_dataset("logits",
                                      ((self.numPredictions,) + sampleOutputs[headID].shape),
                                      dtype=PRED_T,
-                                     chunks=((self.writeChunkSize,) + sampleOutputs[headID].shape))
+                                     chunks=(self.writeChunkSize,) + sampleOutputs[headID].shape)
         logging.debug("Initialized datasets.")
 
     def addEntry(self, batcherOut):
@@ -175,7 +175,7 @@ def main(config):
         writer.close()
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
         config = json.load(configFp)

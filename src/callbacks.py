@@ -117,7 +117,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                     # Now for a bit of magic - experimentation has determined this number.
                     λ = λ * 37.0
                     logging.info("Estimated initial λ of {0:f} for head {1:s} based on ĉ of {2:f}"
-                        .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
+                                 .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
                     head["INTERNAL_λ-variable"].assign(λ)
 
     def getLosses(self, epoch: int, headName: str) -> tuple[float, float, float, float]:
@@ -292,7 +292,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                         logging.warning("A large λ change was detected in the first epoch. "
                                         "Consider changing the starting counts-loss-weight for "
                                         "head {0:s} to a value near {1:f}".format(head["head-name"],
-                                        correctedλ))
+                                                                                  correctedλ))
                 # With current loss weight, what is the loss fraction due to counts?
                 # (This doesn't enter our calculation, it's for logging.
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
@@ -301,9 +301,9 @@ class ApplyAdaptiveCountsLoss(Callback):
                                " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})."
                                " Epoch {8:d}")
                               .format(head["head-name"], curλ, newλ,
-                                   correctedλ, scaledCurFrac,
-                                   head["counts-loss-frac-target"],
-                                   countsLossRaw, countsLoss, epoch))
+                                      correctedλ, scaledCurFrac,
+                                      head["counts-loss-frac-target"],
+                                      countsLossRaw, countsLoss, epoch))
 
                 λVar.assign(newλ)
         # We've updated the loss. But now we have to go mess with the callbacks so that

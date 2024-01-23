@@ -92,7 +92,7 @@ def get_length_difference(n_dil_layers, initial_convolution_widths, profile_kern
         #    ''PREDICTIONPREDIC''
         # We remove convWidth // 2 bases on each side, for a total of convWidth-1.
         overhang += (convWidth - 1)
-        if (verbose):
+        if verbose:
             print("Convolutional layer, width {0:d}, receptive field {1:d}"
                   .format(convWidth, overhang + 1))
 
@@ -110,12 +110,12 @@ def get_length_difference(n_dil_layers, initial_convolution_widths, profile_kern
     # /_  2^(i+1)  = 2^(i+2)-4
     # i=1
     overhang += 2 ** (n_dil_layers + 2) - 4
-    if (verbose):
+    if verbose:
         print("After dilated convolutions, receptive field {0:d}".format(overhang + 1))
     # Now, at the bottom, we have the output filter. It's the same math as the first filter.
     assert profile_kernel_size % 2 == 1
     overhang += (profile_kernel_size - 1)
-    if (verbose):
+    if verbose:
         print("After final convolution, receptive field {0:d}".format(overhang + 1))
     return overhang
 
@@ -168,28 +168,28 @@ def length_calc_main():
     """Run the calculation."""
     parser = getParser()
     args = parser.parse_args()
-    if (args.conv1KernelSize is not None):
+    if args.conv1KernelSize is not None:
         args.initialConvolutionWidths = [args.conv1KernelSize]
-    if (args.initialConvolutionWidths is None):
+    if args.initialConvolutionWidths is None:
         args.print_help()
         return
-    if (args.outputLen is not None):
+    if args.outputLen is not None:
         inpLen = getInputLength(out_pred_len=args.outputLen, n_dil_layers=args.nDilLayers,
                 initial_convolution_widths=args.initialConvolutionWidths,
                 profile_kernel_size=args.profileKernelSize,
                 verbose=args.verbose)
         print(inpLen)
-    elif (args.inputLen is not None):
+    elif args.inputLen is not None:
         outLen = getOutputLength(seq_len=args.inputLen, n_dil_layers=args.nDilLayers,
                 initial_convolution_widths=args.initialConvolutionWidths,
                 profile_kernel_size=args.profileKernelSize,
                 verbose=args.verbose)
         print(outLen)
-        if (outLen <= 0):
+        if outLen <= 0:
             raise Exception("Predicted output length {0:d} is empty.".format(outLen))
     else:
         raise Exception("Must provide one of --input-len or --output-len")
 
 
-if (__name__ == '__main__'):
+if __name__ == '__main__':
     length_calc_main()

@@ -7,7 +7,7 @@ import json
 import pysam
 import logging
 import pybedtools
-import bpreveal.utils as utils
+from bpreveal import utils
 from typing import Literal
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
 
@@ -22,7 +22,7 @@ def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
 
 def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
     numSequences = bed.count()
-    if (not revcomp):
+    if not revcomp:
         seqs = np.zeros((numSequences, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
     else:
         seqs = np.zeros((numSequences * 2, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
@@ -32,7 +32,7 @@ def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
         start = region.start - padding
         stop = region.stop + padding
         seq = genome.fetch(chrom, start, stop)
-        if (not revcomp):
+        if not revcomp:
             seqs[i] = utils.oneHotEncode(seq)
         else:
             sret = utils.oneHotEncode(seq)
@@ -45,7 +45,7 @@ def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
             revcomp: Literal[False] | list[int]) -> PRED_AR_T:
     # Note that revcomp should be either False or the task-order array (which is truthy).
     numSequences = bed.count()
-    if (not revcomp):
+    if not revcomp:
         headVals = np.zeros((numSequences, outputLength + 2 * jitter, len(bigwigFnames)),
                             dtype=PRED_T)
     else:
@@ -59,7 +59,7 @@ def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
                 start = region.start - jitter
                 stop = region.stop + jitter
                 bwVals = np.nan_to_num(fp.values(chrom, start, stop))
-                if (not revcomp):
+                if not revcomp:
                     headVals[j        , :, i         ] = bwVals  # noqa
                 else:
                     headVals[j * 2    , :, i         ] = bwVals  # noqa
@@ -83,9 +83,9 @@ def writeH5(config):
                            chunks=(H5_CHUNK_SIZE, seqs.shape[1], 4), compression='gzip')
     logging.debug("Sequence dataset created.")
     for i, head in enumerate(config["heads"]):
-        if (config["reverse-complement"]):
+        if config["reverse-complement"]:
             revcomp = head["revcomp-task-order"]
-            if (revcomp == "auto"):
+            if revcomp == "auto":
                 # The user has left reverse-complementing up to us.
                 match len(head["bigwig-files"]):
                     case 1:

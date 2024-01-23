@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
@@ -13,20 +14,23 @@ import matplotlib.axes
 # Types
 CorruptorLetter: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \
     | Literal["d"] | Literal["Ǎ"] | Literal["Č"] | Literal["Ǧ"] | Literal["Ť"]
+"""Any letter that is a valid corruptor."""
 Corruptor: TypeAlias = tuple[int, CorruptorLetter]
+"""A corruptor gives a coordinate and a change to make."""
 Profile: TypeAlias = list[tuple[PRED_AR_T, float]]
 CandidateCorruptor: TypeAlias = tuple[int, str]
+"""A candidate corruptor gives all possible mutations at a particular locus."""
 
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
 # in case they aren't easily typeable on your keyboard:
 
-IN_A = "Ǎ"
+IN_A: CorruptorLetter = "Ǎ"
 """The letter Ǎ represents inserting an A"""
-IN_C = "Č"
+IN_C: CorruptorLetter = "Č"
 """The letter Č represents inserting a C"""
-IN_G = "Ǧ"
+IN_G: CorruptorLetter = "Ǧ"
 """The letter Ǧ represents inserting a G"""
-IN_T = "Ť"
+IN_T: CorruptorLetter = "Ť"
 """The letter Ť represents inserting a T"""
 IN_L = "ǍČǦŤ"
 """The four insertion letters"""
@@ -710,13 +714,13 @@ def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
             return False
         if prev[0] == c[0]:
             # Overlapping corruptors.
-            if (prev[1] == "d" or c[1] == "d"):
+            if prev[1] == "d" or c[1] == "d":
                 # A deletion and something else. Not allowed.
                 return False
             if ord(prev[1]) > ord(c[1]):
                 # The letters are not in order.
                 return False
-            if (prev[1] in "ACGT" and c[1] not in "ǍČǦŤ"):
+            if prev[1] in "ACGT" and c[1] not in "ǍČǦŤ":
                 # We have a SNP and something that is not an insertion.
                 return False
         prev = c

@@ -52,8 +52,8 @@ def writeBigWig(inH5, outFname, verbose):
     numRegions = inH5['coords_chrom'].shape[0]
     if type(inH5['coords_chrom'][0]) is bytes:
         logging.warning("You are using an old-style hdf5 file for importance scores. "
-            "Support for these files will be removed in BPReveal 5.0. "  # noqa
-            "Instructions for updating: Re-calculate importance scores.")  # noqa
+            "Support for these files will be removed in BPReveal 5.0. "
+            "Instructions for updating: Re-calculate importance scores.")
         coordsChrom = np.array(inH5['coords_chrom'].asstr())
     else:
         coordsChromIdxes = np.array(inH5['coords_chrom'])
@@ -71,16 +71,16 @@ def writeBigWig(inH5, outFname, verbose):
     logging.info("Files opened; writing regions")
     regionRange = range(numRegions)
     nextRegion = None
-    if (verbose):
+    if verbose:
         regionRange = tqdm.tqdm(regionRange)
     for regionNumber in regionRange:
         # Extract the appropriate region from the sorted list.
 
-        if (regionChrom != curChrom):
+        if regionChrom != curChrom:
             curChrom = regionChrom
             startWritingAt = 0
 
-        if (startWritingAt < regionStart):
+        if startWritingAt < regionStart:
             # The next region starts beyond the end
             # of the previous one. Some bases will not be filled in.
             startWritingAt = regionStart
@@ -88,12 +88,12 @@ def writeBigWig(inH5, outFname, verbose):
         stopWritingAt = regionStop
         # As long as we aren't on the last region, check for overlaps.
 
-        if (regionNumber < numRegions - 1):
+        if regionNumber < numRegions - 1:
             nextRegion = regionOrder[regionNumber + 1]
             nextChrom = coordsChrom[nextRegion]
             nextStart = coordsStart[nextRegion]
             nextStop = coordsEnd[nextRegion]
-            if (nextChrom == regionChrom and nextStart < stopWritingAt):
+            if nextChrom == regionChrom and nextStart < stopWritingAt:
                 # The next region overlaps. So stop writing before then.
                 overlapSize = regionStop - nextStart
                 stopWritingAt = stopWritingAt - overlapSize // 2
@@ -116,7 +116,7 @@ def writeBigWig(inH5, outFname, verbose):
         # Update the region. By pulling the first setting of the region variables out of the loop,
         # I avoid double-dipping to get those data from the H5.
         startWritingAt = stopWritingAt
-        if (nextRegion is not None):
+        if nextRegion is not None:
             regionID = nextRegion
             regionChrom = nextChrom  # type: ignore
             regionStart = nextStart  # type: ignore
@@ -141,7 +141,7 @@ def main():
 
     args = getParser().parse_args()
     import utils
-    if (args.verbose):
+    if args.verbose:
         utils.setVerbosity("INFO")
     else:
         utils.setVerbosity("WARNING")
@@ -149,5 +149,5 @@ def main():
     writeBigWig(inH5, args.bw, args.verbose)
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()

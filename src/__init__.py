@@ -2,7 +2,8 @@
 
 See README for a brief description of the programs,
 see doc/overview.pdf for a specification,
-and see doc/osknExample.ipynb for a demonstration notebook."""
+and see doc/osknExample.ipynb for a demonstration notebook.
+"""
 
 
 # Version specification:

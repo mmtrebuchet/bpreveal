@@ -1,6 +1,6 @@
 import logging
 try:
-    import bpreveal.jaccard as jaccard
+    from bpreveal import jaccard
 except ModuleNotFoundError:
     logging.error("Could not find the Jaccard module. You may need to run `make`"
                   " in the src/ directory.")
@@ -8,7 +8,7 @@ except ModuleNotFoundError:
 
 import h5py
 import numpy as np
-import bpreveal.utils as utils
+from bpreveal import utils
 import csv
 import scipy.signal
 import multiprocessing

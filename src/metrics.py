@@ -34,14 +34,14 @@ class MetricsCalculator:
         referenceData = np.nan_to_num(self.referenceBw.values(regionReference.chrom,
                                                               regionReference.start,
                                                               regionReference.stop))
-        if (self.applyAbs):
+        if self.applyAbs:
             referenceData = np.abs(referenceData)
         predictedData = np.nan_to_num(self.predictedBw.values(regionPredicted.chrom,
                                                               regionPredicted.start,
                                                               regionPredicted.stop))
-        if (self.applyAbs):
+        if self.applyAbs:
             predictedData = np.abs(predictedData)
-        if (np.sum(referenceData) > 0 and np.sum(predictedData) > 0):
+        if np.sum(referenceData) > 0 and np.sum(predictedData) > 0:
             referencePmf = referenceData / np.sum(referenceData)
             predictedPmf = predictedData / np.sum(predictedData)
             mnll = scipy.stats.multinomial(np.sum(referenceData), predictedPmf)
@@ -227,7 +227,7 @@ def getParser() -> argparse.ArgumentParser:
 
 def main():
     args = getParser().parse_args()
-    if (args.verbose):
+    if args.verbose:
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
@@ -236,5 +236,5 @@ def main():
                args.applyAbs, args.skipZeroes, args.jsonOutput)
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()

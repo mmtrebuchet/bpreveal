@@ -39,13 +39,13 @@ def getParser() -> argparse.ArgumentParser:
 def main():
 
     args = getParser().parse_args()
-    if (args.verbose):
+    if args.verbose:
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
     logging.info("Loading input file {0:s}.".format(args.h5))
     inFile = h5py.File(args.h5, "r")
-    if (args.seqs is not None):
+    if args.seqs is not None:
         flipAndSave(inFile["input_seqs"], args.seqs, ONEHOT_T)
         logging.info("Saved sequences.")
     logging.info("Saving scores.")
@@ -53,5 +53,5 @@ def main():
     logging.info("Done.")
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()

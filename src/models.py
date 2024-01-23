@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
-import bpreveal.layers as layers
+from bpreveal import layers
 import logging
 
 
@@ -143,7 +143,7 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
             case _:
                 raise ValueError("The simple layer type you gave ({0:s}) is not supported"
                         .format(layerType))  # noqa
-    if (len(activationLayers) > 1):
+    if len(activationLayers) > 1:
         sumLayer = keras.layers.Add(name='regress_sum_{0:s}'.format(headName))(activationLayers)
     else:
         sumLayer = activationLayers[0]
@@ -314,7 +314,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
         addProfile = keras.layers.Add(
                 name='combined_add_profile_{0:s}'.format(individualHead["head-name"]))\
             ([readyBiasHeads[i], residualModel.outputs[i]])  # noqa
-        if (individualHead["use-bias-counts"]):
+        if individualHead["use-bias-counts"]:
             # While we add logits, we have to convert from log space to linear space
             # This is because we want to model
             # counts = biasCounts + residualCounts
