@@ -5,6 +5,14 @@ from keras import backend
 
 
 def multinomialNll(trueCounts, logits):
+    """The heart of what makes BPNet great - the loss function for profiles.
+
+    :param trueCounts: The experimentally-observed counts.
+        Shape ``(batch-size x output-length x num-tasks)``
+    :param logits: The logits that the model is currently emitting.
+        Shape ``(batch-size x output-length x num-tasks)``
+    :return: A scalar representing the profile loss of this batch.
+    """
     logging.debug("Creating multinomial NLL.")
     inputShape = tf.shape(trueCounts)
     numBatches = inputShape[0]
@@ -23,11 +31,18 @@ def multinomialNll(trueCounts, logits):
 
 
 def weightedMse(weightTensor):
-    """Given a weight tensor (a tensorflow Variable of shape (1,))
+    """Loss for the adaptive counts loss weight.
+
+    Given a weight tensor (a tensorflow Variable of shape (1,))
     return a loss function that calculates mean square error and multiplies
     the error by the weight. This is used to implement the automatic
     counts weight algorithm.
-    Returns a loss function."""
+
+    :param weightTensor: The tensor that will be adjusted by the dynamic
+        counts loss weight algorithm.
+
+    :return: A loss function.
+    """
     logging.debug("Creating weighted mse.")
 
     def reweightableMse(y_true, y_pred):

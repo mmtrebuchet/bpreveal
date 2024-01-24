@@ -1,5 +1,130 @@
 #!/usr/bin/env python3
-"""A script to generate PISA scores."""
+"""A script to generate PISA scores.
+
+PISA is described in detail in the overview document.
+
+BNF
+---
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/interpretPisa.bnf
+
+
+Parameter Notes
+---------------
+
+model-file
+    The name of the saved Keras model to interpret.
+
+head-id
+    The head number that you'd like to interpret.
+
+task-id
+    The task within that head that you'd like to interpret. Note that while
+    interpretFlat can combine multiple tasks, PISA can only consider one task
+    at a time.
+
+output-h5
+    The name of the hdf5 file where you'd like the output saved.
+
+output-length, input-length
+    The output and input length of your model.
+
+genome, bed-file
+    If you provide a bed file, this file represents the *individual bases* that
+    should be shapped. There is no restriction on the number of regions, nor on
+    their length. If you are interested in the effects of a particular motif,
+    then you'd put the region surrounding that motif in the bed file, making it
+    as large as you want to see the interactions you're interested in.
+
+fasta-file
+    You can also supply the sequences directly with a fasta file. Since PISA
+    calculates shap scores for a single base, this tool always calculates the
+    pisa scores for the *leftmost* base in the output window. Suppose the input
+    length is 3090 bp, and the output is 1000 bp. In this case, the receptive
+    field is 2091 bp, and there are 1045 bp of overhang on each end of the
+    input sequence. So, for each input sequence, this program will assign shap
+    scores to the 1046th base (one-indexed) of the input sequence.
+
+
+num-shuffles
+    This is the number of background samples that should be used for
+    calculating shap values. I recommend 20.
+
+kmer-size
+    (Optional) If provided, this changes how the shuffles work. By default (or
+    if you specify ``kmer-size = 1``) all of the bases in the input are jumbled
+    randomly. However, if you specify ``kmer-size=2``, then the distribution of
+    dimers will be preserved in the shuffled sequences. If you specify
+    ``kmer-size=3``, then trimers will be preserved, and so on.
+
+
+Output Specification
+--------------------
+
+It produces an hdf5 format which is organized as follows:
+
+head-id
+    An integer representing which head of the model was
+    used to generate the data.
+
+task-id
+    An integer giving the task number within the specified head.
+
+input_predictions
+    A ``(numSamples,)`` array of the logit value
+    of the target base when that sequence is run through the network.
+
+shuffle_predictions
+    A ``(numSamples, numShuffles)`` array of
+    the logits of the target base in the shuffled reference sequences.
+
+sequence
+    A one-hot encoded array representing the sequence
+    under each PISA value.
+    The shape is ``(num regions * receptive-field * 4)``.
+    Note that this is receptive field, not input width, since each base
+    being shapped will only be affected by bases in its receptive field,
+    and there's no reason to store the noise.
+
+shap
+    A table of the shap scores.
+    The shape is the same as the sequence table, and each position in the
+    shap table represents the corresponding base in the sequence table.
+    These values are contribution scores to the difference-from-reference
+    of the logit at this base.
+
+If you specified a bed file with input regions, it will also have these datasets:
+
+chrom_names
+    A list of strings giving the name of each chromosome. This is used to
+    figure out which chromosome each number in `coords_chrom` corresponds to.
+
+chrom_sizes
+    A list of integers giving the size of each chromosome. This is mostly here
+    as a handy reference when you want to make a bigwig file.
+
+coords_base
+    The center point for each of the regions in the table of PISA values.
+
+coords_chrom
+    The chromosome on which each PISA vector is found. This is a list of
+    integers. The width of the integer data type may vary from run to run, and
+    is calculated based on the number of chromosomes in the genome file.
+
+If, however, you gave a fasta file of input sequences, it will instead have the
+following dataset:
+
+descriptions
+    A string taken from the fasta file. These are the comment (``>``) lines,
+    and are stored without the leading ``>``. This will have shape
+    ``(numSamples,)``
+
+API
+---
+
+"""
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 from bpreveal import utils

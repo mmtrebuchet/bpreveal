@@ -39,11 +39,11 @@
                         "model-name", "filters", "layers", "input-filter-width",
                         "output-filter-width"]}
             },
-            "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
-                "batch-size", "learning-rate", "learning-rate-plateau-patience",
-                "transformation-model", "architecture"],
+            "required": ["output-prefix", "epochs", "max-jitter",
+                "early-stopping-patience", "batch-size", "learning-rate",
+                "learning-rate-plateau-patience", "transformation-model",
+                "architecture"],
             "not": {"required": ["profile-architecture", "counts-architecture"]}
-
         },
         "heads": {
             "type": "array",
@@ -61,7 +61,8 @@
                     {"required": ["counts-loss-weight"]},
                     {"required": ["counts-loss-frac-target"]}
                 ],
-                "required": ["num-tasks", "profile-loss-weight", "head-name", "use-bias-counts"]
+                "required": ["num-tasks", "profile-loss-weight",
+                             "head-name", "use-bias-counts"]
             }
         },
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}

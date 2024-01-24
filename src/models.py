@@ -8,6 +8,7 @@ import logging
 def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
     """This is a single output head for a solo model.
 
+    :param dilateOutput: The last dilated convolutional layer of the model.
     :param individualHead: Taken straight from the configuration json.
     :param outputFilterWidth: Also taken from the configuration json.
 
@@ -95,17 +96,16 @@ def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
 
 def _buildSimpleTransformationModel(architectureSpecification, headName, inputLayer):
     """
-        Builds the model that will transform the tracks produced by the solo model (inputLayer)
-            into the experimental data.
-        Arguments:
-            architectureSpecification is taken straight from the config json.
-            headName is just a string, used for naming this head.
-            inputLayer is a keras Layer that will be taken from one of the output heads of the
-                solo model. Note that this function is used to transform both the counts and
-                profile layers, but it is called once to transform the counts and separately
-                to transform the profile.
-        Returns:
-            A keras Layer that transforms the solo predictions.
+    Builds the model that will transform the tracks produced by the solo model (inputLayer)
+        into the experimental data.
+
+    :param architectureSpecification: Taken straight from the config json.
+    :param headName: Just a string, used for naming this head.
+    :param inputLayer: A keras Layer that will be taken from one of the output heads of the
+        solo model. Note that this function is used to transform both the counts and
+        profile layers, but it is called once to transform the counts and separately
+        to transform the profile.
+    :return: A keras Layer that transforms the solo predictions.
     """
     logging.debug("Building transformation model.")
     activationLayers = []
@@ -152,22 +152,21 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
 
 def _transformationHead(soloProfile, soloCounts, individualHead,
                         profileArchitectureSpecification, countsArchitectureSpecification):
-    """
+    """Make a head for the transformation model.
+
     Takes the predicted profile and counts Layers from the solo model, and generates a
         head for the transformation model from them.
-    Arguments:
-        soloProfile is a keras Layer representing the Profile component of a
-            particular solo model head.
-        soloCounts is a keras Layer representing the Counts prediction of a
-            particular solo model head.
-        individualHead is taken straight from the configuration json, and
-            contains data about weights and the data files to use.
-        profileArchitectureSpecification and countsArchitectureSpecification
-            are taken straight from the config json.
-    Returns:
-        a tuple of (profile, counts), each one a keras Layer (or similar) that
-        can be treated just like the head of a solo model.
 
+    :param soloProfile: A keras Layer representing the Profile component of a
+        particular solo model head.
+    :param soloCounts: is a keras Layer representing the Counts prediction of a
+        particular solo model head.
+    :param individualHead: is taken straight from the configuration json, and
+        contains data about weights and the data files to use.
+    :param profileArchitectureSpecification: Straight from the config json.
+    :param countsArchitectureSpecification: Straight from the config json.
+    :return: a tuple of (profile, counts), each one a keras Layer (or similar) that
+        can be treated just like the head of a solo model.
     """
     logging.debug("Building transformation head {0:s}".format(individualHead["head-name"]))
     match profileArchitectureSpecification["name"]:
@@ -197,7 +196,9 @@ def _transformationHead(soloProfile, soloCounts, individualHead,
 
 def transformationModel(soloModel, profileArchitectureSpecification,
                         countsArchitectureSpecification, headList):
-    """Given a solo model (typically representing bias), generate a simple network that
+    """Construct a simple model used to regress out the solo model from experimental data.
+
+    Given a solo model (typically representing bias), generate a simple network that
     can be used to transform the solo model's output into the experimental data.
     That is,
     experimental = f(bias)
@@ -205,7 +206,14 @@ def transformationModel(soloModel, profileArchitectureSpecification,
     When you train the model returned by this function, you are training the m and b
     parameters of that function. Note that this function sets the solo model to non-trainable,
     since you're not trying to make the bias model better, you're trying to transform the solo
-    model's output to look like experimental data."""
+    model's output to look like experimental data.
+
+    :param soloModel: A Keras model that you'd like to transform.
+    :param profileArchitectureSpecification: Straight from the config JSON.
+    :param countsArchitectureSpecification: Straight from the config JSON.
+    :param headList: Also from the config JSON.
+    :return: A Keras model with the same output shape as the soloModel.
+    """
 
     soloModel.trainable = False
     profileOutputs = []
@@ -230,7 +238,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
                   outputFilterWidth, headList, biasModel):
     """Build a combined model.
 
-    This builds a standard bpnet model, but then adds in the bias at the very end::
+    This builds a standard BPNet model, but then adds in the bias at the very end::
 
             ,-----------------SEQUENCE------------------,
             V                                           ,
@@ -318,7 +326,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
             # While we add logits, we have to convert from log space to linear space
             # This is because we want to model
             # counts = biasCounts + residualCounts
-            # but the counts in bpnet are log-counts.
+            # but the counts in BPNet are log-counts.
             # TODO: Rewrite this using tf.math.reduce_logsumexp, since it would avoid some
             # numerical stability problems.
             absBiasCounts = keras.layers.Activation(

@@ -290,7 +290,7 @@ class Pattern:
 
         After running this function, this Pattern object will contain a few arrays:
 
-        pwm, which contains the positiong weight matrix for the underlying seqlets
+        pwm, which contains the position weight matrix for the underlying seqlets
         pssm, the information content of the motif
         ppm, the frequency of each base at each position.
         cwm, the contribution scores at each position.
@@ -387,7 +387,7 @@ class Pattern:
         """
         for i in range(self.numSeqlets):
             ret = dict()
-            # TODO Once we have the abilitiy to map back the seqlet positions, make this meaningful!
+            # TODO Once we have the ability to map back the seqlet positions, make this meaningful!
             ret["chrom"] = self.seqletChroms[i]
             # TODO ditto
             ret["start"] = self.seqletGenomicStarts[i]
@@ -470,7 +470,7 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
         (sum(abs(contrib scores))) can still be considered hits.
 
     :param trimThreshold: Gives how aggressive the flank-trimming will be.
-    :param trimBuffer: Gisve the padding to be added to the flanks.
+    :param trimBuffer: Gives the padding to be added to the flanks.
         See :func:`bpreveal.motifUtils.cwmTrimPoints` for details of these parameters.
 
     :param backgroundProbs: An array of shape (4,) of floats that gives the background
@@ -787,7 +787,7 @@ class PatternScanner:
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
             if self.firstIndex:
-                logging.debug("Scanning patten {0:s}".format(pattern.shortName))
+                logging.debug("Scanning pattern {0:s}".format(pattern.shortName))
 
             hits = pattern.scan(oneHotSequence, contribScores)
             if self.firstIndex:

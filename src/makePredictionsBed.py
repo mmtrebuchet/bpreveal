@@ -1,5 +1,90 @@
 #!/usr/bin/env python3
-"""A script to make predictions using a bed file and a genome."""
+"""A script to make predictions using a bed file and a genome.
+
+BNF
+---
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/makePredictionsBed.bnf
+
+
+Parameter Notes
+---------------
+
+heads
+    Gives the number of output heads for your model.
+    You don't need to tell this program how many tasks there are for each
+    head, since it just blindly sticks whatever the model outputs into the
+    hdf5 file.
+
+output-h5
+    The name of the output file that will contain the predictions.
+
+genome
+    The name of the fasta-format file containing the appropriate genome.
+
+batch-size
+    How many samples should be run simultaneously? I recommend 64 or so.
+
+model-file
+    The name of the Keras model file on disk.
+
+input-length, output-length
+    The input and output lengths of your model.
+
+bed-file
+    A file containing the regions for which you'd like predictions. Each region in
+    this bed file must be ``output-length`` long.
+
+Output Specification
+--------------------
+This program will produce an hdf5-format file containing the predicted values.
+It is organized as follows:
+
+chrom_names
+    A list of strings that give you the meaning
+    of each index in the ``coords_chrom`` dataset.
+    This is particularly handy when you want to make a bigwig file, since
+    you can extract a header from this data.
+
+chrom_sizes
+    The size of each chromosome in the same order
+    as ``chrom_names``.
+    Mostly used to create bigwig headers.
+
+coords_chrom
+    A list of integers, one for each region
+    predicted, that gives the chromosome index (see ``chrom_names``)
+    for that region.
+
+coords_start
+    The start base of each predicted region.
+
+coords_stop
+    The end point of each predicted region.
+
+head_0, head_1, head_2, ...
+    You get a subgroup for each output head of the model. The subgroups are named
+    ``head_N``, where N is 0, 1, 2, etc.
+    Each head contains:
+
+    logcounts
+        A vector of shape (numRegions,) that gives
+        the logcounts value for each region.
+
+    logits
+        The array of logit values for each track for
+        each region.
+        The shape is (numRegions x outputWidth x numTasks).
+        Don't forget that you must calculate the softmax on the whole
+        set of logits, not on each task's logits independently.
+        (Use :py:func:`bpreveal.utils.logitsToProfile` to do this.)
+
+API
+---
+
+"""
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
@@ -38,7 +123,7 @@ def main(config):
     padding = (inputLength - outputLength) // 2
 
     logging.info("Loading regions")
-    for i, region in wrapTqdm(list(enumerate(regions))):
+    for i, region in wrapTqdm(list(enumerate(regions))):  # type: ignore
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
         seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
@@ -98,7 +183,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)  # noqa
 
     logging.debug("Writing predictions.")
-    for headID in wrapTqdm(range(numHeads)):
+    for headID in wrapTqdm(range(numHeads)):  # type: ignore
         headGroup = outFile.create_group("head_{0:d}".format(headID))
         headGroup.create_dataset("logcounts", data=preds[numHeads + headID], dtype=PRED_T)
         headGroup.create_dataset("logits", data=preds[headID], dtype=PRED_T)

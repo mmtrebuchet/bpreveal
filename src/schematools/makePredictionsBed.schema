@@ -26,7 +26,9 @@
 
     "type": "object",
     "properties": {
-        "settings": {"$ref": "/schemas/makePredictionsBed#definitions/prediction-settings-section"},
+        "settings": {
+            "$ref":
+            "/schemas/makePredictionsBed#definitions/prediction-settings-section"},
         "bed-file": {"type": "string"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },

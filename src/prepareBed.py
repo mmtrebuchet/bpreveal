@@ -46,7 +46,7 @@ output-prefix
     ``output-prefix_reject.bed``
 
 output-train, output-val, output-test
-    If you give these file names, then the training, validition and test splits
+    If you give these file names, then the training, validation and test splits
     will be written to these three files, respectively.
 
 regions

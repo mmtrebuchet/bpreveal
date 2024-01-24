@@ -15,25 +15,54 @@ import matplotlib.axes
 CorruptorLetter: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \
     | Literal["d"] | Literal["Ǎ"] | Literal["Č"] | Literal["Ǧ"] | Literal["Ť"]
 """Any letter that is a valid corruptor."""
+
 Corruptor: TypeAlias = tuple[int, CorruptorLetter]
-"""A corruptor gives a coordinate and a change to make."""
+"""A corruptor gives a coordinate and a change to make.
+
+The change is represented by a single letter. The letters `ACGT` indicate a SNP
+at that locus, the letter `d` indicates that that base should be deleted, and
+the letters `ǍČǦŤ` indicate that the corresponding base should be inserted
+immediately after the locus.
+
+Examples::
+
+    (85, "A"),
+    (1525, "Ť"),
+    (1603, "d")
+"""
+
 Profile: TypeAlias = list[tuple[PRED_AR_T, float]]
 CandidateCorruptor: TypeAlias = tuple[int, str]
-"""A candidate corruptor gives all possible mutations at a particular locus."""
+"""A candidate corruptor gives all possible mutations at a particular locus.
+
+Examples::
+
+    (85, "ACTd"),
+    (1525, "AGTdǍČǦŤ"),
+    (1603, "G")
+
+Note that it is possible for a CandidateCorruptor to only allow for one
+possible mutation at a locus.
+"""
 
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
 # in case they aren't easily typeable on your keyboard:
 
 IN_A: CorruptorLetter = "Ǎ"
 """The letter Ǎ represents inserting an A"""
+
 IN_C: CorruptorLetter = "Č"
 """The letter Č represents inserting a C"""
+
 IN_G: CorruptorLetter = "Ǧ"
 """The letter Ǧ represents inserting a G"""
+
 IN_T: CorruptorLetter = "Ť"
 """The letter Ť represents inserting a T"""
+
 IN_L = "ǍČǦŤ"
 """The four insertion letters"""
+
 IN_D = {"A": "Ǎ", "C": "Č", "G": "Ǧ", "T": "Ť"}
 """A dict mapping a regular letter ACGT to an insertion code ǍČǦŤ"""
 
@@ -60,9 +89,10 @@ These colors are drawn from the Wong palette, but with the green lightened a bit
 
 
 def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
-    """Convert a list of corruptors to an array of numbers.
+    """Convert a list of Corruptors to an array of numbers.
 
     :param corruptorList: A list of corruptors to serialize.
+    :type corruptorList: list[:data:`Corruptor<bpreveal.gaOptimize.Corruptor>`]
     :return: A list of tuples of numbers representing the same information.
 
     Given a list of corruptor tuples, like ``[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]``,
@@ -82,12 +112,13 @@ def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[Corruptor]:
     """The inverse of corruptorsToArray.
 
     :param corruptorArray: A list of tuples of ints.
-    :return: A list of Corruptors.
+    :return: Corruptors corresponding to the array.
+    :rtype: list[:py:data:`Corruptor<bpreveal.gaOptimize.Corruptor>`]
 
     Takes an array of numerical corruptors in the form
     ``[ [1354, 1], [1514, 7], [1693, 8] ]``
-    and generates the canonical list with letters, as used in the rest of the code.
-    This function will work on a list or a numpy array of shape (N x 2).
+    and generates the canonical list with letters, as used in the rest of the
+    code. This function will work on a list or a numpy array of shape (N x 2).
     Returns a list of tuples, one for each position that was corrupted, like:
     ``[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]``
     """
@@ -100,10 +131,11 @@ def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[Corruptor]:
 
 
 def stringToCorruptorList(corruptorStr: str) -> list[Corruptor]:
-    """Parse a string and turn it into a corruptor list.
+    """Parse a string and turn it into a :py:data:`~Corruptor` list.
 
     :param corruptorStr: The string to parse.
     :return: A list of Corruptors.
+    :rtype: list[:py:data:`~Corruptor`]
 
     Takes a string representing a list of corruptors and generates
     the actual list as a python object. For example, if the string is
@@ -126,6 +158,9 @@ def stringToCorruptorList(corruptorStr: str) -> list[Corruptor]:
 
 class Organism:
     """This represents the set of corruptors that are to be applied to the input sequence.
+
+    :param corruptors: A list of corruptors that this organism represents.
+    :type corruptors: list[:py:data:`~Corruptor`]
     """
 
     profile: Profile
@@ -133,10 +168,7 @@ class Organism:
     corruptors: list[Corruptor]
 
     def __init__(self, corruptors: list[Corruptor]) -> None:
-        """Construct an organism with the given corruptors.
-
-        :param corruptors: A list of corruptors that this organism represents.
-        """
+        """Construct an organism with the given corruptors."""
 
         self.corruptors = sorted(corruptors)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
@@ -146,7 +178,7 @@ class Organism:
 
         :param initialSequence: A string representing the wild-type sequence that
             this organism will apply its corruptors to.
-        :param inputLength: The length of the retutrned sequence.
+        :param inputLength: The length of the returned sequence.
         :return: A string of length inputLength.
 
         Note that initialSequence will need to be longer than the inputLength
@@ -269,6 +301,7 @@ class Organism:
         """Mutate this organism's corruptors.
 
         :param allowedCorruptors: All corruptors that this organism has access to
+        :type allowedCorruptors: list[:py:data:`~CandidateCorruptor`]
         :param checkCorruptors: A function that accepts a list of corruptors and
             returns True if they are a valid combination and False otherwise.
         :return: A newly-allocated Organism with a new set of corruptors.
@@ -355,65 +388,85 @@ class Organism:
 
 
 class Population:
-    """This is the main class for running the sequence optimization GA."""
+    """This is the main class for running the sequence optimization GA.
+
+
+    This is a heck of a constructor, but you need to make a lot of
+    choices to use the GA.
+
+    :param initialSequence: A string of length (input-length + numMutations)
+    :param inputLength: is the length of sequence that is given to your model.
+    :param populationSize: is the number of organisms at the end of each generation.
+    :param numCorruptors: determines how many corruptors will be applied
+        in each organism.
+    :param allowedCorruptors: is a list of tuples. (see below)
+    :param checkCorruptors: is a function that determines if a list of corruptors
+        is valid. (see below)
+    :param fitnessFn: The fitness function. It takes two arguments:
+        The first argument is a list of tuples containing the model outputs.
+        These have the same organization as the outputs from batchPredictor.
+        The second argument is a list of corruptors, as presented to checkCorruptors.
+    :param numSurvivingParents: The number of parents that will be kept for the next
+        generation, usually referred to as elitism in GA terminology.
+    :param predictor: A BatchPredictor that has been set up with the model you
+        want to use.
+
+    The initial sequence must be longer than needed for your model.
+    The extra length is needed because this GA can have deletions
+    and you need sequence to fill in the gaps when that happens. If you limit
+    the number of deletions allowed (say, by not having them in allowedCorruptors
+    or restricting them through checkCorruptors), then you need to provide
+    (input-length + numPossibleDeletions), and if you're only allowing SNPs,
+    then numPossibleDeletions = 0.
+
+    allowedCorruptors is a list of tuples, with each tuple being a
+    :py:data:`~CandidateCorruptor`. Each tuple contains two elements: a number,
+    representing the position in the input sequence (starting at zero), and the
+    second is a string containing the allowed corruptions at the base at the
+    positing given by the number. For example, if your sequence is AGGCA, and
+    you want any base to be corruptor to any other except that the C cannot be
+    corrupted to a T and the second G cannot be corrupted at all,
+    allowedCorruptors would be
+    ``[(0, "CGT"), (1, "ACT"), (3, "AG"), (4, "CGT")]``.
+    In the string of possible corruptors, the capital letters A, C, G, and T
+    refer to a SNP of the base at the given position to the new letter,
+    a lowercase 'd' means that the base there should be deleted, and a
+    letter with a caron, like Ǎ, Č, Ǧ, or Ť, means that the given letter
+    should be inserted AFTER the base number.
+
+    checkCorruptors should take a list of :py:data:`~Corruptor`. These are
+    tuples, and the first element of each tuple is a number, representing the
+    base to be corrupted, and the second will be a single character,
+    representing the corruption to be applied The corruptor locations will
+    always be sorted in increasing order. You could use this, for example, to
+    make sure that no two corruptors are next to each other. If you don't wish
+    to apply any logic to the corruptors, pass in ``lambda x: True``.
+    """
+
+    initialSequence: str
+    """The un-mutated sequence that all organisms will work with."""
+    organisms: list[Organism]
+    """The Organisms in this population.
+
+    When the population is created, the organisms will have no profile or score
+    information.
+
+    After you execute :py:meth:`runCalculation()<~runCalculation>`, each
+    organism will contain profile and score data, and the organisms list will
+    be sorted in ascending order of score. So organisms[-1] is the best
+    organism in the population.
+
+    After you call :py:meth:`nextGeneration()<~nextGeneration>`, the organisms
+    in the population are reset and don't contain score or profile information
+    any more.
+    """
 
     def __init__(self, initialSequence: str, inputLength: int, populationSize: int,
                  numCorruptors: int, allowedCorruptors: list[CandidateCorruptor],
                  checkCorruptors: Callable[[list[Corruptor]], bool],
                  fitnessFn: Callable[[Profile, list[Corruptor]], float],
                  numSurvivingParents: int, predictor: utils.BatchPredictor):
-        """Construct a population.
-
-        This is a heck of a constructor, but you need to make a lot of
-        choices to use the GA.
-
-        :param initialSequence: A string of length (input-length + numMutations)
-        :param inputLength: is the length of sequence that is given to your model.
-        :param populationSize: is the number of organisms at the end of each generation.
-        :param numCorruptors: determines how many corruptors will be applied
-            in each organism.
-        :param allowedCorruptors: is a list of tuples. (see below)
-        :param checkCorruptors: is a function that determines if a list of corruptors
-            is valid. (see below)
-        :param fitnessFn: The fitness function. It takes two arguments:
-            The first argument is a list of tuples containing the model outputs.
-            These have the same organization as the outputs from batchPredictor.
-            The second argument is a list of corruptors, as presented to checkCorruptors.
-        :param numSurvivingParents: The number of parents that will be kept for the next
-            generation, usually referred to as elitism in GA terminology.
-        :param predictor: A BatchPredictor that has been set up with the model you
-            want to use.
-
-        The initial sequence must be longer than needed for your model.
-        The extra length is needed because this GA can have deletions
-        and you need sequence to fill in the gaps when that happens. If you limit
-        the number of deletions allowed (say, by not having them in allowedCorruptors
-        or restricting them through checkCorruptors), then you need to provide
-        (input-length + numPossibleDeletions), and if you're only allowing SNPs,
-        then numPossibleDeletions = 0.
-
-        allowedCorruptors is a list of tuples. Each tuple contains two elements:
-        a number, representing the position in the input sequence (starting at
-        zero), and the second is a string containing the allowed corruptions at
-        the base at the positing given by the number. For example, if your
-        sequence is AGGCA, and you want any base to be corruptor to any other
-        except that the C cannot be corrupted to a T and the second G cannot
-        be corrupted at all, allowedCorruptors would be
-        ``[(0, "CGT"), (1, "ACT"), (3, "AG"), (4, "CGT")]``.
-        In the string of possible corruptors, the capital letters A, C, G, and T
-        refer to a SNP of the base at the given position to the new letter,
-        a lowercase 'd' means that the base there should be deleted, and a
-        letter with a caron, like Ǎ, Č, Ǧ, or Ť, means that the given letter
-        should be inserted AFTER the base number.
-
-        checkCorruptors should take a list of tuples, the first element of each
-        tuple is a number, representing the base to be corrupted, and the second
-        will be a single character, representing the corruption to be applied
-        The corruptor locations will always be sorted in increasing order.
-        You could use this, for example, to make sure that no two corruptors
-        are next to each other. If you don't wish to apply any logic to the
-        corruptors, pass in ``lambda x: True``.
-        """
+        """Construct a population."""
         self.initialSequence = initialSequence
         self.inputLength = inputLength
         self.populationSize = populationSize
@@ -464,8 +517,13 @@ class Population:
     def runCalculation(self) -> None:
         """Run the GA.
 
-        Runs the current population through the model, assigns scores
-        to each organism, and sorts the organisms by score."""
+        Runs the current population through the model, assigns scores to each
+        organism, and sorts the organisms by score. If you want to save a list
+        of the best parents, remember that the organisms are sorted in
+        *ascending* order of fitness, so the best organism is
+        pop.organisms[-1].
+        """
+
         numInFlight = 0
         for i, organism in enumerate(self.organisms):
             self.predictor.submitString(
@@ -533,13 +591,12 @@ class Population:
 
         Once you've runCalculation(), you call this to create new organisms
         for the next generation. This replaces the .organisms array with the new
-        children. If you want to save a list of the best parents, remember that
-        the organisms are sorted in *ascending* order of fitness, so the best
-        organism is pop.organisms[-1]."""
+        children, and those organisms will not have any profile or score data.
+        """
 
         # Keep the best parents (elitism)
         ret = set(self.organisms[-self.numSurvivingParents:])
-        # Note that ret is a SET, and not a list. sets in Python have the nice
+        # Note that ret is a SET, and not a list. Sets in Python have the nice
         # property that adding an item that's already in the set does not
         # change its length. So I blindly keep adding new organisms to the set,
         # allowing for duplicates, and this loop keeps doing this until the
@@ -575,6 +632,7 @@ def getCandidateCorruptorList(sequence: str, regions: Optional[list[tuple[int, i
     :param allowDeletion: Is deletion a valid corruptor type?
     :param allowInsertion: Is insertion a valid corruptor type?
     :return: A list of Corruptors.
+    :rtype: list[:py:data:`~Corruptor`]
 
     Given a sequence (a string), this generates a list of tuples
     that contain all of the possible corruptors for each position in the
@@ -623,6 +681,7 @@ def anyCorruptorsCloserThan(corList: list[Corruptor], distance: int) -> bool:
     """Are any corruptors close to each other?
 
     :param corList: The corruptors to consider.
+    :type corList: list[:py:data:`~Corruptor`]
     :param distance: The minimum distance that must be between corruptors.
     :return: True if there exist two corruptors from corList that are less than
         distance apart, False otherwise.
@@ -646,9 +705,12 @@ def removeCorruptors(corruptorList: list[CandidateCorruptor],
     """Take corruptors out of a list.
 
     :param corruptorList: A list of candidate corruptors, like [(100, "ACG")].
+    :type corruptorList: list[:py:data:`~CandidateCorruptor`]
     :param corsToRemove: A list of corruptors.
+    :type corsToRemove: list[:py:data:`~Corruptor`]
     :return: A newly-allocated list of candidate corruptors with the given corruptors
         removed.
+    :rtype: list[:py:data:`~CandidateCorruptor`]
 
     Given a candidate corruptor list, like from getCandidateCorruptorList, and
     a list of tuples giving disallowed corruptors, return a new candidate corruptor
@@ -681,6 +743,7 @@ def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
     r"""Is a list of corruptors even possible?
 
     :param corruptorList: The corruptors to consider.
+    :type corruptorList: list[:py:data:`~Corruptor`]
     :return: True if the corruptors could be applied by an organism,
         False otherwise.
 
@@ -727,7 +790,7 @@ def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
     return True
 
 
-ANNOTATION_T = tuple[tuple[int, int], str, str] \
+ANNOTATION_T: TypeAlias = tuple[tuple[int, int], str, str] \
     | tuple[tuple[int, int], str, str, float, float]
 """The shap for an annotation object to pass to :func:`plotTraces`."""
 
@@ -745,6 +808,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
     :param xvals: An array giving the genomic coordinates of your data.
     :param annotations: Annotations that you'd like to put on your plot.
     :param corruptors: A list of Corruptors that you'd like to put on your plot.
+    :type corruptors: list[:py:data:`~Corruptor`]
     :param ax: The matplotlib Axes object to draw on.
 
     posTraces is a list of tuples. Each tuple has three things:

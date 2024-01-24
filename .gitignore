@@ -9,8 +9,8 @@ doc/overview.toc
 doc/overview.out
 src/__pycache__
 src/tools/__pycache__
-src/schema/__pycache__
-src/schema/__init__.py
+src/schematools/__pycache__
+src/schema.py
 doc/img
 html/_*
 html/api

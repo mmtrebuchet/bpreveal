@@ -12,20 +12,21 @@ libjaccard.cpython-311-x86_64-linux-gnu.so: internal/libjaccard.c internal/libja
 
 clean: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
 	internal/libushuffle.cpython-311-x86_64-linux-gnu.so \
-	schema/__init__.py
+	schema.py
 	rm $^
 
-defined_schemas = prepareBed prepareBed_old prepareTrainingData trainSoloModel trainTransformationModel\
-				  trainCombinedModel makePredictionsBed makePredictionsFasta interpretFlat interpretPisa\
+defined_schemas = prepareBed prepareBed_old prepareTrainingData trainSoloModel\
+				  trainTransformationModel trainCombinedModel makePredictionsBed\
+				  makePredictionsFasta interpretFlat interpretPisa\
 				  motifSeqletCutoffs motifScan
 
-schema_files = $(addprefix schema/,$(addsuffix .schema,${defined_schemas}))
+schema_files = $(addprefix schematools/,$(addsuffix .schema,${defined_schemas}))
 
-schema/__init__.py: schema/build.py ${schema_files}
+schema.py: schematools/build.py ${schema_files}
 	python3 $< $@ ${defined_schemas}
 
-schemas: schema/__init__.py schema/build.py ${schema_files}
+schemas: schema.py schematools/build.py ${schema_files}
 
 all: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
 	internal/libushuffle.cpython-311-x86_64-linux-gnu.so \
-	schema/__init__.py
+	schemas

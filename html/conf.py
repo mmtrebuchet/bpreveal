@@ -1,4 +1,4 @@
-# Configuration file for the Sphinx documentation builder.
+"""Configuration file for the Sphinx documentation builder."""
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
@@ -20,15 +20,32 @@ extensions = ['sphinx.ext.autodoc',
 #              'sphinx_autodoc_typehints',
               'sphinx_rtd_theme',
               'sphinxarg.ext']
+#              'sphinxcontrib.restbuilder']
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = []
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
+                    "demos", "presentations", "scripts"]
 
 
+#def rst_file_transform(docname):
+#    if docname == "index":
+#        docname = "home"
+#    return docname.title() + ".rst"
+import re
+reSubs = [
+    ["λ", r":math:`{\\lambda}`"],
+    ["½", r":math:`{1/2}`"]]
 
+def fixLambda(app, what, name, obj, options, lines):
+
+    for i, line in enumerate(lines):
+        for rsub, rrepl in reSubs:
+            line = re.sub(rsub, rrepl, line)
+        lines[i] = line
 
 
 def setup(app):
+    app.connect('autodoc-process-docstring', fixLambda)
     pass
 
 
@@ -43,4 +60,7 @@ autodoc_type_aliases={
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 #html_theme = "alabaster"
 html_theme = "sphinx_rtd_theme"
-html_static_path = ['_static']
+html_static_path = []
+html_css_files = []
+
+

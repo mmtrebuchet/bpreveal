@@ -26,10 +26,11 @@
                     "$ref": "#/definitions/transformation-architecture-specification"
                 }
             },
-            "required": ["output-prefix", "epochs", "max-jitter", "early-stopping-patience",
-                "batch-size", "learning-rate", "learning-rate-plateau-patience",
-                "solo-model-file", "input-length", "output-length",
-                "profile-architecture", "counts-architecture"],
+            "required": ["output-prefix", "epochs", "max-jitter",
+                "early-stopping-patience", "batch-size", "learning-rate",
+                "learning-rate-plateau-patience", "solo-model-file",
+                "input-length", "output-length", "profile-architecture",
+                "counts-architecture"],
             "not": {"required": ["architecture", "transformation-model"]}
         },
         "heads": {

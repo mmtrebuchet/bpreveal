@@ -6,6 +6,8 @@ from tensorflow import keras
 class LinearRegression(keras.layers.Layer):
     """A simple layer that performs a linear regression on its inputs.
 
+    .. highlight:: none
+
     Implements the following formula::
 
         out = input * slope + offset

@@ -1,5 +1,94 @@
 #!/usr/bin/env python3
+"""Create the data files that will be used to train the model.
 
+
+This program reads in a genome file, a list of regions in bed format, and a set
+of bigwig files containing profiles that the model will use to train. It
+generates an hdf5-format file that is used during training. If you want to
+train on a custom genome, or you don't have a meaningful genome for your
+experiment, you can still provide sequences and profiles by creating an hdf5
+file in the same format as this tool generates.
+
+
+BNF
+---
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/prepareTrainingData.bnf
+
+
+Parameter Notes
+---------------
+
+genome
+    The name of the fasta-format file for your organism.
+regions
+    is the name of the bed file of regions you will train on. These regions
+    must be ``output-width`` in length.
+reverse-complement
+    A boolean that sets whether the data files will include reverse-complement
+    augmentation. If this is set to ``true`` then you must include
+    ``revcomp-task-order`` in every head section.
+revcomp-task-order
+    A list specifying which tasks in the forward sample should map to the tasks
+    in the reverse sample.
+    Alternatively, this may be the string ``"auto"``.
+    If ``reverse-complement`` is false, it is an error to specify
+    ``revcomp-task-order``.
+
+Output specification
+--------------------
+
+It will generate a file that is organized as follows:
+
+head_0, head_1, head_2, ...
+    There will be a ``head_n`` entry for each head in your model. It will have
+    shape ``(num-regions x (output-length + 2*jitter) x num-tasks)``.
+sequence
+    The one-hot encoded sequence for each corresponding region. It will have
+    shape ``(num-regions x (input-width + 2*jitter) x 4)``.
+
+Additional information
+----------------------
+
+Revcomp tasks
+^^^^^^^^^^^^^
+
+The ``revcomp-task-order`` parameter can be a bit tricky to understand.
+Generally, ask yourself "If we had sequenced the other strand of this
+chromosome, which profile would look like which?" If the data from one task,
+say, the positive task, would appear on the other task in this hypothetical
+universe, then you should flip the tasks.
+
+For example, if the two tasks represent reads on the plus and minus
+strand, then when you create a reverse-complemented training example,
+the minus strand becomes the plus strand, and vice versa.
+So you'd set this parameter to ``[1,0]`` to indicate that the data
+for the two tasks should be swapped (in addition to reversed 5' to 3',
+of course).
+
+If you only have one task in a head, you should set this to
+``[0]``, to indicate that there is no swapping.
+If you have multiple tasks, say, a task for the left end of a read,
+one for the right end, and one for the middle, then the left and right
+should be swapped and the middle left alone.
+In this case, you'd set ``revcomp-task-order`` to ``[1,0,2]``.
+If this parameter is set to ``"auto"``, then it will choose
+``[1,0]`` if there are two strands, ``[0]`` if there is only
+one strand, and it will issue an error if there are more strands than
+that.
+
+``auto`` is appropriate for data like ChIP-nexus.
+
+HISTORY
+-------
+
+``reverse-complement`` became mandatory in BPReveal 2.0.0
+
+API
+---
+"""
 import numpy as np
 import h5py
 import pyBigWig

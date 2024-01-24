@@ -23,11 +23,12 @@ class Query:
 
     It has three things.
 
-    :param sequence: The (INPUT_LENGTH, 4) one-hot encoded sequence of the current base.
-    :param passData: As with Result objects, is either a tuple of (chromName, position)
+    :param sequence: The ``(input-length, 4)`` one-hot encoded sequence of the current base.
+    :param passData: As with Result objects, is either a tuple of ``(chromName, position)``
         (for when you have a bed file) or a string with a fasta description line
-        (for when you're starting with a fasta).
-    :param index: An integer, indicates which output slot this data should be put in.
+        (for when you're starting with a fasta). If you're using the
+        :py:class:`~ListGenerator`, then it can be anything.
+    :param index: Indicates which output slot this data should be put in.
         Since there's no guarantee that the results will arrive in order, we have to
         track which query was which.
     """
@@ -46,6 +47,11 @@ class Query:
 
 
 class Result:
+    """The base class for results.
+
+    Subclassed by :py:class:`~PisaResult` and :py:class:`flatResult`.
+    """
+
     pass
 
 
@@ -57,21 +63,21 @@ class PisaResult(Result):
     :param inputPrediction: A scalar floating point value, of the predicted logit
         from the input sequence at the base that was being shapped.
 
-    :param shufflePredictions: A (numShuffles,) numpy array of the logits
+    :param shufflePredictions: A ``(numShuffles,)`` numpy array of the logits
         returned by running predictions on the reference sequence, again evaluated
         at the position of the base that was being shapped.
 
-    :param sequence: is a (RECEPTIVE_FIELD, 4) numpy array of the
+    :param sequence: is a ``(receptive-field, 4)`` numpy array of the
         one-hot encoded input sequence.
 
-    :param shap: is a (RECEPTIVE_FIELD, 4) numpy array of shap scores.
+    :param shap: is a ``(receptive-field, 4)`` numpy array of shap scores.
 
     :param passData: is data that is not touched by the batcher, but added by
         the generator and necessary for creating the output file.
         If the generator is reading from a bed file, then it is a tuple of (chromName, position)
         and that data should be used to populate the coords_chrom and coords_base fields.
         If the generator was using a fasta file, it is the title line from the original fasta,
-        with its leading '>' removed.
+        with its leading ``>`` removed.
 
     :param index: Indicates which address the data should be stored at in the output hdf5.
         Since there's no order guarantee when you're receiving data, we have to keep track
@@ -96,8 +102,8 @@ class FlatResult(Result):
     """A Result object that is given to savers for flat interpretation analysis.
 
     :param sequence: A one-hot encoded array of the sequence that was explained, of shape
-        (input-length, 4)
-    :param shap: An array of shape (input-length, 4), containing the shap scores.
+        ``(input-length, 4)``
+    :param shap: An array of shape ``(input-length, 4)``, containing the shap scores.
 
     :param passData: is a (picklable) object that is passed through from the generator.
         For bed-based interpretations, it will be a three-tuple of (chrom, start, end)
@@ -188,7 +194,7 @@ class FlatRunner:
     """Runs shap scores.
 
     I try to avoid class-based wrappers around simple things, but this is not simple.
-    This class creates threads to read in data, and then creates a thread that runs interpretation
+    This class creates threads to read in data, and then creates two threads that run interpretation
     samples in batches. Finally, it takes the results from the interpretation thread and saves
     those out to an hdf5-format file.
 
@@ -196,13 +202,15 @@ class FlatRunner:
     :param headID: The head to shap.
     :param taskIDs: The tasks to shap, obviously.
         Typically, you'd want to interpret all of the tasks in a head, so for a two-task
-        head, taskIDs would be [0,1].
+        head, taskIDs would be ``[0,1]``.
     :param batchSize: is the *shap* batch size, which should be your usual batch size divided
         by the number of shuffles. (since the original sequence and shuffles are run together)
     :param generator: is a Generator object that will be passed to _generatorThread
     :param saver: is a Saver object that will be used to save out the data.
     :param numShuffles: is the number of reference sequences that should be generated for each
         shap evaluation. (I recommend 20 or so)
+    :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
+        If kmerSize > 1, preserve the distribution of kmers of the given size.
     :param profileFname: is an optional parameter. If provided, profiling data (i.e., performance
         of this code) will be written to the given file name. Note that this has
         nothing to do with genomic profiles, it's just benchmarking data for this code.
@@ -297,6 +305,8 @@ class PisaRunner:
     :param receptiveField: is the receptive field of the model. To save on writing a lot of
         zeroes, the result objects only contain bases that are in the receptive field
         of the base being shapped.
+    :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
+        If kmerSize > 1, preserve the distribution of kmers of the given size.
     :param profileFname: is an optional parameter. If provided, profiling data (i.e., performance
         of this code) will be written to the given file name. Note that this has
         nothing to do with genomic profiles, it's just benchmarking data for this code.
@@ -379,6 +389,7 @@ class FlatListSaver(Saver):
         logging.debug("Created shared arrays for the list saver.")
 
     def construct(self):
+        """This is run in the child process."""
         # Do this in the child so the parent doesn't accidentally mess with
         # an empty array.
         self._results = []
@@ -425,11 +436,14 @@ class FlatH5Saver(Saver):
         be deposited in.
     :param numSamples: is the number of regions (i.e., bases) that pisa will be run on.
         This is needed because we store reference predictions.
+    :param inputLength: The input length of the model.
     :param genome: (Optional) Gives the name of a fasta-format file that contains
         the genome of the organism. If provided, then chromosome name and size information
         will be included in the output, and, additionally, two other datasets will be
         created: coords_chrom, and coords_base.
+    :param useTqdm: Should a progress bar be displayed?
     """
+
     CHUNK_SHAPE: tuple[int, int, int]
     _outputFname: str
     numSamples: int
@@ -450,6 +464,7 @@ class FlatH5Saver(Saver):
         self._useTqdm = useTqdm
 
     def construct(self):
+        """This is called inside the child thread."""
         logging.info("Initializing saver.")
         self._outFile = h5py.File(self._outputFname, "w")
         self._chunksToWrite = dict()
@@ -581,10 +596,12 @@ class PisaH5Saver(Saver):
     :param numSamples: is the number of regions (i.e., bases) that pisa will be run on.
     :param numShuffles: is the number of shuffles that are used to generate the reference.
         This is needed because we store reference predictions.
+    :param receptiveField: How wide is the model's receptive field?
     :param genome: an optional parameter, gives the name of a fasta-format file that contains
         the genome of the organism. If provided, then chromosome name and size information
         will be included in the output, and, additionally, two other datasets will be
         created: coords_chrom, and coords_base.
+    :param useTqdm: Should a progress bar be displayed?
         """
 
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
@@ -599,6 +616,7 @@ class PisaH5Saver(Saver):
         self.CHUNK_SHAPE = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
 
     def construct(self):
+        """Run in the child thread."""
         self._outFile = h5py.File(self._outputFname, "w")
         self._outFile.create_dataset("input_predictions",
                                      (self.numSamples,), dtype='f4')
@@ -608,7 +626,7 @@ class PisaH5Saver(Saver):
         # self._outFile.create_dataset("shap",
         #                             (self.numSamples, self.receptiveField, 4),
         #                             dtype='f4')
-        # TODO for later: Adding compression to the sequence here absolutely tanks performan
+        # TODO for later: Adding compression to the sequence here absolutely tanks performance
         # self._outFile.create_dataset('sequence',
         #                             (self.numSamples, self.receptiveField, 4),
         #                             dtype='u1')
@@ -780,6 +798,12 @@ class ListGenerator(Generator):
 
 
 class FastaGenerator(Generator):
+    """Reads a fasta file from disk and generates Queries from it.
+
+    :param fastaFname: The name of the fasta-format file containing
+        query sequences.
+    """
+
     def __init__(self, fastaFname: str):
         logging.info("Creating fasta generator.")
         self.fastaFname = fastaFname
@@ -832,8 +856,15 @@ class FastaGenerator(Generator):
 
 class FlatBedGenerator(Generator):
     """Reads in lines from a bed file and fetches the genomic sequence around them.
+
     Note that the regions should have width outputLength, and they will be automatically
-    padded to the appropriate input length."""
+    padded to the appropriate input length.
+
+    :param bedFname: The bed file to read.
+    :param genomeFname: The genome fasta that sequences will be drawn from.
+    :param inputLength: The input length of your model.
+    :param outputLength: The output length of your model.
+    """
 
     def __init__(self, bedFname: str, genomeFname: str, inputLength: int, outputLength: int):
         logging.info("Creating bed generator.")
@@ -886,7 +917,18 @@ class FlatBedGenerator(Generator):
 
 
 class PisaBedGenerator(Generator):
+    """Reads in lines from a bed file and fetches the genomic sequence
+    at every base.
 
+    This is very different than the :py:class:`~FlatBedGenerator`, which generates
+    one sequence query per bed file entry. This class generates a query for every
+    base that the bed file contains.
+
+    :param bedFname: The bed file to read.
+    :param genomeFname: The genome fasta that sequences will be drawn from.
+    :param inputLength: The input length of your model.
+    :param outputLength: The output length of your model.
+    """
     def __init__(self, bedFname: str, genomeFname: str, inputLength: int, outputLength: int):
         logging.info("Creating bed generator.")
         self.bedFname = bedFname
@@ -942,6 +984,8 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                        outQueue: multiprocessing.Queue, headID: int, numHeads: int,
                        taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int,
                        profileFname: Optional[str] = None):
+    """The thread that spins up the batcher."""
+
     logging.debug("Starting flat batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
@@ -969,6 +1013,7 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                        outQueue: multiprocessing.Queue, headID: int, taskID: int,
                        numShuffles: int, receptiveField: int, kmerSize: int,
                        profileFname: Optional[str] = None):
+    """The thread that spins up the batcher."""
     logging.debug("Starting batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
@@ -994,6 +1039,7 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 
 def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
                      profileFname: Optional[str] = None):
+    """The thread that spins up the generator and emits queries."""
     import cProfile
     profiler = cProfile.Profile()
     if profileFname is not None:
@@ -1016,6 +1062,7 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
 
 def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
                  profileFname: Optional[str] = None):
+    """The thread that spins up the saver."""
     logging.debug("Saver thread started.")
     import cProfile
     profiler = cProfile.Profile()
@@ -1036,7 +1083,18 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
 
 class _PisaBatcher:
     """The workhorse of this stack, it accepts queries until its internal storage is full,
-    then predicts them all at once, and runs shap."""
+    then predicts them all at once, and runs shap.
+
+    :param modelFname: The name of the keras model to interpret.
+    :param batchSize: How many sequences should be interpreted at once?
+    :param outQueue: The batcher will put its :py:class:`~Result` objects here.
+    :param headID: The head that is being interpreted.
+    :param taskID: The task within that head that is being interpreted.
+    :param numShuffles: How many shuffled samples should be run?
+    :param receptiveField: What is the receptive field of the model?
+    :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
+
+    """
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
@@ -1147,7 +1205,20 @@ class _PisaBatcher:
 
 class _FlatBatcher:
     """The workhorse of this stack, it accepts queries until its internal storage is full,
-    then predicts them all at once, and runs shap."""
+    then predicts them all at once, and runs shap.
+
+    :param modelFname: The name of the keras model to interpret.
+    :param batchSize: How many sequences should be interpreted at once?
+    :param outQueue: The batcher will put its :py:class:`~Result` objects here.
+    :param headID: The head that is being interpreted.
+    :param numHeads: How many heads does this model have, in total?
+    :param taskIDs: Within the given head, what tasks should be considered?
+    :param numShuffles: How many shuffled samples should be run?
+    :param mode: What type of importance score is being generated? Options are
+        ``profile`` or ``counts``.
+    :param receptiveField: What is the receptive field of the model?
+    :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
+    """
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
@@ -1244,6 +1315,7 @@ class _FlatBatcher:
 
 
 def combineMultAndDiffref(mult, orig_inp, bg_data):
+    """This is injected deep into shap and generates the hypothetical importance scores."""
     # This is copied from Zahoor's code.
     projected_hypothetical_contribs = \
         np.zeros_like(bg_data[0]).astype('float')

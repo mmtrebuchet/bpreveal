@@ -42,19 +42,27 @@
                 {
                     "type": "object",
                     "properties": {
-                        "train-chroms": {"type": "array", "items": {"type": "string"}},
-                        "val-chroms":   {"type": "array", "items": {"type": "string"}},
-                        "test-chroms":  {"type": "array", "items": {"type": "string"}},
-                        "regions":  {"type": "array", "items": {"type": "string"}}
+                        "train-chroms": {"type": "array",
+                                         "items": {"type": "string"}},
+                        "val-chroms":   {"type": "array",
+                                         "items": {"type": "string"}},
+                        "test-chroms":  {"type": "array",
+                                         "items": {"type": "string"}},
+                        "regions":  {"type": "array",
+                                     "items": {"type": "string"}}
                     },
-                    "required": ["train-chroms", "val-chroms", "test-chroms", "regions"]
+                    "required": ["train-chroms", "val-chroms",
+                                 "test-chroms", "regions"]
                 },
                 {
                     "type": "object",
                     "properties": {
-                        "train-regions": {"type": "array", "items": {"type": "string"}},
-                        "val-regions":   {"type": "array", "items": {"type": "string"}},
-                        "test-regions":  {"type": "array", "items": {"type": "string"}}
+                        "train-regions": {"type": "array",
+                                          "items": {"type": "string"}},
+                        "val-regions":   {"type": "array",
+                                          "items": {"type": "string"}},
+                        "test-regions":  {"type": "array",
+                                          "items": {"type": "string"}}
                     },
                     "required": ["train-regions", "val-regions", "test-regions"]
                 },
@@ -64,9 +72,11 @@
                         "train-regex": {"type": "string"},
                         "val-regex":   {"type": "string"},
                         "test-regex":  {"type": "string"},
-                        "regions":  {"type": "array", "items": {"type": "string"}}
+                        "regions":  {"type": "array",
+                                     "items": {"type": "string"}}
                     },
-                    "required": ["train-regex", "val-regex", "test-regex", "regions"]
+                    "required": ["train-regex", "val-regex",
+                                 "test-regex", "regions"]
                 }]},
         "genome": {"type": "string"},
         "output-length": {"type": "integer"},
@@ -81,8 +91,8 @@
         "overlap-max-distance": {"type": "integer"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARN", "INFO"]}
     },
-    "required": ["heads", "splits", "genome", "output-length", "input-length", "max-jitter",
-               "remove-overlaps",  "verbosity"],
+    "required": ["heads", "splits", "genome", "output-length", "input-length",
+                 "max-jitter", "remove-overlaps",  "verbosity"],
     "allOf": [
         {
             "if": {

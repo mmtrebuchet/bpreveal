@@ -16,7 +16,7 @@ def slidingJaccard(importanceScores, cwm):
 
 
 def jaccardRegion(importanceScores, scaleFactor, cwm):
-    """For given region's importance scores, calculate the continuous Jaccard similarity.
+    r"""For given region's importance scores, calculate the continuous Jaccard similarity.
 
     :param importanceScores: An array of shape (length, 4)
         giving a region's hypothetical importance scores.
@@ -24,18 +24,25 @@ def jaccardRegion(importanceScores, scaleFactor, cwm):
     :param cwm: An array of shape (length, 4) giving the CWM for a motif.
     :return: A single float giving the Jaccard match
 
-    This implements the formula in the modisco paper, namely that::
+    This implements the formula in the modisco paper, namely that
 
-                     sum_i (v₁_i ∩ v₂_i)
-        J(v₂, v₂) = ---------------------
-                     sum_i (v₁_i ∪ v₂_i)
+    .. math::
 
-    where::
+        J(v_1,v_2) = \frac{\sum_i (v_{1,i} \cap v_{2,i})}{\sum_i (v_{1,i} \cup v_{2,i})}
 
-        x ∩ y = min(|x|, |y|) * sign(x) * sign(y)
-        x ∪ y = max(|x|, |y|)
+    where:
+
+    .. math::
+
+        x \cap y &= min(|x|, |y|) * sign(x) * sign(y) \\
+        x \cup y &= max(|x|, |y|)
 
     The scaleFactor is a number that the importanceScores array should be multiplied by.
     If you just want the continuous Jaccard metric, set this to 1.0.
     """
+    #                 sum_i (v₁_i ∩ v₂_i)
+    #    J(v₂, v₂) = ---------------------
+    #                 sum_i (v₁_i ∪ v₂_i)
+    #    x ∩ y = min(|x|, |y|) * sign(x) * sign(y)
+    #    x ∪ y = max(|x|, |y|)
     return lj.jaccardRegion(importanceScores, scaleFactor, cwm)

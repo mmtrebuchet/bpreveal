@@ -1,4 +1,79 @@
 #!/usr/bin/env python3
+"""A script to make predictions using a list of sequences.
+
+This program streams input from disk and writes output as it calculates, so
+it can run with very little memory even for extremely large prediction tasks.
+
+
+BNF
+---
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/makePredictionsFasta.bnf
+
+
+Parameter Notes
+---------------
+
+heads
+    Gives the number of output heads for your model.
+    You don't need to tell this program how many tasks there are for each
+    head, since it just blindly sticks whatever the model outputs into the
+    hdf5 file.
+
+output-h5
+    The name of the output file that will contain the predictions.
+
+batch-size
+    How many samples should be run simultaneously? I recommend 64 or so.
+
+model-file
+    The name of the Keras model file on disk.
+
+input-length, output-length
+    The input and output lengths of your model.
+
+fasta-file
+    A file containing the sequences for which you'd like predictions. Each sequence in
+    this bed file must be ``input-length`` long.
+
+num-threads
+    (Optional) How many parallel predictors should be run? Unless you're really taxed
+    for performance, leave this at 1.
+
+Output Specification
+--------------------
+This program will produce an hdf5-format file containing the predicted values.
+It is organized as follows:
+
+descriptions
+    A list of strings of length (numRegions,).
+    Each string corresponds to one description line (i.e., a line starting
+    with ``>``).
+
+head_0, head_1, head_2, ...
+    You get a subgroup for each output head of the model. The subgroups are named
+    ``head_N``, where N is 0, 1, 2, etc.
+    Each head contains:
+
+    logcounts
+        A vector of shape (numRegions,) that gives
+        the logcounts value for each region.
+
+    logits
+        The array of logit values for each track for
+        each region.
+        The shape is (numRegions x outputWidth x numTasks).
+        Don't forget that you must calculate the softmax on the whole
+        set of logits, not on each task's logits independently.
+        (Use :py:func:`bpreveal.utils.logitsToProfile` to do this.)
+
+API
+---
+
+"""
+
 
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
@@ -13,16 +88,24 @@ from bpreveal.utils import PRED_T, wrapTqdm
 
 
 class FastaReader:
+    """Streams a fasta file from disk lazily.
+
+    :param fastaFname: The name of the fasta file to load.
+    """
+
     curSequence = ""
+    """The current sequence in this file. Updated by :py:meth:`~pop`."""
     curLabel = ""
+    """The current description line in this file. Updated by :py:meth:`~pop`."""
     numPredictions = 0
     _nextLabel = ""
 
     def __init__(self, fastaFname):
+        """Scan the file to count the total lines, then load the first sequence."""
         # First, scan over the file and count how many sequences are in it.
         logging.info("Counting number of samples.")
         with open(fastaFname, "r") as fp:
-            for line in wrapTqdm(fp):
+            for line in wrapTqdm(fp):  # type: ignore
                 line = line.strip()  # Get rid of newlines.
                 if len(line) == 0:
                     continue  # There is a blank line. Ignore it.
@@ -37,6 +120,7 @@ class FastaReader:
         self._nextLabel = self._fp.readline().strip()[1:]
 
     def pop(self):
+        """Pop the current sequence off the queue. Updates curSequence and curLabel."""
         # We know we're at the start of the sequence section of a fasta.
         self.curLabel = self._nextLabel
         self.curSequence = ""
@@ -53,7 +137,16 @@ class FastaReader:
 
 
 class H5Writer:
+    """Batches up predictions and saves them in chunks.
+
+    :param fname: The name of the hdf5 file to save.
+    :param numHeads: The total number of heads for this model.
+    :param numPredictions: How many total predictions will be made?
+
+    """
+
     def __init__(self, fname, numHeads, numPredictions):
+        """Load everything that can be loaded before the subprocess launches."""
         self._fp = h5py.File(fname, 'w')
         self.numHeads = numHeads
         self.numPredictions = numPredictions
@@ -64,7 +157,15 @@ class H5Writer:
         # We'll construct the datasets on the fly once we get our first output.
 
     def buildDatasets(self, sampleOutputs):
-        # Since descriptions will not consume an inordinate amout of memory, and string
+        """Actually construct the output hdf5 file.
+
+        You must give this function the first prediction from the model so that
+        it can size its datasets appropriately.
+
+        :param sampleOutputs: An output from the Batcher. This is not written to the file,
+            it's just used to get the right size for the datasets.
+        """
+        # Since descriptions will not consume an inordinate amount of memory, and string
         # handling is messy with h5py, just store all the descriptions in a list and
         # write them out at the end.
         self._descriptionList = []
@@ -91,6 +192,7 @@ class H5Writer:
         logging.debug("Initialized datasets.")
 
     def addEntry(self, batcherOut):
+        """Add a single output from the Batcher."""
         # Give this exactly the output from the batcher, and it will queue the data
         # to be written to the hdf5 on the next commit.
 
@@ -113,7 +215,7 @@ class H5Writer:
             self.commit()
 
     def commit(self):
-        # Actually write the data out to the backing hdf5 file.
+        """Actually write the data out to the backing hdf5 file."""
         start = self.writeHead
         stop = start + self.batchWriteHead
         for headID in range(self.numHeads):
@@ -125,8 +227,11 @@ class H5Writer:
         self.batchWriteHead = 0
 
     def close(self):
-        # You MUST call close on this object, as otherwise the last bit of data won't
-        # get written to disk.
+        """Close the output hdf5.
+
+        You MUST call close on this object, as otherwise the last bit of data won't
+        get written to disk.
+        """
         if self.batchWriteHead != 0:
             self.commit()
         stringDType = h5py.string_dtype(encoding='utf-8')
@@ -136,6 +241,10 @@ class H5Writer:
 
 
 def main(config):
+    """Run the predictions.
+
+    :param config: is taken straight from the json specification.
+    """
     utils.setVerbosity(config["verbosity"])
     fastaFname = config["fasta-file"]
     batchSize = config["settings"]["batch-size"]
@@ -163,14 +272,14 @@ def main(config):
             while batcher.outputReady():
                 # We've just run a batch. Write it out.
                 ret = batcher.getOutput()
-                pbar.update()
+                pbar.update()  # type: ignore
                 writer.addEntry(ret)
         # Done with the main loop, clean up the batcher.
         logging.debug("Done with main loop.")
         while not batcher.empty():
             # We've just run a batch. Write it out.
             ret = batcher.getOutput()
-            pbar.update()
+            pbar.update()  # type: ignore
             writer.addEntry(ret)
         writer.close()
 

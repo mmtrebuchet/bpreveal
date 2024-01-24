@@ -153,17 +153,17 @@ def setVerbosity(userLevel: str) -> None:
 
 
 def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,
-             **tqdmKwargs) -> tqdm.tqdm | typing.Iterable:
+             **tqdmKwargs):
     """Create a tqdm logger or a dummy, based on current logging level.
 
     :param iterable: The thing to be wrapped, or the number to be counted to.
     :param logLevel: The log level at which you'd like the tqdm to print progress.
-    :param tqdmKwargs: Additional keyward arguments passed to tqdm.
+    :param tqdmKwargs: Additional keyword arguments passed to tqdm.
     :return: Either a tqdm that will do logging, or an iterable that won't log.
 
     Sometimes, you want to display a tqdm progress bar only if the logging level is
     high. Call this with something you want to iterate over OR an integer giving the
-    total number of things that will be processed (correspoinding to::
+    total number of things that will be processed (corresponding to::
 
         pbar = tqdm.tqdm(total=10000)
         while condition:
@@ -570,7 +570,7 @@ class BatchPredictor:
         preds = self._model.predict(modelInputs[:numSamples, :, :],
                                     verbose=0,  # type: ignore
                                     batch_size=self._batchSize)
-        # I now need to parse out the shape of the prediction toa
+        # I now need to parse out the shape of the prediction to
         # generate the correct outputs.
         numHeads = len(preds) // 2  # Two predictions (logits & logcounts) for each head.
         # The output from the prediction is an awkward shape for

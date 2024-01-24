@@ -1,4 +1,62 @@
 #!/usr/bin/env python3
+"""Trains up a simple regression model to match a bias model to an experiment.
+
+The transformation input file is a JSON file that names a solo model and gives
+the experimental data that it should be fit to.
+Note that it may occasionally be appropriate to chain several transformation
+models together.
+Currently, the easiest way to do this is to feed the first transformation model
+in as the solo model for the second transformation.
+A better way to do it would be to write your own custom transformation Model.
+
+
+BNF
+---
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/trainTransformationModel.bnf
+
+
+Parameter Notes
+---------------
+Most of the parameters for the transformation model are the same as for a solo
+model, and they are described at
+:py:mod:`trainSoloModel<bpreveal.trainSoloModel>`.
+
+solo-model-file
+    The name of the file (or directory, since
+    that's how keras likes to save models) that contains the solo model.
+
+passthrough
+    This transformation does nothing to the solo model,
+    it doesn't regress anything.
+
+simple
+    This transformation applies the specified functions to
+    the output of the solo model, and adjusts the parameters to best fit the
+    experimental data.
+    A linear model applies :math:`y=m x+b` to the solo predictions (which,
+    remember, are in log-space),
+    a sigmoid applies :math:`y = m_1 *sigmoid(m_2x+b_2) + b_1`,
+    and a relu applies :math:`y = m_1 * relu(m_2x+b_2) + b_1`.
+    In other words, there's a linear model both before and after the sigmoid
+    or relu activation.
+    Generally, you need to use these more complex functions when the solo
+    model is not a great fit for the experimental bias.
+
+HISTORY
+-------
+
+Before BPReveal 3.0.0, there was a ``cropdown`` transformation option.
+It turned out to be mathematically inappropriate, and so it was removed.
+
+Also in BPReveal 3.0.0, a parameter named ``sequence-input-length`` was renamed to
+just ``input-length``.
+
+API
+---
+"""
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
@@ -32,9 +90,6 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     utils.setVerbosity(config["verbosity"])
-    if "sequence-input-length" in config:
-        assert False, "Sequence-input-length has been renamed "\
-                      "input-length in transformation config files."
     inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]
     numHeads = len(config["heads"])
