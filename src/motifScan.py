@@ -110,6 +110,7 @@ seq-match-cutoff, contrib-match-cutoff, contrib-magnitude-cutoff
     are calculated by
     :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>`. You could set
     these manually, but why would you?
+    TODO MELANIE More documentation.
 
 Output Specification
 --------------------
@@ -184,7 +185,7 @@ def main(config):
 if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.motifScan.validate(config)
-    main(config)
+    bpreveal.schema.motifScan.validate(configJson)
+    main(configJson)

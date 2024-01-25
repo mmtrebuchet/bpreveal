@@ -36,6 +36,16 @@ fasta-file
     explained.) In this case, the contribution scores in the output will match
     one-to-one with the input bases.
 
+coordinates, genome, bed-file
+    If you give a fasta file and also include a ``coordinates`` section, then
+    the sequences to interpret will be drawn from the given ``fasta-file``, but
+    coordinate information and chromosome sizes will be taken from the bed file
+    and genome fasta. This means that you can use
+    :py:mod:`shapToBigwig<bpreveal.shapToBigwig>` even though the sequences
+    don't come from a real genome. In this case, the output hdf5 will contain
+    all of the usual coordinate datasets in addition to the ``description``
+    dataset that you usually get for interpreting from a fasta file.
+
 heads
     This parameter is the *total* number of heads that the model has.
 
@@ -122,7 +132,9 @@ No fasta coordinate data
 
 While you can use :py:mod:`shapToNumpy<bpreveal.shapToNumpy` on either format of
 ``interpretFlat`` output, you cannot convert a fasta-based interpretation
-h5 to a bigwig, since it doesn't contain coordinate information.
+h5 to a bigwig, since it doesn't contain coordinate information. You can get
+around this limitation by providing a bed file and a genome in a ``coordinates``
+section.
 
 DEPRECATIONS
 ------------
@@ -188,11 +200,23 @@ def main(config):
                                         profileFname)
     batcher.run()
 
+    # Finishing touch - if someone gave coordinate information, load that.
+    if "coordinates" in config:
+        import h5py
+        from bpreveal import makePredictionsBed
+        import pybedtools
+        import pysam
+        for ftype in ["profile-h5", "counts-h5"]:
+            with h5py.File(config[ftype], "r+") as h5fp, \
+                 pybedtools.BedTool(config["coordinates"]["bed-file"]) as bedFp, \
+                 pysam.FastaFile(config["coordinates"]["genome"]) as genome:
+                makePredictionsBed.addCoordsInfo(bedFp, h5fp, genome)
+
 
 if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.interpretFlat.validate(config)
-    main(config)
+    bpreveal.schema.interpretFlat.validate(configJson)
+    main(configJson)

@@ -65,7 +65,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if tensorboardDir is not None:
         logging.info("Including logging.")
-        from callbacks import tensorboardCallback
+        from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
     history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen,
                         callbacks=callbacks, max_queue_size=1000)
@@ -154,7 +154,7 @@ def main(config):
 if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.trainCombinedModel.validate(config)
-    main(config)
+    bpreveal.schema.trainCombinedModel.validate(configJson)
+    main(configJson)

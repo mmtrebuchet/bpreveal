@@ -60,15 +60,15 @@ API
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
+import h5py
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-import h5py
-from tensorflow import keras
 from bpreveal import generators
 from bpreveal import losses
 from bpreveal import models
 from bpreveal.callbacks import getCallbacks
+from tensorflow import keras
 import logging
 import tensorflow as tf
 
@@ -77,7 +77,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
                outputPrefix, plateauPatience, heads, tensorboardDir=None):
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if tensorboardDir is not None:
-        from callbacks import tensorboardCallback
+        from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
     history = model.fit(trainBatchGen, epochs=epochs,
                         validation_data=valBatchGen, callbacks=callbacks)
@@ -151,7 +151,7 @@ def main(config):
 if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.trainTransformationModel.validate(config)
-    main(config)
+    bpreveal.schema.trainTransformationModel.validate(configJson)
+    main(configJson)

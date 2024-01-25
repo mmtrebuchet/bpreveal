@@ -202,9 +202,9 @@ def main(config):
 if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
 
     import bpreveal.schema
-    bpreveal.schema.prepareTrainingData.validate(config)
-    utils.setVerbosity(config["verbosity"])
-    writeH5(config)
+    bpreveal.schema.prepareTrainingData.validate(configJson)
+    utils.setVerbosity(configJson["verbosity"])
+    writeH5(configJson)

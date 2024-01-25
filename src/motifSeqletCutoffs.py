@@ -54,19 +54,19 @@ There are two ways of specifying patterns,
     protein.
 
 seq-match-quantile
-    TODO ADD DOCUMENTATION FOR QUANTILE AND TRIM PARAMETERS.
+    TODO MELANIE Document
 
 contrib-match-quantile
-    TODO ADD DOCUMENTATION FOR QUANTILE AND TRIM PARAMETERS.
+    TODO MELANIE Document
 
 contrib-magnitude-quantile
-    TODO ADD DOCUMENTATION FOR QUANTILE AND TRIM PARAMETERS.
+    TODO MELANIE Document
 
 trim-threshold
-    TODO ADD DOCUMENTATION FOR QUANTILE AND TRIM PARAMETERS.
+    TODO MELANIE Document
 
 trim-padding
-    TODO ADD DOCUMENTATION FOR QUANTILE AND TRIM PARAMETERS.
+    TODO MELANIE Document
 
 background-probs
     Gives the genetic content of your genome.
@@ -137,14 +137,14 @@ def main(config):
     logging.info("Analysis complete.")
     if "quantile-json" in config:
         logging.info("Saving pattern json.")
-        with open(config["quantile-json"], "w") as fp:
+        with open(config["quantile-json"], "w", encoding='utf-8') as fp:
             json.dump(scanPatternDict, fp, indent=4)
 
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+    with open(sys.argv[1], "r", encoding='utf-8') as configFp:
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.motifSeqletCutoffs.validate(config)
-    main(config)
+    bpreveal.schema.motifSeqletCutoffs.validate(configJson)
+    main(configJson)

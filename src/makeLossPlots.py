@@ -55,7 +55,7 @@ def main():
             if lt == 'counts-loss-weight':
                 continue
             if not re.search('val', lt):
-                if ("val_" + lt) in history:
+                if ("val_" + lt) in history:  # pylint: disable=superfluous-parens
                     lossTypes.append([lt, "val_" + lt])
                 else:
                     lossTypes.append([lt,])
@@ -97,7 +97,7 @@ def main():
                             totalReweightedValLosses += np.array(history[lossType])
                         else:
                             totalReweightedLosses += np.array(history[lossType])
-                if len(typesToAdd):
+                if len(typesToAdd) > 0:
                     lossPair.extend(typesToAdd)
         # Find the total loss terms and add the reweighted values.
         history["rew_loss"] = totalReweightedLosses
@@ -115,12 +115,12 @@ def main():
 def plotLosses(lossTypes, history, startFrom, countsLossWeight):
     """Given all the loss data, plot them in a grid."""
     # First, how many plots are needed?
-    num_rowscols = math.ceil(len(lossTypes) ** 0.5)
-    fig, axs = plt.subplots(nrows=num_rowscols, ncols=num_rowscols, sharex=True, figsize=(15, 15))
+    numRowsCols = math.ceil(len(lossTypes) ** 0.5)
+    fig, axs = plt.subplots(nrows=numRowsCols, ncols=numRowsCols, sharex=True, figsize=(15, 15))
     epochs = range(len(history[lossTypes[0][0]]))
     for i, lt in enumerate(lossTypes):
         allDats = []
-        ax = axs[i // num_rowscols][i % num_rowscols]
+        ax = axs[i // numRowsCols][i % numRowsCols]
         for loss in lt:
             ax.plot(epochs[startFrom:], history[loss][startFrom:], label=loss)
             allDats.extend(history[loss][startFrom:])

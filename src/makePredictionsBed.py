@@ -92,13 +92,13 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import pybedtools
 from bpreveal import utils
+from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 import numpy as np
 import pysam
 import h5py
 import logging
-from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
 
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.
@@ -135,16 +135,17 @@ def main(config):
     writePreds(regions, preds, outFile, numHeads, genome)
 
 
-def writePreds(regions, preds, outFile, numHeads, genome):
-    """Write the predictions to an HDF5.
+def addCoordsInfo(regions, outFile, genome):
+    """Initialize an hdf5 with coordinate information.
 
-    :param regions: The BedTool taken from the config's bed file.
-    :param preds: The output of the model's predict function, no transformations.
-    :param outputTrackList: Straight from the json file.
-    :param numheads: The number of output heads.
-    :param chromSizes: A dict mapping chromosome names to size.
+    Creates the chrom_names, chrom_sizes, coords_chrom, coords_start,
+    and coords_stop datasets.
+
+    :param regions: A BedTool of regions that will be written.
+    :param outFile: The opened hdf5 file.
+    :param genome: An opened pysam.FastaFile with your genome.
+
     """
-    logging.info("Writing predictions")
     stringDtype = h5py.string_dtype(encoding='utf-8')
     outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
     outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u8')
@@ -182,6 +183,19 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     outFile.create_dataset('coords_start', dtype=chromPosDtype, data=startDset)
     outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)  # noqa
 
+
+def writePreds(regions, preds, outFile, numHeads, genome):
+    """Write the predictions to an HDF5.
+
+    :param regions: The BedTool taken from the config's bed file.
+    :param preds: The output of the model's predict function, no transformations.
+    :param outFile: The (opened) hdf5 file to write to
+    :param numHeads: How many heads does this model have?
+    :param genome: The pysam FastaFile containing your genome.
+
+    """
+    logging.info("Writing predictions")
+    addCoordsInfo(regions, outFile, genome)
     logging.debug("Writing predictions.")
     for headID in wrapTqdm(range(numHeads)):  # type: ignore
         headGroup = outFile.create_group("head_{0:d}".format(headID))
@@ -193,8 +207,8 @@ def writePreds(regions, preds, outFile, numHeads, genome):
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+    with open(sys.argv[1], "r", encoding='utf-8') as configFp:
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.makePredictionsBed.validate(config)
-    main(config)
+    bpreveal.schema.makePredictionsBed.validate(configJson)
+    main(configJson)

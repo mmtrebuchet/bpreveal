@@ -25,6 +25,14 @@
         },
         "fasta-file": {"type": "string"},
         "num-threads": {"type": "integer"},
+        "coordinates": {
+            "type": "object",
+            "properties": {
+                "bed-file" : {"type": "string"},
+                "genome" : {"type": "string"}
+            },
+            "required" : ["bed-file", "genome"]
+        },
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
     },
     "required": ["fasta-file", "settings",  "verbosity"]

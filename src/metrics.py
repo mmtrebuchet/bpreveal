@@ -115,6 +115,8 @@ from multiprocessing import Process, Queue
 
 
 class Region:
+    """A simple container from a line from a bed file."""
+
     def __init__(self, line):
         lsp = line.split()
         self.chrom = lsp[0]
@@ -123,7 +125,18 @@ class Region:
 
 
 class MetricsCalculator:
-    def __init__(self, referenceBwFname, predictedBwFname, applyAbs, inQueue, outQueue, tid):
+    """Calculates metrics as it receives queries from inQueue, puts results in outQueue.
+
+    :param referenceBwFname: The file name of the reference bigwig.
+    :param predictedBwFname: The file name of the predicted bigwig.
+    :param applyAbs: Should the vaulues in the bigwig be made positive?
+    :param inQueue: The queue that will provide queries.
+    :param outQueue: The queue where results will be put.
+    :param tid: The thread ID of this process.
+    """
+
+    def __init__(self, referenceBwFname, predictedBwFname, applyAbs, inQueue,
+                 outQueue, tid):
         logging.debug("Starting thread {0:d} for metrics calculation.".format(tid))
         self.referenceBw = pyBigWig.open(referenceBwFname, "r")
         self.predictedBw = pyBigWig.open(predictedBwFname, "r")
@@ -133,7 +146,16 @@ class MetricsCalculator:
         self.tid = tid
 
     def runRegions(self, regionReference, regionPredicted, regionID):
+        """Run the calculation on a single region.
 
+        :param regionReference: A region in the reference bigwig.
+        :param regionPredicted: A region in the predicted bigwig.
+        :param regionID: A tag passed into the output queue.
+        :return: Nothing, but does put a result in the outQueue.
+
+        Given a region, loads up profiles from the reference and predicted bigwigs
+        and calculates the various metrics.
+        """
         referenceData = np.nan_to_num(self.referenceBw.values(regionReference.chrom,
                                                               regionReference.start,
                                                               regionReference.stop))
@@ -166,7 +188,8 @@ class MetricsCalculator:
         self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
     def run(self):
-        while (True):
+        """Watch the input queue and run queries until you get the stop signal."""
+        while True:
             match self.inQueue.get(timeout=QUEUE_TIMEOUT):
                 case None:
                     logging.debug("Finishing calculator thread {0:d}.".format(self.tid))
@@ -176,18 +199,45 @@ class MetricsCalculator:
                     self.runRegions(regionRef, regionPred, regionID)
 
     def finish(self):
+        """Wrap up shop, close the bigwigs."""
         self.referenceBw.close()
         self.predictedBw.close()
 
 
-def calculatorThread(referenceBwFname, predictedBwFname, applyAbs, inQueue, outQueue, tid):
-    calc = MetricsCalculator(referenceBwFname, predictedBwFname, applyAbs, inQueue, outQueue, tid)
+def calculatorThread(referenceBwFname, predictedBwFname, applyAbs, inQueue,
+                     outQueue, tid):
+    """Just spawns a MetricsCalculator and runs it.
+
+    :param referenceBwFname: The file name of the reference bigwig.
+    :param predictedBwFname: The file name of the predicted bigwig.
+    :param applyAbs: Should the vaulues in the bigwig be made positive?
+    :param inQueue: The queue that will provide queries.
+    :param outQueue: The queue where results will be put.
+    :param tid: The thread ID of this process.
+    """
+    calc = MetricsCalculator(referenceBwFname, predictedBwFname, applyAbs, inQueue,
+                             outQueue, tid)
     calc.run()
 
 
 def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
+    """A thread to generate regions and stuff them in the regionQueue.
+
+    :param regionsFname: The bed file to read in.
+    :param regionQueue: The queue that the calculator threads will be getting
+        their queries from.
+    :param numThreads: How many calculator threads will be running?
+    :param numberQueue: A queue that will hear the number of regions
+        in the regions file.
+
+    numberQueue is needed so that the parent thread can know how many results
+    to expect. This thread counts the number of regions in regionsFname
+    and then puts that number in numberQueue *before* it starts putting
+    regions into regionQueue.
+    """
     logging.debug("Initializing generator.")
-    regions = [Region(x) for x in open(regionsFname, 'r')]
+    with open(regionsFname, "r") as fp:
+        regions = [Region(x) for x in fp]
     logging.info("Number of regions: {0:d}".format(len(regions)))
     numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
     for i, r in enumerate(regions):
@@ -198,6 +248,17 @@ def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
 
 
 def percentileStats(name, vector, jsonDict, header=False, write=True):
+    """Given a vector of statistics, calculate percentile values.
+
+    :param name: The name of the statistic being calculated. Used for output.
+    :param vector: The data that you want processed.
+    :param jsonDict: A dict where you want quantile information stored.
+    :param header: Should a header be written? If so, prints a row with
+        the quantile cutoff values.
+    :param write: Should the results be written at all? If not, they will
+        still be added to the jsonDict.
+    :return: Nothing, but does put information in jsonDict.
+    """
     quantileCutoffs = np.linspace(0, 1, 5)
     if vector.shape[0] < 5:
         vector = np.zeros((5,))
@@ -215,6 +276,21 @@ def percentileStats(name, vector, jsonDict, header=False, write=True):
 
 
 def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
+    """Listen to the output from the calculator threads and process it.
+
+    :param numRegions: How many total regions will be calculated?
+        This is calculated inside regionGenThread and passed back through
+        numberQueue.
+    :param outQueue: The queue that the calculator threads are putting
+        their results in.
+    :param skipZeros: Should regions where the metrics are undefined be
+        filtered out? If not, your results will be contaminated with NaN,
+        but this can also be a good indication that something is wrong.
+    :param jsonOutput: Should a json file be written? If so, the normal
+        tabular output will not be printed.
+    :param jsonDict: Any additional information you'd like included in
+        your json file, like the names of the files that were processed.
+    """
     mnlls = np.zeros((numRegions,))
     jsds = np.zeros((numRegions,))
     pearsonrs = np.zeros((numRegions,))
@@ -264,6 +340,19 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
 
 
 def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jsonOutput):
+    """Run the calculation.
+
+    :param reference: The name of the bigwig file with reference data.
+    :param predicted: The name of the bigwig file with predictions.
+    :param regions: The name of the bed file with regions to analyze.
+    :param threads: How many parallel workers should be used?
+    :param applyAbs: Should all values in the bigwigs be made positive?
+    :param skipZeros: If one of the metrics from one region is NaN,
+        should it be ignored (skipZeros = True) or should all the results
+        be contaminated with NaN (skipZeros = False)?
+    :param jsonOutput: Should json output be written instead of a table?
+    :return: nothing, but the writer thread prints to stdout.
+    """
     regionQueue = Queue()
     resultQueue = Queue()
     numberQueue = Queue()
@@ -296,6 +385,7 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
 
 
 def getParser() -> argparse.ArgumentParser:
+    """Generate the argument parser."""
     parser = argparse.ArgumentParser(description="Take two bigwig-format files and calculate "
                                                  "an assortment of metrics on their contents.")
     parser.add_argument("--reference",
@@ -335,6 +425,7 @@ def getParser() -> argparse.ArgumentParser:
 
 
 def main():
+    """Run the whole thing."""
     args = getParser().parse_args()
     if args.verbose:
         logging.basicConfig(level=logging.INFO)

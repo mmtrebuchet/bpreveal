@@ -20,15 +20,15 @@ class LinearRegression(keras.layers.Layer):
     def __init__(self, **kwargs):
         """Construct."""
         super(LinearRegression, self).__init__(**kwargs)
-        slope_init = tf.ones_initializer()
+        slopeInit = tf.ones_initializer()
         self.slope = tf.Variable(
-            initial_value=slope_init(shape=(1,), dtype='float32'),
+            initial_value=slopeInit(shape=(1,), dtype='float32'),
             trainable=True,
             name='slope')
 
-        offset_init = tf.zeros_initializer()
+        offsetInit = tf.zeros_initializer()
         self.offset = tf.Variable(
-            initial_value=offset_init(shape=(1,), dtype='float32'),
+            initial_value=offsetInit(shape=(1,), dtype='float32'),
             trainable=True,
             name='offset')
 

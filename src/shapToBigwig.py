@@ -6,6 +6,7 @@ import argparse
 import logging
 import tqdm
 from bpreveal.utils import H5_CHUNK_SIZE
+from bpreveal import utils
 
 
 class BatchedH5Reader:
@@ -140,7 +141,6 @@ def getParser() -> argparse.ArgumentParser:
 def main():
 
     args = getParser().parse_args()
-    import utils
     if args.verbose:
         utils.setVerbosity("INFO")
     else:

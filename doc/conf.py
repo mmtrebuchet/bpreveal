@@ -11,7 +11,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 project = 'BPReveal'
 copyright = '2024, Charles McAnany, Melanie Weilert, Haining Jiang'
 author = 'Charles McAnany, Melanie Weilert, Haining Jiang'
-release = '4.0.1'
+import bpreveal
+release = bpreveal.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -24,13 +25,8 @@ extensions = ['sphinx.ext.autodoc',
 
 templates_path = []
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
-                    "demos", "presentations", "scripts"]
-
-
-#def rst_file_transform(docname):
-#    if docname == "index":
-#        docname = "home"
-#    return docname.title() + ".rst"
+                    "demos", "presentations", "scripts",
+                    "makeHeader"]
 import re
 reSubs = [
     ["λ", r":math:`{\\lambda}`"],
@@ -50,7 +46,7 @@ def setup(app):
 
 
 autodoc_mock_imports = ["tensorflow", 'keras']
-autodoc_typehints = 'both'
+autodoc_typehints = 'description'
 autodoc_type_aliases={
     "ANNOTATION_T": "ANNOTATION_T",
     "CorruptorLetter": "CorruptorLetter",

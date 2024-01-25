@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""Useful tools for creating sequences with a desired property."""
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
@@ -6,7 +6,7 @@ import random
 import matplotlib.colors
 from typing import TypeAlias, Callable, Optional, Literal
 import numpy.typing as npt
-import bpreveal.utils as utils
+from bpreveal import utils
 from bpreveal.utils import PRED_AR_T
 import numpy as np
 import matplotlib.axes
@@ -109,7 +109,7 @@ def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
 
 
 def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[Corruptor]:
-    """The inverse of corruptorsToArray.
+    """Turn an array of numbers into a Corruptor list.
 
     :param corruptorArray: A list of tuples of ints.
     :return: Corruptors corresponding to the array.
@@ -169,12 +169,11 @@ class Organism:
 
     def __init__(self, corruptors: list[Corruptor]) -> None:
         """Construct an organism with the given corruptors."""
-
         self.corruptors = sorted(corruptors)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
 
     def getSequence(self, initialSequence: str, inputLength: int) -> str:
-        """Applies this organism's corruptors to initialSequence, a string.
+        """Apply this organism's corruptors to initialSequence, a string.
 
         :param initialSequence: A string representing the wild-type sequence that
             this organism will apply its corruptors to.
@@ -188,7 +187,6 @@ class Organism:
         and unless you're filtering somehow, the maximum number of deletions
         is the number of corruptors for this organism.
         """
-
         seq = []
         readHead = 0  # The position in the input sequence where the
         # next base should be taken from.
@@ -242,7 +240,7 @@ class Organism:
         self.score = scoreFn(self.profile, self.corruptors)
 
     def __eq__(self, other: 'Organism') -> bool:
-        """Returns True if this organism has the same corruptors as the other.
+        """Return True if this organism has the same corruptors as the other.
 
         :param other: The organism to check against
         :return: True if they have the same corruptors, False otherwise.
@@ -252,7 +250,7 @@ class Organism:
         return self.cmp(other) == 0
 
     def __hash__(self) -> int:
-        """Returns an integer representing a hash of this organism's corruptors.
+        """Return an integer representing a hash of this organism's corruptors.
 
         :return: An integer unique to this organism's corruptors.
 
@@ -270,8 +268,8 @@ class Organism:
             one, -1 if this organism comes first, or 0 if the two organisms
             have the same corruptors.
 
-        Note that this does not compare profile or score!"""
-
+        Note that this does not compare profile or score!
+        """
         for i in range(min(len(self.corruptors),
                            len(other.corruptors))):
             mine = self.corruptors[i]
@@ -346,7 +344,8 @@ class Organism:
         This is also something you may wish to override in a subclass.
         Currently, it pools the corruptors from self and other, and then
         randomly selects numCorruptors of them. If that passes checkCorruptors,
-        then it returns a NEW organism. """
+        then it returns a NEW organism.
+        """
         fullCorruptorPool = sorted(self.corruptors + other.corruptors)
         corruptorPool = [fullCorruptorPool[0]]
         # If there are any duplicated bases, choose one at random.
@@ -389,7 +388,6 @@ class Organism:
 
 class Population:
     """This is the main class for running the sequence optimization GA.
-
 
     This is a heck of a constructor, but you need to make a lot of
     choices to use the GA.
@@ -500,7 +498,7 @@ class Population:
     def _newOrganism(self) -> Organism:
         """Construct a random new organism.
 
-            :return: A newly-allocated Organism.
+        :return: A newly-allocated Organism.
         """
         for _ in range(100):
             corLocations = random.sample(self.allowedCorruptors, self.numCorruptors)
@@ -523,7 +521,6 @@ class Population:
         *ascending* order of fitness, so the best organism is
         pop.organisms[-1].
         """
-
         numInFlight = 0
         for i, organism in enumerate(self.organisms):
             self.predictor.submitString(
@@ -552,7 +549,8 @@ class Population:
         Randomly choose one of the organisms in the population.
         This only makes sense once you've runCalculation(), since it needs
         to know which organisms are good. You may want to override this in
-        a subclass to change the selection operator."""
+        a subclass to change the selection operator.
+        """
         toChoose = int(random.triangular(0,
                                          self.populationSize,
                                          self.populationSize))
@@ -593,7 +591,6 @@ class Population:
         for the next generation. This replaces the .organisms array with the new
         children, and those organisms will not have any profile or score data.
         """
-
         # Keep the best parents (elitism)
         ret = set(self.organisms[-self.numSurvivingParents:])
         # Note that ret is a SET, and not a list. Sets in Python have the nice
@@ -727,7 +724,7 @@ def removeCorruptors(corruptorList: list[CandidateCorruptor],
 
     """
     def removeLetters(original, forbidden):
-        return "".join([x for x in original if (x not in forbidden)])
+        return "".join([x for x in original if x not in forbidden])
     ret = []
     for c in corruptorList:
         newLetters = c[1]

@@ -7,6 +7,14 @@
         "genome": {"type": "string"},
         "bed-file": {"type": "string"},
         "fasta-file": {"type": "string"},
+        "coordinates" : {
+            "type" : "object",
+            "properties" : {
+                "genome": {"type": "string"},
+                "bed-file": {"type": "string"}
+            },
+            "required" : ["genome", "bed-file"]
+        },
         "input-length": {"type": "integer"},
         "output-length": {"type": "integer"},
         "heads": {"type": "integer"},
@@ -28,10 +36,20 @@
     "oneOf": [
         {
             "required": ["genome", "bed-file"],
-            "not": {"required": ["fasta-file"]}
+            "not": {
+                "anyOf" : [
+                    {"required": ["coordinates"]},
+                    {"required": ["fasta-file"]}
+                ]
+            }
         },
         {
-            "not": {"required": ["genome", "bed-file"]},
+            "not": {
+                "anyOf" : [
+                    {"required": ["genome"]},
+                    {"required": ["bed-file"]}
+                ]
+            },
             "required": ["fasta-file"]
         }
     ]

@@ -16,7 +16,10 @@
     "genome" : <file-name>,
     "bed-file" : <file-name>
  |  "fasta-file" : <file-name>
-
+ |  "fasta-file" : <file-name>,
+    "coordinates": {
+        "genome" : <file-name>,
+        "bed-file" : <file-name>}
 
 <list-of-integers> ::=
     <integer>

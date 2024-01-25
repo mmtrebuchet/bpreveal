@@ -185,8 +185,8 @@ if __name__ == "__main__":
             "It is now just called interpretPisa and automatically detects if you're "
             "using a bed or fasta file. Instructions for updating: Call the program "
             "interpretPisa. These old program names will be removed in BPReveal 5.0.0.")
-    with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+    with open(sys.argv[1], "r", encoding='utf-8') as configFp:
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.interpretPisa.validate(config)
-    main(config)
+    bpreveal.schema.interpretPisa.validate(configJson)
+    main(configJson)

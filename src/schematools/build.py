@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Builds the schema.py module."""
 import sys
 with open(sys.argv[1], "w") as fp:
     fp.write('"""Auto-generated schema validators for the JSON files used by the main CLI."""\n')
@@ -24,8 +25,9 @@ with open(sys.argv[1], "w") as fp:
                  "_{0:s}Schema, store=_schemaStore)\n").format(schemaFname))
     fp.write("\n\n")
     for schemaFname in sys.argv[2:]:
-        fp.write("{0:s}: Draft7Validator = Draft7Validator(_{0:s}Schema, resolver=_{0:s}Resolver)\n".format(
-                 schemaFname))
+        fp.write(
+            "{0:s}: Draft7Validator = Draft7Validator(_{0:s}Schema, resolver=_{0:s}Resolver)\n".
+            format(schemaFname))
         fp.write('"""Validator for :py:mod:`{0:s}<bpreveal.{0:s}>`"""\n'.format(schemaFname))
     fp.write("schemaMap = {")
     for schemaFname in sys.argv[2:]:

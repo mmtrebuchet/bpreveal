@@ -93,7 +93,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         for head in heads:
             self.λHistory[head["head-name"]] = []
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, logs=None):  # pylint: disable=invalid-name
         """Set up the initial guesses for λ.
 
         :param logs: Ignored.
@@ -226,7 +226,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):  # pylint: disable=invalid-name
         """Update the other callbacks and calculate a new λ.
 
         :param epoch: The epoch number that just finished.

@@ -20,6 +20,13 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 BPReveal 4.x
 ------------
 
+BPReveal 4.0.2
+^^^^^^^^^^^^^^
+
+A few variables deep inside BPReveal were changed from snake_case to the
+preferred style for BPReveal, camelCase. This should not have any effect unless
+you were digging deep inside the code.
+
 BPReveal 4.0.0
 ^^^^^^^^^^^^^^
 The following breaking changes occurred when BPReveal 4.0.0 was released:
@@ -47,8 +54,8 @@ BPReveal 3.6.0
 ^^^^^^^^^^^^^^
 
 1. The :py:mod:`predictToBigwig<bpreveal.predictToBigwig>` script now averages the values in
-        overlapping regions instead of taking the leftmost base.
-        This may result in small changes in generated bigwigs.
+   overlapping regions instead of taking the leftmost base.
+   This may result in small changes in generated bigwigs.
 2. In order to accomodate the adaptive loss algorithm
    (:doc:`countsLossReweighting`), some of the layer names in transformation
    models were changed. If you were depending on these layer names, I'm curious

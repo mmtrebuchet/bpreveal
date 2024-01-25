@@ -1,3 +1,4 @@
+"""Defines the Multinomial NLL loss and the adaptive counts loss."""
 import tensorflow as tf
 import tensorflow_probability as tfp
 import logging
@@ -45,10 +46,10 @@ def weightedMse(weightTensor):
     """
     logging.debug("Creating weighted mse.")
 
-    def reweightableMse(y_true, y_pred):
-        y_pred = tf.convert_to_tensor(y_pred)
-        y_true = tf.cast(y_true, y_pred.dtype)
-        mse = backend.mean(tf.math.squared_difference(y_pred, y_true), axis=-1)
+    def reweightableMse(yTrue, yPred):
+        yPred = tf.convert_to_tensor(yPred)
+        yTrue = tf.cast(yTrue, yPred.dtype)
+        mse = backend.mean(tf.math.squared_difference(yPred, yTrue), axis=-1)
         scaledMse = mse * weightTensor
         return scaledMse
     return reweightableMse

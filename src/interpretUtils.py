@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-
+"""A big ol' module that contains high-efficiency tools for calculating shap scores."""
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '4'
 from bpreveal import utils
@@ -32,16 +31,19 @@ class Query:
         Since there's no guarantee that the results will arrive in order, we have to
         track which query was which.
     """
+
     sequence: ONEHOT_AR_T
     passData: Any
     index: int
 
     def __init__(self, oneHotSequence: ONEHOT_AR_T, passData: Any, index: int):
+        """Just store the given data."""
         self.sequence = oneHotSequence
         self.passData = passData
         self.index = index
 
     def __str__(self):
+        """Make a string with information about this Query."""
         fmtStr = "seqSize {0:s} passData {1:s} index {2:d}"
         return fmtStr.format(str(self.sequence.shape), str(self.passData), self.index)
 
@@ -51,8 +53,6 @@ class Result:
 
     Subclassed by :py:class:`~PisaResult` and :py:class:`flatResult`.
     """
-
-    pass
 
 
 class PisaResult(Result):
@@ -90,6 +90,7 @@ class PisaResult(Result):
                  shap: npt.NDArray[IMPORTANCE_T],
                  passData: Any,
                  index: int):
+        """Just store all the provided data."""
         self.inputPrediction = inputPrediction
         self.shufflePredictions = shufflePredictions
         self.sequence = sequence
@@ -117,12 +118,14 @@ class FlatResult(Result):
     def __init__(self, sequence: ONEHOT_AR_T,
                  shap: npt.NDArray[IMPORTANCE_T],
                  passData: Any, index: int):
+        """Just store all the provided data."""
         self.sequence = sequence
         self.shap = shap
         self.passData = passData
         self.index = index
 
     def __str__(self) -> str:
+        """Make a string with useful information."""
         minVal = np.min(self.shap)
         maxVal = np.max(self.shap)
         formatStr = "index: {0:d}, sequence: {1:s}, shap: {2:s}, "\
@@ -141,15 +144,22 @@ class Generator:
         raise NotImplementedError()
 
     def __next__(self):
+        """Get the next step for the iterator.
+
+        If your generator's __iter__ returns self, you must implement __next__.
+        """
         raise NotImplementedError()
 
     def construct(self):
-        # When the generator is about to start, this method is called once before
-        # requesting the iterator.
+        """Set up the generator (in the child thread).
+
+        When the generator is about to start, this method is called once before
+        requesting the iterator.
+        """
         raise NotImplementedError()
 
     def done(self):
-        # When the batcher is done, this is called to free any allocated resources.
+        """When the batcher is done, this is called to free any allocated resources."""
         raise NotImplementedError()
 
 
@@ -160,33 +170,43 @@ class Saver:
     appropriate structure, usually on disk.
     The user creates a Saver object in the main thread, and then the saver gets
     construct()ed inside a separate thread created by the runners. Therefore, you
-    should only create members that are serializable in __init__."""
+    should only create members that are serializable in __init__.
+    """
 
     def __init__(self):
         raise NotImplementedError()
 
     def construct(self):
-        """This function should actually open the output files, since it will
-        be called from inside the actual saver thread."""
+        """Do any setup necessary in the child thread.
+
+        This function should actually open the output files, since it will
+        be called from inside the actual saver thread.
+        """
         raise NotImplementedError()
 
     def add(self, result: Result):
         """Add the given Result to wherever you're saving them out.
+
         Note that this will not be called with None at the end of the run,
-        that is special-cased in the code that runs your saver."""
+        that is special-cased in the code that runs your saver.
+        """
         del result
         raise NotImplementedError()
 
     def parentFinish(self):
         """This is called in the parent thread when the saver is done.
+
         Usually, there's nothing to do, but the parent thread might need
         to close shared memory, so this function is guaranteed to be called
-        by the Runners."""
+        by the Runners.
+        """
         logging.debug("Called parentFinish on the base Saver class.")
 
     def done(self):
         """Called when the batcher is complete (indicated by putting a None in its output queue).
-        Now is the time to close all of your files."""
+
+        Now is the time to close all of your files.
+        """
         logging.debug("Called done on the base Saver class.")
 
 
@@ -265,7 +285,7 @@ class FlatRunner:
                     s.print_stats()
 
     def run(self):
-        """Starts up the threads and waits for them to finish."""
+        """Start up the threads and waits for them to finish."""
         logging.info("Beginning flat run.")
         self._genThread.start()
         logging.debug("Started generator.")
@@ -288,7 +308,9 @@ class FlatRunner:
 
 
 class PisaRunner:
-    """I try to avoid class-based wrappers around simple things, but this is not simple.
+    """Tool to run pisa batches.
+
+    I try to avoid class-based wrappers around simple things, but this is not simple.
     This class creates threads to read in data, and then creates a thread that runs pisa
     samples in batches. Finally, it takes the results from the pisa thread and saves
     those out to an hdf5-format file.
@@ -338,7 +360,7 @@ class PisaRunner:
         self._saver = saver
 
     def run(self):
-        """Starts up the threads and waits for them to finish."""
+        """Start up the threads and waits for them to finish."""
         logging.info("Beginning pisa run.")
         self._genThread.start()
         logging.debug("Started generator.")
@@ -389,7 +411,10 @@ class FlatListSaver(Saver):
         logging.debug("Created shared arrays for the list saver.")
 
     def construct(self):
-        """This is run in the child process."""
+        """Set up the data sets.
+
+        This is run in the child process.
+        """
         # Do this in the child so the parent doesn't accidentally mess with
         # an empty array.
         self._results = []
@@ -401,7 +426,8 @@ class FlatListSaver(Saver):
         This must be called to load the shap data from the child,
         since it's currently packed away inside a linear array.
         I could just expose _outShapArray, but this reorganizes it in a much
-        more intuitive way."""
+        more intuitive way.
+        """
         self.shap = np.zeros((self.numSamples, self.inputLength, 4), dtype=np.float32)
         self.seq = np.zeros((self.numSamples, self.inputLength, 4), dtype=ONEHOT_T)
         for idx in range(self.numSamples):
@@ -413,6 +439,10 @@ class FlatListSaver(Saver):
         logging.debug("Finished list saver in parent thread. Your data are ready!")
 
     def done(self):
+        """Copy over the data from the child thread to the parent.
+
+        This method is called from the child process.
+        """
         for r in self._results:
             idx = r.index
             svals = r.shap
@@ -426,6 +456,10 @@ class FlatListSaver(Saver):
         logging.debug("Finished list saver in child thread.")
 
     def add(self, result: FlatResult):
+        """Add the result to the internal list.
+
+        This is called from the child process.
+        """
         self._results.append(result)
 
 
@@ -444,7 +478,7 @@ class FlatH5Saver(Saver):
     :param useTqdm: Should a progress bar be displayed?
     """
 
-    CHUNK_SHAPE: tuple[int, int, int]
+    chunkShape: tuple[int, int, int]
     _outputFname: str
     numSamples: int
     genomeFname: Optional[str]
@@ -456,7 +490,7 @@ class FlatH5Saver(Saver):
 
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
                  genome: Optional[str] = None, useTqdm: bool = False):
-        self.CHUNK_SHAPE = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
+        self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
         self._outputFname = outputFname
         self.numSamples = numSamples
         self.genomeFname = genome
@@ -464,18 +498,21 @@ class FlatH5Saver(Saver):
         self._useTqdm = useTqdm
 
     def construct(self):
-        """This is called inside the child thread."""
+        """Set up the data sets for writing.
+
+        This is called inside the child thread.
+        """
         logging.info("Initializing saver.")
         self._outFile = h5py.File(self._outputFname, "w")
         self._chunksToWrite = dict()
 
         self._outFile.create_dataset("hyp_scores",
                                      (self.numSamples, self.inputLength, 4),
-                                     dtype=IMPORTANCE_T, chunks=self.CHUNK_SHAPE,
+                                     dtype=IMPORTANCE_T, chunks=self.chunkShape,
                                      compression='gzip')
         self._outFile.create_dataset('input_seqs',
                                      (self.numSamples, self.inputLength, 4),
-                                     dtype=ONEHOT_T, chunks=self.CHUNK_SHAPE,
+                                     dtype=ONEHOT_T, chunks=self.chunkShape,
                                      compression='gzip')
         if self.genomeFname is not None:
             self._loadGenome()
@@ -533,12 +570,20 @@ class FlatH5Saver(Saver):
         logging.debug("Genome data loaded.")
 
     def done(self):
+        """Close up shop.
+
+        Called in the child process.
+        """
         logging.debug("Saver closing.")
         if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
 
     def add(self, result: FlatResult):
+        """Add the given result to the output file.
+
+        :param result: The output from the batcher.
+        """
         if self.pbar is None and self._useTqdm:
             # Initialize the progress bar.
             # I would do it earlier, but starting it before the batchers
@@ -548,23 +593,23 @@ class FlatH5Saver(Saver):
             self.pbar.update()
         index = result.index
         # Which chunk does this result go in?
-        chunkIdx = index // self.CHUNK_SHAPE[0]
+        chunkIdx = index // self.chunkShape[0]
         # And where in the chunk does it go?
-        chunkOffset = index % self.CHUNK_SHAPE[0]
+        chunkOffset = index % self.chunkShape[0]
         if chunkIdx not in self._chunksToWrite:
             # Allocate a new chunk.
             # Note that we can't just statically allocate one chunk buffer because we don't
             # guarantee the order that the results will arrive in.
-            numToAdd = self.CHUNK_SHAPE[0]
-            if chunkIdx == self.numSamples // self.CHUNK_SHAPE[0]:
-                numToAdd = self.numSamples % self.CHUNK_SHAPE[0]
-            curChunkShape = (numToAdd, self.CHUNK_SHAPE[1], self.CHUNK_SHAPE[2])
+            numToAdd = self.chunkShape[0]
+            if chunkIdx == self.numSamples // self.chunkShape[0]:
+                numToAdd = self.numSamples % self.chunkShape[0]
+            curChunkShape = (numToAdd, self.chunkShape[1], self.chunkShape[2])
             self._chunksToWrite[chunkIdx] = {
                 "hyp_scores": np.empty(curChunkShape, dtype=IMPORTANCE_T),
                 "input_seqs": np.empty(curChunkShape, dtype=ONEHOT_T),
                 "numToAdd": numToAdd,
-                "writeStart": chunkIdx * self.CHUNK_SHAPE[0],
-                "writeEnd": chunkIdx * self.CHUNK_SHAPE[0] + numToAdd}
+                "writeStart": chunkIdx * self.chunkShape[0],
+                "writeEnd": chunkIdx * self.chunkShape[0] + numToAdd}
         curChunk = self._chunksToWrite[chunkIdx]
         curChunk["numToAdd"] -= 1
         curChunk["hyp_scores"][chunkOffset] = result.shap
@@ -602,7 +647,7 @@ class PisaH5Saver(Saver):
         will be included in the output, and, additionally, two other datasets will be
         created: coords_chrom, and coords_base.
     :param useTqdm: Should a progress bar be displayed?
-        """
+    """
 
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
                  genome: Optional[str] = None, useTqdm: bool = False):
@@ -613,7 +658,7 @@ class PisaH5Saver(Saver):
         self.genomeFname = genome
         self._useTqdm = useTqdm
         self.receptiveField = receptiveField
-        self.CHUNK_SHAPE = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
+        self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
 
     def construct(self):
         """Run in the child thread."""
@@ -634,11 +679,11 @@ class PisaH5Saver(Saver):
 
         self._outFile.create_dataset("shap",
                                      (self.numSamples, self.receptiveField, 4),
-                                     dtype=IMPORTANCE_T, chunks=self.CHUNK_SHAPE,
+                                     dtype=IMPORTANCE_T, chunks=self.chunkShape,
                                      compression='gzip')
         self._outFile.create_dataset('sequence',
                                      (self.numSamples, self.receptiveField, 4),
-                                     dtype=ONEHOT_T, chunks=self.CHUNK_SHAPE,
+                                     dtype=ONEHOT_T, chunks=self.chunkShape,
                                      compression='gzip')
         self.pbar = None
         if self._useTqdm:
@@ -697,33 +742,38 @@ class PisaH5Saver(Saver):
         logging.debug("Genome data loaded.")
 
     def done(self):
+        """Called from the child process."""
         logging.debug("Saver closing.")
         if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
 
     def add(self, result: PisaResult):
+        """Add the given result to the output file.
+
+        :param result: The output from the batcher.
+        """
         if self.pbar is not None:
             self.pbar.update()
         index = result.index
         # Which chunk does this result go in?
-        chunkIdx = index // self.CHUNK_SHAPE[0]
+        chunkIdx = index // self.chunkShape[0]
         # And where in the chunk does it go?
-        chunkOffset = index % self.CHUNK_SHAPE[0]
+        chunkOffset = index % self.chunkShape[0]
         if chunkIdx not in self._chunksToWrite:
             # Allocate a new chunk.
             # Note that we can't just statically allocate one chunk buffer because we don't
             # guarantee the order that the results will arrive in.
-            numToAdd = self.CHUNK_SHAPE[0]
-            if chunkIdx == self.numSamples // self.CHUNK_SHAPE[0]:
-                numToAdd = self.numSamples % self.CHUNK_SHAPE[0]
-            curChunkShape = (numToAdd, self.CHUNK_SHAPE[1], self.CHUNK_SHAPE[2])
+            numToAdd = self.chunkShape[0]
+            if chunkIdx == self.numSamples // self.chunkShape[0]:
+                numToAdd = self.numSamples % self.chunkShape[0]
+            curChunkShape = (numToAdd, self.chunkShape[1], self.chunkShape[2])
             self._chunksToWrite[chunkIdx] = {
                 "shap": np.empty(curChunkShape, dtype=IMPORTANCE_T),
                 "sequence": np.empty(curChunkShape, dtype=ONEHOT_T),
                 "numToAdd": numToAdd,
-                "writeStart": chunkIdx * self.CHUNK_SHAPE[0],
-                "writeEnd": chunkIdx * self.CHUNK_SHAPE[0] + numToAdd}
+                "writeStart": chunkIdx * self.chunkShape[0],
+                "writeEnd": chunkIdx * self.chunkShape[0] + numToAdd}
 
         curChunk = self._chunksToWrite[chunkIdx]
         curChunk["numToAdd"] -= 1
@@ -760,7 +810,6 @@ class ListGenerator(Generator):
         into a list, so very large iterables will consume a lot of memory.
     :param passDataList: (optional) Will be passed through the batcher to
         the saver.
-
     """
 
     def __init__(self, sequences: Iterable[str],
@@ -771,6 +820,11 @@ class ListGenerator(Generator):
         self._passDataList = passDataList
 
     def construct(self):
+        """Set up stuff in the child thread.
+
+        Note that this doesn't load data - because the child thread is
+        forked from the parent, it already contains the lists of data.
+        """
         self._indexes = list(range(len(self._sequences)))
         if self._passDataList is None:
             self._passData = [""] * len(self._sequences)
@@ -778,13 +832,15 @@ class ListGenerator(Generator):
             self._passData = self._passDataList
 
     def done(self):
-        pass
+        """Called in the child thread, does nothing."""
 
     def __iter__(self):
+        """Returns self, because Generators are iterable."""
         return self
 
     def __next__(self) -> Query:
-        if not len(self._sequences):
+        """Get the next query, or raise StopIteration."""
+        if len(self._sequences) == 0:
             raise StopIteration()
         # Eat the first sequence, index, and passData, then return a query.
         oneHotSequence = utils.oneHotEncode(self._sequences[0])
@@ -820,6 +876,7 @@ class FastaGenerator(Generator):
         logging.info("Fasta generator initialized with {0:d} regions.".format(self.numRegions))
 
     def construct(self):
+        """Open the file and start reading."""
         logging.info("Constructing fasta generator in its thread.")
         self.fastaFile = open(self.fastaFname, "r")
         self.nextSequenceID = self.fastaFile.readline()[1:].strip()
@@ -827,14 +884,17 @@ class FastaGenerator(Generator):
         logging.debug("Initial sequence to read: {0:s}".format(self.nextSequenceID))
 
     def done(self):
+        """Close the Fasta file."""
         logging.info("Closing fasta generator.")
         self.fastaFile.close()
 
     def __iter__(self):
+        """Return self, because generators are Iterable."""
         logging.debug("Creating fasta iterator.")
         return self
 
     def __next__(self) -> Query:
+        """Get the next Query."""
         if self.nowStop:
             raise StopIteration()
         sequence = ""
@@ -845,7 +905,7 @@ class FastaGenerator(Generator):
                 self.nowStop = True
                 break
             if nextLine[0] == ">":
-                self.nextSequnceID = nextLine[1:].strip()
+                self.nextSequenceID = nextLine[1:].strip()
                 break
             sequence += nextLine.strip()
         oneHotSequence = utils.oneHotEncode(sequence)
@@ -883,6 +943,7 @@ class FlatBedGenerator(Generator):
         logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
     def construct(self):
+        """Open the bed file and fasta genome."""
         # We create a list of all the regions now, but we'll look up the sequences
         # and stuff on the fly.
         logging.info("Constructing bed generator it its thread.")
@@ -898,7 +959,7 @@ class FlatBedGenerator(Generator):
         return self
 
     def __next__(self) -> Query:
-        # Get the sequence and make a Query with it.
+        """Get the next sequence and make a Query with it."""
         if self.readHead >= len(self.shapTargets):
             raise StopIteration()
         r = self.shapTargets[self.readHead]
@@ -912,13 +973,13 @@ class FlatBedGenerator(Generator):
         return ret
 
     def done(self):
+        """Close the fasta file."""
         logging.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
         self.genome.close()
 
 
 class PisaBedGenerator(Generator):
-    """Reads in lines from a bed file and fetches the genomic sequence
-    at every base.
+    """Reads in lines from a bed file and fetches the genomic sequence at every base.
 
     This is very different than the :py:class:`~FlatBedGenerator`, which generates
     one sequence query per bed file entry. This class generates a query for every
@@ -929,6 +990,7 @@ class PisaBedGenerator(Generator):
     :param inputLength: The input length of your model.
     :param outputLength: The output length of your model.
     """
+
     def __init__(self, bedFname: str, genomeFname: str, inputLength: int, outputLength: int):
         logging.info("Creating bed generator.")
         self.bedFname = bedFname
@@ -946,6 +1008,7 @@ class PisaBedGenerator(Generator):
         logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
     def construct(self):
+        """Run in the child thread, opens up the files and reads the bed."""
         # We create a list of all the regions now, but we'll look up the sequences
         # and stuff on the fly.
         logging.debug("Constructing bed generator it its thread.")
@@ -962,7 +1025,7 @@ class PisaBedGenerator(Generator):
         return self
 
     def __next__(self) -> Query:
-        # Get the sequence and make a Query with it.
+        """Get the next sequence and make a Query with it."""
         if self.readHead >= len(self.shapTargets):
             raise StopIteration()
         curChrom, curStart = self.shapTargets[self.readHead]
@@ -976,6 +1039,7 @@ class PisaBedGenerator(Generator):
         return ret
 
     def done(self):
+        """Close the fasta."""
         logging.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
         self.genome.close()
 
@@ -985,7 +1049,6 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                        taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int,
                        profileFname: Optional[str] = None):
     """The thread that spins up the batcher."""
-
     logging.debug("Starting flat batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
@@ -1082,7 +1145,9 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
 
 
 class _PisaBatcher:
-    """The workhorse of this stack, it accepts queries until its internal storage is full,
+    """The workhorse of this stack.
+
+    Accepts queries until its internal storage is full,
     then predicts them all at once, and runs shap.
 
     :param modelFname: The name of the keras model to interpret.
@@ -1129,28 +1194,35 @@ class _PisaBatcher:
             self.generateShuffles)
         logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
-    def generateShuffles(self, model_inputs):
+    def generateShuffles(self, modelInputs):
+        """Callback for shap."""
         if self.kmerSize == 1:
             rng = np.random.default_rng(seed=355687)
-            shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
+            shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
             shuffles = np.array(shuffles)
             return [shuffles]
         else:
-            shuffles = ushuffle.shuffleOHE(model_inputs[0], self.kmerSize, self.numShuffles,
+            shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
                                            seed=355687)
             return [shuffles]
 
     def addSample(self, query: Query):
+        """Add a query to the batch.
+
+        Runs the batch if it has enough work accumulated.
+        """
         self.curBatch.append(query)
         if len(self.curBatch) >= self.batchSize:
             self.finishBatch()
 
     def finishBatch(self):
-        if len(self.curBatch):
+        """If there's any work waiting to be done, do it."""
+        if len(self.curBatch) > 0:
             self.runPrediction()
             self.curBatch = []
 
     def runPrediction(self):
+        """Actually run the batch."""
         # Now for the meat of all this boilerplate. Take the query sequences and
         # run them through the model, then run the shuffles, then run shap.
         # Finally, put all the results in the output queue.
@@ -1204,7 +1276,9 @@ class _PisaBatcher:
 
 
 class _FlatBatcher:
-    """The workhorse of this stack, it accepts queries until its internal storage is full,
+    """The workhorse of this stack.
+
+    Accepts queries until its internal storage is full,
     then predicts them all at once, and runs shap.
 
     :param modelFname: The name of the keras model to interpret.
@@ -1264,28 +1338,32 @@ class _FlatBatcher:
 
         logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
-    def generateShuffles(self, model_inputs):
+    def generateShuffles(self, modelInputs):
+        """Callback for shap."""
         if self.kmerSize == 1:
             rng = np.random.default_rng(seed=355687)
-            shuffles = [rng.permutation(model_inputs[0], axis=0) for _ in range(self.numShuffles)]
+            shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
             shuffles = np.array(shuffles)
             return [shuffles]
         else:
-            shuffles = ushuffle.shuffleOHE(model_inputs[0], self.kmerSize, self.numShuffles,
+            shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
                                            seed=355687)
             return [shuffles]
 
     def addSample(self, query: Query):
+        """Append the sample to the work queue."""
         self.curBatch.append(query)
         if len(self.curBatch) >= self.batchSize:
             self.finishBatch()
 
     def finishBatch(self):
-        if len(self.curBatch):
+        """If there's any work to do, finish it."""
+        if len(self.curBatch) > 0:
             self.runPrediction()
             self.curBatch = []
 
     def runPrediction(self):
+        """Actually run the calculation."""
         # Now for the meat of all this boilerplate. Take the query sequences and
         # run them through the model, then run the shuffles, then run shap.
         # Finally, put all the results in the output queue.
@@ -1315,16 +1393,19 @@ class _FlatBatcher:
 
 
 def combineMultAndDiffref(mult, orig_inp, bg_data):
-    """This is injected deep into shap and generates the hypothetical importance scores."""
+    """Combine the shap multipliers and difference from reference to generate hypothetical scores.
+
+    This is injected deep into shap and generates the hypothetical importance scores.
+    """
     # This is copied from Zahoor's code.
-    projected_hypothetical_contribs = \
+    projectedHypotheticalContribs = \
         np.zeros_like(bg_data[0]).astype('float')
     assert len(orig_inp[0].shape) == 2
     for i in range(4):  # We're going to go over all the base possibilities.
-        hypothetical_input = np.zeros_like(orig_inp[0]).astype('float')
-        hypothetical_input[:, i] = 1.0
-        hypothetical_diffref = hypothetical_input[None, :, :] - bg_data[0]
-        hypothetical_contribs = hypothetical_diffref * mult[0]
-        projected_hypothetical_contribs[:, :, i] = np.sum(hypothetical_contribs, axis=-1)
+        hypotheticalInput = np.zeros_like(orig_inp[0]).astype('float')
+        hypotheticalInput[:, i] = 1.0
+        hypotheticalDiffref = hypotheticalInput[None, :, :] - bg_data[0]
+        hypotheticalContribs = hypotheticalDiffref * mult[0]
+        projectedHypotheticalContribs[:, :, i] = np.sum(hypotheticalContribs, axis=-1)
     # There are no bias importances, so the np.zeros_like(orig_inp[1]) is not needed.
-    return [np.mean(projected_hypothetical_contribs, axis=0)]
+    return [np.mean(projectedHypotheticalContribs, axis=0)]

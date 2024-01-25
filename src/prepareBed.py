@@ -248,7 +248,7 @@ def removeOverlaps(config, regions, genome):
             # No overlap, commit and reset the pile.
             piles.append(curPile)
             curPile = [r]
-    if len(curPile):
+    if len(curPile) > 0:
         piles.append(curPile)
     ret = []
     rejects = []
@@ -493,14 +493,14 @@ def prepareBeds(config):
 
 if __name__ == "__main__":
     import sys
-    config = json.load(open(sys.argv[1]))
-    utils.setVerbosity(config["verbosity"])
-    logging.info("Validating input JSON.")
+    with open(sys.argv[1], "r") as fp:
+        configJson = json.load(fp)
+    utils.setVerbosity(configJson["verbosity"])
     import bpreveal.schema
     try:
-        bpreveal.schema.prepareBed_old.validate(config)
+        bpreveal.schema.prepareBed_old.validate(configJson)
         logging.warning("Json validated against the old prepareBed format."
                         "This will be an error in BPReveal 5.0")
     except jsonschema.ValidationError:
-        bpreveal.schema.prepareBed.validate(config)
-    prepareBeds(config)
+        bpreveal.schema.prepareBed.validate(configJson)
+    prepareBeds(configJson)

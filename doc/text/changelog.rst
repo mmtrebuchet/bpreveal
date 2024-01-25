@@ -1,29 +1,57 @@
 Changelog
 =========
 
-This is the detailed changelog. If you're looking for breaking changes, see
-:doc:`breakingChanges`.
+This is the detailed changelog. If you're just looking for breaking changes,
+see :doc:`breakingChanges`.
 
 
 BPReveal 4.x
 ------------
 
+BPReveal 4.0.x
+^^^^^^^^^^^^^^
+
 Version 4.0.2, 2024-DATEDATEDATE
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''''''
+
+BREAKING CHANGES:
+    * A few internal variable names were switched from snake_case to camelCase.
+      This should not have any effect on code that uses BPReveal.
 
 ENHANCEMENTS:
     * A complete overhaul of the documentation means that we now have on-line
       docs for all of the components of BPReveal, all with type annotations.
       The old overview.pdf has been removed and split up across many webpages.
-    * Many functions that were previously undocumented are now fully-documented.
-    * Automated the testing of schemas. The runTests.py script will automatically
-      go through all the test cases.
+    * Many functions that were previously undocumented are now
+      fully-documented.
+    * Automated the testing of schemas. The runTests.py script will
+      automatically go through all the test cases.
+    * Added a feature to
+      :py:mod:`makePredictionsFasta<bpreveal.makePredictionsFasta>` where you
+      can specify a bed file and a genome. If you do, then the coordinate
+      information from that bed will be saved in the output h5 and you can use
+      :py:mod:`predictToBigwig<bpreveal.predictToBigwig>` with it. Added the
+      same feature to interpretFlat, so you can use it with
+      :py:mod:`shapToBigwig<bpreveal.shapToBigwig>`.
+    * Two new functions:
+      :py:func:`utils.blankChromosomeArrays<bpreveal.utils.blankChromosomeArrays>`
+      and :py:func:`utils.writeBigwig<bpreveal.utils.writeBigwig>`
+    * Added new arguments to
+      :py:func:`utils.loadChromSizes<bpreveal.utils.loadChromSizes`. These let
+      you pass in things other than a ``chrom.sizes`` file name. You can now
+      provide a genome fasta, a bigwig, and a bunch of other things.
+
+
+BUG FIXES:
+    * The dummy progress bar for an int passed to
+      :py:func:`utils.wrapTqdm<bpreveal.utils.wrapTqdm>` returned the dummyPbar
+      *class*, not an *object*. This has been fixed.
 
 CONTRIBUTORS:
     Charles McAnany
 
 Version 4.0.1, 2024-01-17
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * Added the option to specify the kmer size for the shuffles in shap value
@@ -45,7 +73,7 @@ BUG FIXES:
       non-iterable tqdm object as an iterable in a loop. This has been fixed.
 
 Version 4.0.0, 2024-01-10
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * interpretFlat now produces h5 files that use integer indexes for the
@@ -97,21 +125,25 @@ CONTRIBUTORS:
 BPReveal 3.x
 ------------
 
+BPReveal 3.6.x
+^^^^^^^^^^^^^^
+
 Version 3.6.1, 2023-12-05
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * Added a version of ushuffle that is compatible with python 3.11. This is
       now part of the main bpreveal repository, in the src/internal directory.
     * Implemented an adaptive counts loss weight algorithm, so you can specify
-      the fraction of the loss due to counts instead of a raw λ parameter.
+      the fraction of the loss due to counts instead of a raw :math:`{\lambda}`
+      parameter.
 
 CONTRIBUTORS:
     Charles McAnany
 
 
 Version 3.6.0, 2023-11-06
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * The old predictToBigwig script had odd behavior with overlapping inputs.
@@ -132,8 +164,11 @@ BUG FIXES:
 CONTRIBUTORS:
     Charles McAnany
 
+BPReveal 3.5.x
+^^^^^^^^^^^^^^
+
 Version 3.5.3, 2023-11-03
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 NEW FEATURES:
     * Added a bedUtils.py library with useful tools for manipulating bed files.
@@ -146,7 +181,7 @@ CONTRIBUTORS:
     Charles McAnany
 
 Version 3.5.2, 2023-10-26
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 NEW FEATURES:
     * Added a script to calculate the right counts loss weight given a model
@@ -160,7 +195,7 @@ CONTRIBUTORS:
 
 
 Version 3.5.1, 2023-10-23
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 BUG FIXES:
     * Building conda environments is always haunted. Fixed problems with model
@@ -172,7 +207,7 @@ CONTRIBUTORS:
 
 
 Version 3.5.0, 2023-10-17
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 BREAKING CHANGES
     * This should not have any effects on typical uses, but BPReveal now uses
@@ -212,8 +247,11 @@ ENHANCEMENTS:
 CONTRIBUTORS:
     Charles McAnany
 
+BPReveal 3.4.x
+^^^^^^^^^^^^^^
+
 Version 3.4.0, 2023-10-06
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 NEW FEATURES:
     * CWM scanning is now implemented. This takes the output from modisco and
@@ -225,8 +263,11 @@ CONTRIBUTORS:
     Melanie Weilert, Charles McAnany
 
 
+BPReveal 3.3.x
+^^^^^^^^^^^^^^
+
 Version 3.3.2, 2023-09-19
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 BUG FIXES:
     * Updated the conda install script to be compatible with Tensorflow 2.12.
@@ -240,7 +281,7 @@ CONTRIBUTORS:
 
 
 Version 3.3.1, 2023-08-30
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * Added a "heads" section to prepareBed.py json files. This lets you
@@ -270,7 +311,7 @@ CONTRIBUTORS:
 
 
 Version 3.3.0, 2023-06-23
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 NEW FEATURES:
     * Added a genetic algorithm module. See the demo pdfs for how to use them.
@@ -287,8 +328,12 @@ CONTRIBUTORS:
     Charles McAnany
 
 
+BPReveal 3.2.x
+^^^^^^^^^^^^^^
+
 Version 3.2.0, 2023-05-17
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
+
 NEW FEATURES:
     * Previously, if a solo model had a different input length than the
       residual model, you could not combine them. Melanie added logic so that
@@ -303,8 +348,11 @@ ENHANCEMENTS:
 CONTRIBUTORS:
     Melanie Weilert (cropdown logic), Charles McAnany (code cleanup)
 
+BPReveal 3.1.x
+^^^^^^^^^^^^^^
+
 Version 3.1.0, 2023-05-14
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 NEW FEATURES:
     * Added an automatic reverse complement strand selection feature. Instead
@@ -322,8 +370,11 @@ CONTRIBUTORS:
     Charles McAnany
 
 
+BPReveal 3.0.x
+^^^^^^^^^^^^^^
+
 Version 3.0.1, 2023-04-26
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * Formatted the code throughout the repository to more closely comply with
@@ -336,7 +387,8 @@ CONTRIBUTORS:
     Charles McAnany
 
 Version 3.0.0, 2023-03-10
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
+
 BREAKING CHANGES:
     * There is a new "remove-overlaps" field that is mandatory in prepareBed.py
       json files. If set to true, then you can set how close two peaks must be
@@ -370,8 +422,11 @@ CONTRIBUTORS:
 BPReveal 2.x
 ------------
 
+BPReveal 2.0.x
+^^^^^^^^^^^^^^
+
 Version 2.0.2, 2023-02-17
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 ENHANCEMENTS:
     * interpretPisaBed.py will now include predictions and reference
       predictions in the output hdf5.
@@ -381,7 +436,7 @@ CONTRIBUTORS:
 
 
 Version 2.0.1, 2023-02-09
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 ENHANCEMENTS:
     * prepareBed.py will no longer replace the names in your bed files; the
       generated files will have the same names as the input beds. (Suggested by
@@ -392,7 +447,7 @@ CONTRIBUTORS:
 
 
 Version 2.0.0, 2023-02-07
-^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * Added a reverse-complement flag to prepareTrainingData.py. If this is set

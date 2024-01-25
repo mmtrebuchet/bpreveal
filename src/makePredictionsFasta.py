@@ -42,6 +42,12 @@ num-threads
     (Optional) How many parallel predictors should be run? Unless you're really taxed
     for performance, leave this at 1.
 
+bed-file, genome
+    These are optional. If provided, then the output hdf5 will contain ``chrom_names``,
+    ``chrom_sizes``, ``coords_chrom``, ``coords_start``, and ``coords_end`` datasets,
+    in addition to the descriptions dataset. This way, you can make predictions from a
+    fasta but then easily convert it to a bigwig.
+
 Output Specification
 --------------------
 This program will produce an hdf5-format file containing the predicted values.
@@ -68,6 +74,11 @@ head_0, head_1, head_2, ...
         Don't forget that you must calculate the softmax on the whole
         set of logits, not on each task's logits independently.
         (Use :py:func:`bpreveal.utils.logitsToProfile` to do this.)
+
+chrom_names, chrom_sizes, coords_chrom, coords_start, coords_stop
+    If you provided ``bed-file`` and ``genome`` entries in your json,
+    these datasets will be populated. They mirror their meaning in the
+    output from :py:mod:`makePredictionsBed<bpreveal.makePredictionsBed>`.
 
 API
 ---
@@ -109,7 +120,7 @@ class FastaReader:
                 line = line.strip()  # Get rid of newlines.
                 if len(line) == 0:
                     continue  # There is a blank line. Ignore it.
-                elif line[0] == '>':
+                if line[0] == '>':
                     self.numPredictions += 1
             fp.close()
         logging.info("Found {0:d} entries in input fasta".format(self.numPredictions))
@@ -145,7 +156,8 @@ class H5Writer:
 
     """
 
-    def __init__(self, fname, numHeads, numPredictions):
+    def __init__(self, fname, numHeads, numPredictions,
+                 bedFname: str | None = None, genomeFname: str | None = None):
         """Load everything that can be loaded before the subprocess launches."""
         self._fp = h5py.File(fname, 'w')
         self.numHeads = numHeads
@@ -153,6 +165,15 @@ class H5Writer:
         self.writeHead = 0
         self.batchWriteHead = 0
         self.writeChunkSize = 100
+        if bedFname is not None:
+            logging.info("Adding coordinate information.")
+            import pybedtools
+            import pysam
+            from bpreveal import makePredictionsBed
+            assert genomeFname is not None, "Must supply a genome to get coordinate information."
+            regions = pybedtools.BedTool(bedFname)
+            with pysam.FastaFile(genomeFname) as genome:
+                makePredictionsBed.addCoordsInfo(regions, self._fp, genome)
         # We don't know the output length yet, since the model hasn't run any batches.
         # We'll construct the datasets on the fly once we get our first output.
 
@@ -261,7 +282,12 @@ def main(config):
                                                numThreads=config["num-threads"])
     else:
         batcher = utils.BatchPredictor(modelFname, batchSize)
-    writer = H5Writer(outFname, numHeads, fastaReader.numPredictions)
+    if "coordinates" in config:
+        writer = H5Writer(outFname, numHeads, fastaReader.numPredictions,
+                          config["coordinates"]["bed-file"],
+                          config["coordinates"]["genome"])
+    else:
+        writer = H5Writer(outFname, numHeads, fastaReader.numPredictions)
     logging.info("Entering prediction loop.")
     # Now we just iterate over the fasta file and submit to our batcher.
     with batcher:

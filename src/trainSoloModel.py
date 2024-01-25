@@ -246,7 +246,7 @@ if __name__ == "__main__":
     import sys
 
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.trainSoloModel.validate(config)
-    main(config)
+    bpreveal.schema.trainSoloModel.validate(configJson)
+    main(configJson)

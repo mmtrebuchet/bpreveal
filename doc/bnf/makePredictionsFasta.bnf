@@ -1,7 +1,8 @@
 <prediction-fasta-input-configuration> ::=
     { <prediction-fasta-settings-section>,
       <prediction-fasta-input-section>,
-      <prediction-fasta-threads-section>
+      <prediction-fasta-threads-section>,
+      <prediction-fasta-coordinates-section>,
       <verbosity-section> }
 
 <prediction-fasta-settings-section> ::=
@@ -17,3 +18,9 @@
 <prediction-fasta-threads-section> ::=
     "num-threads" : <integer>,
   | <empty>
+
+<prediction-fasta-coordinates-section> ::=
+    <empty>
+  | "coordinates" : {
+        "bed-file" : <file-name>,
+        "genome" : <file-name>},

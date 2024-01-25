@@ -1,3 +1,4 @@
+"""Lots of helpful utilities for working with models."""
 import logging
 import multiprocessing
 import numpy as np
@@ -5,56 +6,87 @@ import scipy
 import numpy.typing as npt
 import typing
 import tqdm
+import pyBigWig
+import pysam
 
-ONEHOT_T = np.uint8
-ONEHOT_AR_T = npt.NDArray[ONEHOT_T]
-PRED_T = np.float32
-PRED_AR_T = npt.NDArray[PRED_T]
+ONEHOT_T: typing.TypeAlias = np.uint8
+"""Data type for elements of a one-hot encoded sequence.
 
-# Store importance scores with 16 bits of precision. Since importance scores
-# (particularly PISA values) take up a lot of space, I use a small floating point type
-# and compression to mitigate the amount of data.
-IMPORTANCE_T = np.float16
+"""
+ONEHOT_AR_T: typing.TypeAlias = npt.NDArray[ONEHOT_T]
+"""Data type for an array of one-hot encoded sequences"""
+PRED_T: typing.TypeAlias = np.float32
+"""Data type for logits and logcounts."""
+PRED_AR_T: typing.TypeAlias = npt.NDArray[PRED_T]
+"""Data type for an array of predictions."""
 
-# Inside the models, we use floating point numbers to represent one-hot sequences.
-# For reasons I don't understand, setting this to uint8 DESTROYS pisa values.
-MODEL_ONEHOT_T = np.float32
+IMPORTANCE_T: typing.TypeAlias = np.float16
+"""Store importance scores with 16 bits of precision.
 
-# The type used to represent cwms and pwms, and also the type used by the jaccard code.
-# If you change this, be sure to change libJaccard.c and libJaccard.pyf (and run make)
-# so that the jaccard library uses the correct data type.
-MOTIF_FLOAT_T = np.float32
+Since importance scores (particularly PISA values) take up a lot of space, I
+use a small floating point type and compression to mitigate the amount of data.
+"""
 
+MODEL_ONEHOT_T: typing.TypeAlias = np.float32
+"""Inside the models, we use floating point numbers to represent one-hot sequences.
 
-# When saving large hdf5 files, store the data in compressed chunks.
-# This constant sets the number of entries in each chunk that gets compressed.
-# For good performance, whenever you read a compressed hdf5 file, it really helps
-# if you read out whole chunks at a time and buffer them. See, for example,
-# shapToBigwig.py for an example of a chunked reader.
-H5_CHUNK_SIZE = 128
+For reasons I don't understand, setting this to uint8 DESTROYS pisa values.
+"""
 
-# In parallel code, if something goes wrong, a queue could stay stuck forever.
-# Python's queues have a nifty timeout parameter so that they'll crash if they wait
-# too long. If a queue has been blocking for longer than this timeout, have the
-# program crash.
-QUEUE_TIMEOUT = 60  # (seconds)
+MOTIF_FLOAT_T: typing.TypeAlias = np.float32
+"""The type used to represent cwms and pwms, and also the type used by the jaccard code.
+
+If you change this, be sure to change libJaccard.c and libJaccard.pyf (and run
+make) so that the jaccard library uses the correct data type.
+"""
 
 
-# This gets set to True if you use any of the tensorflow-importing functions in this
-# file. If you import tensorflow in a parent process, child processes will not be able
-# to use tensorflow, because tensorflow is dumb like that. Tools like the easy® functions
-# and the threaded batcher check to see if Tensorflow has been loaded in the parent process
-# before they spawn children.
-GLOBAL_TENSORFLOW_LOADED = False
+H5_CHUNK_SIZE: int = 128
+"""When saving large hdf5 files, store the data in compressed chunks.
+
+This constant sets the number of entries in each chunk that gets compressed.
+For good performance, whenever you read a compressed hdf5 file, it really helps
+if you read out whole chunks at a time and buffer them. See, for example,
+:py:mod:`shapToBigwig<bpreveal.shapToBigwig>` for an example of a chunked
+reader.
+"""
+
+QUEUE_TIMEOUT: int = 240  # (seconds)
+"""How long should a queue wait before crashing?
+
+In parallel code, if something goes wrong, a queue could stay stuck forever.
+Python's queues have a nifty timeout parameter so that they'll crash if they
+wait too long. If a queue has been blocking for longer than this timeout, have
+the program crash.
+
+This is measured in seconds.
+"""
+
+
+GLOBAL_TENSORFLOW_LOADED: bool = False
+"""Has Tensorflow been loaded in this process?
+
+This gets set to True if you use any of the tensorflow-importing functions in
+this file. If you import tensorflow in a parent process, child processes will
+not be able to use tensorflow, because tensorflow is dumb like that. Tools like
+the easy® functions and the threaded batcher check to see if Tensorflow has
+been loaded in the parent process before they spawn children.
+"""
 
 
 def loadModel(modelFname: str):
-    """A simple wrapper to load up a BPReveal model.
-    modelFname is the name of the model that Keras saved earlier, typically
-    a directory.
-    Returns a Keras Model object.
+    """Load up a BPReveal model.
+
+    .. note::
+        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+
+    :param modelFname: The name of the model that Keras saved earlier, typically
+        a directory.
+    :return: A Keras Model object.
+
     The returned model does NOT support additional training, since it uses a
-    dummy loss."""
+    dummy loss.
+    """
     from keras.models import load_model
     from bpreveal.losses import multinomialNll, dummyMse
     model = load_model(modelFname,
@@ -68,22 +100,52 @@ def loadModel(modelFname: str):
 def setMemoryGrowth() -> None:
     """Turn on the tensorflow option to grow memory usage as needed.
 
+    .. note::
+        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+
     All of the main programs in BPReveal do this, so that you can
-    use your GPU for other stuff as you work with models."""
+    use your GPU for other stuff as you work with models.
+    """
     import tensorflow as tf
     gpus = tf.config.list_physical_devices('GPU')
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
         logging.debug("GPU memory growth enabled.")
-    except Exception as inst:
-        logging.warning(str(inst))
+    except Exception as inst:  # pylint: disable=broad-exception-caught
         logging.warning("Not using GPU")
+        logging.debug("Because: " + str(inst))
     global GLOBAL_TENSORFLOW_LOADED
     GLOBAL_TENSORFLOW_LOADED = True
 
 
-def limitMemoryUsage(fraction: float, offset: float) -> None:
-    # Limit tensorflow to use only the given fraction of memory.
+def limitMemoryUsage(fraction: float, offset: float) -> float:
+    """Limit tensorflow to use only the given fraction of memory.
+
+    .. note::
+        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+
+    This will allocate ``total-memory * fraction - offset``
+    Why use this? Well, for running multiple processes on the same GPU, you don't
+    want to have them both allocating all the memory. So if you had two processes,
+    you'd do something like::
+
+        def child1():
+            utils.limitMemoryUsage(0.5, 1024)
+            # Load model, do stuff.
+
+        def child2():
+            utils.limitMemoryUsage(0.5, 1024)
+            # Load model, do stuff.
+
+        p1 = multiprocessing.Process(target=child1); p1.start()
+        p2 = multiprocessing.Process(target=child2); p2.start()
+
+    And now each process will use (1024 MB less than) half the total GPU memory.
+
+    :param fraction: How much of the memory on the GPU can I have?
+    :param offset: How much memory (in MB) should be reserved when I carve out my fraction?
+    :return: The memory (in MB) reserved.
+    """
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
     import os
     import subprocess as sp
@@ -126,20 +188,152 @@ def limitMemoryUsage(fraction: float, offset: float) -> None:
     logging.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
     global GLOBAL_TENSORFLOW_LOADED
     GLOBAL_TENSORFLOW_LOADED = True
+    return useMem
 
 
-def loadChromSizes(fname: str) -> dict[str, int]:
-    # Read in a chrom sizes file and return a dictionary mapping chromosome name → size
+def loadChromSizes(chromSizesFname: str | None = None, genomeFname: str | None = None,
+                   bwHeader: dict[str, int] | None = None,
+                   bw: pyBigWig.pyBigWig | None = None,
+                   fasta: pysam.FastaFile | None = None) -> dict[str, int]:
+    """Read in a chrom sizes file and return a dictionary mapping chromosome name → size.
+
+    Exactly one of the supplied parameters may be None.
+
+    :param chromSizesFname: The name of a chrom.sizes file on disk.
+    :param genomeFname: The name of a genome fasta file on disk.
+    :param bwHeader: A dictionary loaded from a bigwig.
+        (Using this makes this function a no-op.)
+    :param bw: An opened bigwig file.
+    :param fasta: An opened genome fasta.
+
+    :return: {"chr1": 1234567, "chr2": 43212567, ...}
+
+    """
+    if chromSizesFname is not None:
+        ret = dict()
+        with open(chromSizesFname, 'r') as fp:
+            for line in fp:
+                if len(line) > 2:
+                    chrom, size = line.split()
+                    ret[chrom] = int(size)
+        return ret
+    if genomeFname is not None:
+        with pysam.FastaFile(genomeFname) as genome:
+            chromNames = genome.references
+            ret = dict()
+            for chromName in chromNames:
+                ret[chromName] = genome.get_reference_length(chromName)
+        return ret
+    if bwHeader is not None:
+        return bwHeader
+    if bw is not None:
+        return bw.chroms()
+    if fasta is not None:
+        chromNames = fasta.references
+        ret = dict()
+        for chromName in chromNames:
+            ret[chromName] = fasta.get_reference_length(chromName)
+        return ret
+    assert False, "You can't ask for chrom sizes without some argument!"
+
+
+def blankChromosomeArrays(genomeFname: str | None = None, chromSizesFname: str | None = None,
+                          bwHeader: dict[str, int] | None = None,
+                          chromSizes: dict[str, int] | None = None,
+                          bw: pyBigWig.pyBigWig | None = None,
+                          fasta: pysam.FastaFile | None = None,
+                          dtype: type = np.float32,
+                          numTracks: int = 1):
+    """Get a set of blank numpy arrays that you can use to save genome-wide data.
+
+    Exactly one of ``chromSizesFname``, ``genomeFname``, ``bwHeader``,
+    ``chromSizes``, ``bw``, or ``fasta`` may be None.
+
+    :param chromSizesFname: The name of a chrom.sizes file on disk.
+    :param genomeFname: The name of a genome fasta file on disk.
+    :param bwHeader: A dictionary loaded from a bigwig.
+    :param chromSizes: A dictionary mapping chromosome name to length.
+    :param bw: An opened bigwig file.
+    :param fasta: An opened genome fasta.
+    :param dtype: The type of the arrays that will be returned.
+    :param numTracks: How many tracks of data do you have?
+
+    :return: A dict mapping chromosome name to a numpy array.
+
+    The returned dict will have an element for every chromosome in the input.
+    The shape of each element of the dictionary will be (chromosome-length, numTracks).
+
+    """
+    if chromSizes is None:
+        chromSizes = loadChromSizes(genomeFname=genomeFname,
+                                    chromSizesFname=chromSizesFname,
+                                    bwHeader=bwHeader, bw=bw, fasta=fasta)
     ret = dict()
-    with open(fname, 'r') as fp:
-        for line in fp:
-            if len(line) > 2:
-                chrom, size = line.split()
-                ret[chrom] = int(size)
+    for chromName in chromSizes.keys():
+        newAr = np.zeros((chromSizes[chromName], numTracks), dtype=dtype)
+        ret[chromName] = newAr
     return ret
 
 
+def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
+                regionList: list[tuple[str, int, int]] | None = None,
+                regionData: typing.Any = None,
+                chromSizes: dict[str, int] | None = None):
+    """Write a bigwig file given some region data.
+
+    You must specify either:
+
+    * ``chromDict``, in which case ``regionList``, ``chromSizes``
+        and ``regionData`` must be ``None``, or
+    * ``regionList``, ``chromSizes``, and ``regionData``, in which
+        case ``chromDict`` must be ``None``.
+
+    :param bwFname: The name of the bigwig file to write.
+    :param chromDict: A dict mapping chromosome names to the data for that
+        chromosome. The data should have shape (chromosome-length,).
+    :param regionList: A list of (chrom, start, end) tuples giving the
+        locations where the data should be saved.
+    :param regionData: An iterable with the same length as ``regionList``.
+        The ith element of ``regionData`` will be
+        written to the ith location in ``regionList``.
+    :param chromSizes: A dict mapping chromosome name → chromosome size.
+    """
+    if chromDict is None:
+        logging.debug("Got regionList, regionData, chromSizes. Building chromosome dict.")
+        assert chromSizes is not None and regionList is not None and regionData is not None, \
+            "Must provide chromSizes, regionList, and regionData if chromDict is None."
+        chromDict = blankChromosomeArrays(bwHeader=chromSizes)
+        for i, r in enumerate(regionList):
+            chrom, start, end = r
+            chromDict[chrom][start:end] = regionData[i]
+    else:
+        chromSizes = dict()
+        for c in chromDict.keys():
+            chromSizes[c] = len(chromDict[c])
+    # Now we just write the chrom dict.
+    outBw = pyBigWig.open(bwFname, "w")
+    logging.debug("Starting to write data to bigwig.")
+    header = [(x, chromSizes[x]) for x in sorted(list(chromSizes.keys()))]
+    outBw.addHeader(header)
+
+    for chromName in sorted(list(chromDict.keys())):
+        vals = [float(x) for x in chromDict[chromName]]
+        outBw.addEntries(chromName, 0, values=vals,
+                         span=1, step=1)
+    logging.debug("Data written. Closing bigwig.")
+    outBw.close()
+    logging.debug("Bigwig closed.")
+
+
 def setVerbosity(userLevel: str) -> None:
+    """Set the verbosity for this BPReveal session.
+
+    BPReveal uses the python logging module for its printing, and
+    less-important information is logged at lower levels.
+    Level options are CRITICAL, ERROR, WARNING, INFO, and DEBUG.
+
+    :param userLevel: The level of logging that you'd like to enable.
+    """
     levelMap = {"CRITICAL": logging.CRITICAL,
                 "ERROR": logging.ERROR,
                 "WARNING": logging.WARNING,
@@ -152,7 +346,7 @@ def setVerbosity(userLevel: str) -> None:
     logging.debug("Logger configured.")
 
 
-def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,
+def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,  # type: ignore
              **tqdmKwargs):
     """Create a tqdm logger or a dummy, based on current logging level.
 
@@ -160,6 +354,7 @@ def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO
     :param logLevel: The log level at which you'd like the tqdm to print progress.
     :param tqdmKwargs: Additional keyword arguments passed to tqdm.
     :return: Either a tqdm that will do logging, or an iterable that won't log.
+    :rtype: A tqdm-like object supporting either iteration or ``.update()``.
 
     Sometimes, you want to display a tqdm progress bar only if the logging level is
     high. Call this with something you want to iterate over OR an integer giving the
@@ -184,8 +379,9 @@ def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO
                     "INFO": logging.INFO,
                     "DEBUG": logging.DEBUG}
         logLevel = levelMap[logLevel.upper()]
+    logLevel: int = logLevel  # type: ignore
 
-    class dummyPbar:
+    class DummyPbar:
         """This serves as a tqdm-like object that doesn't print anything."""
 
         def update(self):
@@ -195,37 +391,45 @@ def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO
             pass
 
     if type(iterable) is int:
-        if logging.root.isEnabledFor(logLevel):  # type: ignore
+        if logging.root.isEnabledFor(logLevel):
             return tqdm.tqdm(total=iterable, **tqdmKwargs)
         else:
-            return dummyPbar  # type: ignore
+            return DummyPbar()
     else:
-        if logging.root.isEnabledFor(logLevel):  # type: ignore
-            return tqdm.tqdm(iterable, **tqdmKwargs)  # type: ignore
+        iterable: typing.Iterable = iterable  # type: ignore
+        if logging.root.isEnabledFor(logLevel):
+            return tqdm.tqdm(iterable, **tqdmKwargs)
         else:
-            return iterable  # type: ignore
+            return iterable
 
 
 def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
-    """Converts the string sequence into a one-hot encoded numpy array.
-       The returned array will have shape (len(sequence), 4).
-       The columns are, in order, A, C, G, and T.
-       This function will error out if your sequence contains any
-       characters other than ACGTacgt, so N nucleotides are rejected.
-       If allowN is set to True, then any letters that are not in
-       "ACGTacgt" will be encoded to [0, 0, 0, 0].
-       if allowN is False (the default) then any characters other than
-       "ACGTacgt" will raise an AssertionError.
-       The mapping is as follows:
-       Aa → [1, 0, 0, 0]
-       Cc → [0, 1, 0, 0]
-       Gg → [0, 0, 1, 0]
-       Tt → [0, 0, 0, 1]
-       Other → [0, 0, 0, 0]
+    """Convert the string sequence into a one-hot encoded numpy array.
+
+    :param sequence: A DNA sequence to encode.
+        May contain uppercase and lowercase letters.
+    :param allowN: If False (the default), raise an AssertionError if
+        the sequence contains letters other than ``ACGTacgt``.
+        If True, any other characters will be encoded as ``[0, 0, 0, 0]``.
+    :return: An array with shape (len(sequence), 4).
+
+
+    The columns are, in order, A, C, G, and T.
+    The mapping is as follows::
+
+        A or a → [1, 0, 0, 0]
+        C or c → [0, 1, 0, 0]
+        G or g → [0, 0, 1, 0]
+        T or t → [0, 0, 0, 1]
+        Other  → [0, 0, 0, 0]
+
+
     """
     if allowN:
         initFunc = np.zeros
     else:
+        # We're going to overwrite every position, so don't bother with
+        # initializing the array.
         initFunc = np.empty
     ret = initFunc((len(sequence), 4), dtype=ONEHOT_T)
     ordSeq = np.fromstring(sequence, np.int8)  # type:ignore
@@ -240,15 +444,18 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
 
 
 def oneHotDecode(oneHotSequence: np.ndarray) -> str:
-    """Given an array representing a one-hot encoded sequence, convert it back
+    """Take a one-hot encoded sequence and turn it back into a string.
+
+    Given an array representing a one-hot encoded sequence, convert it back
     to a string. The input shall have shape (sequenceLength, 4), and the output
     will be a Python string.
-    The decoding is performed based on the following mapping:
-    [1, 0, 0, 0] → A
-    [0, 1, 0, 0] → C
-    [0, 0, 1, 0] → G
-    [0, 0, 0, 1] → T
-    [0, 0, 0, 0] → N
+    The decoding is performed based on the following mapping::
+
+        [1, 0, 0, 0] → A
+        [0, 1, 0, 0] → C
+        [0, 0, 1, 0] → G
+        [0, 0, 0, 1] → T
+        [0, 0, 0, 0] → N
 
     """
     # Convert to an int8 array, since if we get floating point
@@ -266,7 +473,7 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
 
 
 def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_AR_T:
-    """The easy (and very slow!) way to make predictions with your model.
+    """Make predictions with your model.
 
     :param sequences: The DNA sequence(s) that you want to predict on.
     :param modelFname: The name of the Keras model to use.
@@ -330,7 +537,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
                       heads: int, headID: int, taskIDs: list[int],
                       numShuffles: int = 20, kmerSize: int = 1,
                       keepHypotheticals: bool = False) -> dict[str, npt.NDArray]:
-    """Spins up an entire interpret pipeline just to interpret your sequences.
+    """Spin up an entire interpret pipeline just to interpret your sequences.
 
     You should only use this for quick one-off things since it is EXTREMELY
     slow.
@@ -425,9 +632,12 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
 
 def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
                     logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float32]:
-    """
-    Purpose: Given a single task and region sequence prediction (position x channels),
-        convert output logits/logcounts to human-readable representation of profile prediction.
+    """Take logits and logcounts and turn it into a profile.
+
+    :param logitsAcrossSingleRegion: An array of shape (output-length * num-tasks)
+    :param logCountsAcrossSingleRegion: A single floating-point number
+    :return: An array of shape (output-length * num-tasks), giving the profile
+        predictions.
     """
     # Logits will have shape (output-width x numTasks)
     assert len(logitsAcrossSingleRegion.shape) == 2
@@ -440,10 +650,14 @@ def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
 
 
 class BatchPredictor:
-    """This is a utility class for when you need to make lots of predictions,
-    and you may be generating sequences dynamically. Here's how it works.
-    You first create a predictor by calling BatchPredictor(modelName, batchSize).
-    If you're not sure, a batch size of 64 is probably good.
+    """This is a utility class for when you need to make lots of predictions.
+
+    .. note::
+        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+
+    It's doubly-useful if you are generating sequences dynamically. Here's how
+    it works. You first create a predictor by calling BatchPredictor(modelName,
+    batchSize). If you're not sure, a batch size of 64 is probably good.
 
     Now, you submit any sequences you want predicted, using the submit methods.
 
@@ -461,12 +675,12 @@ class BatchPredictor:
         through the model.
     :param start: Ignored, but present here to give BatchPredictor the same API
         as ThreadedBatchPredictor.
-
     """
 
     def __init__(self, modelFname: str, batchSize: int, start: bool = True) -> None:
-        """Starts up the BatchPredictor. This will load your model,and get
-        ready to make predictions.
+        """Start up the BatchPredictor.
+
+        This will load your model, and get ready to make predictions.
         """
         logging.debug("Creating batch predictor.")
         from collections import deque
@@ -486,19 +700,26 @@ class BatchPredictor:
         del start  # We don't refer to start.
 
     def __enter__(self):
-        """Using this batcher with a context manager does nothing."""
+        """Do nothing; context managers not supported."""
 
     def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
-        """If this batcher was used in a context manager, exiting does nothing, but raises
-        any exceptions that happened."""
+        """Quit the context manager.
+
+        If this batcher was used in a context manager, exiting does nothing, but raises
+        any exceptions that happened.
+        """
         if exceptionType is not None:
-            raise Exception(exceptionType + "\n" + exceptionValue + '\n' + exceptionTraceback)
+            return False
+        del exceptionValue
+        del exceptionTraceback
+        return True
 
     def clear(self) -> None:
         """Reset the predictor.
 
         If you've left your predictor in some weird state, you can reset it
-        by calling clear(). This empties all the queues."""
+        by calling clear(). This empties all the queues.
+        """
         self._inQueue.clear()
         self._outQueue.clear()
         self._inWaiting = 0
@@ -519,7 +740,7 @@ class BatchPredictor:
             self.runBatch()
 
     def submitString(self, sequence: str, label: typing.Any) -> None:
-        """Submits a given sequence for prediction.
+        """Submit a given sequence for prediction.
 
         :param sequence: A string of length input-length
         :param label: Any object. Label will be returned to you with the
@@ -529,7 +750,7 @@ class BatchPredictor:
         self.submitOHE(seqOhe, label)
 
     def runBatch(self, maxSamples: int | None = None) -> None:
-        """This actually runs the batch.
+        """Actually run the batch.
 
         Normally, this will be called
         by the submit functions, and it will also be called if you ask
@@ -608,11 +829,12 @@ class BatchPredictor:
         """Is it possible to getOutput()?
 
         :return: True if predictions haven't been made yet, but
-            they would be made if you asked for output."""
+            they would be made if you asked for output.
+        """
         return self._outWaiting == 0 and self._inWaiting == 0
 
     def getOutput(self) -> tuple[list, typing.Any]:
-        """Returns one of the predictions made by the model.
+        """Return one of the predictions made by the model.
 
         This implementation guarantees that predictions will be returned in
         the same order as they were submitted, but you should not rely on that
@@ -692,6 +914,7 @@ class ThreadedBatchPredictor:
 
     def __init__(self, modelFname: str, batchSize: int, start: bool = False,
                  numThreads: int = 1) -> None:
+        """Build the batch predictor."""
         logging.debug("Creating threaded batch predictor.")
         self._batchSize = batchSize
         self._modelFname = modelFname
@@ -706,8 +929,11 @@ class ThreadedBatchPredictor:
             self.start()
 
     def __enter__(self):
-        """Used in a context manager, this is the first thing that gets called
-        inside a with statement."""
+        """Start up a context manager.
+
+        Used in a context manager, this is the first thing that gets called
+        inside a with statement.
+        """
         self.start()
 
     def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
@@ -785,7 +1011,7 @@ class ThreadedBatchPredictor:
             logging.warning("Attempting to stop a batcher that is already stopped.")
 
     def clear(self):
-        """Resets the batcher, emptying any queues and reloading the model."""
+        """Reset the batcher, emptying any queues and reloading the model."""
         if self.running:
             self.stop()
         self.start()
@@ -808,7 +1034,7 @@ class ThreadedBatchPredictor:
         self._inFlight += 1
 
     def submitString(self, sequence: str, label: typing.Any) -> None:
-        """Submits a given sequence for prediction.
+        """Submit a given sequence for prediction.
 
         :param sequence: A string of length input-length
         :param label: Any object. Label will be returned to you with the
@@ -831,11 +1057,16 @@ class ThreadedBatchPredictor:
         """Is it possible to getOutput()?
 
         :return: True if predictions haven't been made yet, but
-            they would be made if you asked for output."""
+            they would be made if you asked for output.
+        """
         return self._inFlight == 0
 
     def getOutput(self) -> tuple[list, typing.Any]:
-        """Same semantics as BatchPredictor.getOutput."""
+        """Get a single output.
+
+        Same semantics as
+        :py:meth:`BatchPredictor.getOutput<bpreveal.utils.batchPredictor.getOutput>`.
+        """
         nextQueueIdx = self._outQueueOrder.pop()
         if self._outQueues[nextQueueIdx].empty():
             if self._inFlight:
@@ -849,6 +1080,11 @@ class ThreadedBatchPredictor:
 
 
 def _batcherThread(modelFname, batchSize, inQueue, outQueue):
+    """Run batches from the ThreadedBatchPredictor in this separate thread.
+
+    .. note::
+        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+    """
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
         "after loading tensorflow."
     logging.debug("Starting subthread")
