@@ -24,11 +24,17 @@ CONDA_BIN=mamba
 PIP_BIN=pip
 
 # Do you want to install Jupyter?
+# Options: true or false
 INSTALL_JUPYTER=true
 
 #Do you want the tools used for development?
 # These are needed to run the code quality checks and build the html documentation.
+# Options: true or false
 INSTALL_DEVTOOLS=true
+
+# Do you want to install Snakemake?
+INSTALL_SNAKEMAKE=false
+
 
 ######################
 # DON'T CHANGE BELOW #
@@ -70,6 +76,7 @@ check
 # I'm gonna do it anyway, because it works for me.
 #${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
 #check
+
 pip install 'tensorflow[and-cuda]'
 check
 pip install tensorflow-probability
@@ -81,6 +88,7 @@ ${CONDA_BIN} install --yes -c conda-forge matplotlib
 check
 checkPackage matplotlib
 
+#jsonschema is used to validate input jsons.
 ${CONDA_BIN} install --yes -c conda-forge jsonschema
 check
 checkPackage jsonschema
@@ -141,10 +149,12 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     check
 fi
 
-# 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
-# it with pip.
-${PIP_BIN} install --no-input snakemake
-check
+if [ "$INSTALL_SNAKEMAKE" = true ] ; then
+    # 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
+    # it with pip.
+    ${PIP_BIN} install --no-input snakemake
+    check
+fi
 
 
 # 4. Try to build libjaccard.

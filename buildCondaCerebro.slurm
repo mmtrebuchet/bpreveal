@@ -34,6 +34,18 @@ ENV_NAME=/n/projects/cm2363/public-bpreveal/4.0.0/env
 CONDA_BIN=mamba
 PIP_BIN=pip
 
+# Do you want to install Jupyter?
+# Options: true or false
+INSTALL_JUPYTER=true
+
+#Do you want the tools used for development?
+# These are needed to run the code quality checks and build the html documentation.
+# Options: true or false
+INSTALL_DEVTOOLS=true
+
+# Do you want to install Snakemake?
+INSTALL_SNAKEMAKE=false
+
 
 ######################
 # DON'T CHANGE BELOW #
@@ -77,7 +89,9 @@ check
 #check
 
 pip install 'tensorflow[and-cuda]'
-pip install tensorflow_probability
+check
+pip install tensorflow-probability
+check
 checkPackage tensorflow
 checkPackage tensorflow_probability
 
@@ -98,12 +112,16 @@ check
 ${CONDA_BIN} install --yes -c conda-forge h5py
 check
 checkPackage h5py
+
 ${CONDA_BIN} install --yes -c conda-forge tqdm
 check
 checkPackage tqdm
 
 # Before building stuff with pip, we need to make sure we have a compiler installed.
 ${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
+check
+
+${CONDA_BIN} install --yes -c bioconda bedtools
 check
 
 # pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
@@ -118,19 +136,36 @@ checkPackage pysam
 ${PIP_BIN} install --no-input modisco-lite
 check
 
-# Optional:
 # 1. Install jupyter lab.
-${CONDA_BIN} install --yes -c conda-forge jupyterlab
-check
-# 2. Install pycodestyle (used in development to check code style,
-# never needed to run bpreveal.)
-${CONDA_BIN} install --yes -c conda-forge pycodestyle
-check
+if [ "$INSTALL_JUPYTER" = true ] ; then
+    ${CONDA_BIN} install --yes -c conda-forge jupyterlab
+    check
+fi
 
-# 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
-# it with pip.
-${PIP_BIN} install --no-input snakemake
-check
+
+# 2. Install flake8 (used in development to check code style,
+# never needed to run bpreveal.)
+if [ "$INSTALL_DEVTOOLS" = true ] ; then
+    ${CONDA_BIN} install --yes -c conda-forge flake8
+    check
+    ${CONDA_BIN} install --yes -c conda-forge pydocstyle
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx_rtd_theme
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx-argparse
+    check
+    ${CONDA_BIN} install --yes -c conda-forge sphinx-autodoc-typehints
+    check
+fi
+
+if [ "$INSTALL_SNAKEMAKE" = true ] ; then
+    # 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
+    # it with pip.
+    ${PIP_BIN} install --no-input snakemake
+    check
+fi
 
 
 # 4. Try to build libjaccard.
