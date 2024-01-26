@@ -298,7 +298,7 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
     referenceCounts = np.zeros((numRegions,))
     predictedCounts = np.zeros((numRegions,))
     pbar = utils.wrapTqdm(range(numRegions), logging.INFO)
-    for _ in pbar:  # type: ignore
+    for _ in pbar:
         ret = outputQueue.get(timeout=QUEUE_TIMEOUT)
         (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCount, predictedCount) = ret
         mnlls[regionID] = mnllVal

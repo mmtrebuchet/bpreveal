@@ -98,6 +98,7 @@ def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     from stat import S_IREAD, S_IWRITE, S_IEXEC, S_IRGRP, S_IROTH
     # Chmod the file to rwxr--r--.
     os.chmod(scriptFname, mode=S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IROTH)
+    return scriptFname
 
 
 SLURM_HEADER_GPU = """#!/usr/bin/env zsh
@@ -139,7 +140,7 @@ def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     return outFname
 
 
-def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None):
+def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None, local=False):
     """A jobspec is a tuple of (str, [str,str,str,...])
     where the first string is the name of the slurm file to run.
     The strings after it are the names of the slurm files that the
@@ -179,6 +180,11 @@ def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None):
         fp.write("#!/usr/bin/env zsh\n")
         for jobSpec in jobOrder:
             job, deps = jobSpec
+            if local:
+                fp.write("echo 'Satisfied {0:s}'\n".format(str(deps)))
+                fp.write("{0:s}\n".format(job))
+                fp.write("echo 'Completed {0:s}'\n".format(job))
+                continue
             # First, create the dependency string.
             if baseJobId is not None:
                 depStr = " --dependency=afterok:{0:d}".format(baseJobId)

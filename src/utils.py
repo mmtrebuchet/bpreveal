@@ -1,4 +1,5 @@
 """Lots of helpful utilities for working with models."""
+from __future__ import annotations
 import logging
 import multiprocessing
 import numpy as np
@@ -8,6 +9,8 @@ import typing
 import tqdm
 import pyBigWig
 import pysam
+
+# Constants
 
 ONEHOT_T: typing.TypeAlias = np.uint8
 """Data type for elements of a one-hot encoded sequence.
@@ -72,6 +75,9 @@ not be able to use tensorflow, because tensorflow is dumb like that. Tools like
 the easy® functions and the threaded batcher check to see if Tensorflow has
 been loaded in the parent process before they spawn children.
 """
+
+
+# Functions
 
 
 def loadModel(modelFname: str):
@@ -346,8 +352,8 @@ def setVerbosity(userLevel: str) -> None:
     logging.debug("Logger configured.")
 
 
-def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,  # type: ignore
-             **tqdmKwargs):
+def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,
+             **tqdmKwargs) -> tqdm.tqdm:
     """Create a tqdm logger or a dummy, based on current logging level.
 
     :param iterable: The thing to be wrapped, or the number to be counted to.
@@ -378,29 +384,25 @@ def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO
                     "WARNING": logging.WARNING,
                     "INFO": logging.INFO,
                     "DEBUG": logging.DEBUG}
-        logLevel = levelMap[logLevel.upper()]
-    logLevel: int = logLevel  # type: ignore
-
-    class DummyPbar:
-        """This serves as a tqdm-like object that doesn't print anything."""
-
-        def update(self):
-            pass
-
-        def close(self):
-            pass
+        logLevelInternal: int = levelMap[logLevel.upper()]
+    elif type(logLevel) is int:
+        logLevelInternal: int = logLevel
+    else:
+        assert False, "Invalid type passed to wrapTqdm"
 
     if type(iterable) is int:
-        if logging.root.isEnabledFor(logLevel):
+        if logging.root.isEnabledFor(logLevelInternal):
             return tqdm.tqdm(total=iterable, **tqdmKwargs)
         else:
-            return DummyPbar()
-    else:
-        iterable: typing.Iterable = iterable  # type: ignore
-        if logging.root.isEnabledFor(logLevel):
-            return tqdm.tqdm(iterable, **tqdmKwargs)
+            return tqdm.tqdm(total=iterable, **tqdmKwargs, disable=True)
+    elif isinstance(iterable, typing.Iterable):
+        iterableOut: typing.Iterable = iterable
+        if logging.root.isEnabledFor(logLevelInternal):
+            return tqdm.tqdm(iterableOut, **tqdmKwargs)
         else:
-            return iterable
+            return tqdm.tqdm(iterableOut, **tqdmKwargs, disable=True)
+    else:
+        assert False, "Your iterable is not valid with tqdm."
 
 
 def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
@@ -470,6 +472,28 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     # Anything that was not encoded is N.
     ret[ret == 0] = ord('N')
     return ret.tobytes().decode('ascii')
+
+
+def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
+                    logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float32]:
+    """Take logits and logcounts and turn it into a profile.
+
+    :param logitsAcrossSingleRegion: An array of shape (output-length * num-tasks)
+    :param logCountsAcrossSingleRegion: A single floating-point number
+    :return: An array of shape (output-length * num-tasks), giving the profile
+        predictions.
+    """
+    # Logits will have shape (output-width x numTasks)
+    assert len(logitsAcrossSingleRegion.shape) == 2
+    # If the logcounts passed in is a float, this will break.
+    # assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value
+
+    profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
+    profile = profileProb * np.exp(logCountsAcrossSingleRegion)
+    return profile.astype(np.float32)
+
+
+# Easy functions
 
 
 def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_AR_T:
@@ -630,23 +654,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
         return {"profile": profile, "counts": counts}
 
 
-def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
-                    logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float32]:
-    """Take logits and logcounts and turn it into a profile.
-
-    :param logitsAcrossSingleRegion: An array of shape (output-length * num-tasks)
-    :param logCountsAcrossSingleRegion: A single floating-point number
-    :return: An array of shape (output-length * num-tasks), giving the profile
-        predictions.
-    """
-    # Logits will have shape (output-width x numTasks)
-    assert len(logitsAcrossSingleRegion.shape) == 2
-    # If the logcounts passed in is a float, this will break.
-    # assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value
-
-    profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
-    profile = profileProb * np.exp(logCountsAcrossSingleRegion)
-    return profile.astype(np.float32)
+# The batchers.
 
 
 class BatchPredictor:

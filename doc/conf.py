@@ -46,12 +46,16 @@ def setup(app):
 
 
 autodoc_mock_imports = ["tensorflow", 'keras']
-autodoc_typehints = 'description'
+autodoc_typehints = 'both'
+autodoc_member_order = 'bysource'
 autodoc_type_aliases={
     "ANNOTATION_T": "ANNOTATION_T",
     "CorruptorLetter": "CorruptorLetter",
-    "Corruptor": "Corruptor"
+    "Corruptor": "Corruptor",
+    "CandidateCorruptor" : "CandidateCorruptor",
+    "Profile": "Profile"
 }
+autodoc_unqualified_typehints = False
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 #html_theme = "alabaster"

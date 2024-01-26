@@ -33,7 +33,7 @@ INSTALL_JUPYTER=true
 INSTALL_DEVTOOLS=true
 
 # Do you want to install Snakemake?
-INSTALL_SNAKEMAKE=false
+INSTALL_SNAKEMAKE=true
 
 
 ######################

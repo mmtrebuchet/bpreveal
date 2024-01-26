@@ -116,7 +116,7 @@ class FastaReader:
         # First, scan over the file and count how many sequences are in it.
         logging.info("Counting number of samples.")
         with open(fastaFname, "r") as fp:
-            for line in wrapTqdm(fp):  # type: ignore
+            for line in wrapTqdm(fp):
                 line = line.strip()  # Get rid of newlines.
                 if len(line) == 0:
                     continue  # There is a blank line. Ignore it.
@@ -298,14 +298,14 @@ def main(config):
             while batcher.outputReady():
                 # We've just run a batch. Write it out.
                 ret = batcher.getOutput()
-                pbar.update()  # type: ignore
+                pbar.update()
                 writer.addEntry(ret)
         # Done with the main loop, clean up the batcher.
         logging.debug("Done with main loop.")
         while not batcher.empty():
             # We've just run a batch. Write it out.
             ret = batcher.getOutput()
-            pbar.update()  # type: ignore
+            pbar.update()
             writer.addEntry(ret)
         writer.close()
 

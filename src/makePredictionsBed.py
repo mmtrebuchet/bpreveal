@@ -123,7 +123,7 @@ def main(config):
     padding = (inputLength - outputLength) // 2
 
     logging.info("Loading regions")
-    for i, region in wrapTqdm(list(enumerate(regions))):  # type: ignore
+    for i, region in wrapTqdm(list(enumerate(regions))):
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
         seqs[i] = utils.oneHotEncode(curSeq)
     logging.info("Input prepared. Loading model.")
@@ -197,7 +197,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     logging.info("Writing predictions")
     addCoordsInfo(regions, outFile, genome)
     logging.debug("Writing predictions.")
-    for headID in wrapTqdm(range(numHeads)):  # type: ignore
+    for headID in wrapTqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headID))
         headGroup.create_dataset("logcounts", data=preds[numHeads + headID], dtype=PRED_T)
         headGroup.create_dataset("logits", data=preds[headID], dtype=PRED_T)

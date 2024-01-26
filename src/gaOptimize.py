@@ -1,4 +1,5 @@
 """Useful tools for creating sequences with a desired property."""
+from __future__ import annotations
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
@@ -32,6 +33,11 @@ Examples::
 """
 
 Profile: TypeAlias = list[tuple[PRED_AR_T, float]]
+"""A profile is the result from running a model.
+
+It is a list of (logits, logcounts) tuples.
+"""
+
 CandidateCorruptor: TypeAlias = tuple[int, str]
 """A candidate corruptor gives all possible mutations at a particular locus.
 
@@ -43,6 +49,20 @@ Examples::
 
 Note that it is possible for a CandidateCorruptor to only allow for one
 possible mutation at a locus.
+"""
+
+ANNOTATION_T: TypeAlias = tuple[tuple[int, int], str, str] \
+    | tuple[tuple[int, int], str, str, float, float]
+"""The shape for an annotation object to pass to :func:`plotTraces`.
+
+It contains:
+
+1. a pair of integers, giving the start and stop points of that annotation,
+2. a string giving its label,
+3. a string giving its color,
+4. (Optional) a float giving the bottom of its annotation box, and
+5. (Optional) a float giving the top of its annotation box.
+
 """
 
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
@@ -85,7 +105,12 @@ corruptorColors = {"A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "
                    "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
 """BPreveal's canonical coloring scheme for bases. A is green, C is blue, G is yellow, and T is red.
 
-These colors are drawn from the Wong palette, but with the green lightened a bit."""
+These colors are drawn from the Wong palette, but with the green lightened a bit.
+
+:type: dict[CorruptorLetter, tuple[float, float, float]]
+
+:meta hide-value:
+"""
 
 
 def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
@@ -232,6 +257,7 @@ class Organism:
 
         :param scoreFn: A function that takes this organism's profile and its corruptor list
             and returns a float.
+        :type scoreFn: Callable[[:py:data:`~Profile`, list[:py:data:`~Corruptor`]], float]
 
         This function can only be called after the organism's profile has been set!
         """
@@ -302,6 +328,7 @@ class Organism:
         :type allowedCorruptors: list[:py:data:`~CandidateCorruptor`]
         :param checkCorruptors: A function that accepts a list of corruptors and
             returns True if they are a valid combination and False otherwise.
+        :type checkCorruptors: Callable[[list[:py:data:`~Corruptor`]], bool]
         :return: A newly-allocated Organism with a new set of corruptors.
 
         This is something you may want to override in a subclass.
@@ -339,6 +366,7 @@ class Organism:
         :param other: Another organism that this should be mixed with.
         :param checkCorruptors: A function that returns True if a corruptor
             list is valid, and False otherwise.
+        :type checkCorruptors: Callable[[list[:py:data:`~Corruptor`]], bool]
         :return: A newly-allocated Organism that is a blend of both parents.
 
         This is also something you may wish to override in a subclass.
@@ -398,12 +426,15 @@ class Population:
     :param numCorruptors: determines how many corruptors will be applied
         in each organism.
     :param allowedCorruptors: is a list of tuples. (see below)
+    :type allowedCorruptors: list[:py:data:`~CandidateCorruptor`]
     :param checkCorruptors: is a function that determines if a list of corruptors
         is valid. (see below)
+    :type checkCorruptors: Callable[[list[:py:data:`~Corruptor`]], bool]
     :param fitnessFn: The fitness function. It takes two arguments:
         The first argument is a list of tuples containing the model outputs.
         These have the same organization as the outputs from batchPredictor.
         The second argument is a list of corruptors, as presented to checkCorruptors.
+    :type fitnessFn: Callable[[:py:data:`~Profile`, list[:py:data:`~Corruptor`]], float],
     :param numSurvivingParents: The number of parents that will be kept for the next
         generation, usually referred to as elitism in GA terminology.
     :param predictor: A BatchPredictor that has been set up with the model you
@@ -786,10 +817,6 @@ def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
         prev = c
     return True
 
-
-ANNOTATION_T: TypeAlias = tuple[tuple[int, int], str, str] \
-    | tuple[tuple[int, int], str, str, float, float]
-"""The shap for an annotation object to pass to :func:`plotTraces`."""
 
 
 def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],

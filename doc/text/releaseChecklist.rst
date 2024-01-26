@@ -29,7 +29,7 @@ Release Checklist
 
     14. git clone in public-bpreveal
 
-    15. Build conda environment on cerebro.
+    15. Build conda environment on Cerebro.
 
     16. Symlinks in public-bpreveal.
 

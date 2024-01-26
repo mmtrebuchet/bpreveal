@@ -53,6 +53,6 @@ parameter :math:`\beta`. :math:`\beta=0` implies no change ever to :math:`\lambd
 The scripts in bpreveal use a :math:`\beta` parameter of 0.3. This is currently not
 user-configurable, but can be edited in :py:mod:`callbacks<bpreveal.callbacks>`.
 
-Early in training, :math:`\lambda_E` may be \emph{way} off from
+Early in training, :math:`\lambda_E` may be *way* off from
 :math:`\lambda^{\prime\prime}_{E+1}`, and so we clamp :math:`\lambda_{E+1}` to be at most
 a factor of two off from :math:`\lambda_E`.

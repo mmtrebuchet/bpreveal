@@ -240,7 +240,7 @@ ENHANCEMENTS:
     * Added type annotations to most of the library functions, allowing your
       editor to quickly check for mistakes in argument order and type.
     * Added type definitions to utils.py, so the code now (mostly) uses
-      consintent definitions for variable types.
+      consistent definitions for variable types.
     * Updated the build scripts and added one for building a local copy of the
       BPReveal environment.
 

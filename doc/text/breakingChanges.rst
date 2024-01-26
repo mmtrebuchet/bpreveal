@@ -56,7 +56,7 @@ BPReveal 3.6.0
 1. The :py:mod:`predictToBigwig<bpreveal.predictToBigwig>` script now averages the values in
    overlapping regions instead of taking the leftmost base.
    This may result in small changes in generated bigwigs.
-2. In order to accomodate the adaptive loss algorithm
+2. In order to accommodate the adaptive loss algorithm
    (:doc:`countsLossReweighting`), some of the layer names in transformation
    models were changed. If you were depending on these layer names, I'm curious
    to know how you got yourself in that situation.

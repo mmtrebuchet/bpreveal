@@ -39,7 +39,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
                 blacklistsByChrom[blackInterval.chrom] = []
             blacklistsByChrom[blackInterval.chrom].append(blackInterval)
 
-    for chromName in wrapTqdm(sorted(genome.references), "INFO"):  # type: ignore
+    for chromName in wrapTqdm(sorted(genome.references), "INFO"):
         chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
         if chromName in blacklistsByChrom:
             seqList = list(chromSeq)

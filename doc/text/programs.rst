@@ -36,7 +36,7 @@ These are the core programs of BPReveal. Each one takes a JSON configuration fil
 
 :py:mod:`prepareBed<bpreveal.prepareBed>`
     Given a set of regions and data tracks, reject
-    regions that have too few (or too many) reads, or that have unmappped
+    regions that have too few (or too many) reads, or that have unmapped
     bases in the genome.
 
 :py:mod:`prepareTrainingData<bpreveal.prepareTrainingData>`
@@ -51,7 +51,7 @@ These are the core programs of BPReveal. Each one takes a JSON configuration fil
 
 :py:mod:`trainSoloModel<bpreveal.trainSoloModel>`
     Takes in a training input configuration
-    and trains up a model to predict the the given data, with no bias
+    and trains up a model to predict the given data, with no bias
     correction.
     Saves the model to disk, along with information from the training phase.
 
