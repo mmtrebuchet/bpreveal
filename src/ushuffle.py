@@ -17,8 +17,8 @@ libushuffle.initialize()
 
 def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
                   seed: int | None = None) -> list[str]:
-    """Given a string sequence, perform a shuffle that maintains
-    the kmer distribution.
+    """Given a string sequence, perform a shuffle that maintains the kmer distribution.
+
     This is adapted from ushuffle.
     sequence should be a string in ASCII, but it should theoretically work
     on multi-byte encoded utf-8 characters so long as the kmerSize is at least
@@ -40,8 +40,8 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
 
 def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
                seed: int | None = None) -> ONEHOT_AR_T:
-    """Given a one-hot encoded sequence, perform a shuffle that
-    maintains the kmer distribution.
+    """Given a one-hot encoded sequence, perform a shuffle that maintains the kmer distribution.
+
     sequence should have shape (length, alphabetLength)
     for DNA, alphabetLength = 4. It is an error to have an alphabet length of more than 8.
     Internally, this function packs the bits at each position into a character, and the

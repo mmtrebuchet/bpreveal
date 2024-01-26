@@ -10,6 +10,7 @@ p.add_argument("--show-correct", help="Show a note when a test is successful.",
                action='store_true', dest='showCorrect')
 args = p.parse_args()
 
+
 def runTest(schema, jsonFname, good):
     with open("testcases/" + jsonFname, "r") as fp:
         dats = json.load(fp)
@@ -35,6 +36,7 @@ def runTest(schema, jsonFname, good):
             print("\u29B8 {0:s}, {1:s}".format(jsonFname, otherSchema))
         except jsonschema.ValidationError:
             pass
+
 
 if args.showCorrect:
     print("\u2713 = good json, passed schema.")

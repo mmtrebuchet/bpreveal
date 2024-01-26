@@ -1,0 +1,19 @@
+{
+    "coordinates": {
+        "genome": "/n/data1/genomes/indexes/mm10/mm10.fa",
+        "bed-file": "/n/projects/cm2363/bpreveal/test/oskn/bed/peak_all.bed"
+    },
+    "model-file": "/n/projects/cm2363/bpreveal/test/oskn/models/joint_residual.model",
+    "input-length": 3092,
+    "output-length": 1000,
+    "heads": 4,
+    "head-id": 2,
+    "profile-task-ids": [
+        0,
+        1
+    ],
+    "profile-h5": "/dev/shm/klf4_profile.h5",
+    "counts-h5": "/dev/shm/klf4_counts.h5",
+    "num-shuffles": 20,
+    "verbosity": "DEBUG"
+}

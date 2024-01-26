@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Reads in a modisco h5 and prepares to scan for seqlets.
 
-
 In order to see where seqlets are found on the genome, we need to scan the cwms
 derived from modiscolite.
 The first step of this process is to look at the seqlets that MoDISco called for
