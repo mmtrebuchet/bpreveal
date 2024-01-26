@@ -39,7 +39,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
                 blacklistsByChrom[blackInterval.chrom] = []
             blacklistsByChrom[blackInterval.chrom].append(blackInterval)
 
-    for chromName in wrapTqdm(sorted(genome.references), "INFO"):
+    for chromName in wrapTqdm(sorted(genome.references), "INFO"):  # type: ignore
         chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
         if chromName in blacklistsByChrom:
             seqList = list(chromSeq)
@@ -69,7 +69,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
         if inSegment:
             # We finished the chromosome without hitting Ns. Certainly possible!
             segments.append(pybedtools.Interval(chromName, segmentStart, len(chromSeq)))
-    return segments
+    return pybedtools.BedTool(segments)
 
 
 def tileSegments(inputLength: int, outputLength: int,
