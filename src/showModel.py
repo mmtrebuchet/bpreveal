@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+"""A super simple program that displays a summary of your model and optionally saves an image."""
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
@@ -20,6 +20,7 @@ def main(modelFname: str, pngFile: str | None):
 
 
 def getParser() -> argparse.ArgumentParser:
+    """Build the parser."""
     ap = argparse.ArgumentParser(description="Show a text description of your "
                                  "model and optionally save it to a png file.")
     ap.add_argument("--model", help="The name of the Keras model file to show.")

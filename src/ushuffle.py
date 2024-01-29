@@ -1,3 +1,4 @@
+"""A wrapper around the ushuffle C implementation."""
 import numpy as np
 from bpreveal.internal import libushuffle
 from bpreveal.utils import ONEHOT_AR_T

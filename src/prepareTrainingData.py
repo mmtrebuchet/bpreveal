@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Create the data files that will be used to train the model.
 
-
 This program reads in a genome file, a list of regions in bed format, and a set
 of bigwig files containing profiles that the model will use to train. It
 generates an hdf5-format file that is used during training. If you want to
@@ -110,6 +109,7 @@ def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
 
 
 def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
+    """TODO Document"""
     numSequences = bed.count()
     if not revcomp:
         seqs = np.zeros((numSequences, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
@@ -132,6 +132,7 @@ def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
 
 def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
             revcomp: Literal[False] | list[int]) -> PRED_AR_T:
+    """TODO Document"""
     # Note that revcomp should be either False or the task-order array (which is truthy).
     numSequences = bed.count()
     if not revcomp:
@@ -157,6 +158,7 @@ def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
 
 
 def writeH5(config):
+    """Main method, load the config and then generate training data hdf5 files."""
     regions = pybedtools.BedTool(config["regions"])
     outputLength = config["output-length"]
     inputLength = config["input-length"]
@@ -193,10 +195,6 @@ def writeH5(config):
         logging.debug("Added data for head {0:d}".format(i))
     outFile.close()
     logging.info("File created; closing.")
-
-
-def main(config):
-    writeH5(config)
 
 
 if __name__ == "__main__":

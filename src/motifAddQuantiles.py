@@ -146,7 +146,6 @@ def readTsv(fname):
     initial tsv, this field is called _TMPNAME. This field contains the combined pattern
     identifier.
     """
-
     records = []
     patternIDs = []
     with open(fname, "r", newline='') as fp:
@@ -165,7 +164,6 @@ def readTsv(fname):
 
 def addFieldNameQuantileMetadata(standardRecords, sampleRecords, patternID, readName, writeName):
     """TODO MELANIE document"""
-
     standardValues = []
     for r in standardRecords:
         if r["_TMPNAME"] == patternID:

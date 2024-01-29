@@ -256,7 +256,7 @@ class Pattern:
     TODO When tfmodisco-lite carries through the seqlet indexes correctly, modify this.
     Shape (numSeqlets,)
     """
-    seqletRevcomps: npt.NDArray[np.bool8]
+    seqletRevcomps: npt.NDArray[np.bool_]
     """For each seqlet, is it reverse-complemented?
 
     Shape (numSeqlets,)
@@ -347,7 +347,9 @@ class Pattern:
     def loadCwm(self, modiscoFp: h5py.File, trimThreshold: float,
                 padding: int, backgroundProbs: npt.NDArray[MOTIF_FLOAT_T]) -> None:
         """Given an opened hdf5 file object, load up the contribution scores for this pattern.
+
         TODO MELANIE Convert to RST.
+
         trimThreshold and padding are used to trim the motifs, see cwmTrimPoints
         for documentation on those parameters.
 
@@ -379,6 +381,7 @@ class Pattern:
 
     def loadSeqlets(self, modiscoFp: h5py.File) -> None:
         """Load seqlets from the modisco hdf5.
+
         TODO MELANIE Convert to RST.
 
         This function loads up all the seqlet data from the modisco file and calculates
@@ -413,6 +416,7 @@ class Pattern:
                    quantileContribMatch: float,
                    quantileContribMagnitude: float) -> None:
         """Calculate cutoff values given target quantiles.
+
         TODO MELANIE Convert to RST.
 
         Given the quantile values you want to use as cutoffs, actually
@@ -713,8 +717,10 @@ class MiniPattern:
                     scores: npt.NDArray[MOTIF_FLOAT_T], cwm: npt.NDArray[MOTIF_FLOAT_T],
                     pssm: npt.NDArray[MOTIF_FLOAT_T], strand: Literal['+', '-']
                     ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
-        """Don't do revcomp - let scan take care of that. You should never
-        call this method. Use scan instead!"""
+        """Don't do revcomp - let scan take care of that.
+
+        You should never call this method. Use scan instead!
+        """
         contribMatchScores, contribMagnitudes = self._callJaccard(scores, cwm)
         seqMatchScores = slidingDotproduct(sequence, pssm)
         if self.contribMatchCutoff is not None:
@@ -747,8 +753,9 @@ class MiniPattern:
 
     def scan(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
              ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
-        """Given a sequence and a contribution score track, identify all places
-        where this pattern matches. sequence is a (length, 4) one-hot encoded
+        """Given a sequence and a contribution track, identify places where this pattern matches.
+
+        sequence is a (length, 4) one-hot encoded
         DNA fragment, and scores is the actual (not hypothetical) contribution score
         data from that region. Scores is (length, 4) in shape, but all of the
         bases that are not present should have zero contribution score.
@@ -767,11 +774,11 @@ class MiniPattern:
 
 
 class Hit:
-    """The hit class is a small struct-like class that is used to bundle up found hits
-    for insertion in the pipe to the writer thread.
+    """A small struct used to bundle up found hits for insertion in the pipe to the writer thread.
 
     TODO MELANIE Document initializer.
     """
+
     def __init__(self, chrom: str, start: int, end: int, shortName: str,
                  metaclusterName: str, patternName: str, strand: Literal['+', '-'],
                  sequence: str, index: int, contribMagnitude: float,
@@ -812,11 +819,15 @@ class Hit:
 
 class PatternScanner:
     """TODO MELANIE Document initializer."""
+
     warnedAboutOldScores = False
 
     def __init__(self, hitQueue: multiprocessing.Queue, contribFname: str,
                  patternConfig: dict) -> None:
-        """hitQueue is a Multiprocessing Queue where found hits should be put().
+        """A tool to run the actual scans.
+
+        hitQueue is a Multiprocessing Queue where found hits should be put().
+
         (A Hit put in this queue should be an instance of the Hit class defined
         above.)
         The contribFname is the name of the contribution hdf5 file that will
@@ -838,7 +849,9 @@ class PatternScanner:
             self.chromIdxToName[i] = name
 
     def scanIndex(self, idx: int) -> None:
-        """Given an index into the hdf5 contribution file, extract the sequence
+        """Scan a single locus.
+
+        Given an index into the hdf5 contribution file, extract the sequence
         and contribution scores there and run a scan.
         idx is an integer ranging from 0 to the number of entries in the hdf5 file
         (minus one, of course, since zero-based indexing).
@@ -912,7 +925,9 @@ class PatternScanner:
 
 def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Queue,
                   contribFname: str, patternConfig: dict) -> None:
-    """This is the thread for one scanner. Each scanner is looking for every pattern,
+    """This is the thread for one scanner.
+
+    Each scanner is looking for every pattern,
     and gets regions to scan from queryQueue. Every time it finds a hit in one of the
     queries it pulled, it stuffs those Hit objects into hitQueue.
     contribFname is a string naming the hdf5-format file generated by interpretFlat.py.
@@ -1007,6 +1022,7 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
 
 def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThreads: int) -> None:
     """ContribH5Fname is the name of a contribution score file generated by interpretFlat.py
+
     patternConfig is a dictionary/json generated by the quantile script that contains the necessary
     information to scan for the patterns.
     tsvFname is the name of the output file containing the hits. Columns 1-6 of this file can
@@ -1018,7 +1034,6 @@ def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThr
     computationally expensive!
     TODO MELANIE Document
     """
-
     assert numThreads >= 3, "Scanning requires at least three threads. " \
                             "(but works great with fifty!)"
     # A queue size of 1024 is reasonable.

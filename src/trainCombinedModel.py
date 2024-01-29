@@ -62,6 +62,7 @@ import tensorflow as tf
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
                outputPrefix, plateauPatience, heads, tensorboardDir=None):
+    """Train the model."""
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if tensorboardDir is not None:
         logging.info("Including logging.")
@@ -77,6 +78,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 
 def main(config):
+    """Build and train a combined model."""
     utils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]

@@ -75,6 +75,7 @@ import tensorflow as tf
 
 def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
                outputPrefix, plateauPatience, heads, tensorboardDir=None):
+    """Run the training."""
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
@@ -89,6 +90,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 
 def main(config):
+    """Build and train the transformation model."""
     utils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Generates test, train, and validation splits and optionally performs some filtering.
 
-
 BNF
 ---
 
@@ -224,14 +223,15 @@ def loadRegions(config):
 
 
 def removeOverlaps(config, regions, genome):
-    """ Remove overlaps among the given regions.
+    """Remove overlaps among the given regions.
 
     :param config: Straight from the JSON.
     :param regions: A BedTool (or list of Intervals)
     :param genome: A FastaFile (not string) giving the genome.
 
     Takes in the list of regions, resizes each to the minimum size, and if there are overlaps,
-    randomly chooses one of the overlapping regions."""
+    randomly chooses one of the overlapping regions.
+    """
     # Resize the regions down to the minimum size.
     resizedRegions = regions.each(resize,
                                   config['resize-mode'],
@@ -399,7 +399,6 @@ def prepareBeds(config):
 
     :param config: A JSON object matching the prepareBed specification.
     """
-
     logging.info("Starting bed file generation.")
     # FUTURE: In BPReveal 5.0, raise an error inside this if block.
     # In BPReveal 7.0, remove it entirely.

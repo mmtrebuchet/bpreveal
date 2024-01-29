@@ -1,3 +1,4 @@
+"""Functions to build BPNet-style models."""
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
@@ -22,15 +23,15 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
     logging.debug("Initializing head {0:s}".format(individualHead["head-name"]))
     numOutputs = individualHead["num-tasks"]
     profile = keras.layers.Conv1D(
-        numOutputs, outputFilterWidth, padding='valid',
-        name='solo_profile_{0:s}'.format(individualHead["head-name"]))\
+            numOutputs, outputFilterWidth, padding='valid',
+            name='solo_profile_{0:s}'.format(individualHead["head-name"]))\
         (dilateOutput)
     countsGap = keras.layers.GlobalAveragePooling1D(
-        name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))\
+            name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))\
         (dilateOutput)
     counts = keras.layers.Dense(
-        1,
-        name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))\
+            1,
+            name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))\
         (countsGap)
     return (profile, counts)
 
@@ -65,20 +66,20 @@ def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
     inputLayer = keras.Input((inputLength, 4), name=modelName + '_input')
 
     initialConv = keras.layers.Conv1D(
-        numFilters, kernel_size=inputFilterWidth, padding='valid',
-        activation='relu', name=modelName + "_initial_conv")\
+            numFilters, kernel_size=inputFilterWidth, padding='valid',
+            activation='relu', name=modelName + "_initial_conv")\
         (inputLayer)
     prevLayer = initialConv
     for i in range(numLayers):
         newConv = keras.layers.Conv1D(
-            numFilters, kernel_size=3, padding='valid', activation='relu',
-            dilation_rate=2 ** (i + 1), name=modelName + '_conv_{0:d}'.format(i))\
+                numFilters, kernel_size=3, padding='valid', activation='relu',
+                dilation_rate=2 ** (i + 1), name=modelName + '_conv_{0:d}'.format(i))\
             (prevLayer)
         prevLength = int_shape(prevLayer)[1]
         newLength = int_shape(newConv)[1]
         newCrop = keras.layers.Cropping1D(
-            (prevLength - newLength) // 2,
-            name=modelName + '_crop{0:d}'.format(i))\
+                (prevLength - newLength) // 2,
+                name=modelName + '_crop{0:d}'.format(i))\
             (prevLayer)
         prevLayer = keras.layers.add(
             [newConv, newCrop], name=modelName + '_add{0:d}'.format(i))
@@ -95,7 +96,8 @@ def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
 
 
 def _buildSimpleTransformationModel(architectureSpecification, headName, inputLayer):
-    """
+    """Actually make the transformation model.
+
     Builds the model that will transform the tracks produced by the solo model (inputLayer)
         into the experimental data.
 
@@ -214,7 +216,6 @@ def transformationModel(soloModel, profileArchitectureSpecification,
     :param headList: Also from the config JSON.
     :return: A Keras model with the same output shape as the soloModel.
     """
-
     soloModel.trainable = False
     profileOutputs = []
     countsOutputs = []

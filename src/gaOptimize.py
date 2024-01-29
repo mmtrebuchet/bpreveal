@@ -818,7 +818,6 @@ def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
     return True
 
 
-
 def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
                negTraces: list[tuple[PRED_AR_T, str, str]],
                xvals: npt.NDArray[np.float32],

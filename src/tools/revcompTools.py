@@ -8,6 +8,7 @@ import logging
 from bpreveal import utils, bedUtils
 utils.setVerbosity("INFO")
 
+
 def getParser():
     ap = argparse.ArgumentParser(description="A utility for generating "
         "reverse-complement test data.")

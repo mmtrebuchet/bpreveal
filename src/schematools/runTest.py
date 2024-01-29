@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Make sure that all of the schemas are correct by testing them on known good and bad inputs."""
 import jsonschema
 import json
 import bpreveal.schema
@@ -12,6 +13,14 @@ args = p.parse_args()
 
 
 def runTest(schema, jsonFname, good):
+    """Given a schema and a json name, check whether it passes or not.
+
+    Runs the test against the given schema, and also checks all other
+    BPReveal schemas to make sure the json doesn't validate as any of them.
+
+    If good is True, then it is an error if it fails to pass.
+    If good is False, then it is an error if it passes.
+    """
     with open("testcases/" + jsonFname, "r") as fp:
         dats = json.load(fp)
     try:
