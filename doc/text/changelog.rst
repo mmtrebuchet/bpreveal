@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.0.x
 ^^^^^^^^^^^^^^
 
-Version 4.0.2, 2024-DATEDATEDATE
-''''''''''''''''''''''''''''''''
+Version 4.0.2, 2024-01-29
+'''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * A few internal variable names were switched from snake_case to camelCase.
