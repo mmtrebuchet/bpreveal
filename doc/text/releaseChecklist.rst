@@ -31,7 +31,7 @@ Release Checklist
 
     15. Build conda environment on Cerebro.
 
-    16. Symlinks in public-bpreveal.
+    16. Symlinks in public-bpreveal, including documentation directory.
 
     17. (major and minor releases only) Announce on Teams.
 

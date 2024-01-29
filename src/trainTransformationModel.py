@@ -45,7 +45,7 @@ simple
     Generally, you need to use these more complex functions when the solo
     model is not a great fit for the experimental bias.
 
-HISTORY
+History
 -------
 
 Before BPReveal 3.0.0, there was a ``cropdown`` transformation option.

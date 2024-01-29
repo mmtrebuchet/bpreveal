@@ -44,7 +44,7 @@ INSTALL_JUPYTER=true
 INSTALL_DEVTOOLS=true
 
 # Do you want to install Snakemake?
-INSTALL_SNAKEMAKE=false
+INSTALL_SNAKEMAKE=true
 
 
 ######################
@@ -78,19 +78,11 @@ check
 
 conda activate ${ENV_NAME}
 check
-# You have to install the nvidia-toolkit manually to enable optimizations
-# for tensorflow.
-#${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
-#check
-
 # Tensorflow expressly advises against installing with conda.
-# I'm gonna do it anyway, because it works for me.
-#${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
-#check
 
-pip install 'tensorflow[and-cuda]'
+${PIP_BIN} install 'tensorflow[and-cuda]'
 check
-pip install tensorflow-probability
+${PIP_BIN} install tensorflow-probability
 check
 checkPackage tensorflow
 checkPackage tensorflow_probability
@@ -124,8 +116,8 @@ check
 ${CONDA_BIN} install --yes -c bioconda bedtools
 check
 
-# pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
-# in the conda repositories. So install them through pip.
+# pysam, pybigwig, and pybedtools don't have (as of 2023-03-23) Python 3.11
+# versions in the conda repositories. So install them through pip.
 ${PIP_BIN} install --no-input pysam pybedtools pybigwig
 check
 checkPackage pybedtools
@@ -140,6 +132,8 @@ check
 if [ "$INSTALL_JUPYTER" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge jupyterlab
     check
+    ${CONDA_BIN} install --yes -c conda-forge pandoc
+    check
 fi
 
 
@@ -149,6 +143,8 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge flake8
     check
     ${CONDA_BIN} install --yes -c conda-forge pydocstyle
+    check
+    ${CONDA_BIN} install --yes -c conda-forge pylint
     check
     ${CONDA_BIN} install --yes -c conda-forge sphinx
     check

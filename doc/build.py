@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Builds the .rst files that autodoc will use to generate the documentation."""
+import os
 import sys
 if len(sys.argv) > 1:
     requestName = sys.argv[1]
@@ -30,7 +31,6 @@ filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
             "models.py", "motifUtils.py", "ushuffle.py", "utils.py",
             "schema.py"]
 
-import os
 if not os.path.exists("_generated"):
     os.mkdir("_generated")
 
@@ -126,35 +126,37 @@ for fname in filesMajor + filesMinor + filesApi:
             fp.write("\n{0:s}\n{1:s}\n\n".format(modName, lineBreak))
             if fname in filesMajor:
                 fp.write(".. automodule:: bpreveal.{0:s}\n    :members:\n\n".
-                        format(modName))
+                         format(modName))
                 fp.write(".. highlight:: python\n\n")
 
-                fp.write("SCHEMA\n------\n.. highlight:: json\n")
+                fp.write("Schema\n------\n.. highlight:: json\n")
                 fp.write(".. literalinclude:: ../../src/schematools/{0:s}.schema\n\n".
                          format(modName))
             elif fname in filesMinor:
-                fp.write("HELP INFO\n---------\n\n")
+                fp.write("Help Info\n---------\n\n")
                 fp.write(".. highlight:: none\n\n")
                 fp.write(".. argparse::\n")
                 fp.write("    :module: bpreveal.{0:s}\n".format(modName))
                 fp.write("    :func: getParser\n")
                 fp.write("    :prog: {0:s}\n\n".format(modName))
-                fp.write("USAGE\n-----\n\n")
+                fp.write("Usage\n-----\n\n")
                 fp.write("\n.. highlight:: python\n\n")
                 fp.write(".. automodule:: bpreveal.{0:s}\n    :members:\n\n".
-                        format(modName))
+                         format(modName))
             elif modName == "schema":
                 fp.write(".. automodule:: bpreveal.{0:s}\n\n".
-                        format(modName))
-                fp.write("    .. autodata:: schemaMap(dict[str, Draft7Validator])\n")
+                         format(modName))
+                fp.write(
+                    "    .. autodata:: schemaMap(dict[str, Draft7Validator])\n")
                 fp.write("        :annotation:\n\n")
                 for majorFile in filesMajor:
-                    fp.write("    .. autodata:: {0:s}(Draft7Validator)\n".format(majorFile[:-3]))
+                    fp.write("    .. autodata:: {0:s}(Draft7Validator)\n".format(
+                        majorFile[:-3]))
                     fp.write("        :annotation:\n\n")
 
             else:
                 fp.write(".. automodule:: bpreveal.{0:s}\n    :members:\n\n".
-                        format(modName))
+                         format(modName))
             fp.write("\n.. raw:: latex\n\n    \\clearpage\n")
             fp.write("\n.. raw:: latex\n\n    \\clearpage\n")
 

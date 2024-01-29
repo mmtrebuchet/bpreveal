@@ -313,7 +313,7 @@ def main(config):
 if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as configFp:
-        config = json.load(configFp)
+        configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.makePredictionsFasta.validate(config)
-    main(config)
+    bpreveal.schema.makePredictionsFasta.validate(configJson)
+    main(configJson)

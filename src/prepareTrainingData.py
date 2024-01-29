@@ -81,7 +81,7 @@ that.
 
 ``auto`` is appropriate for data like ChIP-nexus.
 
-HISTORY
+History
 -------
 
 ``reverse-complement`` became mandatory in BPReveal 2.0.0

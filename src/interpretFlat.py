@@ -136,8 +136,8 @@ h5 to a bigwig, since it doesn't contain coordinate information. You can get
 around this limitation by providing a bed file and a genome in a ``coordinates``
 section.
 
-DEPRECATIONS
-------------
+History
+-------
 
 Before BPReveal 4.0.0, the ``coords_chrom`` dataset in the generated hdf5 file
 contained strings. For consistency with every other tool in the BPReveal suite,
@@ -208,8 +208,8 @@ def main(config):
         import pysam
         for ftype in ["profile-h5", "counts-h5"]:
             with h5py.File(config[ftype], "r+") as h5fp, \
-                 pybedtools.BedTool(config["coordinates"]["bed-file"]) as bedFp, \
                  pysam.FastaFile(config["coordinates"]["genome"]) as genome:
+                bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
                 makePredictionsBed.addCoordsInfo(bedFp, h5fp, genome)
 
 

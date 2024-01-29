@@ -10,16 +10,16 @@
 # work without this line for you.
 
 source /home/cm2363/.zshrc
-#The location where you cloned the git repository.
-#CHANGE to reflect your directory.
+# The location where you cloned the git repository.
+# CHANGE to reflect your directory.
 BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 ENV_FLAG=-n
-ENV_NAME=bpreveal-doctest
+ENV_NAME=bpreveal-teak
 
-#CHANGE this to conda if you don't have mamba installed.
+# CHANGE this to conda if you don't have mamba installed.
 CONDA_BIN=mamba
 PIP_BIN=pip
 
@@ -67,19 +67,11 @@ check
 
 conda activate ${ENV_NAME}
 check
-# You have to install the nvidia-toolkit manually to enable optimizations
-# for tensorflow.
-#${CONDA_BIN} install --yes -c "nvidia/label/cuda-11.8.0" cuda-toolkit
-#check
-
 # Tensorflow expressly advises against installing with conda.
-# I'm gonna do it anyway, because it works for me.
-#${CONDA_BIN} install --yes -c conda-forge tensorflow-gpu tensorflow-probability
-#check
 
-pip install 'tensorflow[and-cuda]'
+${PIP_BIN} install 'tensorflow[and-cuda]'
 check
-pip install tensorflow-probability
+${PIP_BIN} install tensorflow-probability
 check
 checkPackage tensorflow
 checkPackage tensorflow_probability
@@ -113,8 +105,8 @@ check
 ${CONDA_BIN} install --yes -c bioconda bedtools
 check
 
-# pysam and pybedtools don't have (as of 2023-03-23) Python 3.10 versions
-# in the conda repositories. So install them through pip.
+# pysam, pybigwig, and pybedtools don't have (as of 2023-03-23) Python 3.11
+# versions in the conda repositories. So install them through pip.
 ${PIP_BIN} install --no-input pysam pybedtools pybigwig
 check
 checkPackage pybedtools
@@ -129,6 +121,8 @@ check
 if [ "$INSTALL_JUPYTER" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge jupyterlab
     check
+    ${CONDA_BIN} install --yes -c conda-forge pandoc
+    check
 fi
 
 
@@ -138,6 +132,8 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge flake8
     check
     ${CONDA_BIN} install --yes -c conda-forge pydocstyle
+    check
+    ${CONDA_BIN} install --yes -c conda-forge pylint
     check
     ${CONDA_BIN} install --yes -c conda-forge sphinx
     check

@@ -103,8 +103,8 @@ It will not check that the score column in your file is numeric, nor will
 it check to see if you have flipped some columns in your input file.
 
 
-DEPRECATIONS
-------------
+History
+-------
 
 The old ``bigwigs`` format was deprecated in BPReveal 4.0.0 and will be
 removed in BPReveal 5.0.0

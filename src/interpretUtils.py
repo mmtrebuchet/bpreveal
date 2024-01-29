@@ -1392,7 +1392,7 @@ class _FlatBatcher:
             self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
 
 
-def combineMultAndDiffref(mult, orig_inp, bg_data):
+def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-name
     """Combine the shap multipliers and difference from reference to generate hypothetical scores.
 
     This is injected deep into shap and generates the hypothetical importance scores.
