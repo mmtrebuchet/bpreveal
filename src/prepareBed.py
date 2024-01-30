@@ -460,8 +460,12 @@ def prepareBeds(config):
         config["heads"] = headsConfig
     if "num-threads" not in config:
         numThreads = 1
+        logging.warning("You have not specified a number of threads in your prepareBed config."
+                        "Defaulting to one thread. "
+                        "You may see a performance gain if you set num-threads around 20.")
     else:
         numThreads = config["num-threads"]
+        logging.debug("Using {0:d} threads".format(numThreads))
 
     genome = pysam.FastaFile(config["genome"])
     (trainRegions, valRegions, testRegions, rejectRegions) = loadRegions(config)

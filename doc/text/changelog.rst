@@ -11,13 +11,15 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.1.0
+BPReveal 4.1.0, DATEDATEDATE
 ''''''''''''''
 
 ENHANCEMENTS:
     * Added parallelization to :py:mod:`prepareBed<bpreveal.prepareBed>`.
-      It should now be a lot faster. Output should be identical.
-    
+      It should now be a lot faster. Output is bit-for-bit identical.
+    * Dramatically sped up the whitelist calculation for tiling the genome in
+      :py:func:`makeWhitelistSegments<bpreveal.bedUtils.makeWhitelistSegments>`.
+
 
 BPReveal 4.0.x
 ^^^^^^^^^^^^^^
