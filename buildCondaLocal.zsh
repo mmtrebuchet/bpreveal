@@ -35,6 +35,8 @@ INSTALL_DEVTOOLS=true
 # Do you want to install Snakemake?
 INSTALL_SNAKEMAKE=true
 
+# Do you want to install pydot and graphviz? This is needed to render an image from showModel.
+INSTALL_PYDOT=true
 
 ######################
 # DON'T CHANGE BELOW #
@@ -143,6 +145,8 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     check
     ${CONDA_BIN} install --yes -c conda-forge sphinx-autodoc-typehints
     check
+    ${CONDA_BIN} install --yes -c conda-forge coverage
+    check
 fi
 
 if [ "$INSTALL_SNAKEMAKE" = true ] ; then
@@ -152,6 +156,12 @@ if [ "$INSTALL_SNAKEMAKE" = true ] ; then
     check
 fi
 
+if [ "$INSTALL_PYDOT" = true ] ; then
+    ${CONDA_BIN} install --yes -c conda-forge graphviz
+    check
+    ${CONDA_BIN} install --yes -c conda-forge pydot
+    check
+fi
 
 # 4. Try to build libjaccard.
 ${CONDA_BIN} install --yes -c conda-forge gfortran

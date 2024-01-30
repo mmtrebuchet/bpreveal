@@ -8,6 +8,7 @@
      <output-file-name-section>,
      "resize-mode" : <resize-mode>,
      <overlaps-section>
+     <num-threads-section>
      <verbosity-section>}
 
 <bigwig-section> ::=
@@ -77,6 +78,11 @@
 <list-of-bed-files> ::=
     <file-name>, <list-of-bed-files>
   | <file-name>
+
+
+<num-threads-section> ::=
+    <empty>
+  | "num-threads" <integer>,
 
 (DEPRECATED) <bigwig-preparation-list> ::=
 (DEPRECATED)    <individual-preparation-bigwig>

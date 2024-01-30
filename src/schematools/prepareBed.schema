@@ -89,6 +89,7 @@
         "resize-mode": {"type": "string", "enum": ["none", "center", "start"]},
         "remove-overlaps": {"type": "boolean"},
         "overlap-max-distance": {"type": "integer"},
+        "num-threads" : {"type" : "integer"},
         "verbosity": {"type": "string", "enum": ["DEBUG", "WARN", "INFO"]}
     },
     "required": ["heads", "splits", "genome", "output-length", "input-length",

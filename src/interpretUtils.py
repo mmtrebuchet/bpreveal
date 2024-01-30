@@ -302,6 +302,7 @@ class FlatRunner:
         logging.debug("Batchers joined.")
         self._profileSaverThread.join()
         self._countsSaverThread.join()
+        logging.debug("Savers joined.")
         self._profileSaver.parentFinish()
         self._countsSaver.parentFinish()
         logging.info("Savers complete. Done.")
@@ -428,6 +429,7 @@ class FlatListSaver(Saver):
         I could just expose _outShapArray, but this reorganizes it in a much
         more intuitive way.
         """
+        logging.debug("Finishing in parent.")
         self.shap = np.zeros((self.numSamples, self.inputLength, 4), dtype=np.float32)
         self.seq = np.zeros((self.numSamples, self.inputLength, 4), dtype=ONEHOT_T)
         for idx in range(self.numSamples):

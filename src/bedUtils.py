@@ -3,6 +3,10 @@ import pybedtools
 import pysam
 import logging
 import numpy as np
+import multiprocessing
+import pyBigWig
+from collections import deque
+from bpreveal import utils
 from typing import Literal
 from bpreveal.utils import wrapTqdm
 
@@ -41,35 +45,43 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
 
     for chromName in wrapTqdm(sorted(genome.references), "INFO"):
         chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
+        seqList = np.fromstring(chromSeq, np.int8)  # type: ignore
         if chromName in blacklistsByChrom:
-            seqList = list(chromSeq)
             for blackInterval in blacklistsByChrom[chromName]:
-                for base in range(blackInterval.start, blackInterval.end - 1):
-                    try:
-                        seqList[base] = 'N'
-                    except IndexError:
-                        logging.warning("Ran off the end of the chromosome. Interval: {0:s}"
-                                        .format(str(blackInterval)))
-                        break
-            chromSeq = ''.join(seqList)
-        segmentStart = 0
-        inSegment = False
-        for i, c in enumerate(chromSeq):
-            if c not in 'ACGTacgt':
-                # We have hit a segment boundary.
-                if inSegment:
-                    # We should commit the current segment.
-                    segments.append(pybedtools.Interval(chromName, segmentStart, i))
-                inSegment = False
-            elif not inSegment:
-                # Start up a new segment.
-                segmentStart = i
-                inSegment = True
-
-        if inSegment:
-            # We finished the chromosome without hitting Ns. Certainly possible!
-            segments.append(pybedtools.Interval(chromName, segmentStart, len(chromSeq)))
+                if blackInterval.start >= seqList.shape[0]:
+                    continue
+                endPt = min(seqList.shape[0], blackInterval.end)
+                seqList[blackInterval.start:endPt] = ord('N')
+        segments.extend(_findNonN(seqList, chromName))
     return pybedtools.BedTool(segments)
+
+
+def _findNonN(inSeq: np.ndarray, chromName: str) -> list[pybedtools.Interval]:
+    """Return a list of Intervals consisting of all regions of the sequence that are not N.
+
+    :param inSeq: an array of character values - not a one-hot encoded sequence::
+
+        inSeq[i] = ord(dnaStr[i])
+
+    :param chromName: Just the name of the chromosome, used to populate the chrom
+        field in the returned Interval objects.
+
+    :return: A list of Intervals where the sequence is NOT ``n`` or ``N``.
+    """
+    segments = []
+    isValid = np.logical_not(np.logical_or(inSeq == ord('N'), inSeq == ord('n')))
+    stops = np.empty(isValid.shape, dtype=np.bool_)
+    starts = np.empty(isValid.shape, dtype=np.bool_)
+    starts[0] = isValid[0]
+    stops[-1] = isValid[-1]
+
+    stops[:-1] = np.logical_and(isValid[:-1], np.logical_not(isValid[1:]))
+    starts[1:] = np.logical_and(isValid[1:], np.logical_not(isValid[:-1]))
+    stopPoses = np.flatnonzero(stops)  # type: ignore
+    startPoses = np.flatnonzero(starts)  # type: ignore
+    for startPos, stopPos in zip(startPoses, stopPoses):
+        segments.append(pybedtools.Interval(chromName, startPos, stopPos + 1))
+    return segments
 
 
 def tileSegments(inputLength: int, outputLength: int,
@@ -255,3 +267,71 @@ def lineToInterval(line: str) -> pybedtools.Interval | Literal[False]:
         return False
     initInterval = pybedtools.cbedtools.create_interval_from_list(line.split())
     return initInterval
+
+
+class ParallelCounter:
+    """A class that queues up getCounts() jobs and runs them in parallel.
+
+    This is used by the prepareBed scripts.
+
+    :param bigwigNames: The name of the bigwig files to read from
+    :param numThreads: How many parallel workers should be used?
+    """
+
+    def __init__(self, bigwigNames: list[str], numThreads: int):
+        self.bigwigNames = bigwigNames
+        self.numThreads = numThreads
+        self.inQueue = multiprocessing.Queue()
+        self.outQueue = multiprocessing.Queue()
+        self.inFlight = 0
+        self.outDeque = deque()
+        self.numInDeque = 0
+        self.threads = [multiprocessing.Process(
+            target=_counterThread,
+            args=(bigwigNames, self.inQueue, self.outQueue))
+            for _ in range(numThreads)]
+        [x.start() for x in self.threads]
+
+    def addQuery(self, query: tuple[str, int, int], idx) -> None:
+        self.inQueue.put(query + (idx,), timeout=utils.QUEUE_TIMEOUT)
+        self.inFlight += 1
+        while not self.outQueue.empty():
+            self.outDeque.appendleft(self.outQueue.get(timeout=utils.QUEUE_TIMEOUT))
+            self.numInDeque += 1
+            self.inFlight -= 1
+
+    def done(self):
+        for _ in range(self.numThreads):
+            self.inQueue.put(None)
+        [x.join() for x in self.threads]
+
+    def getResult(self):
+        if self.inFlight and self.numInDeque == 0:
+            self.outDeque.appendleft(self.outQueue.get(timeout=utils.QUEUE_TIMEOUT))
+            self.numInDeque += 1
+            self.inFlight -= 1
+        self.numInDeque -= 1
+        return self.outDeque.pop()
+
+
+def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
+                   outQueue: multiprocessing.Queue) -> None:
+    bwFiles = [pyBigWig.open(fname) for fname in bigwigFnames]
+    outDeque = deque()
+    inDeque = 0
+    while True:
+        query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
+        match query:
+            case (chrom, start, end, idx):
+                r = getCounts(pybedtools.Interval(chrom, start, end), bwFiles)
+                outDeque.appendleft((r, idx))
+                inDeque += 1
+                while outQueue.empty and inDeque > 0:
+                    outQueue.put(outDeque.pop())
+                    inDeque -= 1
+            case None:
+                break
+    while inDeque:
+        outQueue.put(outDeque[-1], timeout=utils.QUEUE_TIMEOUT)
+        inDeque -= 1
+    [x.close() for x in bwFiles]

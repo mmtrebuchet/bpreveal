@@ -76,6 +76,9 @@ remove-overlaps
     If ``remove-overlaps`` is ``false``, then
     it is an error to set ``overlap-max-distance``.
 
+num-threads
+    How many threads should be used for loading counts information?
+    I recommend setting this to as many threads as your machine has.
 
 Additional information
 ----------------------
@@ -117,7 +120,6 @@ API
 # This file contains several helper functions for dealing with bed files.
 
 import json
-import pyBigWig
 import jsonschema
 import pysam
 import logging
@@ -126,7 +128,8 @@ import numpy as np
 import pybedtools
 import random
 import re
-from bpreveal.bedUtils import resize, sequenceChecker, getCounts, lineToInterval
+from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter
+random.seed(735014)
 
 
 def loadRegions(config):
@@ -264,13 +267,13 @@ def removeOverlaps(config, regions, genome):
     return (pybedtools.BedTool(ret), pybedtools.BedTool(rejects))
 
 
-def validateRegions(config, regions, genome, bigwigLists):
+def validateRegions(config, regions, genome, bigwigLists, numThreads):
     """The workhorse of this program.
 
     :param config: Straight from the JSON.
     :param regions: A BedTool or list.
     :param genome: A FastaFile (not the name as a str.)
-    :param bigwigLists: The data files to use.
+    :param bigwigLists: The names of the data files to use.
     :return: Two BedTools, one for regions that passed the filters and another for
         those that failed.
 
@@ -306,6 +309,7 @@ def validateRegions(config, regions, genome, bigwigLists):
     # Note: The bigwigLists correspond to the heads in here.
     # So go over every region and measure its counts (unless max-quantile == 1)
     # and reject regions that are over-full on reads.
+    pbar = utils.wrapTqdm(len(bigRegionsList) * len(config["heads"]) * 2, logging.INFO)
     for i, headSpec in enumerate(config["heads"]):
         if "max-quantile" in headSpec:
             if headSpec["max-quantile"] == 1:
@@ -314,9 +318,16 @@ def validateRegions(config, regions, genome, bigwigLists):
                 # if we need to look at max counts there.
                 continue
         # Get the counts over every region.
+        counter = ParallelCounter(bigwigLists[i], numThreads)
         bigCounts = np.zeros((len(bigRegionsList),))
         for j, r in enumerate(bigRegionsList):
-            bigCounts[j] = getCounts(r, bigwigLists[i])
+            counter.addQuery((r.chrom, r.start, r.end), j)
+            pbar.update()
+        for _ in range(len(bigRegionsList)):
+            val, idx = counter.getResult()
+            bigCounts[idx] = val
+            pbar.update()
+        counter.done()
         if "max-counts" in headSpec:
             maxCounts = headSpec["max-counts"]
         else:
@@ -330,26 +341,32 @@ def validateRegions(config, regions, genome, bigwigLists):
                 validRegions[regionIdx] = 0
         logging.debug("    Rejected {0:f}% of regions for having too many"
             "counts.".format(numReject * 100. / len(bigRegionsList)))
-
+    pbar.close()
     # We've now validated that the regions don't have too many counts when you inflate them.
     # We also need to check that the regions won't have too few counts in the output.
     logging.info("    Validated inflated regions. Surviving: {0:d}".format(
         int(np.sum(validRegions))))
     bigRegionsBed = pybedtools.BedTool(bigRegionsList)
-    pbar = utils.wrapTqdm(len(bigRegionsList) * len(bigwigLists))
     smallRegionsList = list(bigRegionsBed.each(resize,
                                                'center',
                                                config["output-length"] - config["max-jitter"] * 2,
                                                genome).saveas())
+    pbar = utils.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logging.INFO)
     for i, headSpec in enumerate(config["heads"]):
         # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
         if "min-quantile" in headSpec:
             if headSpec["min-quantile"] == 0:
                 continue
         smallCounts = np.zeros((len(smallRegionsList),))
+        counter = ParallelCounter(bigwigLists[i], numThreads)
         for j, r in enumerate(smallRegionsList):
-            smallCounts[j] = getCounts(r, bigwigLists[i])
+            counter.addQuery((r.chrom, r.start, r.end), j)
             pbar.update()
+        for _ in range(len(smallRegionsList)):
+            val, idx = counter.getResult()
+            smallCounts[idx] = val
+            pbar.update()
+        counter.done()
         if "min-counts" in headSpec:
             minCounts = headSpec["min-counts"]
         else:
@@ -441,6 +458,10 @@ def prepareBeds(config):
         logging.warning("with each bigwig being considered as its own head:")
         logging.warning(str(headsConfig))
         config["heads"] = headsConfig
+    if "num-threads" not in config:
+        numThreads = 1
+    else:
+        numThreads = config["num-threads"]
 
     genome = pysam.FastaFile(config["genome"])
     (trainRegions, valRegions, testRegions, rejectRegions) = loadRegions(config)
@@ -463,17 +484,15 @@ def prepareBeds(config):
 
     bigwigLists = []
     for head in config["heads"]:
-        bigwigLists.append([pyBigWig.open(bwName) for bwName in head["bigwig-names"]])
+        # bigwigLists.append([pyBigWig.open(bwName) for bwName in head["bigwig-names"]])
+        bigwigLists.append(head["bigwig-names"])
     logging.info("Training regions validation beginning.")
-    validTrain, rejectTrain = validateRegions(config, trainRegions, genome, bigwigLists)
+    validTrain, rejectTrain = validateRegions(config, trainRegions, genome, bigwigLists, numThreads)
     logging.info("Validation regions validation beginning.")
-    validVal, rejectVal = validateRegions(config, valRegions, genome, bigwigLists)
+    validVal, rejectVal = validateRegions(config, valRegions, genome, bigwigLists, numThreads)
     logging.info("Test regions validation beginning.")
-    validTest, rejectTest = validateRegions(config, testRegions, genome, bigwigLists)
+    validTest, rejectTest = validateRegions(config, testRegions, genome, bigwigLists, numThreads)
 
-    for bwList in bigwigLists:
-        for f in bwList:
-            f.close()
     logging.info("Saving region lists to bed files.")
     validTrain.saveas(outputTrainFname)
     validVal.saveas(outputValFname)

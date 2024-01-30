@@ -197,7 +197,8 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     return useMem
 
 
-def loadChromSizes(chromSizesFname: str | None = None, genomeFname: str | None = None,
+def loadChromSizes(chromSizesFname: str | None = None,
+                   genomeFname: str | None = None,
                    bwHeader: dict[str, int] | None = None,
                    bw: pyBigWig.pyBigWig | None = None,
                    fasta: pysam.FastaFile | None = None) -> dict[str, int]:
@@ -525,32 +526,25 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
         # In case we got some weird iterable, turn it into a list.
         sequences = list(sequences)
 
-    def predictThread(seqs, model, outQueue):
-        setMemoryGrowth()
-        remainingToRead = len(seqs)
-        bp = BatchPredictor(model, 64)
-        preds = []
-        for s in seqs:
-            bp.submitString(s, 1)
-            while bp.outputReady():
-                preds.append(bp.getOutput())
+    predictor = ThreadedBatchPredictor(modelFname, 64, start=False)
+    ret = []
+    remainingToRead = 0
+    with predictor:
+        for s in sequences:
+            predictor.submitString(s, 1)
+            remainingToRead += 1
+            while predictor.outputReady():
+                ret.append(predictor.getOutput())
                 remainingToRead -= 1
         for _ in range(remainingToRead):
-            preds.append(bp.getOutput())
-        for p in preds:
-            logits, logcounts = p[0]
-            outQueue.put(logitsToProfile(logits, logcounts))
-    resultQueue = multiprocessing.Queue()
-    # daemon=True makes it so that the child process dies if the parent dies
-    # which is useful if something goes wrong.
-    proc = multiprocessing.Process(target=predictThread,
-                                   args=(sequences, modelFname, resultQueue),
-                                   daemon=True)
-    proc.start()
-    ret = []
-    for _ in range(len(sequences)):
-        ret.append(resultQueue.get())
-    proc.join()
+            outputs = predictor.getOutput()[0]
+            numHeads = len(outputs) // 2
+            headProfiles = []
+            for h in range(numHeads):
+                logits = outputs[h]
+                logcounts = outputs[h + numHeads]
+                headProfiles.append(logitsToProfile(logits, logcounts))  # type: ignore
+            ret.append(headProfiles)
     if singleReturn:
         return ret[0]
     else:
