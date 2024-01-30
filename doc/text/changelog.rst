@@ -8,6 +8,17 @@ see :doc:`breakingChanges`.
 BPReveal 4.x
 ------------
 
+BPReveal 4.1.x
+^^^^^^^^^^^^^^
+
+BPReveal 4.1.0
+''''''''''''''
+
+ENHANCEMENTS:
+    * Added parallelization to :py:mod:`prepareBed<bpreveal.prepareBed>`.
+      It should now be a lot faster. Output should be identical.
+    
+
 BPReveal 4.0.x
 ^^^^^^^^^^^^^^
 
