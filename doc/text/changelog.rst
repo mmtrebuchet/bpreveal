@@ -11,6 +11,18 @@ BPReveal 4.x
 BPReveal 4.0.x
 ^^^^^^^^^^^^^^
 
+Version 4.0.3, 2024-01-30
+-------------------------
+
+BUG FIXES:
+    * Fixed a bug in the Easy prediction function incorrectly assuming that models
+      had only one output.
+    * Added pydot and graphviz as optional components in the build script, only
+      necessary to use the graphical output from showModel.
+
+CONTRIBUTORS:
+    Charles McAnany
+
 Version 4.0.2, 2024-01-29
 '''''''''''''''''''''''''
 
