@@ -109,7 +109,6 @@ def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
 
 
 def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
-    """TODO Document"""
     numSequences = bed.count()
     if not revcomp:
         seqs = np.zeros((numSequences, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
@@ -132,7 +131,6 @@ def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
 
 def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
             revcomp: Literal[False] | list[int]) -> PRED_AR_T:
-    """TODO Document"""
     # Note that revcomp should be either False or the task-order array (which is truthy).
     numSequences = bed.count()
     if not revcomp:

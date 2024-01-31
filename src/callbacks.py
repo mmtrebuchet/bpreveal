@@ -14,6 +14,18 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
     :param heads: The heads list for your model, to which adaptive loss λ tensors
         have been added.
     :return: A list of Keras callbacks that you should use to train your model.
+
+    The returned callbacks are:
+
+    EarlyStopping
+        Stop training if the validation loss hasn't improved for a while.
+    ModelCheckpoint
+        Write a checkpoint file every time the validation loss improves.
+    ReduceLROnPlateau
+        If validation loss hasn't improved for a while, decrease the learning rate.
+    ApplyAdaptiveCountsLoss
+        Implement the :doc:`adaptive counts loss algorithm<countsLossReweighting>`.
+
     """
     logging.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(

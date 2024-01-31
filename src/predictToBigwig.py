@@ -11,7 +11,6 @@ from bpreveal import utils
 
 
 class Region:
-    """TODO Document"""
 
     def __init__(self, chromIdx, start, end, h5Idx):
         self.chromIdx = chromIdx
@@ -20,7 +19,6 @@ class Region:
         self.h5Idx = h5Idx
 
     def getValues(self, h5fp, mode, head, taskID):
-        """TODO Document"""
         headLogits = h5fp["head_{0:d}".format(head)]["logits"]
         headLogcounts = h5fp["head_{0:d}".format(head)]["logcounts"]
 
@@ -55,7 +53,6 @@ def getChromInserts(arg):
 
 
 def getChromVector(regionList, h5fp, headID, taskID, mode):
-    """TODO Document"""
     chromSize = h5fp["chrom_sizes"][regionList[0].chromIdx]
     regionCounts = np.zeros((chromSize,), dtype=np.uint16)
     regionValues = np.zeros((chromSize,), dtype=np.float32)
@@ -67,7 +64,6 @@ def getChromVector(regionList, h5fp, headID, taskID, mode):
 
 
 def vectorToListOfInserts(dataVector):
-    """TODO Document"""
     rets = []
     regionStart = 0
     poses = np.nonzero(dataVector)[0]
@@ -87,7 +83,6 @@ def vectorToListOfInserts(dataVector):
 
 
 def buildRegionList(inH5):
-    """TODO Document"""
     numRegions = inH5['coords_chrom'].shape[0]
 
     # Sort the regions.
@@ -118,7 +113,6 @@ def buildRegionList(inH5):
 
 
 def writeBigWig(inH5Fname, outFname, headID, taskID, mode, verbose, negate, numThreads):
-    """TODO Document"""
     inH5 = h5py.File(inH5Fname, "r")
     logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headID, taskID))
     bwHeader = []

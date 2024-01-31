@@ -290,9 +290,14 @@ class ParallelCounter:
             target=_counterThread,
             args=(bigwigNames, self.inQueue, self.outQueue))
             for _ in range(numThreads)]
-        [x.start() for x in self.threads]
+        [x.start() for x in self.threads]  # pylint: disable=expression-not-assigned
 
     def addQuery(self, query: tuple[str, int, int], idx) -> None:
+        """Add a region (chrom, start, end) to the task list.
+
+        :param query: A tuple of (chromosome, start, end) giving the region to look at.
+        :param idx: An index that will be returned with the results.
+        """
         self.inQueue.put(query + (idx,), timeout=utils.QUEUE_TIMEOUT)
         self.inFlight += 1
         while not self.outQueue.empty():
@@ -301,11 +306,20 @@ class ParallelCounter:
             self.inFlight -= 1
 
     def done(self):
+        """Wrap up the show - close the child threads."""
         for _ in range(self.numThreads):
             self.inQueue.put(None)
-        [x.join() for x in self.threads]
+        [x.join() for x in self.threads]  # pylint: disable=expression-not-assigned
 
     def getResult(self):
+        """Get the next result.
+
+        :return: A tuple of (counts, idx), where counts is the total counts
+            for the bigwigs and idx is the index of the region you gave to addQuery.
+
+        Note that the results will NOT be given in order - you must look at the index
+        values.
+        """
         if self.inFlight and self.numInDeque == 0:
             self.outDeque.appendleft(self.outQueue.get(timeout=utils.QUEUE_TIMEOUT))
             self.numInDeque += 1
@@ -316,6 +330,36 @@ class ParallelCounter:
 
 def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
                    outQueue: multiprocessing.Queue) -> None:
+    """Thread to sum up regions of the bigwigs.
+
+    :param bigwigFnames: A list of file names to open.
+    :param inQueue: The input queue, where queries will come from.
+    :param outQueue: Where the calculated counts should be put.
+    :return: None, but does put results in outQueue.
+
+    The runner, :py:class:`~ParallelCounter`, will inject regions
+    in the format ``tuple[str, int, int, Any]``, which contains, in order,
+
+    1. Chromosome (``str``), the chromosome that the region is on.
+    2. Start (``int``), the start coordinate, 0-based, inclusive.
+    3. End (``int``), the end coordinate, 0-based, exclusive.
+    4. Index, which will be passed back with the result.
+
+    The results put counts data into ``outQueue``, with format
+    ``tuple[int, Any]``, containing:
+
+    1. Total counts, a float.
+    2. Index, which is straight from the input queue.
+
+    The total counts for a region is specified by::
+
+        def total(chrom, start, end):
+            total = 0.0
+            for bw in bigwigs:
+                total += sum(abs(bw.values(chrom, start, end)))
+            return total
+
+    """
     bwFiles = [pyBigWig.open(fname) for fname in bigwigFnames]
     outDeque = deque()
     inDeque = 0
@@ -334,4 +378,4 @@ def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
     while inDeque:
         outQueue.put(outDeque[-1], timeout=utils.QUEUE_TIMEOUT)
         inDeque -= 1
-    [x.close() for x in bwFiles]
+    [x.close() for x in bwFiles]  # pylint: disable=expression-not-assigned

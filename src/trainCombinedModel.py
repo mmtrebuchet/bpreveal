@@ -87,7 +87,7 @@ def main(config):
         config["settings"]["transformation-model"]["transformation-model-file"])
     regressionModel.trainable = False
     logging.debug("Loaded regression model.")
-    combinedModel, residualModel, transformationModel = models.combinedModel(
+    combinedModel, residualModel, _ = models.combinedModel(
         inputLength, outputLength,
         config["settings"]["architecture"]["filters"],
         config["settings"]["architecture"]["layers"],

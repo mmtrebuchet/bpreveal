@@ -34,13 +34,19 @@ snakemake
     For automatic processing workflows
 jupyterlab
     For interactive data wrangling.
+pandoc
+    Used to export Jupyter notebooks as pdfs.
+pydot, graphviz
+    These are only necessary to use showModel.py, which is deprecated and
+    will be removed in BPReveal 6.0.0.
 
 Additionally, for development, there are a few libraries that I find useful:
 
-flake8, pydocstyle
+flake8, pydocstyle, pylint
     Used to check the code for style issues.
 sphinx, sphinx_rtd_theme, sphinx-argparse, sphinx-autodoc-typehints
     Used to generate the documentation you're reading right now.
-
+coverage
+    Used to check code coverage.
 
 

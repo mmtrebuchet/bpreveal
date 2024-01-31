@@ -20,6 +20,7 @@ ENV_FLAG=-n
 ENV_NAME=bpreveal-teak
 
 # CHANGE this to conda if you don't have mamba installed.
+# (I recommend using mamba; it's way faster.)
 CONDA_BIN=mamba
 PIP_BIN=pip
 
@@ -41,6 +42,8 @@ INSTALL_PYDOT=true
 ######################
 # DON'T CHANGE BELOW #
 ######################
+
+PYTHON_VERSION=3.11
 
 check() {
     errorVal=$?
@@ -64,10 +67,14 @@ checkPackage() {
 }
 
 
-${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=3.11
+${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=${PYTHON_VERSION}
 check
 
 conda activate ${ENV_NAME}
+check
+
+#Make sure we have activated an environment with the right python.
+python3 --version | grep -q "${PYTHON_VERSION}"
 check
 # Tensorflow expressly advises against installing with conda.
 

@@ -286,7 +286,7 @@ class Organism:
         """
         return str(self.corruptors).__hash__()
 
-    def cmp(self, other: 'Organism') -> int:
+    def cmp(self, other: 'Organism') -> int:  # pylint: disable=too-many-return-statements
         """A general comparator between two organisms based on their corruptors.
 
         :param other: The organism to compare against.

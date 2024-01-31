@@ -4,6 +4,19 @@ Breaking Changes
 
 A more detailed version history can be found in the :doc:`changelog`.
 
+BPReveal 6.x
+------------
+
+BPReveal 6.0.0
+^^^^^^^^^^^^^^
+
+When BPReveal 6.0.0 is released, the following breaking changes will occur:
+
+1. The :py:mod:`showModel<bpreveal.showModel>` tool will be removed since it just
+   wraps a single keras function call, and getting graphical output requires two
+   rather large dependencies.
+
+
 BPReveal 5.x
 ------------
 

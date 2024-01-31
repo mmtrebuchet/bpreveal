@@ -40,6 +40,59 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
+def reweightCountsLosses(history, lossTypes):
+    """Add corrections for the adaptive counts loss algorithm.
+
+    :param history: The loss history, straight from the json.
+    :param lossTypes: The losses that should be plotted.
+    :return: The weight history, and also edits history and lossTypes.
+    """
+    totalReweightedValLosses = np.zeros((len(history["loss"]),))
+    totalReweightedLosses = np.zeros((len(history["loss"]),))
+    countsLossWeight = history["counts-loss-weight"]
+    # Now we need to go back and calculate all the corrected counts losses.
+    for countsKey in countsLossWeight.keys():
+        history["cw_" + countsKey] = countsLossWeight[countsKey]
+        # countsKey will be the head-name, we need to decorate it.
+        countsRe = re.compile(".*logcounts_{0:s}_loss".format(countsKey))
+        profileRe = re.compile(".*profile_{0:s}_loss".format(countsKey))
+        for lossPair in lossTypes:
+            typesToAdd = []
+            for lossType in lossPair:
+                if re.search(countsRe, lossType):
+                    # We found a counts loss and know the right weights.
+                    weightedCountsLosses = np.array(history[lossType])
+                    weightsAr = np.array(countsLossWeight[countsKey])
+                    unweightedCountsLosses = weightedCountsLosses / weightsAr
+                    reweightedCountsLosses = unweightedCountsLosses * weightsAr[-1]
+                    history["unw_" + lossType] = unweightedCountsLosses
+                    typesToAdd.append("unw_" + lossType)
+                    history["rew_" + lossType] = unweightedCountsLosses * weightsAr[-1]
+                    typesToAdd.append("rew_" + lossType)
+                    if lossType[:3] == "val":
+                        totalReweightedValLosses += reweightedCountsLosses
+                    else:
+                        totalReweightedLosses += reweightedCountsLosses
+                elif re.search(profileRe, lossType):
+                    # We found a profile loss. Add it to the totals, even though we don't
+                    # need to reweight anything.
+
+                    if lossType[:3] == "val":
+                        totalReweightedValLosses += np.array(history[lossType])
+                    else:
+                        totalReweightedLosses += np.array(history[lossType])
+            if len(typesToAdd) > 0:
+                lossPair.extend(typesToAdd)
+    # Find the total loss terms and add the reweighted values.
+    history["rew_loss"] = totalReweightedLosses
+    history["rew_val_loss"] = totalReweightedValLosses
+    for lt in lossTypes:
+        if lt[0] == "loss":
+            lt.append("rew_loss")
+            lt.append("rew_val_loss")
+    return countsLossWeight
+
+
 def main():
     """Make the plots"""
     args = getParser().parse_args()
@@ -60,53 +113,8 @@ def main():
                 else:
                     lossTypes.append([lt,])
     countsLossWeight = None
-    lossTypesCountsWeight = []
     if "counts-loss-weight" in history:
-        totalReweightedValLosses = np.zeros((len(history["loss"]),))
-        totalReweightedLosses = np.zeros((len(history["loss"]),))
-        countsLossWeight = history["counts-loss-weight"]
-        # Now we need to go back and calculate all the corrected counts losses.
-        for countsKey in countsLossWeight.keys():
-            history["cw_" + countsKey] = countsLossWeight[countsKey]
-            lossTypesCountsWeight.append("cw_" + countsKey)
-            # countsKey will be the head-name, we need to decorate it.
-            countsRe = re.compile(".*logcounts_{0:s}_loss".format(countsKey))
-            profileRe = re.compile(".*profile_{0:s}_loss".format(countsKey))
-            for lossPair in lossTypes:
-                typesToAdd = []
-                for lossType in lossPair:
-                    if re.search(countsRe, lossType):
-                        # We found a counts loss and know the right weights.
-                        weightedCountsLosses = np.array(history[lossType])
-                        weightsAr = np.array(countsLossWeight[countsKey])
-                        unweightedCountsLosses = weightedCountsLosses / weightsAr
-                        reweightedCountsLosses = unweightedCountsLosses * weightsAr[-1]
-                        history["unw_" + lossType] = unweightedCountsLosses
-                        typesToAdd.append("unw_" + lossType)
-                        history["rew_" + lossType] = unweightedCountsLosses * weightsAr[-1]
-                        typesToAdd.append("rew_" + lossType)
-                        if lossType[:3] == "val":
-                            totalReweightedValLosses += reweightedCountsLosses
-                        else:
-                            totalReweightedLosses += reweightedCountsLosses
-                    if re.search(profileRe, lossType):
-                        # We found a profile loss. Add it to the totals, even though we don't
-                        # need to reweight anything.
-
-                        if lossType[:3] == "val":
-                            totalReweightedValLosses += np.array(history[lossType])
-                        else:
-                            totalReweightedLosses += np.array(history[lossType])
-                if len(typesToAdd) > 0:
-                    lossPair.extend(typesToAdd)
-        # Find the total loss terms and add the reweighted values.
-        history["rew_loss"] = totalReweightedLosses
-        history["rew_val_loss"] = totalReweightedValLosses
-        for lt in lossTypes:
-            if lt[0] == "loss":
-                lt.append("rew_loss")
-                lt.append("rew_val_loss")
-        lossTypes.append(lossTypesCountsWeight)
+        countsLossWeight = reweightCountsLosses(history, lossTypes)
 
     fig = plotLosses(lossTypes, history, args.startFrom, countsLossWeight)
     fig.savefig(args.output, dpi=args.dpi)

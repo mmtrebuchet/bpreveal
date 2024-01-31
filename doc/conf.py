@@ -24,7 +24,6 @@ extensions = ['sphinx.ext.autodoc',
               'sphinxarg.ext']
 #              'sphinxcontrib.restbuilder']
 
-templates_path = []
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
                     "demos", "presentations", "scripts",
                     "makeHeader"]
@@ -61,6 +60,7 @@ autodoc_unqualified_typehints = False
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 # html_theme = "alabaster"
+templates_path = []
 html_theme = "sphinx_rtd_theme"
-html_static_path = []
-html_css_files = []
+html_static_path = ["_generated/static"]
+html_css_files = ["custom-styles.css"]

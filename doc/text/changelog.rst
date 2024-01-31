@@ -12,7 +12,7 @@ BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
 BPReveal 4.1.0, DATEDATEDATE
-''''''''''''''
+''''''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * Added parallelization to :py:mod:`prepareBed<bpreveal.prepareBed>`.
@@ -25,7 +25,7 @@ BPReveal 4.0.x
 ^^^^^^^^^^^^^^
 
 Version 4.0.3, 2024-01-30
--------------------------
+'''''''''''''''''''''''''
 
 BUG FIXES:
     * Fixed a bug in the Easy prediction function incorrectly assuming that models

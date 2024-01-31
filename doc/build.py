@@ -7,23 +7,21 @@ if len(sys.argv) > 1:
 else:
     requestName = None
 # Prose
-filesText = ["workflow", "programs", "setup",
-             "breakingChanges", "modelArchitectures",
-             "countsLossReweighting", "pisa"]
+filesText = ["workflow", "programs", "setup", "breakingChanges",
+             "modelArchitectures", "countsLossReweighting", "pisa"]
 
 filesDevelopment = ["philosophy", "changelog", "releaseChecklist"]
 
 # Things that take a json
-filesMajor = ["interpretFlat.py", "interpretPisa.py",
-              "makePredictionsBed.py", "makePredictionsFasta.py",
-              "motifScan.py", "motifSeqletCutoffs.py",
-              "prepareBed.py", "prepareTrainingData.py",
-              "trainCombinedModel.py",
+filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePredictionsBed.py",
+              "makePredictionsFasta.py", "motifScan.py",
+              "motifSeqletCutoffs.py", "prepareBed.py",
+              "prepareTrainingData.py", "trainCombinedModel.py",
               "trainSoloModel.py", "trainTransformationModel.py"]
 # Things that take command-line arguments
-filesMinor = ["lengthCalc.py", "makeLossPlots.py", "metrics.py", "motifAddQuantiles.py",
-              "predictToBigwig.py", "shapToBigwig.py", "shapToNumpy.py",
-              "showModel.py", "checkJson.py"]
+filesMinor = ["lengthCalc.py", "makeLossPlots.py", "metrics.py",
+              "motifAddQuantiles.py", "predictToBigwig.py", "shapToBigwig.py",
+              "shapToNumpy.py", "showModel.py", "checkJson.py"]
 
 # Libraries that can't be executed on their own
 filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
@@ -33,6 +31,13 @@ filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
 
 if not os.path.exists("_generated"):
     os.mkdir("_generated")
+
+
+if not os.path.exists("_generated/static"):
+    os.mkdir("_generated/static")
+
+if not os.path.exists("_generated/templates"):
+    os.mkdir("_generated/templates")
 
 # Always write a new header for the makefile.
 # In a bit of an incestuous daisy-chain, this program generates
@@ -95,6 +100,16 @@ if requestName == "base":
         fp.write("\n.. toctree::\n    :maxdepth: 2\n\n")
         for file in filesDevelopment:
             fp.write("    {0:s}\n".format(file))
+
+    # with open("_generated/templates/layout.html", "w") as fp:
+    #     fp.write('{% extends "!layout.html" %}\n')
+    #     fp.write("{% set bootswatch_css_custom = ['custom-styles.css'] %}\n")
+
+    with open("_generated/static/custom-styles.css", "w") as fp:
+        fp.write(".rst-content code.literal {\n")
+        fp.write("    color: #202060 !important;\n")
+        fp.write("    background-color: #fbfbfb !important;\n")
+        fp.write("}\n")
 
     # Generate a single .rst index
     with open("index.rst", "w") as fpBig:
