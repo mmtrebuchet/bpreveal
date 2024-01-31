@@ -16,7 +16,7 @@
         "num-shuffles": {"type": "integer"},
         "kmer-size": {"type": "integer"},
         "DEBUG_profile-output": {"type": "string"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
     },
     "required": ["input-length", "output-length", "head-id", "task-id",
         "output-h5", "num-shuffles", "verbosity"],

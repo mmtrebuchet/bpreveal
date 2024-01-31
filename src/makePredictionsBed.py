@@ -135,7 +135,7 @@ def main(config):
     writePreds(regions, preds, outFile, numHeads, genome)
 
 
-def addCoordsInfo(regions, outFile, genome):
+def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
     """Initialize an hdf5 with coordinate information.
 
     Creates the chrom_names, chrom_sizes, coords_chrom, coords_start,
@@ -144,6 +144,10 @@ def addCoordsInfo(regions, outFile, genome):
     :param regions: A BedTool of regions that will be written.
     :param outFile: The opened hdf5 file.
     :param genome: An opened pysam.FastaFile with your genome.
+    :param stopName: What should the stop point dataset be called?
+        For interpretation scores, it should be called coords_end, while
+        for predictions it should be called coords_stop.
+        I'm sorry that this parameter exists.
 
     """
     stringDtype = h5py.string_dtype(encoding='utf-8')
@@ -180,8 +184,8 @@ def addCoordsInfo(regions, outFile, genome):
     stopDset = [r.stop for r in regions]
     logging.debug("Datasets created. Populating regions.")
     outFile.create_dataset('coords_chrom', dtype=chromDtype, data=chromDset)
-    outFile.create_dataset('coords_start', dtype=chromPosDtype, data=startDset)
-    outFile.create_dataset('coords_stop',  dtype=chromPosDtype, data=stopDset)  # noqa
+    outFile.create_dataset("coords_start", dtype=chromPosDtype, data=startDset)
+    outFile.create_dataset(stopName, dtype=chromPosDtype, data=stopDset)
 
 
 def writePreds(regions, preds, outFile, numHeads, genome):

@@ -29,7 +29,7 @@
         "num-shuffles": {"type": "integer"},
         "kmer-size": {"type": "integer"},
         "DEBUG_profile-output": {"type": "string"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
     },
     "required": ["input-length", "output-length", "heads", "head-id",
         "profile-task-ids", "profile-h5", "counts-h5", "num-shuffles", "verbosity"],

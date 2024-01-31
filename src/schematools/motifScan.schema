@@ -34,7 +34,7 @@
             "enum": [
                 "DEBUG",
                 "WARNING",
-                "INFO"
+                "INFO", "ERROR", "CRITICAL"
             ]
         }
     },

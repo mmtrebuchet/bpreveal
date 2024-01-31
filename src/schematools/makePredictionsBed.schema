@@ -30,7 +30,7 @@
             "$ref":
             "/schemas/makePredictionsBed#definitions/prediction-settings-section"},
         "bed-file": {"type": "string"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
     },
     "required": ["bed-file", "settings",  "verbosity"]
 }

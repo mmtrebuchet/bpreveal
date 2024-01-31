@@ -33,7 +33,7 @@
             },
             "required" : ["bed-file", "genome"]
         },
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
     },
     "required": ["fasta-file", "settings",  "verbosity"]
 }

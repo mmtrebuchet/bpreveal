@@ -52,7 +52,7 @@
                 "not": {"required": ["use-bias-counts"]}
             }
         },
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
     },
     "required": ["heads", "train-data", "val-data", "settings",  "verbosity"],
     "definitions": {

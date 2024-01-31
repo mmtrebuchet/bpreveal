@@ -58,7 +58,7 @@
 
     "type": "object",
     "properties": {
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO"]}
+        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
     },
     "allOf": [
             {"$ref": "#/definitions/seqlet-scanning-settings"},

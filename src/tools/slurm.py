@@ -140,7 +140,8 @@ def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     return outFname
 
 
-def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None, local=False):
+def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None, local=False,
+                          cancelScript = None):
     """A jobspec is a tuple of (str, [str,str,str,...])
     where the first string is the name of the slurm file to run.
     The strings after it are the names of the slurm files that the
@@ -178,6 +179,8 @@ def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None, local=
 
     with open(outFname, "w") as fp:
         fp.write("#!/usr/bin/env zsh\n")
+        if cancelScript is not None:
+            fp.write("echo '#!/usr/bin/env zsh' > {0:s}\n".format(cancelScript))
         for jobSpec in jobOrder:
             job, deps = jobSpec
             if local:
@@ -202,3 +205,6 @@ def writeDependencyScript(config, jobspecs, wholeJobName, baseJobId=None, local=
                 "sed 's/_.*//'| sort -n | tail -n 1)\n").format(jobToDepNumber[job]))
             fp.write("echo \"job '{0:s}' got dependency ${{DEP_{1:d}}}\"\n".
                      format(job, jobToDepNumber[job]))
+            if cancelScript is not None:
+                fp.write('echo "scancel ${{DEP_{0:d}}}" >> {1:s}\n'.format(
+                    jobToDepNumber[job], cancelScript))
