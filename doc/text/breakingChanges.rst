@@ -29,6 +29,8 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
    when you do this, and these will become an error.
 2. Using an importance hdf5 from before version 4.0.0 will now result in an
    error instead of a deprecation warning.
+3. When doing PISA interpretation on a fasta, you must call the fasta
+   ``fasta-file`` instead of ``sequence-fasta``.
 
 BPReveal 4.x
 ------------
