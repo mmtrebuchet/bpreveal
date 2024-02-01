@@ -45,14 +45,14 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
 
     for chromName in wrapTqdm(sorted(genome.references), "INFO"):
         chromSeq = genome.fetch(chromName, 0, genome.get_reference_length(chromName))
-        seqList = np.fromstring(chromSeq, np.int8)  # type: ignore
+        seqVector = np.fromstring(chromSeq, np.int8)  # type: ignore
         if chromName in blacklistsByChrom:
             for blackInterval in blacklistsByChrom[chromName]:
-                if blackInterval.start >= seqList.shape[0]:
+                if blackInterval.start >= seqVector.shape[0]:
                     continue
-                endPt = min(seqList.shape[0], blackInterval.end)
-                seqList[blackInterval.start:endPt] = ord('N')
-        segments.extend(_findNonN(seqList, chromName))
+                endPt = min(seqVector.shape[0], blackInterval.end)
+                seqVector[blackInterval.start:endPt] = ord('N')
+        segments.extend(_findNonN(seqVector, chromName))
     return pybedtools.BedTool(segments)
 
 
@@ -69,17 +69,21 @@ def _findNonN(inSeq: np.ndarray, chromName: str) -> list[pybedtools.Interval]:
     :return: A list of Intervals where the sequence is NOT ``n`` or ``N``.
     """
     segments = []
+    # All bases that are not N.
     isValid = np.logical_not(np.logical_or(inSeq == ord('N'), inSeq == ord('n')))
-    stops = np.empty(isValid.shape, dtype=np.bool_)
+    # ends is 1 if this base is the end of a valid region, 0 otherwise.
+    ends = np.empty(isValid.shape, dtype=np.bool_)
+    # starts is 1 if this base is the beginning of a valid region, 0 otherwise.
     starts = np.empty(isValid.shape, dtype=np.bool_)
     starts[0] = isValid[0]
-    stops[-1] = isValid[-1]
+    ends[-1] = isValid[-1]
 
-    stops[:-1] = np.logical_and(isValid[:-1], np.logical_not(isValid[1:]))
+    ends[:-1] = np.logical_and(isValid[:-1], np.logical_not(isValid[1:]))
     starts[1:] = np.logical_and(isValid[1:], np.logical_not(isValid[:-1]))
-    stopPoses = np.flatnonzero(stops)  # type: ignore
+    # the Poses are the actual indices where the start and end vectors are nonzero.
+    endPoses = np.flatnonzero(ends)  # type: ignore
     startPoses = np.flatnonzero(starts)  # type: ignore
-    for startPos, stopPos in zip(startPoses, stopPoses):
+    for startPos, stopPos in zip(startPoses, endPoses):
         segments.append(pybedtools.Interval(chromName, startPos, stopPos + 1))
     return segments
 

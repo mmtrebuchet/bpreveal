@@ -68,8 +68,13 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
         logging.info("Including logging.")
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
+    if logging.root.isEnabledFor(logging.INFO):
+        verbosity = 'auto'
+    else:
+        verbosity = 0
     history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen,
-                        callbacks=callbacks, max_queue_size=1000)
+                        callbacks=callbacks, max_queue_size=1000,
+                        verbose=verbosity)
     # Turn the learning rates into native python float values so they can be saved to json.
     history.history['lr'] = [float(x) for x in history.history['lr']]
     lossCallback = callbacks[3]

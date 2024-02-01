@@ -56,7 +56,7 @@ def doShift(bwFnames, shifts, outFname):
     bwOut.close()
 
 
-def main():
+def getParser():
     parser = argparse.ArgumentParser(
         description="Slide bigwigs to turn mnase endpoint data into midpoints."
     )
@@ -75,8 +75,12 @@ def main():
         help="The name of the bigwig file to write, or, if scanning, "
              "the name of the dat file containing the correlation."
     )
+    return parser
 
-    args = parser.parse_args()
+
+def main():
+
+    args = getParser().parse_args()
 
     if args.scan:
         scanBigwigs(args.bw5, args.bw3, args.out)

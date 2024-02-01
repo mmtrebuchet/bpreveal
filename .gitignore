@@ -12,3 +12,4 @@ doc/*.rst
 **/*.bw
 **/*.so
 demoData
+**/.nfs0000*

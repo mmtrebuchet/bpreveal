@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-from bpreveal import bedUtils
 import pybedtools
 import pysam
 import logging
+from bpreveal import bedUtils
 from bpreveal import utils
-utils.setVerbosity("DEBUG")
 
 
 def getParser():
@@ -18,6 +17,10 @@ def getParser():
              "May be given multiple times.",
         action='append',
         dest='allowChrom')
+    ap.add_argument("--all-chroms", help="Instead of listing the chromosomes "
+                    "to use, use all of the chromosomes in the genome. "
+                    "Cannot be used with --allow-chrom.",
+                    action='store_true', dest='allChroms')
     ap.add_argument("--output-length", help="The width of the output regions.",
                     type=int, dest='outputLength')
     ap.add_argument("--input-length", help="The width of the model input.",
@@ -44,7 +47,11 @@ def main():
         utils.setVerbosity("WARNING")
     forbidRegions = []
     with pysam.FastaFile(args.genome) as genome:
-        for c in args.allowChrom:
+        if args.allChroms:
+            chroms = genome.references
+        else:
+            chroms = args.allowChroms
+        for c in chroms:
             chromLen = genome.get_reference_length(c)
             if chromLen < 2 * args.chromEdgeBoundary:
                 forbidRegions.append(
@@ -62,7 +69,7 @@ def main():
     with pysam.FastaFile(args.genome) as genome:
         whitelist = bedUtils.makeWhitelistSegments(genome, blacklist)
     logging.info("Whitelist built.")
-    whitelist = pybedtools.BedTool([x for x in whitelist if x.chrom in args.allowChrom])
+    whitelist = pybedtools.BedTool([x for x in whitelist if x.chrom in chroms])
     whitelist = pybedtools.BedTool(list(whitelist))
     tiles = bedUtils.tileSegments(args.inputLength, args.outputLength, whitelist, args.spacing)
     tiles.saveas(args.outputBed)

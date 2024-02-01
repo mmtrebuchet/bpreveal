@@ -210,7 +210,7 @@ def main(config):
             with h5py.File(config[ftype], "r+") as h5fp, \
                  pysam.FastaFile(config["coordinates"]["genome"]) as genome:
                 bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
-                makePredictionsBed.addCoordsInfo(bedFp, h5fp, genome)
+                makePredictionsBed.addCoordsInfo(bedFp, h5fp, genome, stopName="coords_end")
 
 
 if __name__ == "__main__":

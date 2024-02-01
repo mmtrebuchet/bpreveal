@@ -79,17 +79,21 @@ def main(jsonFname: str, targetRatio: float, prevWeight: float):
                 lossByHead[k]["valRatio"] * prevWeight, k))
 
 
-if __name__ == "__main__":
+def getParser():
     parser = argparse.ArgumentParser(description="Read in a model history json and calculate the"
                                      "profile/counts loss ratio.")
     parser.add_argument("--json", help="The name of the history json file", type=str)
     parser.add_argument("--target-ratio", help="(optional) What counts loss weight do you want "
-        "to have? A float from [0,∞), with 0 meaning no counts weight, 1 meaning equal weight "  # noqa
-        "between counts and profile. A normal setting would be 0.1. Use the output to set "  # noqa
+        "to have? A float from [0,∞), with 0 meaning no counts weight, 1 meaning equal weight "
+        "between counts and profile. A normal setting would be 0.1. Use the output to set "
         "counts-loss-weight in your training configuration files.",  # noqa
         dest='targetRatio', type=float, default=0.0)  # noqa
     parser.add_argument("--prev-weight", help="The counts-loss-weight you used to train your "
-        "model. If provided, the printed ratios will be scaled by this number to reflect their "  # noqa
-        "actual contribution in your model.", type=float, default=1.0, dest="prevWeight")  # noqa
-    args = parser.parse_args()
+        "model. If provided, the printed ratios will be scaled by this number to reflect their "
+        "actual contribution in your model.", type=float, default=1.0, dest="prevWeight")
+    return parser
+
+
+if __name__ == "__main__":
+    args = getParser().parse_args()
     main(args.json, args.targetRatio, args.prevWeight)

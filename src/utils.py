@@ -350,6 +350,7 @@ def setVerbosity(userLevel: str) -> None:
                         format='%(levelname)s : %(asctime)s :'
                         '%(filename)s:%(lineno)d : %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
+    logging.root.setLevel(levelMap[userLevel])
     logging.debug("Logger configured.")
 
 

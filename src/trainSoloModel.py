@@ -170,8 +170,13 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
+    if logging.root.isEnabledFor(logging.INFO):
+        verbosity = 'auto'
+    else:
+        verbosity = 0
     history = model.fit(trainBatchGen, epochs=epochs,
-                        validation_data=valBatchGen, callbacks=callbacks)
+                        validation_data=valBatchGen, callbacks=callbacks,
+                        verbose=verbosity)
     # Turn the learning rate data into python floats, since they come as
     # numpy floats and those are not serializable.
     history.history['lr'] = [float(x) for x in history.history["lr"]]
