@@ -19,6 +19,14 @@ ENHANCEMENTS:
       It should now be a lot faster. Output is bit-for-bit identical.
     * Dramatically sped up the whitelist calculation for tiling the genome in
       :py:func:`makeWhitelistSegments<bpreveal.bedUtils.makeWhitelistSegments>`.
+    * Made the verbosity of the training step match the user-specified verbosity.
+      If your configuration json says that verbosity should be WARNING, then there
+      is much less output from the training scripts.
+
+DEPRECATIONS:
+    * The showModel script is deprecated and will be removed in 6.0.0.
+      It does very little and required two large dependencies (pydot and graphviz)
+      to get the image out.
 
 
 BPReveal 4.0.x
