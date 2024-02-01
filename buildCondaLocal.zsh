@@ -114,7 +114,7 @@ check
 ${CONDA_BIN} install --yes -c bioconda bedtools
 check
 
-# pysam, pybigwig, and pybedtools don't have (as of 2023-03-23) Python 3.11
+# pysam, pybigwig, and pybedtools don't have (as of 2024-02-01) Python 3.11
 # versions in the conda repositories. So install them through pip.
 ${PIP_BIN} install --no-input pysam pybedtools pybigwig
 check
@@ -122,7 +122,7 @@ checkPackage pybedtools
 checkPackage pyBigWig
 checkPackage pysam
 
-# Modisco-lite isn't in conda as of 2023-03-23.
+# Modisco-lite isn't in conda as of 2024-02-01.
 ${PIP_BIN} install --no-input modisco-lite
 check
 
@@ -157,9 +157,7 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
 fi
 
 if [ "$INSTALL_SNAKEMAKE" = true ] ; then
-    # 3. Snakemake doesn't have a python 3.10 version in the conda repositories, so install
-    # it with pip.
-    ${PIP_BIN} install --no-input snakemake
+    ${CONDA_BIN} install --yes -c bioconda snakemake
     check
 fi
 
