@@ -4,9 +4,9 @@ import numpy as np
 import pysam
 import pyBigWig
 import argparse
-import logging
+from bpreveal import logging
 from bpreveal import utils, bedUtils
-utils.setVerbosity("INFO")
+logging.setVerbosity("INFO")
 
 
 def getParser():

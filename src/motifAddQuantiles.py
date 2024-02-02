@@ -114,7 +114,7 @@ from bpreveal import motifUtils
 import numpy as np
 import csv
 import argparse
-import logging
+from bpreveal import logging
 
 
 def recordToPatternID(record):
@@ -230,9 +230,9 @@ def main():
     """Add quantile information."""
     args = getParser().parse_args()
     if args.verbose:
-        logging.basicConfig(level=logging.INFO)
+        logging.setVerbosity("INFO")
     else:
-        logging.basicConfig(level=logging.WARNING)
+        logging.setVerbosity("WARNING")
     seqletInFname = args.seqletTsvFname
     scanInFname = args.scanTsvFname
     seqletOutFname = args.seqletOutFname

@@ -105,10 +105,9 @@ API
 import pyBigWig
 import numpy as np
 import argparse
-import logging
+from bpreveal import logging
 import scipy.stats
 import scipy.spatial.distance
-from bpreveal import utils
 import json
 from bpreveal.utils import QUEUE_TIMEOUT
 from multiprocessing import Process, Queue
@@ -297,7 +296,7 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
     spearmanrs = np.zeros((numRegions,))
     referenceCounts = np.zeros((numRegions,))
     predictedCounts = np.zeros((numRegions,))
-    pbar = utils.wrapTqdm(range(numRegions), logging.INFO)
+    pbar = logging.wrapTqdm(range(numRegions), logging.INFO)
     for _ in pbar:
         ret = outputQueue.get(timeout=QUEUE_TIMEOUT)
         (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCount, predictedCount) = ret
@@ -428,10 +427,10 @@ def main():
     """Run the whole thing."""
     args = getParser().parse_args()
     if args.verbose:
-        logging.basicConfig(level=logging.INFO)
+        logging.setVerbosity("INFO")
         assert not args.jsonOutput, "--json-output and --verbose cannot be specified together."
     else:
-        logging.basicConfig(level=logging.WARNING)
+        logging.setVerbosity("WARNING")
 
     runMetrics(args.reference, args.predicted, args.regions, args.threads,
                args.applyAbs, args.skipZeroes, args.jsonOutput)

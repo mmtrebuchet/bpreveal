@@ -93,7 +93,7 @@ import h5py
 import pyBigWig
 import json
 import pysam
-import logging
+from bpreveal import logging
 import pybedtools
 from bpreveal import utils
 from typing import Literal
@@ -202,5 +202,5 @@ if __name__ == "__main__":
 
     import bpreveal.schema
     bpreveal.schema.prepareTrainingData.validate(configJson)
-    utils.setVerbosity(configJson["verbosity"])
+    logging.setVerbosity(configJson["verbosity"])
     writeH5(configJson)

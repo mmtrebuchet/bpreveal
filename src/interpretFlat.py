@@ -150,10 +150,9 @@ API
 """
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-from bpreveal import utils
 import json
 from bpreveal import interpretUtils
-import logging
+from bpreveal import logging
 
 
 def main(config):
@@ -161,7 +160,7 @@ def main(config):
 
     :param config: A JSON object matching the interpretFlat specification.
     """
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     genomeFname = None
     kmerSize = 1
     if "kmer-size" in config:

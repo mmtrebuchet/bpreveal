@@ -18,7 +18,7 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
-import logging
+from bpreveal import logging
 import argparse
 from bpreveal import utils
 
@@ -48,7 +48,7 @@ def getParser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     args = getParser().parse_args()
-    utils.setVerbosity("INFO")
+    logging.setVerbosity("INFO")
     logging.warning(
         "DEPRECATION: The showModel tool is deprecated and will be removed in BPReveal 6.0.0.\n"
         "    Instructions for updating:\n"

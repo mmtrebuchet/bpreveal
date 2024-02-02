@@ -4,7 +4,7 @@ import h5py
 import pyBigWig
 import numpy as np
 import argparse
-import logging
+from bpreveal import logging
 import tqdm
 import multiprocessing
 from bpreveal import utils
@@ -194,9 +194,9 @@ def main():
     """Run the program."""
     args = getParser().parse_args()
     if args.verbose:
-        logging.basicConfig(level=logging.INFO)
+        logging.setVerbosity("INFO")
     else:
-        logging.basicConfig(level=logging.WARNING)
+        logging.setVerbosity("WARNING")
     writeBigWig(args.h5, args.bw, args.headID, args.taskID, args.mode, args.verbose,
                 args.negate, args.numThreads)
 

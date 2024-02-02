@@ -157,7 +157,7 @@ import h5py
 from tensorflow import keras
 from bpreveal import generators
 from bpreveal import losses
-import logging
+from bpreveal import logging
 from bpreveal.callbacks import getCallbacks
 from bpreveal import models
 import tensorflow as tf
@@ -170,7 +170,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    if logging.root.isEnabledFor(logging.INFO):
+    if logging.getLogger().isEnabledFor(logging.INFO):
         verbosity = 'auto'
     else:
         verbosity = 0
@@ -188,7 +188,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     """Build and train a model."""
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     logging.debug("Initializing")
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]

@@ -6,7 +6,7 @@ numpy arrays that can be fed to the tfmodisco-lite suite.
 import numpy as np
 import h5py
 import argparse
-import logging
+from bpreveal import logging
 from bpreveal.utils import IMPORTANCE_T, ONEHOT_T
 
 
@@ -41,9 +41,9 @@ def main():
 
     args = getParser().parse_args()
     if args.verbose:
-        logging.basicConfig(level=logging.INFO)
+        logging.setVerbosity("INFO")
     else:
-        logging.basicConfig(level=logging.WARNING)
+        logging.setVerbosity("WARNING")
     logging.info("Loading input file {0:s}.".format(args.h5))
     inFile = h5py.File(args.h5, "r")
     if args.seqs is not None:

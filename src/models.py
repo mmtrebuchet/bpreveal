@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
 from bpreveal import layers
-import logging
+from bpreveal import logging
 
 
 def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):

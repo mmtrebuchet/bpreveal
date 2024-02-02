@@ -105,9 +105,8 @@ API
 ---
 
 """
-import logging
+from bpreveal import logging
 from bpreveal import motifUtils
-from bpreveal import utils
 import json
 
 
@@ -116,7 +115,7 @@ def main(config):
 
     :param config: A JSON object based on the motifSeqletCutoffs specification.
     """
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     logging.info("Starting seqlet analysis")
     # First, make the pattern objects.
     tsvFname = None

@@ -69,7 +69,7 @@ from bpreveal import losses
 from bpreveal import models
 from bpreveal.callbacks import getCallbacks
 from tensorflow import keras
-import logging
+from bpreveal import logging
 import tensorflow as tf
 
 
@@ -80,7 +80,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    if logging.root.isEnabledFor(logging.INFO):
+    if logging.getLogger().isEnabledFor(logging.INFO):
         verbosity = 'auto'
     else:
         verbosity = 0
@@ -96,7 +96,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     """Build and train the transformation model."""
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]
     numHeads = len(config["heads"])

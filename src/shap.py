@@ -1,5 +1,5 @@
 import numpy as np
-import logging
+from bpreveal import logging
 import tqdm
 keras = None
 tf = None

@@ -2,7 +2,7 @@
 import argparse
 import pybedtools
 import pysam
-import logging
+from bpreveal import logging
 from bpreveal import bedUtils
 from bpreveal import utils
 
@@ -42,15 +42,15 @@ def getParser():
 def main():
     args = getParser().parse_args()
     if args.verbose:
-        utils.setVerbosity("DEBUG")
+        logging.setVerbosity("DEBUG")
     else:
-        utils.setVerbosity("WARNING")
+        logging.setVerbosity("WARNING")
     forbidRegions = []
     with pysam.FastaFile(args.genome) as genome:
         if args.allChroms:
             chroms = genome.references
         else:
-            chroms = args.allowChroms
+            chroms = args.allowChrom
         for c in chroms:
             chromLen = genome.get_reference_length(c)
             if chromLen < 2 * args.chromEdgeBoundary:

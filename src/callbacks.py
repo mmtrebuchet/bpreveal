@@ -1,5 +1,5 @@
 """A set of callbacks useful for training a model."""
-import logging
+from bpreveal import logging
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 import re

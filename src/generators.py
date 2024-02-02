@@ -4,7 +4,7 @@
 from tensorflow import keras
 import numpy as np
 import math
-import logging
+from bpreveal import logging
 import time
 import h5py
 from bpreveal.utils import MODEL_ONEHOT_T

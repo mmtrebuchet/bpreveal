@@ -3,10 +3,9 @@ import h5py
 import pyBigWig
 import numpy as np
 import argparse
-import logging
+from bpreveal import logging
 import tqdm
 from bpreveal.utils import H5_CHUNK_SIZE
-from bpreveal import utils
 
 
 class BatchedH5Reader:
@@ -142,9 +141,9 @@ def main():
 
     args = getParser().parse_args()
     if args.verbose:
-        utils.setVerbosity("INFO")
+        logging.setVerbosity("INFO")
     else:
-        utils.setVerbosity("WARNING")
+        logging.setVerbosity("WARNING")
     inH5 = h5py.File(args.h5, 'r')
     writeBigWig(inH5, args.bw, args.verbose)
 

@@ -1,6 +1,6 @@
 """TODO MELANIE Document
 """
-import logging
+from bpreveal import logging
 try:
     from bpreveal import jaccard
 except ModuleNotFoundError:
@@ -22,7 +22,8 @@ import queue
 ENABLE_DEBUG_PROFILING = False
 import numpy.typing as npt
 from typing import Optional, Literal
-from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, wrapTqdm, QUEUE_TIMEOUT
+from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
+from bpreveal.logging import wrapTqdm
 PROFILING_SORT_ORDER = SortKey.TIME
 
 

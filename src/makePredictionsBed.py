@@ -92,13 +92,14 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import pybedtools
 from bpreveal import utils
-from bpreveal.utils import ONEHOT_T, PRED_T, wrapTqdm
+from bpreveal.utils import ONEHOT_T, PRED_T
+from bpreveal.logging import wrapTqdm
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 import numpy as np
 import pysam
 import h5py
-import logging
+from bpreveal import logging
 
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.
@@ -109,7 +110,7 @@ def main(config):
 
     :param config: A JSON object satisfying the makePredictionsBed specification.
     """
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     batchSize = config["settings"]["batch-size"]

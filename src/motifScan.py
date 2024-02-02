@@ -125,9 +125,8 @@ API
 ---
 
 """
-import logging
+from bpreveal import logging
 from bpreveal import motifUtils
-from bpreveal import utils
 import json
 
 
@@ -136,7 +135,7 @@ def main(config):
 
     :param config: A JSON object matching the motifScan specification.
     """
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     if "seqlet-cutoff-settings" in config:
         assert "seqlet-cutoff-json" not in config, "You cannot name a seqlet-cutoff-json to " \
             "read in the config file if you also specify seqlet-cutoff-settings."

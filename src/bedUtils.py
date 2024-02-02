@@ -1,14 +1,14 @@
 """Some utilities for dealing with bed files."""
 import pybedtools
 import pysam
-import logging
+from bpreveal import logging
 import numpy as np
 import multiprocessing
 import pyBigWig
 from collections import deque
 from bpreveal import utils
 from typing import Literal
-from bpreveal.utils import wrapTqdm
+from bpreveal.logging import wrapTqdm
 
 
 def makeWhitelistSegments(genome: pysam.FastaFile,

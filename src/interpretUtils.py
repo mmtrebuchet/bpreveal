@@ -17,7 +17,7 @@ import numpy.typing as npt
 from typing import Any, Optional, Iterator, Iterable
 import tqdm
 import h5py
-import logging
+from bpreveal import logging
 import pybedtools
 import multiprocessing
 from bpreveal import ushuffle

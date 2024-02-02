@@ -122,8 +122,7 @@ API
 import json
 import jsonschema
 import pysam
-import logging
-from bpreveal import utils
+from bpreveal import logging
 import numpy as np
 import pybedtools
 import random
@@ -309,7 +308,7 @@ def validateRegions(config, regions, genome, bigwigLists, numThreads):
     # Note: The bigwigLists correspond to the heads in here.
     # So go over every region and measure its counts (unless max-quantile == 1)
     # and reject regions that are over-full on reads.
-    pbar = utils.wrapTqdm(len(bigRegionsList) * len(config["heads"]) * 2, logging.INFO)
+    pbar = logging.wrapTqdm(len(bigRegionsList) * len(config["heads"]) * 2, logging.INFO)
     for i, headSpec in enumerate(config["heads"]):
         if "max-quantile" in headSpec:
             if headSpec["max-quantile"] == 1:
@@ -351,7 +350,7 @@ def validateRegions(config, regions, genome, bigwigLists, numThreads):
                                                'center',
                                                config["output-length"] - config["max-jitter"] * 2,
                                                genome).saveas())
-    pbar = utils.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logging.INFO)
+    pbar = logging.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logging.INFO)
     for i, headSpec in enumerate(config["heads"]):
         # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
         if "min-quantile" in headSpec:
@@ -517,7 +516,7 @@ if __name__ == "__main__":
     import sys
     with open(sys.argv[1], "r") as fp:
         configJson = json.load(fp)
-    utils.setVerbosity(configJson["verbosity"])
+    logging.setVerbosity(configJson["verbosity"])
     import bpreveal.schema
     try:
         bpreveal.schema.prepareBed_old.validate(configJson)

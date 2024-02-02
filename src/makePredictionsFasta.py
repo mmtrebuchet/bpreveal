@@ -94,8 +94,9 @@ import json
 from bpreveal import utils
 import numpy as np
 import h5py
-import logging
-from bpreveal.utils import PRED_T, wrapTqdm
+from bpreveal import logging
+from bpreveal.logging import wrapTqdm
+from bpreveal.utils import PRED_T
 
 
 class FastaReader:
@@ -266,7 +267,7 @@ def main(config):
 
     :param config: is taken straight from the json specification.
     """
-    utils.setVerbosity(config["verbosity"])
+    logging.setVerbosity(config["verbosity"])
     fastaFname = config["fasta-file"]
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]

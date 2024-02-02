@@ -1,14 +1,14 @@
 """Lots of helpful utilities for working with models."""
 from __future__ import annotations
-import logging
 import multiprocessing
 import numpy as np
 import scipy
 import numpy.typing as npt
 import typing
-import tqdm
 import pyBigWig
 import pysam
+from bpreveal import logging
+from bpreveal.logging import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 
 # Constants
 
@@ -330,81 +330,6 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
     logging.debug("Data written. Closing bigwig.")
     outBw.close()
     logging.debug("Bigwig closed.")
-
-
-def setVerbosity(userLevel: str) -> None:
-    """Set the verbosity for this BPReveal session.
-
-    BPReveal uses the python logging module for its printing, and
-    less-important information is logged at lower levels.
-    Level options are CRITICAL, ERROR, WARNING, INFO, and DEBUG.
-
-    :param userLevel: The level of logging that you'd like to enable.
-    """
-    levelMap = {"CRITICAL": logging.CRITICAL,
-                "ERROR": logging.ERROR,
-                "WARNING": logging.WARNING,
-                "INFO": logging.INFO,
-                "DEBUG": logging.DEBUG}
-    logging.basicConfig(level=levelMap[userLevel],
-                        format='%(levelname)s : %(asctime)s :'
-                        '%(filename)s:%(lineno)d : %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-    logging.root.setLevel(levelMap[userLevel])
-    logging.debug("Logger configured.")
-
-
-def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = logging.INFO,
-             **tqdmKwargs) -> tqdm.tqdm:
-    """Create a tqdm logger or a dummy, based on current logging level.
-
-    :param iterable: The thing to be wrapped, or the number to be counted to.
-    :param logLevel: The log level at which you'd like the tqdm to print progress.
-    :param tqdmKwargs: Additional keyword arguments passed to tqdm.
-    :return: Either a tqdm that will do logging, or an iterable that won't log.
-    :rtype: A tqdm-like object supporting either iteration or ``.update()``.
-
-    Sometimes, you want to display a tqdm progress bar only if the logging level is
-    high. Call this with something you want to iterate over OR an integer giving the
-    total number of things that will be processed (corresponding to::
-
-        pbar = tqdm.tqdm(total=10000)
-        while condition:
-            pbar.update()
-        )
-
-    If iterable is an integer, then this will return a tqdm that you need to
-    call update() on, otherwise it'll return something you can use as a loop iterable.
-
-    logLevel may either be a level from the logging module (like logging.INFO) or a
-    string naming the log level (like "info")
-    """
-    if type(logLevel) is str:
-        # We were given a string, so convert that to a logging level.
-        levelMap = {"CRITICAL": logging.CRITICAL,
-                    "ERROR": logging.ERROR,
-                    "WARNING": logging.WARNING,
-                    "INFO": logging.INFO,
-                    "DEBUG": logging.DEBUG}
-        logLevelInternal: int = levelMap[logLevel.upper()]
-    elif type(logLevel) is int:
-        logLevelInternal: int = logLevel
-    else:
-        assert False, "Invalid type passed to wrapTqdm"
-
-    if type(iterable) is int:
-        if logging.root.isEnabledFor(logLevelInternal):
-            return tqdm.tqdm(total=iterable, **tqdmKwargs)
-        else:
-            return tqdm.tqdm(total=iterable, **tqdmKwargs, disable=True)
-    elif isinstance(iterable, typing.Iterable):
-        iterableOut: typing.Iterable = iterable
-        if logging.root.isEnabledFor(logLevelInternal):
-            return tqdm.tqdm(iterableOut, **tqdmKwargs)
-        else:
-            return tqdm.tqdm(iterableOut, **tqdmKwargs, disable=True)
-    else:
-        assert False, "Your iterable is not valid with tqdm."
 
 
 def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
