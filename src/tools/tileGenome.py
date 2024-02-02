@@ -2,7 +2,7 @@
 import argparse
 import pybedtools
 import pysam
-from bpreveal import logging
+from bpreveal import logUtils
 from bpreveal import bedUtils
 from bpreveal import utils
 
@@ -42,9 +42,9 @@ def getParser():
 def main():
     args = getParser().parse_args()
     if args.verbose:
-        logging.setVerbosity("DEBUG")
+        logUtils.setVerbosity("DEBUG")
     else:
-        logging.setVerbosity("WARNING")
+        logUtils.setVerbosity("WARNING")
     forbidRegions = []
     with pysam.FastaFile(args.genome) as genome:
         if args.allChroms:
@@ -65,10 +65,10 @@ def main():
         blacklist = pybedtools.BedTool(args.blacklist[0])
         for remBl in args.blacklist[1:]:
             blacklist = blacklist.cat(pybedtools.BedTool(remBl))
-    logging.info("Blacklist built.")
+    logUtils.info("Blacklist built.")
     with pysam.FastaFile(args.genome) as genome:
         whitelist = bedUtils.makeWhitelistSegments(genome, blacklist)
-    logging.info("Whitelist built.")
+    logUtils.info("Whitelist built.")
     whitelist = pybedtools.BedTool([x for x in whitelist if x.chrom in chroms])
     whitelist = pybedtools.BedTool(list(whitelist))
     tiles = bedUtils.tileSegments(args.inputLength, args.outputLength, whitelist, args.spacing)

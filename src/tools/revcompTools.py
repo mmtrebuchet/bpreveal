@@ -4,9 +4,9 @@ import numpy as np
 import pysam
 import pyBigWig
 import argparse
-from bpreveal import logging
+from bpreveal import logUtils
 from bpreveal import utils, bedUtils
-logging.setVerbosity("INFO")
+logUtils.setVerbosity("INFO")
 
 
 def getParser():
@@ -38,12 +38,12 @@ def main():
         # We've been asked to generate the revcomp bigwig.
         inBw = pyBigWig.open(args.inputBigwigFname, "r")
         chromSizes = utils.loadChromSizes(bw=inBw)
-        logging.debug(chromSizes)
+        logUtils.debug(chromSizes)
         inBwDats = dict()
         for chromName in chromSizes.keys():
             vals = np.nan_to_num(inBw.values(chromName, 0, inBw.chroms(chromName)))
             inBwDats[chromName] = vals
-        logging.debug("Loaded old data.")
+        logUtils.debug("Loaded old data.")
         # Do we want to revcomp? Probably, since otherwise
         # this is a very slow way to copy a bigwig!
         if args.revcomp:
@@ -51,9 +51,9 @@ def main():
                 origVals = inBwDats[r.chrom][r.start:r.end]
                 flipVals = origVals[::-1]
                 inBwDats[r.chrom][r.start:r.end] = flipVals
-        logging.debug("Revcomped.")
+        logUtils.debug("Revcomped.")
         utils.writeBigwig(args.outputBigwigFname, chromDict=inBwDats)
-        logging.debug("Saved.")
+        logUtils.debug("Saved.")
 
     if args.outputFastaFname is not None or args.outputBedFname is not None:
         resizedRegions = []
