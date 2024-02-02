@@ -1,14 +1,14 @@
 """Some utilities for dealing with bed files."""
 import pybedtools
 import pysam
-from bpreveal import logging
+from bpreveal import logUtils
 import numpy as np
 import multiprocessing
 import pyBigWig
 from collections import deque
 from bpreveal import utils
 from typing import Literal
-from bpreveal.logging import wrapTqdm
+from bpreveal.logUtils import wrapTqdm
 
 
 def makeWhitelistSegments(genome: pysam.FastaFile,
@@ -32,7 +32,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
     """
     segments = []
 
-    logging.debug("Building segments.")
+    logUtils.debug("Building segments.")
     blacklistsByChrom = dict()
     if blacklist is not None:
         # We're going to iterate over blacklist several times,
@@ -119,9 +119,9 @@ def tileSegments(inputLength: int, outputLength: int,
     Note how the last segment is not 5 bp away from the second-to-last.
 
     """
-    logging.debug("Beginning to trim segments. {0:d} segments alive.".format(len(segments)))
+    logUtils.debug("Beginning to trim segments. {0:d} segments alive.".format(len(segments)))
     padding = (inputLength - outputLength) // 2
-    logging.debug("Calculated padding of {0:d}".format(padding))
+    logUtils.debug("Calculated padding of {0:d}".format(padding))
 
     def shrinkSegment(s: pybedtools.Interval):
         newEnd = s.end - padding
@@ -131,10 +131,10 @@ def tileSegments(inputLength: int, outputLength: int,
         return pybedtools.Interval(s.chrom, newStart, newEnd)
 
     shrunkSegments = pybedtools.BedTool(segments).each(shrinkSegment).saveas()
-    logging.debug("Filtered segments. {0:d} survive.".format(shrunkSegments.count()))
+    logUtils.debug("Filtered segments. {0:d} survive.".format(shrunkSegments.count()))
 
     # Phase 3. Generate tiling regions.
-    logging.debug("Creating regions.")
+    logUtils.debug("Creating regions.")
     regions = []
     for s in wrapTqdm(shrunkSegments, "INFO"):
         startPos = s.start
@@ -149,7 +149,7 @@ def tileSegments(inputLength: int, outputLength: int,
             endPos = s.end
             startPos = endPos - outputLength
             regions.append(pybedtools.Interval(s.chrom, startPos, endPos))
-    logging.debug("Regions created, {0:d} across genome.".format(len(regions)))
+    logUtils.debug("Regions created, {0:d} across genome.".format(len(regions)))
 
     return pybedtools.BedTool(regions)
 

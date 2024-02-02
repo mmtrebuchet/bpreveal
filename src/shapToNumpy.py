@@ -6,14 +6,14 @@ numpy arrays that can be fed to the tfmodisco-lite suite.
 import numpy as np
 import h5py
 import argparse
-from bpreveal import logging
+from bpreveal import logUtils
 from bpreveal.utils import IMPORTANCE_T, ONEHOT_T
 
 
 def flipAndSave(inpAr, fname, dtype):
     ar = np.array(inpAr, dtype=dtype)
     transAr = np.transpose(ar, [0, 2, 1])
-    logging.info("Saving {0:s}".format(fname))
+    logUtils.info("Saving {0:s}".format(fname))
     if fname[-3:] == 'npz':
         np.savez(fname, transAr)
     else:
@@ -41,17 +41,17 @@ def main():
 
     args = getParser().parse_args()
     if args.verbose:
-        logging.setVerbosity("INFO")
+        logUtils.setVerbosity("INFO")
     else:
-        logging.setVerbosity("WARNING")
-    logging.info("Loading input file {0:s}.".format(args.h5))
+        logUtils.setVerbosity("WARNING")
+    logUtils.info("Loading input file {0:s}.".format(args.h5))
     inFile = h5py.File(args.h5, "r")
     if args.seqs is not None:
         flipAndSave(inFile["input_seqs"], args.seqs, ONEHOT_T)
-        logging.info("Saved sequences.")
-    logging.info("Saving scores.")
+        logUtils.info("Saved sequences.")
+    logUtils.info("Saving scores.")
     flipAndSave(inFile["hyp_scores"], args.scores, IMPORTANCE_T)
-    logging.info("Done.")
+    logUtils.info("Done.")
 
 
 if __name__ == "__main__":

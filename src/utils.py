@@ -7,8 +7,8 @@ import numpy.typing as npt
 import typing
 import pyBigWig
 import pysam
-from bpreveal import logging
-from bpreveal.logging import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
+from bpreveal import logUtils
+from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 
 # Constants
 
@@ -116,10 +116,10 @@ def setMemoryGrowth() -> None:
     gpus = tf.config.list_physical_devices('GPU')
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
-        logging.debug("GPU memory growth enabled.")
+        logUtils.debug("GPU memory growth enabled.")
     except Exception as inst:  # pylint: disable=broad-exception-caught
-        logging.warning("Not using GPU")
-        logging.debug("Because: " + str(inst))
+        logUtils.warning("Not using GPU")
+        logUtils.debug("Because: " + str(inst))
     global GLOBAL_TENSORFLOW_LOADED
     GLOBAL_TENSORFLOW_LOADED = True
 
@@ -162,7 +162,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         if len(os.environ["CUDA_VISIBLE_DEVICES"]) > 10:
             if os.environ["CUDA_VISIBLE_DEVICES"][:3] == "MIG":
                 # Yep, it's a MIG. Grab its properties from nvidia-smi.
-                logging.debug("Found a MIG card, attempting to guess memory "
+                logUtils.debug("Found a MIG card, attempting to guess memory "
                               "available based on name.")
                 cmd = ["nvidia-smi", "-L"]
                 ret = sp.run(cmd, capture_output=True, check=True)
@@ -171,7 +171,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
                                      os.environ["CUDA_VISIBLE_DEVICES"]))
                 if (smiOut := re.match(matchRe, lines[1])):
                     total = free = float(smiOut[2]) * 1024  # Convert to MiB
-                    logging.debug("Found {0:f} GB of memory.".format(total))
+                    logUtils.debug("Found {0:f} GB of memory.".format(total))
                 else:
                     assert False, "Could not parse nvidia-smi line: " + lines[1]
     if total == 0.0:
@@ -179,7 +179,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
         ret = sp.run(cmd, capture_output=True, check=True)
         line = ret.stdout.decode('utf-8').split('\n')[1]
-        logging.debug("Memory usage limited based on {0:s}".format(line))
+        logUtils.debug("Memory usage limited based on {0:s}".format(line))
         lsp = line.split(' ')
         total = float(lsp[0])
         free = float(lsp[2])
@@ -191,7 +191,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     tf.config.set_logical_device_configuration(
         gpus[0],
         [tf.config.LogicalDeviceConfiguration(memory_limit=useMem)])
-    logging.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
+    logUtils.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
     global GLOBAL_TENSORFLOW_LOADED
     GLOBAL_TENSORFLOW_LOADED = True
     return useMem
@@ -306,7 +306,7 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
     :param chromSizes: A dict mapping chromosome name → chromosome size.
     """
     if chromDict is None:
-        logging.debug("Got regionList, regionData, chromSizes. Building chromosome dict.")
+        logUtils.debug("Got regionList, regionData, chromSizes. Building chromosome dict.")
         assert chromSizes is not None and regionList is not None and regionData is not None, \
             "Must provide chromSizes, regionList, and regionData if chromDict is None."
         chromDict = blankChromosomeArrays(bwHeader=chromSizes)
@@ -319,7 +319,7 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
             chromSizes[c] = len(chromDict[c])
     # Now we just write the chrom dict.
     outBw = pyBigWig.open(bwFname, "w")
-    logging.debug("Starting to write data to bigwig.")
+    logUtils.debug("Starting to write data to bigwig.")
     header = [(x, chromSizes[x]) for x in sorted(list(chromSizes.keys()))]
     outBw.addHeader(header)
 
@@ -327,9 +327,9 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
         vals = [float(x) for x in chromDict[chromName]]
         outBw.addEntries(chromName, 0, values=vals,
                          span=1, step=1)
-    logging.debug("Data written. Closing bigwig.")
+    logUtils.debug("Data written. Closing bigwig.")
     outBw.close()
-    logging.debug("Bigwig closed.")
+    logUtils.debug("Bigwig closed.")
 
 
 def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
@@ -542,7 +542,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
     """
     from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
-    logging.debug("Starting interpretation of sequences.")
+    logUtils.debug("Starting interpretation of sequences.")
     singleReturn = False
     if type(sequences) is str:
         sequences = [sequences]
@@ -553,7 +553,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
     batcher = FlatRunner(modelFname, headID, heads, taskIDs, 1, generator,
                          profileSaver, countsSaver, numShuffles, kmerSize)
     batcher.run()
-    logging.debug("Interpretation complete. Organizing outputs.")
+    logUtils.debug("Interpretation complete. Organizing outputs.")
     if keepHypotheticals:
         if singleReturn:
             return {"profile": profileSaver.shap[0],
@@ -610,13 +610,13 @@ class BatchPredictor:
 
         This will load your model, and get ready to make predictions.
         """
-        logging.debug("Creating batch predictor.")
+        logUtils.debug("Creating batch predictor.")
         from collections import deque
         if not GLOBAL_TENSORFLOW_LOADED:
             # We haven't loaded Tensorflow yet.
             setMemoryGrowth()
         self._model = loadModel(modelFname)  # type: ignore
-        logging.debug("Model loaded.")
+        logUtils.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,
         # I'm going to use a queue data structure, where those operations
@@ -692,7 +692,7 @@ class BatchPredictor:
         if self._inWaiting == 0:
             # There are no samples to process right now, so return
             # (successfully) immediately.
-            logging.info("runBatch was called even though there was nothing to do.")
+            logUtils.info("runBatch was called even though there was nothing to do.")
             return
         if maxSamples is None:
             numSamples = self._inWaiting
@@ -843,7 +843,7 @@ class ThreadedBatchPredictor:
     def __init__(self, modelFname: str, batchSize: int, start: bool = False,
                  numThreads: int = 1) -> None:
         """Build the batch predictor."""
-        logging.debug("Creating threaded batch predictor.")
+        logUtils.debug("Creating threaded batch predictor.")
         self._batchSize = batchSize
         self._modelFname = modelFname
         self._batchSize = batchSize
@@ -880,7 +880,7 @@ class ThreadedBatchPredictor:
         this method will be called automatically (with a warning).
         """
         if not self.running:
-            logging.debug("Starting threaded batcher.")
+            logUtils.debug("Starting threaded batcher.")
             assert self._batchers is None, "Attempting to start a new batcher when an old "\
                 "one is still alive." + str(self._batchers)
             self._inQueues = []
@@ -904,18 +904,18 @@ class ThreadedBatchPredictor:
             from collections import deque
             self._outQueueOrder = deque()
         else:
-            logging.warning("Attempted to start a batcher that was already running.")
+            logUtils.warning("Attempted to start a batcher that was already running.")
 
     def __del__(self):
         """General cleanup - kill off the child process when this object goes out of scope."""
-        logging.debug("Destructor called.")
+        logUtils.debug("Destructor called.")
         if self.running:
             self.stop()
 
     def stop(self):
         """Shut down the processor thread."""
         if self.running:
-            logging.debug("Shutting down threaded batcher.")
+            logUtils.debug("Shutting down threaded batcher.")
             if self._batchers is None:
                 assert False, "Attempting to shut down a running ThreadedBatchPredictor" \
                     "When its _batchers is None"
@@ -936,7 +936,7 @@ class ThreadedBatchPredictor:
             self._batchers = None
             self.running = False
         else:
-            logging.warning("Attempting to stop a batcher that is already stopped.")
+            logUtils.warning("Attempting to stop a batcher that is already stopped.")
 
     def clear(self):
         """Reset the batcher, emptying any queues and reloading the model."""
@@ -952,7 +952,7 @@ class ThreadedBatchPredictor:
         :param label: Any object; it will be returned with the prediction.
         """
         if not self.running:
-            logging.warning("Submitted a query when the batcher is stopped. Starting.")
+            logUtils.warning("Submitted a query when the batcher is stopped. Starting.")
             self.start()
         q = self._inQueues[self._inQueueIdx]
         query = (sequence, label)
@@ -1015,7 +1015,7 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     """
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
         "after loading tensorflow."
-    logging.debug("Starting subthread")
+    logUtils.debug("Starting subthread")
     import queue
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches
@@ -1060,5 +1060,5 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
                     predsInFlight -= 1
             case "shutdown":
                 # End the thread.
-                logging.debug("Shutdown signal received.")
+                logUtils.debug("Shutdown signal received.")
                 return

@@ -157,7 +157,7 @@ import h5py
 from tensorflow import keras
 from bpreveal import generators
 from bpreveal import losses
-from bpreveal import logging
+from bpreveal import logUtils
 from bpreveal.callbacks import getCallbacks
 from bpreveal import models
 import tensorflow as tf
@@ -170,7 +170,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    if logging.getLogger().isEnabledFor(logging.INFO):
+    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
         verbosity = 'auto'
     else:
         verbosity = 0
@@ -188,8 +188,8 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     """Build and train a model."""
-    logging.setVerbosity(config["verbosity"])
-    logging.debug("Initializing")
+    logUtils.setVerbosity(config["verbosity"])
+    logUtils.debug("Initializing")
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     numHeads = len(config["heads"])
@@ -201,7 +201,7 @@ def main(config):
         config["settings"]["architecture"]["input-filter-width"],
         config["settings"]["architecture"]["output-filter-width"],
         config["heads"], "solo")
-    logging.debug("Model built.")
+    logUtils.debug("Model built.")
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = []
     profileWeights = []
@@ -220,8 +220,8 @@ def main(config):
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
         loss=profileLosses + countsLosses,
         loss_weights=profileWeights + countsWeights)  # + is list concatenation, not addition!
-    logging.info("Model compiled.")
-    model.summary(print_fn=logging.debug)
+    logUtils.info("Model compiled.")
+    model.summary(print_fn=logUtils.debug)
 
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
@@ -232,7 +232,7 @@ def main(config):
     valGenerator = generators.H5BatchGenerator(
         config["heads"], valH5, inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
-    logging.info("Generators initialized.")
+    logUtils.info("Generators initialized.")
     tensorboardDir = None
     if "tensorboard-log-dir" in config:
         tensorboardDir = config["tensorflow-log-dir"]
@@ -243,7 +243,7 @@ def main(config):
                          config["settings"]["learning-rate-plateau-patience"],
                          config["heads"],
                          tensorboardDir)
-    logging.debug("Model trained. Saving.")
+    logUtils.debug("Model trained. Saving.")
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii=False, indent=4)

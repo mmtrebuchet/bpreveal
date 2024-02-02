@@ -1,5 +1,5 @@
 """A set of callbacks useful for training a model."""
-from bpreveal import logging
+from bpreveal import logUtils
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 import re
@@ -27,7 +27,7 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
         Implement the :doc:`adaptive counts loss algorithm<countsLossReweighting>`.
 
     """
-    logging.debug("Creating callbacks based on earlyStop "
+    logUtils.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
                       earlyStop, outputPrefix, plateauPatience))
     earlyStopCallback = EarlyStopping(monitor='val_loss',
@@ -95,7 +95,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         """Build the callback."""
         super().__init__()
         self.heads = heads
-        logging.debug(heads)
+        logUtils.debug(heads)
         self.aggression = aggression
         self.lrPlateauCallback = lrPlateauCallback
         self.earlyStopCallback = earlyStopCallback
@@ -118,8 +118,8 @@ class ApplyAdaptiveCountsLoss(Callback):
                 if "counts-loss-weight" in head:
                     # We've been given a starting point. Don't use the heuristic.
                     λ = head["counts-loss-weight"]
-                    logging.debug("An initial counts-loss-weight was provided.")
-                    logging.debug("Setting λ = {0:f} for head {1:s}"
+                    logUtils.debug("An initial counts-loss-weight was provided.")
+                    logUtils.debug("Setting λ = {0:f} for head {1:s}"
                                   .format(λ, head["head-name"]))
                     head["INTERNAL_λ-variable"].assign(λ)
                 else:
@@ -128,7 +128,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                     λ = head["INTERNAL_mean-counts"] * head["counts-loss-frac-target"]
                     # Now for a bit of magic - experimentation has determined this number.
                     λ = λ * 37.0
-                    logging.info("Estimated initial λ of {0:f} for head {1:s} based on ĉ of {2:f}"
+                    logUtils.info("Estimated initial λ of {0:f} for head {1:s} based on ĉ of {2:f}"
                                  .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
                     head["INTERNAL_λ-variable"].assign(λ)
 
@@ -200,7 +200,7 @@ class ApplyAdaptiveCountsLoss(Callback):
             curλ = λVar.read_value()
             oldλ = self.λHistory[head["head-name"]][epoch]
             valTotalLoss += vcl * curλ / oldλ
-        logging.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"
+        logUtils.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"
                       .format(valTotalLoss, epoch, logs["val_loss"]))
         return valTotalLoss
 
@@ -232,7 +232,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         recordEpoch = self.earlyStopCallback.best_epoch
         # Now, set the callbacks to have a corrected loss at the record-setting epoch.
         correctedLoss = self.whatWouldValLossBe(recordEpoch)
-        logging.debug("Resetting callbacks from old loss {0:f} to new loss {1:f}"
+        logUtils.debug("Resetting callbacks from old loss {0:f} to new loss {1:f}"
                       .format(self.lrPlateauCallback.best, correctedLoss))
         self.lrPlateauCallback.best = correctedLoss
         self.earlyStopCallback.best = correctedLoss
@@ -287,7 +287,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                 # If the weight would change by more than a factor of aggression, clamp it down.
                 threshold = 2 if epoch > 1 else 10
                 if (max(newλ, curλ) / min(newλ, curλ)) > threshold:
-                    logging.debug("Large λ change detected. Old: {0:f}, new {1:f}"
+                    logUtils.debug("Large λ change detected. Old: {0:f}, new {1:f}"
                                   .format(curλ, newλ))
                     if newλ > curλ:
                         # λ₁ / λ₀ > 2
@@ -297,11 +297,11 @@ class ApplyAdaptiveCountsLoss(Callback):
                         # λ₀ / λ₁ > 2
                         # make λ₁ = λ₀ / 2
                         newλ = curλ / threshold
-                    logging.debug("Clamped new λ to {0:f}".format(newλ))
+                    logUtils.debug("Clamped new λ to {0:f}".format(newλ))
                     if threshold == 10:
                         # We jumped and had a large threshold - user should choose
                         # a better counts weight.
-                        logging.warning("A large λ change was detected in the first epoch. "
+                        logUtils.warning("A large λ change was detected in the first epoch. "
                                         "Consider changing the starting counts-loss-weight for "
                                         "head {0:s} to a value near {1:f}".format(head["head-name"],
                                                                                   correctedλ))
@@ -309,7 +309,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                 # (This doesn't enter our calculation, it's for logging.
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
 
-                logging.debug(("countsLoss: head {0:s} λ₀ {1:f}, λ₁ {2:f} (A=1: {3:f})."
+                logUtils.debug(("countsLoss: head {0:s} λ₀ {1:f}, λ₁ {2:f} (A=1: {3:f})."
                                " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})."
                                " Epoch {8:d}")
                               .format(head["head-name"], curλ, newλ,
@@ -328,7 +328,7 @@ def tensorboardCallback(logDir: str):
 
     :param logDir: The directory where you'd like the logs to be stored.
     """
-    logging.debug("Creating tensorboard callback in {0:s}".format(logDir))
+    logUtils.debug("Creating tensorboard callback in {0:s}".format(logDir))
     from tensorflow.keras.callbacks import TensorBoard
     return TensorBoard(log_dir=logDir,
                        histogram_freq=1,

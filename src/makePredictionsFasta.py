@@ -94,8 +94,8 @@ import json
 from bpreveal import utils
 import numpy as np
 import h5py
-from bpreveal import logging
-from bpreveal.logging import wrapTqdm
+from bpreveal import logUtils
+from bpreveal.logUtils import wrapTqdm
 from bpreveal.utils import PRED_T
 
 
@@ -115,7 +115,7 @@ class FastaReader:
     def __init__(self, fastaFname):
         """Scan the file to count the total lines, then load the first sequence."""
         # First, scan over the file and count how many sequences are in it.
-        logging.info("Counting number of samples.")
+        logUtils.info("Counting number of samples.")
         with open(fastaFname, "r") as fp:
             for line in wrapTqdm(fp):
                 line = line.strip()  # Get rid of newlines.
@@ -124,7 +124,7 @@ class FastaReader:
                 if line[0] == '>':
                     self.numPredictions += 1
             fp.close()
-        logging.info("Found {0:d} entries in input fasta".format(self.numPredictions))
+        logUtils.info("Found {0:d} entries in input fasta".format(self.numPredictions))
         # Note that we close the file after that with block, so this re-opens it
         # at position zero.
         self._fp = open(fastaFname, "r")
@@ -167,7 +167,7 @@ class H5Writer:
         self.batchWriteHead = 0
         self.writeChunkSize = 100
         if bedFname is not None:
-            logging.info("Adding coordinate information.")
+            logUtils.info("Adding coordinate information.")
             import pybedtools
             import pysam
             from bpreveal import makePredictionsBed
@@ -211,7 +211,7 @@ class H5Writer:
                                      ((self.numPredictions,) + sampleOutputs[headID].shape),
                                      dtype=PRED_T,
                                      chunks=(self.writeChunkSize,) + sampleOutputs[headID].shape)
-        logging.debug("Initialized datasets.")
+        logUtils.debug("Initialized datasets.")
 
     def addEntry(self, batcherOut):
         """Add a single output from the Batcher."""
@@ -258,7 +258,7 @@ class H5Writer:
             self.commit()
         stringDType = h5py.string_dtype(encoding='utf-8')
         self._fp.create_dataset("descriptions", dtype=stringDType, data=self._descriptionList)
-        logging.info("Closing h5.")
+        logUtils.info("Closing h5.")
         self._fp.close()
 
 
@@ -267,12 +267,12 @@ def main(config):
 
     :param config: is taken straight from the json specification.
     """
-    logging.setVerbosity(config["verbosity"])
+    logUtils.setVerbosity(config["verbosity"])
     fastaFname = config["fasta-file"]
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]
     numHeads = config["settings"]["heads"]
-    logging.debug("Opening output hdf5 file.")
+    logUtils.debug("Opening output hdf5 file.")
     outFname = config["settings"]["output-h5"]
 
     # Before we can build the output dataset in the hdf5 file, we need to
@@ -289,7 +289,7 @@ def main(config):
                           config["coordinates"]["genome"])
     else:
         writer = H5Writer(outFname, numHeads, fastaReader.numPredictions)
-    logging.info("Entering prediction loop.")
+    logUtils.info("Entering prediction loop.")
     # Now we just iterate over the fasta file and submit to our batcher.
     with batcher:
         pbar = wrapTqdm(fastaReader.numPredictions)
@@ -302,7 +302,7 @@ def main(config):
                 pbar.update()
                 writer.addEntry(ret)
         # Done with the main loop, clean up the batcher.
-        logging.debug("Done with main loop.")
+        logUtils.debug("Done with main loop.")
         while not batcher.empty():
             # We've just run a batch. Write it out.
             ret = batcher.getOutput()

@@ -17,7 +17,7 @@ import numpy.typing as npt
 from typing import Any, Optional, Iterator, Iterable
 import tqdm
 import h5py
-from bpreveal import logging
+from bpreveal import logUtils
 import pybedtools
 import multiprocessing
 from bpreveal import ushuffle
@@ -244,14 +244,14 @@ class Saver:
         to close shared memory, so this function is guaranteed to be called
         by the Runners.
         """
-        logging.debug("Called parentFinish on the base Saver class.")
+        logUtils.debug("Called parentFinish on the base Saver class.")
 
     def done(self):
         """Called when the batcher is complete (indicated by putting a None in its output queue).
 
         Now is the time to close all of your files.
         """
-        logging.debug("Called done on the base Saver class.")
+        logUtils.debug("Called done on the base Saver class.")
 
 
 class FlatRunner:
@@ -284,7 +284,7 @@ class FlatRunner:
                  batchSize: int, generator: Generator, profileSaver: Saver,
                  countsSaver: Saver, numShuffles: int, kmerSize: int,
                  profileFname: Optional[str] = None):
-        logging.info("Initializing interpretation runner.")
+        logUtils.info("Initializing interpretation runner.")
         self._profileSaver = profileSaver
         self._countsSaver = countsSaver
         self._profileInQueue = multiprocessing.Queue(1000)
@@ -330,26 +330,26 @@ class FlatRunner:
 
     def run(self):
         """Start up the threads and waits for them to finish."""
-        logging.info("Beginning flat run.")
+        logUtils.info("Beginning flat run.")
         self._genThread.start()
-        logging.debug("Started generator.")
+        logUtils.debug("Started generator.")
         self._profileBatchThread.start()
         self._countsBatchThread.start()
-        logging.debug("Started batchers. Starting savers.")
+        logUtils.debug("Started batchers. Starting savers.")
         self._profileSaverThread.start()
         self._countsSaverThread.start()
-        logging.info("All processes started. Beginning main loop.")
+        logUtils.info("All processes started. Beginning main loop.")
         self._genThread.join()
-        logging.debug("Generator joined.")
+        logUtils.debug("Generator joined.")
         self._profileBatchThread.join()
         self._countsBatchThread.join()
-        logging.debug("Batchers joined.")
+        logUtils.debug("Batchers joined.")
         self._profileSaverThread.join()
         self._countsSaverThread.join()
-        logging.debug("Savers joined.")
+        logUtils.debug("Savers joined.")
         self._profileSaver.parentFinish()
         self._countsSaver.parentFinish()
-        logging.info("Savers complete. Done.")
+        logUtils.info("Savers complete. Done.")
 
 
 class PisaRunner:
@@ -382,7 +382,7 @@ class PisaRunner:
     def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
                  receptiveField: int, kmerSize: int, profileFname: Optional[str] = None):
-        logging.info("Initializing pisa runner.")
+        logUtils.info("Initializing pisa runner.")
         self._inQueue = multiprocessing.Queue(1000)
         self._outQueue = multiprocessing.Queue(1000)
 
@@ -406,19 +406,19 @@ class PisaRunner:
 
     def run(self):
         """Start up the threads and waits for them to finish."""
-        logging.info("Beginning pisa run.")
+        logUtils.info("Beginning pisa run.")
         self._genThread.start()
-        logging.debug("Started generator.")
+        logUtils.debug("Started generator.")
         self._batchThread.start()
-        logging.debug("Started batcher.")
+        logUtils.debug("Started batcher.")
         _saverThread(self._outQueue, self._saver)
-        logging.info("Saver complete. Finishing.")
+        logUtils.info("Saver complete. Finishing.")
         self._genThread.join()
-        logging.debug("Generator joined.")
+        logUtils.debug("Generator joined.")
         self._batchThread.join()
-        logging.debug("Batcher joined.")
+        logUtils.debug("Batcher joined.")
         self._saver.parentFinish()
-        logging.info("Done.")
+        logUtils.info("Done.")
 
 
 class FlatListSaver(Saver):
@@ -453,7 +453,7 @@ class FlatListSaver(Saver):
         # there's a float in ctypes, but not a float16.)
         self._outShapArray = multiprocessing.Array(ctypes.c_float, numSamples * inputLength * 4)
         self._outSeqArray = multiprocessing.Array(ctypes.c_int8, numSamples * inputLength * 4)
-        logging.debug("Created shared arrays for the list saver.")
+        logUtils.debug("Created shared arrays for the list saver.")
 
     def construct(self):
         """Set up the data sets.
@@ -463,7 +463,7 @@ class FlatListSaver(Saver):
         # Do this in the child so the parent doesn't accidentally mess with
         # an empty array.
         self._results = []
-        logging.debug("Constructed child thread flat list saver.")
+        logUtils.debug("Constructed child thread flat list saver.")
 
     def parentFinish(self):
         """Extract the data from the child process.
@@ -473,7 +473,7 @@ class FlatListSaver(Saver):
         I could just expose _outShapArray, but this reorganizes it in a much
         more intuitive way.
         """
-        logging.debug("Finishing in parent.")
+        logUtils.debug("Finishing in parent.")
         self.shap = np.zeros((self.numSamples, self.inputLength, 4), dtype=np.float32)
         self.seq = np.zeros((self.numSamples, self.inputLength, 4), dtype=ONEHOT_T)
         for idx in range(self.numSamples):
@@ -482,7 +482,7 @@ class FlatListSaver(Saver):
                     readHead = idx * self.inputLength * 4 + outOffset * 4 + k
                     self.shap[idx, outOffset, k] = self._outShapArray[readHead]
                     self.seq[idx, outOffset, k] = self._outSeqArray[readHead]
-        logging.debug("Finished list saver in parent thread. Your data are ready!")
+        logUtils.debug("Finished list saver in parent thread. Your data are ready!")
 
     def done(self):
         """Copy over the data from the child thread to the parent.
@@ -499,7 +499,7 @@ class FlatListSaver(Saver):
                     self._outShapArray[writeHead] = svals[outOffset, k]
                     oneHotBase = ctypes.c_int8(int(seqvals[outOffset, k]))
                     self._outSeqArray[writeHead] = oneHotBase
-        logging.debug("Finished list saver in child thread.")
+        logUtils.debug("Finished list saver in child thread.")
 
     def add(self, result: FlatResult):  # type: ignore
         """Add the result to the internal list.
@@ -548,7 +548,7 @@ class FlatH5Saver(Saver):
 
         This is called inside the child thread.
         """
-        logging.info("Initializing saver.")
+        logUtils.info("Initializing saver.")
         self._outFile = h5py.File(self._outputFname, "w")
         self._chunksToWrite = dict()
 
@@ -565,7 +565,7 @@ class FlatH5Saver(Saver):
         else:
             self._outFile.create_dataset("descriptions", (self.numSamples,),
                                          dtype=h5py.string_dtype('utf-8'))
-        logging.debug("Saver initialized, hdf5 file created.")
+        logUtils.debug("Saver initialized, hdf5 file created.")
 
     def _loadGenome(self):
         """Does a few things.
@@ -578,7 +578,7 @@ class FlatH5Saver(Saver):
            it was. These fields are populated during data receipt, because we don't have
            an ordering guarantee when we get data from the batcher.
         """
-        logging.info("Loading genome information.")
+        logUtils.info("Loading genome information.")
         with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
                                          (genome.nreferences,),
@@ -613,14 +613,14 @@ class FlatH5Saver(Saver):
 
             self._outFile.create_dataset("coords_start", (self.numSamples, ), dtype=posDtype)
             self._outFile.create_dataset("coords_end", (self.numSamples, ), dtype=posDtype)
-        logging.debug("Genome data loaded.")
+        logUtils.debug("Genome data loaded.")
 
     def done(self):
         """Close up shop.
 
         Called in the child process.
         """
-        logging.debug("Saver closing.")
+        logUtils.debug("Saver closing.")
         if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
@@ -697,7 +697,7 @@ class PisaH5Saver(Saver):
 
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
                  genome: Optional[str] = None, useTqdm: bool = False):
-        logging.info("Initializing saver.")
+        logUtils.info("Initializing saver.")
         self._outputFname = outputFname
         self.numSamples = numSamples
         self.numShuffles = numShuffles
@@ -739,7 +739,7 @@ class PisaH5Saver(Saver):
         else:
             self._outFile.create_dataset("descriptions", (self.numSamples,),
                                          dtype=h5py.string_dtype('utf-8'))
-        logging.debug("Saver initialized, hdf5 file created.")
+        logUtils.debug("Saver initialized, hdf5 file created.")
 
     def _loadGenome(self):
         """Does a few things.
@@ -752,7 +752,7 @@ class PisaH5Saver(Saver):
            it was. These fields are populated during data receipt, because we don't have
            an ordering guarantee when we get data from the batcher.
         """
-        logging.info("Loading genome information.")
+        logUtils.info("Loading genome information.")
         with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
                                          (genome.nreferences,),
@@ -785,11 +785,11 @@ class PisaH5Saver(Saver):
                 chromDtype = 'u4'
             self._outFile.create_dataset("coords_chrom", (self.numSamples, ), dtype=chromDtype)
             self._outFile.create_dataset("coords_base", (self.numSamples, ), dtype='u4')
-        logging.debug("Genome data loaded.")
+        logUtils.debug("Genome data loaded.")
 
     def done(self):
         """Called from the child process."""
-        logging.debug("Saver closing.")
+        logUtils.debug("Saver closing.")
         if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
@@ -907,7 +907,7 @@ class FastaGenerator(Generator):
     """
 
     def __init__(self, fastaFname: str):
-        logging.info("Creating fasta generator.")
+        logUtils.info("Creating fasta generator.")
         self.fastaFname = fastaFname
         self.nowStop = False
         numRegions = 0
@@ -919,24 +919,24 @@ class FastaGenerator(Generator):
         # Iterate through the input file real quick and find out how many regions I'll have.
         self.numRegions = numRegions
         self.index = 0
-        logging.info("Fasta generator initialized with {0:d} regions.".format(self.numRegions))
+        logUtils.info("Fasta generator initialized with {0:d} regions.".format(self.numRegions))
 
     def construct(self):
         """Open the file and start reading."""
-        logging.info("Constructing fasta generator in its thread.")
+        logUtils.info("Constructing fasta generator in its thread.")
         self.fastaFile = open(self.fastaFname, "r")
         self.nextSequenceID = self.fastaFile.readline()[1:].strip()
         # [1:] to get rid of the '>'.
-        logging.debug("Initial sequence to read: {0:s}".format(self.nextSequenceID))
+        logUtils.debug("Initial sequence to read: {0:s}".format(self.nextSequenceID))
 
     def done(self):
         """Close the Fasta file."""
-        logging.info("Closing fasta generator.")
+        logUtils.info("Closing fasta generator.")
         self.fastaFile.close()
 
     def __iter__(self):
         """Return self, because generators are Iterable."""
-        logging.debug("Creating fasta iterator.")
+        logUtils.debug("Creating fasta iterator.")
         return self
 
     def __next__(self) -> Query:
@@ -973,7 +973,7 @@ class FlatBedGenerator(Generator):
     """
 
     def __init__(self, bedFname: str, genomeFname: str, inputLength: int, outputLength: int):
-        logging.info("Creating bed generator.")
+        logUtils.info("Creating bed generator.")
         self.bedFname = bedFname
         self.genomeFname = genomeFname
         self.inputLength = inputLength
@@ -986,13 +986,13 @@ class FlatBedGenerator(Generator):
         for _ in fp:
             numRegions += 1
         self.numRegions = numRegions
-        logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
+        logUtils.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
     def construct(self):
         """Open the bed file and fasta genome."""
         # We create a list of all the regions now, but we'll look up the sequences
         # and stuff on the fly.
-        logging.info("Constructing bed generator it its thread.")
+        logUtils.info("Constructing bed generator it its thread.")
         self.shapTargets = []
         self.genome = pysam.FastaFile(self.genomeFname)
         self.readHead = 0
@@ -1001,7 +1001,7 @@ class FlatBedGenerator(Generator):
             self.shapTargets.append(line)
 
     def __iter__(self):
-        logging.debug("Creating iterator for bed generator.")
+        logUtils.debug("Creating iterator for bed generator.")
         return self
 
     def __next__(self) -> Query:
@@ -1020,7 +1020,7 @@ class FlatBedGenerator(Generator):
 
     def done(self):
         """Close the fasta file."""
-        logging.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
+        logUtils.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
         self.genome.close()
 
 
@@ -1038,7 +1038,7 @@ class PisaBedGenerator(Generator):
     """
 
     def __init__(self, bedFname: str, genomeFname: str, inputLength: int, outputLength: int):
-        logging.info("Creating bed generator.")
+        logUtils.info("Creating bed generator.")
         self.bedFname = bedFname
         self.genomeFname = genomeFname
         self.inputLength = inputLength
@@ -1051,13 +1051,13 @@ class PisaBedGenerator(Generator):
         for line in fp:
             numRegions += line.end - line.start
         self.numRegions = numRegions
-        logging.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
+        logUtils.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
 
     def construct(self):
         """Run in the child thread, opens up the files and reads the bed."""
         # We create a list of all the regions now, but we'll look up the sequences
         # and stuff on the fly.
-        logging.debug("Constructing bed generator it its thread.")
+        logUtils.debug("Constructing bed generator it its thread.")
         self.shapTargets = []
         self.genome = pysam.FastaFile(self.genomeFname)
         self.readHead = 0
@@ -1067,7 +1067,7 @@ class PisaBedGenerator(Generator):
                 self.shapTargets.append((line.chrom, pos))
 
     def __iter__(self):
-        logging.debug("Creating iterator for bed generator.")
+        logUtils.debug("Creating iterator for bed generator.")
         return self
 
     def __next__(self) -> Query:
@@ -1086,7 +1086,7 @@ class PisaBedGenerator(Generator):
 
     def done(self):
         """Close the fasta."""
-        logging.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
+        logUtils.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
         self.genome.close()
 
 
@@ -1095,27 +1095,27 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                        taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int,
                        profileFname: Optional[str] = None):
     """The thread that spins up the batcher."""
-    logging.debug("Starting flat batcher thread.")
+    logUtils.debug("Starting flat batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
     if profileFname is not None:
         profiler.enable()
     b = _FlatBatcher(modelName, batchSize, outQueue, headID,
                      numHeads, taskIDs, numShuffles, mode, kmerSize)
-    logging.debug("Batcher created.")
+    logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
         if query is None:
             break
         b.addSample(query)
-    logging.debug("Last query received. Finishing batcher thread.")
+    logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
     outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
     if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
-    logging.debug("Batcher thread finished.")
+    logUtils.debug("Batcher thread finished.")
 
 
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
@@ -1123,27 +1123,27 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                        numShuffles: int, receptiveField: int, kmerSize: int,
                        profileFname: Optional[str] = None):
     """The thread that spins up the batcher."""
-    logging.debug("Starting batcher thread.")
+    logUtils.debug("Starting batcher thread.")
     import cProfile
     profiler = cProfile.Profile()
     if profileFname is not None:
         profiler.enable()
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
                      receptiveField, kmerSize)
-    logging.debug("Batcher created.")
+    logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
         if query is None:
             break
         b.addSample(query)
-    logging.debug("Last query received. Finishing batcher thread.")
+    logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
     outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
     if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
-    logging.debug("Batcher thread finished.")
+    logUtils.debug("Batcher thread finished.")
 
 
 def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
@@ -1153,7 +1153,7 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     profiler = cProfile.Profile()
     if profileFname is not None:
         profiler.enable()
-    logging.debug("Starting generator thread.")
+    logUtils.debug("Starting generator thread.")
     generator.construct()
     for elem in generator:
         for inQueue in inQueues:
@@ -1161,9 +1161,9 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     for inQueue in inQueues:
         inQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
         inQueue.close()
-    logging.debug("Done with generator, None added to queue.")
+    logUtils.debug("Done with generator, None added to queue.")
     generator.done()
-    logging.debug("Generator thread finished.")
+    logUtils.debug("Generator thread finished.")
     if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
@@ -1172,7 +1172,7 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
 def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
                  profileFname: Optional[str] = None):
     """The thread that spins up the saver."""
-    logging.debug("Saver thread started.")
+    logUtils.debug("Saver thread started.")
     import cProfile
     profiler = cProfile.Profile()
     if profileFname is not None:
@@ -1184,7 +1184,7 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
             break
         saver.add(rv)
     saver.done()
-    logging.debug("Saver thread finished.")
+    logUtils.debug("Saver thread finished.")
     if profileFname is not None:
         profiler.create_stats()
         profiler.dump_stats(profileFname)
@@ -1210,7 +1210,7 @@ class _PisaBatcher:
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
                  kmerSize: int):
-        logging.info("Initializing batcher.")
+        logUtils.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
         from bpreveal import shap
@@ -1224,7 +1224,7 @@ class _PisaBatcher:
         self.numShuffles = numShuffles
         self.receptiveField = receptiveField
         self.kmerSize = kmerSize
-        logging.debug("Batcher prepared, creating explainer.")
+        logUtils.debug("Batcher prepared, creating explainer.")
         # This slice....
         # Oh, this slice is a doozy!
         #                      Keep the first dimension, so it looks like a batch of size one--,
@@ -1238,7 +1238,7 @@ class _PisaBatcher:
         self.profileExplainer = shap.TFDeepExplainer(
             (self.model.input, outTarget),
             self.generateShuffles)
-        logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
+        logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, modelInputs):
         """Callback for shap."""
@@ -1343,7 +1343,7 @@ class _FlatBatcher:
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
                  kmerSize: int):
-        logging.info("Initializing batcher.")
+        logUtils.info("Initializing batcher.")
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
         from bpreveal import shap
@@ -1357,7 +1357,7 @@ class _FlatBatcher:
         self.taskIDs = taskIDs
         self.curBatch = []
         self.numShuffles = numShuffles
-        logging.debug("Batcher prepared, creating explainer.")
+        logUtils.debug("Batcher prepared, creating explainer.")
         match mode:
             case "profile":
                 # Calculate the weighted meannormed logits that are used for the
@@ -1382,7 +1382,7 @@ class _FlatBatcher:
                     self.generateShuffles,
                     combine_mult_and_diffref=combineMultAndDiffref)
 
-        logging.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
+        logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, modelInputs):
         """Callback for shap."""

@@ -3,7 +3,7 @@ import h5py
 import pyBigWig
 import numpy as np
 import argparse
-from bpreveal import logging
+from bpreveal import logUtils
 import tqdm
 from bpreveal.utils import H5_CHUNK_SIZE
 
@@ -48,10 +48,10 @@ def writeBigWig(inH5, outFname, verbose):
         chromIdxToName[i] = name
     outBw = pyBigWig.open(outFname, 'w')
     outBw.addHeader(sorted(bwHeader))
-    logging.debug("Bigwig header" + str((sorted(bwHeader))))
+    logUtils.debug("Bigwig header" + str((sorted(bwHeader))))
     numRegions = inH5['coords_chrom'].shape[0]
     if type(inH5['coords_chrom'][0]) is bytes:
-        logging.warning("You are using an old-style hdf5 file for importance scores. "
+        logUtils.warning("You are using an old-style hdf5 file for importance scores. "
             "Support for these files will be removed in BPReveal 5.0. "
             "Instructions for updating: Re-calculate importance scores.")
         coordsChrom = np.array(inH5['coords_chrom'].asstr())
@@ -68,7 +68,7 @@ def writeBigWig(inH5, outFname, verbose):
     curChrom = regionChrom
     regionStart = coordsStart[regionID]
     regionStop = coordsEnd[regionID]
-    logging.info("Files opened; writing regions")
+    logUtils.info("Files opened; writing regions")
     regionRange = range(numRegions)
     nextRegion = None
     if verbose:
@@ -122,9 +122,9 @@ def writeBigWig(inH5, outFname, verbose):
             regionStart = nextStart  # type: ignore
             regionStop = nextStop  # type: ignore
 
-    logging.info("Regions written; closing bigwig.")
+    logUtils.info("Regions written; closing bigwig.")
     outBw.close()
-    logging.info("Done saving shap scores.")
+    logUtils.info("Done saving shap scores.")
 
 
 def getParser() -> argparse.ArgumentParser:
@@ -141,9 +141,9 @@ def main():
 
     args = getParser().parse_args()
     if args.verbose:
-        logging.setVerbosity("INFO")
+        logUtils.setVerbosity("INFO")
     else:
-        logging.setVerbosity("WARNING")
+        logUtils.setVerbosity("WARNING")
     inH5 = h5py.File(args.h5, 'r')
     writeBigWig(inH5, args.bw, args.verbose)
 

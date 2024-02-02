@@ -152,7 +152,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 from bpreveal import interpretUtils
-from bpreveal import logging
+from bpreveal import logUtils
 
 
 def main(config):
@@ -160,23 +160,23 @@ def main(config):
 
     :param config: A JSON object matching the interpretFlat specification.
     """
-    logging.setVerbosity(config["verbosity"])
+    logUtils.setVerbosity(config["verbosity"])
     genomeFname = None
     kmerSize = 1
     if "kmer-size" in config:
         kmerSize = config["kmer-size"]
     else:
-        logging.info("Did not find a kmer-size property in config. "
+        logUtils.info("Did not find a kmer-size property in config. "
                      "Using default value of 1.")
 
     if "bed-file" in config:
-        logging.debug("Configuration specifies a bed file.")
+        logUtils.debug("Configuration specifies a bed file.")
         genomeFname = config["genome"]
         generator = interpretUtils.FlatBedGenerator(config["bed-file"], genomeFname,
                                                     config["input-length"],
                                                     config["output-length"])
     else:
-        logging.debug("Configuration specifies a fasta file.")
+        logUtils.debug("Configuration specifies a fasta file.")
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
 
     profileWriter = interpretUtils.FlatH5Saver(config["profile-h5"], generator.numRegions,

@@ -1,5 +1,5 @@
 import numpy as np
-from bpreveal import logging
+from bpreveal import logUtils
 import tqdm
 keras = None
 tf = None
@@ -160,7 +160,7 @@ class TFDeepExplainer:
             self.expected_value = None
         else:
             if self.data[0].shape[0] > 5000:
-                logging.warning("You have provided over 5k background samples!"
+                logUtils.warning("You have provided over 5k background samples!"
                     "For better performance consider using smaller random sample.")
             self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
@@ -182,7 +182,7 @@ class TFDeepExplainer:
         self.used_types = {}
         for op in self.between_ops:
             if (op.type not in op_handlers and op.type not in self.used_types):
-                logging.info(str(op.type) + "used in model but handling of op"
+                logUtils.info(str(op.type) + "used in model but handling of op"
                       " is not specified by shap; will use original"
                       " gradients")
             self.used_types[op.type] = True

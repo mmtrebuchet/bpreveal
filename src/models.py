@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.backend import int_shape
 from bpreveal import layers
-from bpreveal import logging
+from bpreveal import logUtils
 
 
 def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
@@ -20,7 +20,7 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
         * The counts layer is a (batch x 1) scalar-valued layer containing the total
           counts for the current head.
     """
-    logging.debug("Initializing head {0:s}".format(individualHead["head-name"]))
+    logUtils.debug("Initializing head {0:s}".format(individualHead["head-name"]))
     numOutputs = individualHead["num-tasks"]
     profile = keras.layers.Conv1D(
             numOutputs, outputFilterWidth, padding='valid',
@@ -62,7 +62,7 @@ def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
     It is an error to call this function with an inconsistent network structure,
     such as an input that is too long.
     """
-    logging.debug("Building solo model")
+    logUtils.debug("Building solo model")
     inputLayer = keras.Input((inputLength, 4), name=modelName + '_input')
 
     initialConv = keras.layers.Conv1D(
@@ -109,7 +109,7 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
         to transform the profile.
     :return: A keras Layer that transforms the solo predictions.
     """
-    logging.debug("Building transformation model.")
+    logUtils.debug("Building transformation model.")
     activationLayers = []
     for layerType in architectureSpecification["types"]:
         match layerType:
@@ -170,7 +170,7 @@ def _transformationHead(soloProfile, soloCounts, individualHead,
     :return: a tuple of (profile, counts), each one a keras Layer (or similar) that
         can be treated just like the head of a solo model.
     """
-    logging.debug("Building transformation head {0:s}".format(individualHead["head-name"]))
+    logUtils.debug("Building transformation head {0:s}".format(individualHead["head-name"]))
     match profileArchitectureSpecification["name"]:
         case 'simple':
             profileTransformation = _buildSimpleTransformationModel(
@@ -289,7 +289,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
     It is an error to call this function with an inconsistent network structure,
     such as an input that is too long.
     """
-    logging.debug("Building combined model.")
+    logUtils.debug("Building combined model.")
     biasModel.trainable = False
     residualModel = soloModel(inputLength, outputLength, numFilters, numLayers,
                               inputFilterWidth, outputFilterWidth, headList, "residual")
@@ -300,7 +300,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
     assert cropDiff % 2 == 0, "Cropping returns an odd number: "\
                               "redo your model input sizes to be even numbers."
     cropFlankSize = int(cropDiff / 2)
-    logging.info("Auto cropdown calculated, will trim {0:d} bases from the bias model input."
+    logUtils.info("Auto cropdown calculated, will trim {0:d} bases from the bias model input."
                  .format(cropFlankSize))
     assert cropFlankSize >= 0, 'Bias model inputs are larger than residual inputs'
     croppedInputLayer = tf.keras.layers.Cropping1D(cropFlankSize,
@@ -308,10 +308,10 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
                                                 (inputLayer[0])  # noqa
     readyBiasHeads = biasModel([croppedInputLayer])
 
-    logging.debug("Bias heads")
-    logging.debug(readyBiasHeads)
-    logging.debug("Residual model")
-    logging.debug(residualModel)
+    logUtils.debug("Bias heads")
+    logUtils.debug(readyBiasHeads)
+    logUtils.debug("Residual model")
+    logUtils.debug(residualModel)
     # Build up the output heads. Note that the residual model also has the standard array of
     # output heads, this next step is to combine the residual and regression models to
     # generate the combined model.
@@ -355,5 +355,5 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
     combinedModel = keras.Model(inputs=inputLayer,
                                 outputs=combinedProfileHeads + combinedCountsHeads,
                                 name='combined_model')
-    logging.debug("Model built")
+    logUtils.debug("Model built")
     return (combinedModel, residualModel, readyBiasHeads)

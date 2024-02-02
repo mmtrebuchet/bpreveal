@@ -56,7 +56,7 @@ from bpreveal import generators
 from bpreveal import losses
 from bpreveal.callbacks import getCallbacks
 from bpreveal import models
-from bpreveal import logging
+from bpreveal import logUtils
 import tensorflow as tf
 
 
@@ -65,10 +65,10 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     """Train the model."""
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if tensorboardDir is not None:
-        logging.info("Including logging.")
+        logUtils.info("Including logUtils.")
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    if logging.getLogger().isEnabledFor(logging.INFO):
+    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
         verbosity = 'auto'
     else:
         verbosity = 0
@@ -84,14 +84,14 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     """Build and train a combined model."""
-    logging.setVerbosity(config["verbosity"])
+    logUtils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     numHeads = len(config["heads"])
     regressionModel = utils.loadModel(
         config["settings"]["transformation-model"]["transformation-model-file"])
     regressionModel.trainable = False
-    logging.debug("Loaded regression model.")
+    logUtils.debug("Loaded regression model.")
     combinedModel, residualModel, _ = models.combinedModel(
         inputLength, outputLength,
         config["settings"]["architecture"]["filters"],
@@ -99,7 +99,7 @@ def main(config):
         config["settings"]["architecture"]["input-filter-width"],
         config["settings"]["architecture"]["output-filter-width"],
         config["heads"], regressionModel)
-    logging.debug("Created combined model.")
+    logUtils.debug("Created combined model.")
     profileLosses = [losses.multinomialNll] * numHeads
     countsLosses = []
     profileWeights = []
@@ -127,7 +127,7 @@ def main(config):
         jit_compile=True,
         loss=profileLosses + countsLosses,
         loss_weights=profileWeights + countsWeights)  # + is list concatenation, not addition!
-    logging.debug("Models compiled.")
+    logUtils.debug("Models compiled.")
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
 
@@ -139,7 +139,7 @@ def main(config):
                                                inputLength, outputLength,
                                                config["settings"]["max-jitter"],
                                                config["settings"]["batch-size"])
-    logging.info("Generators initialized. Training.")
+    logUtils.info("Generators initialized. Training.")
 
     tensorboardDir = None
     if "tensorboard-log-dir" in config:

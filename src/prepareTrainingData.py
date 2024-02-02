@@ -93,7 +93,7 @@ import h5py
 import pyBigWig
 import json
 import pysam
-from bpreveal import logging
+from bpreveal import logUtils
 import pybedtools
 from bpreveal import utils
 from typing import Literal
@@ -162,15 +162,15 @@ def writeH5(config):
     inputLength = config["input-length"]
     jitter = config["max-jitter"]
     genome = pysam.FastaFile(config["genome"])
-    logging.debug("Opening output file.")
+    logUtils.debug("Opening output file.")
     outFile = h5py.File(config["output-h5"], "w")
-    logging.debug("Loading sequence information.")
+    logUtils.debug("Loading sequence information.")
     seqs = getSequences(regions, genome, outputLength,
                         inputLength, jitter, config["reverse-complement"])
 
     outFile.create_dataset("sequence", data=seqs, dtype=ONEHOT_T,
                            chunks=(H5_CHUNK_SIZE, seqs.shape[1], 4), compression='gzip')
-    logging.debug("Sequence dataset created.")
+    logUtils.debug("Sequence dataset created.")
     for i, head in enumerate(config["heads"]):
         if config["reverse-complement"]:
             revcomp = head["revcomp-task-order"]
@@ -190,9 +190,9 @@ def writeH5(config):
         outFile.create_dataset("head_{0:d}".format(i), data=headVals, dtype=PRED_T,
                                chunks=(H5_CHUNK_SIZE, headVals.shape[1], headVals.shape[2]),
                                compression='gzip')
-        logging.debug("Added data for head {0:d}".format(i))
+        logUtils.debug("Added data for head {0:d}".format(i))
     outFile.close()
-    logging.info("File created; closing.")
+    logUtils.info("File created; closing.")
 
 
 if __name__ == "__main__":
@@ -202,5 +202,5 @@ if __name__ == "__main__":
 
     import bpreveal.schema
     bpreveal.schema.prepareTrainingData.validate(configJson)
-    logging.setVerbosity(configJson["verbosity"])
+    logUtils.setVerbosity(configJson["verbosity"])
     writeH5(configJson)

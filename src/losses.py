@@ -1,7 +1,7 @@
 """Defines the Multinomial NLL loss and the adaptive counts loss."""
 import tensorflow as tf
 import tensorflow_probability as tfp
-from bpreveal import logging
+from bpreveal import logUtils
 from keras import backend
 
 
@@ -14,7 +14,7 @@ def multinomialNll(trueCounts, logits):
         Shape ``(batch-size x output-length x num-tasks)``
     :return: A scalar representing the profile loss of this batch.
     """
-    logging.debug("Creating multinomial NLL.")
+    logUtils.debug("Creating multinomial NLL.")
     inputShape = tf.shape(trueCounts)
     numBatches = inputShape[0]
     numSamples = inputShape[1] * inputShape[2]  # output length * num_tasks
@@ -44,7 +44,7 @@ def weightedMse(weightTensor):
 
     :return: A loss function.
     """
-    logging.debug("Creating weighted mse.")
+    logUtils.debug("Creating weighted mse.")
 
     def reweightableMse(yTrue, yPred):
         yPred = tf.convert_to_tensor(yPred)

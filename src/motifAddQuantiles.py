@@ -114,7 +114,7 @@ from bpreveal import motifUtils
 import numpy as np
 import csv
 import argparse
-from bpreveal import logging
+from bpreveal import logUtils
 
 
 def recordToPatternID(record):
@@ -230,9 +230,9 @@ def main():
     """Add quantile information."""
     args = getParser().parse_args()
     if args.verbose:
-        logging.setVerbosity("INFO")
+        logUtils.setVerbosity("INFO")
     else:
-        logging.setVerbosity("WARNING")
+        logUtils.setVerbosity("WARNING")
     seqletInFname = args.seqletTsvFname
     scanInFname = args.scanTsvFname
     seqletOutFname = args.seqletOutFname
@@ -243,21 +243,21 @@ def main():
         scanOutFname = scanInFname
 
     # Now read in the data.
-    logging.info("Reading in seqlet tsvs")
+    logUtils.info("Reading in seqlet tsvs")
     seqletFields, seqletRecords, seqletPatternNames = readTsv(seqletInFname)
     scanFields, scanRecords, scanPatternNames = readTsv(scanInFname)
-    logging.info("Finished reading.")
+    logUtils.info("Finished reading.")
     readNames = ["contrib_magnitude", "seq_match", "contrib_match"]
     writeNames = [x + "_quantile" for x in readNames]
-    logging.info("Annotating seqlet tsvs")
+    logUtils.info("Annotating seqlet tsvs")
     addAllMetadata(seqletRecords, seqletRecords, seqletPatternNames, readNames, writeNames)
-    logging.info("Annotating scanned hit tsvs")
+    logUtils.info("Annotating scanned hit tsvs")
     addAllMetadata(seqletRecords, scanRecords, scanPatternNames, readNames, writeNames)
 
     # Now we just have to write the records out.
-    logging.info("Writing annotated seqlet tsv")
+    logUtils.info("Writing annotated seqlet tsv")
     writeTsv(seqletRecords, seqletFields + writeNames, seqletOutFname)
-    logging.info("Writing annotated scan tsv")
+    logUtils.info("Writing annotated scan tsv")
     writeTsv(scanRecords, scanFields + writeNames, scanOutFname)
 
 

@@ -93,13 +93,13 @@ import json
 import pybedtools
 from bpreveal import utils
 from bpreveal.utils import ONEHOT_T, PRED_T
-from bpreveal.logging import wrapTqdm
+from bpreveal.logUtils import wrapTqdm
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 import numpy as np
 import pysam
 import h5py
-from bpreveal import logging
+from bpreveal import logUtils
 
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.
@@ -110,29 +110,29 @@ def main(config):
 
     :param config: A JSON object satisfying the makePredictionsBed specification.
     """
-    logging.setVerbosity(config["verbosity"])
+    logUtils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
     batchSize = config["settings"]["batch-size"]
     genomeFname = config["settings"]["genome"]
     numHeads = config["settings"]["heads"]
-    logging.debug("Opening output hdf5 file.")
+    logUtils.debug("Opening output hdf5 file.")
     outFile = h5py.File(config["settings"]["output-h5"], "w")
     regions = pybedtools.BedTool(config["bed-file"])
     seqs = np.zeros((len(regions), inputLength, 4), dtype=ONEHOT_T)
     genome = pysam.FastaFile(genomeFname)
     padding = (inputLength - outputLength) // 2
 
-    logging.info("Loading regions")
+    logUtils.info("Loading regions")
     for i, region in wrapTqdm(list(enumerate(regions))):
         curSeq = genome.fetch(region.chrom, region.start - padding, region.stop + padding)
         seqs[i] = utils.oneHotEncode(curSeq)
-    logging.info("Input prepared. Loading model.")
+    logUtils.info("Input prepared. Loading model.")
     model = utils.loadModel(config["settings"]["architecture"]["model-file"])
-    logging.info("Model loaded. Predicting.")
+    logUtils.info("Model loaded. Predicting.")
     preds = model.predict(seqs, batch_size=batchSize, verbose=True,
                           workers=10, use_multiprocessing=True)
-    logging.info("Predictions complete. Writing hdf5.")
+    logUtils.info("Predictions complete. Writing hdf5.")
     writePreds(regions, preds, outFile, numHeads, genome)
 
 
@@ -173,7 +173,7 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
         chromNameToIndex[chromName] = i
         refLen = genome.get_reference_length(chromName)
         if refLen > (2 ** 31 - 1):
-            logging.debug("The genome contains a chromosome that is over four billion bases long. "
+            logUtils.debug("The genome contains a chromosome that is over four billion bases long. "
                           "Using an 8-byte integer for chromosome positions.")
             chromPosDtype = np.uint64
         outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
@@ -183,7 +183,7 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
     chromDset = [chromNameToIndex[r.chrom] for r in regions]
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]
-    logging.debug("Datasets created. Populating regions.")
+    logUtils.debug("Datasets created. Populating regions.")
     outFile.create_dataset('coords_chrom', dtype=chromDtype, data=chromDset)
     outFile.create_dataset("coords_start", dtype=chromPosDtype, data=startDset)
     outFile.create_dataset(stopName, dtype=chromPosDtype, data=stopDset)
@@ -199,15 +199,15 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     :param genome: The pysam FastaFile containing your genome.
 
     """
-    logging.info("Writing predictions")
+    logUtils.info("Writing predictions")
     addCoordsInfo(regions, outFile, genome)
-    logging.debug("Writing predictions.")
+    logUtils.debug("Writing predictions.")
     for headID in wrapTqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headID))
         headGroup.create_dataset("logcounts", data=preds[numHeads + headID], dtype=PRED_T)
         headGroup.create_dataset("logits", data=preds[headID], dtype=PRED_T)
     outFile.close()
-    logging.info("File saved.")
+    logUtils.info("File saved.")
 
 
 if __name__ == "__main__":

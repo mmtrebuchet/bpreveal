@@ -4,7 +4,7 @@
 from tensorflow import keras
 import numpy as np
 import math
-from bpreveal import logging
+from bpreveal import logUtils
 import time
 import h5py
 from bpreveal.utils import MODEL_ONEHOT_T
@@ -25,7 +25,7 @@ class H5BatchGenerator(keras.utils.Sequence):
     def __init__(self, headList: dict, dataH5: h5py.File, inputLength: int,
                  outputLength: int, maxJitter: int, batchSize: int):
         """Create the generator and do the initial data load."""
-        logging.info("Initial load of dataset for hdf5-based generator.")
+        logUtils.info("Initial load of dataset for hdf5-based generator.")
         self.headList = headList
         self.inputLength = inputLength
         self.outputLength = outputLength
@@ -44,7 +44,7 @@ class H5BatchGenerator(keras.utils.Sequence):
             self.fullData.append(np.array(dataH5["head_{0:d}".format(i)]))
         self.loadData()
         self.addMeanCounts()
-        logging.info("Batch generator initialized.")
+        logUtils.info("Batch generator initialized.")
 
     def addMeanCounts(self):
         """For all heads, calculate the average number of reads over all regions.
@@ -62,7 +62,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         for i, head in enumerate(self.headList):
             sumCounts = np.sum(self.fullData[i][:, self.maxJitter:-self.maxJitter, :])
             head["INTERNAL_mean-counts"] = sumCounts / self.numRegions
-            logging.debug("For head {0:s}, mean counts is {1:f}"
+            logUtils.debug("For head {0:s}, mean counts is {1:f}"
                           .format(head["head-name"], sumCounts / self.numRegions))
 
     def __len__(self) -> int:
@@ -113,7 +113,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         Called once every epoch.
         """
         # First, randomize which regions go into which batches.
-        logging.debug("Refreshing batch data.")
+        logUtils.debug("Refreshing batch data.")
         startTime = time.perf_counter()
         self.rng.shuffle(self.regionIndexes)
         for i in range(self.numRegions):
@@ -146,7 +146,7 @@ class H5BatchGenerator(keras.utils.Sequence):
                     np.log(np.sum(tmpData[headIdx]))
         stopTime = time.perf_counter()
         Δt = stopTime - startTime
-        logging.debug("Loaded new batch in {0:5f} seconds.".format(Δt))
+        logUtils.debug("Loaded new batch in {0:5f} seconds.".format(Δt))
 
     def on_epoch_end(self):  # pylint: disable=invalid-name
         """When the epoch is done, re-jitter the data by calling refreshData."""

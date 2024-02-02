@@ -105,7 +105,7 @@ API
 import pyBigWig
 import numpy as np
 import argparse
-from bpreveal import logging
+from bpreveal import logUtils
 import scipy.stats
 import scipy.spatial.distance
 import json
@@ -136,7 +136,7 @@ class MetricsCalculator:
 
     def __init__(self, referenceBwFname, predictedBwFname, applyAbs, inQueue,
                  outQueue, tid):
-        logging.debug("Starting thread {0:d} for metrics calculation.".format(tid))
+        logUtils.debug("Starting thread {0:d} for metrics calculation.".format(tid))
         self.referenceBw = pyBigWig.open(referenceBwFname, "r")
         self.predictedBw = pyBigWig.open(predictedBwFname, "r")
         self.applyAbs = applyAbs
@@ -191,7 +191,7 @@ class MetricsCalculator:
         while True:
             match self.inQueue.get(timeout=QUEUE_TIMEOUT):
                 case None:
-                    logging.debug("Finishing calculator thread {0:d}.".format(self.tid))
+                    logUtils.debug("Finishing calculator thread {0:d}.".format(self.tid))
                     self.finish()
                     return
                 case (regionRef, regionPred, regionID):
@@ -234,16 +234,16 @@ def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
     and then puts that number in numberQueue *before* it starts putting
     regions into regionQueue.
     """
-    logging.debug("Initializing generator.")
+    logUtils.debug("Initializing generator.")
     with open(regionsFname, "r") as fp:
         regions = [Region(x) for x in fp]
-    logging.info("Number of regions: {0:d}".format(len(regions)))
+    logUtils.info("Number of regions: {0:d}".format(len(regions)))
     numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
     for i, r in enumerate(regions):
         regionQueue.put((r, r, i), timeout=QUEUE_TIMEOUT)
     for i in range(numThreads):
         regionQueue.put(None, timeout=QUEUE_TIMEOUT)
-    logging.debug("Generator done.")
+    logUtils.debug("Generator done.")
 
 
 def percentileStats(name, vector, jsonDict, header=False, write=True):
@@ -296,7 +296,7 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
     spearmanrs = np.zeros((numRegions,))
     referenceCounts = np.zeros((numRegions,))
     predictedCounts = np.zeros((numRegions,))
-    pbar = logging.wrapTqdm(range(numRegions), logging.INFO)
+    pbar = logUtils.wrapTqdm(range(numRegions), logUtils.INFO)
     for _ in pbar:
         ret = outputQueue.get(timeout=QUEUE_TIMEOUT)
         (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCount, predictedCount) = ret
@@ -362,7 +362,7 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
                            daemon=True)
     processorThreads = []
     for i in range(threads):
-        logging.debug("Creating thread {0:d}".format(i))
+        logUtils.debug("Creating thread {0:d}".format(i))
         newThread = Process(target=calculatorThread,
                             args=(reference, predicted, applyAbs, regionQueue, resultQueue, i),
                             daemon=True)
@@ -427,10 +427,10 @@ def main():
     """Run the whole thing."""
     args = getParser().parse_args()
     if args.verbose:
-        logging.setVerbosity("INFO")
+        logUtils.setVerbosity("INFO")
         assert not args.jsonOutput, "--json-output and --verbose cannot be specified together."
     else:
-        logging.setVerbosity("WARNING")
+        logUtils.setVerbosity("WARNING")
 
     runMetrics(args.reference, args.predicted, args.regions, args.threads,
                args.applyAbs, args.skipZeroes, args.jsonOutput)

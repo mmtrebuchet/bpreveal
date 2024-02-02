@@ -69,7 +69,7 @@ from bpreveal import losses
 from bpreveal import models
 from bpreveal.callbacks import getCallbacks
 from tensorflow import keras
-from bpreveal import logging
+from bpreveal import logUtils
 import tensorflow as tf
 
 
@@ -80,7 +80,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
     if tensorboardDir is not None:
         from bpreveal.callbacks import tensorboardCallback
         callbacks.append(tensorboardCallback(tensorboardDir))
-    if logging.getLogger().isEnabledFor(logging.INFO):
+    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
         verbosity = 'auto'
     else:
         verbosity = 0
@@ -96,7 +96,7 @@ def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epo
 
 def main(config):
     """Build and train the transformation model."""
-    logging.setVerbosity(config["verbosity"])
+    logUtils.setVerbosity(config["verbosity"])
     inputLength = config["settings"]["input-length"]
     outputLength = config["settings"]["output-length"]
     numHeads = len(config["heads"])
@@ -125,7 +125,7 @@ def main(config):
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
         loss=profileLosses + countsLosses,
         loss_weights=profileWeights + countsWeights)  # + is list concatenation, not addition!
-    model.summary(print_fn=logging.debug)
+    model.summary(print_fn=logUtils.debug)
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
 
@@ -137,7 +137,7 @@ def main(config):
         config["heads"], valH5,
         inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
-    logging.info("Generators initialized. Training.")
+    logUtils.info("Generators initialized. Training.")
     tensorboardDir = None
     if "tensorboard-log-dir" in config:
         tensorboardDir = config["tensorboard-log-dir"]

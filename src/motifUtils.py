@@ -1,10 +1,10 @@
 """TODO MELANIE Document
 """
-from bpreveal import logging
+from bpreveal import logUtils
 try:
     from bpreveal import jaccard
 except ModuleNotFoundError:
-    logging.error("Could not find the Jaccard module. You may need to run `make`"
+    logUtils.error("Could not find the Jaccard module. You may need to run `make`"
                   " in the src/ directory.")
     raise
 
@@ -23,7 +23,7 @@ ENABLE_DEBUG_PROFILING = False
 import numpy.typing as npt
 from typing import Optional, Literal
 from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
-from bpreveal.logging import wrapTqdm
+from bpreveal.logUtils import wrapTqdm
 PROFILING_SORT_ORDER = SortKey.TIME
 
 
@@ -577,16 +577,16 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
         pr.enable()
 
     patterns = makePatternObjects(patternSpec, modiscoH5Fname)
-    logging.info("Initialized patterns, beginning to load data.")
+    logUtils.info("Initialized patterns, beginning to load data.")
     with h5py.File(modiscoH5Fname, "r") as modiscoFp:
         for pattern in patterns:
             pattern.loadCwm(modiscoFp, trimThreshold, trimPadding, backgroundProbs)
             pattern.loadSeqlets(modiscoFp)
             pattern.getCutoffs(quantileSeqMatch, quantileContribMatch, quantileContribMagnitude)
-    logging.info("Loaded and analyzed seqlet data.")
+    logUtils.info("Loaded and analyzed seqlet data.")
     if outputSeqletsFname is not None:
         # We should load up the genomic coordinates of the seqlets.
-        logging.info("Writing tsv of seqlet information.")
+        logUtils.info("Writing tsv of seqlet information.")
         with h5py.File(contribH5Fname, "r") as contribH5fp:
             for pattern in patterns:
                 pattern.loadSeqletCoordinates(contribH5fp)
@@ -607,7 +607,7 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
     ret = []
     for pattern in patterns:
         ret.append(pattern.getScanningInfo())
-    logging.info("Done with analyzing seqlets.")
+    logUtils.info("Done with analyzing seqlets.")
 
     if ENABLE_DEBUG_PROFILING:
         pr.disable()
@@ -656,7 +656,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str) -> li
     """
     patterns = []
     if patternSpec == "all":
-        logging.debug("Loading full pattern information since patternSpec was all")
+        logUtils.debug("Loading full pattern information since patternSpec was all")
         with h5py.File(modiscoH5Fname, "r") as modiscoFp:
             for metaclusterName, metacluster in modiscoFp.items():
                 for patternName in metacluster:
@@ -664,7 +664,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str) -> li
     else:
         patternSpecList: list[dict] = patternSpec  # type: ignore
         for metaclusterSpec in patternSpecList:
-            logging.debug("Initializing patterns {0:s}".format(str(metaclusterSpec)))
+            logUtils.debug("Initializing patterns {0:s}".format(str(metaclusterSpec)))
             if "pattern-names" in metaclusterSpec:
                 for i, patternName in enumerate(metaclusterSpec["pattern-names"]):
                     if "short-names" in metaclusterSpec:
@@ -681,7 +681,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str) -> li
                 patterns.append(Pattern(metaclusterSpec["metacluster-name"],
                                         metaclusterSpec["pattern-name"],
                                         shortName))
-    logging.info("Initialized {0:d} patterns.".format(len(patterns)))
+    logUtils.info("Initialized {0:d} patterns.".format(len(patterns)))
     return patterns
 
 
@@ -860,14 +860,14 @@ class PatternScanner:
         into hitQueue for saving by the writer thread.
         """
         if self.firstIndex:
-            logging.debug("Got first index for thread {0:d}".format(
+            logUtils.debug("Got first index for thread {0:d}".format(
                 multiprocessing.current_process().pid))
 
         # Get all the data for this index.
         chromIdx = self.contribFp["coords_chrom"][idx]
         if type(chromIdx) is bytes:
             if not self.warnedAboutOldScores:
-                logging.warning("Detected an importance score file from before version 4.0. "
+                logUtils.warning("Detected an importance score file from before version 4.0. "
                                 "This will be an error in BPReveal 5.0. "
                                 "Instructions for updating: Re-calculate importance scores.")
                 self.warnedAboutOldScores = True
@@ -875,7 +875,7 @@ class PatternScanner:
         else:
             chrom = self.chromIdxToName[chromIdx]
             if self.firstIndex:
-                logging.debug("First index, found chrom {0:s}".format(str(chrom)))
+                logUtils.debug("First index, found chrom {0:s}".format(str(chrom)))
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')
@@ -883,11 +883,11 @@ class PatternScanner:
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
             if self.firstIndex:
-                logging.debug("Scanning pattern {0:s}".format(pattern.shortName))
+                logUtils.debug("Scanning pattern {0:s}".format(pattern.shortName))
 
             hits = pattern.scan(oneHotSequence, contribScores)
             if self.firstIndex:
-                logging.debug("Completed scanning {0:s}".format(pattern.shortName))
+                logUtils.debug("Completed scanning {0:s}".format(pattern.shortName))
             if len(hits) > 0:
                 # Hey, we found something!
                 for hit in hits:
@@ -910,11 +910,11 @@ class PatternScanner:
                                   hit[3], hit[4])
                     self.hitQueue.put(madeHit, timeout=QUEUE_TIMEOUT)
                     if self.firstHit:
-                        logging.debug("First hit from thread {0:d}".format(
+                        logUtils.debug("First hit from thread {0:d}".format(
                             multiprocessing.current_process().pid))
                         self.firstHit = False
         if self.firstIndex:
-            logging.debug("First pattern complete.")
+            logUtils.debug("First pattern complete.")
         self.firstIndex = False
 
     def done(self) -> None:
@@ -939,14 +939,14 @@ def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Q
     pr = cProfile.Profile()
     scanner = PatternScanner(hitQueue, contribFname, patternConfig)
     wasIOne = False
-    logging.debug("Started scanner {0:d}".format(multiprocessing.current_process().pid))
+    logUtils.debug("Started scanner {0:d}".format(multiprocessing.current_process().pid))
     while True:
         curQuery = queryQueue.get(timeout=QUEUE_TIMEOUT)
         if curQuery == 1 and ENABLE_DEBUG_PROFILING:
             wasIOne = True
         if curQuery == -1:
             # End of the line, finish up!
-            logging.debug("Done with scanner {0:d}".format(multiprocessing.current_process().pid))
+            logUtils.debug("Done with scanner {0:d}".format(multiprocessing.current_process().pid))
             scanner.done()
             break
         if wasIOne:
@@ -978,7 +978,7 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
     if ENABLE_DEBUG_PROFILING:
         pr.enable()
     threadsRemaining = scannerThreads
-    logging.debug("Starting writer.")
+    logUtils.debug("Starting writer.")
     with open(tsvFname, "w", newline='') as outTsv:
         # Must match Hit.toDict()
         fieldNames = ["chrom", "start", "end", "short_name", "contrib_magnitude", "strand",
@@ -993,20 +993,20 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
             try:
                 ret = hitQueue.get(timeout=QUEUE_TIMEOUT)
                 if firstOne:
-                    logging.debug("Writer got first hit, {0:s}".format(str(ret)))
+                    logUtils.debug("Writer got first hit, {0:s}".format(str(ret)))
                     firstOne = False
             except queue.Empty:
-                logging.warning("Exceeded timeout waiting to see a hit. Either your motif is very"
+                logUtils.warning("Exceeded timeout waiting to see a hit. Either your motif is very"
                                 " rare, or there is a bug in the code. If you see this message"
                                 " multiple times, that's a bug.")
                 numWaits += 1
                 if numWaits > 10:
-                    logging.error("Over ten timeouts have occurred. Aborting.")
+                    logUtils.error("Over ten timeouts have occurred. Aborting.")
                     raise
                 continue  # Go back to the top of the loop - we don't have a ret to process.
             if ret == -1:
                 threadsRemaining -= 1
-                logging.debug("Writer got thread done message, "
+                logUtils.debug("Writer got thread done message, "
                               "{0:d} remain.".format(threadsRemaining))
                 if threadsRemaining <= 0:
                     break
@@ -1040,7 +1040,7 @@ def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThr
     # A queue size of 1024 is reasonable.
     queryQueue = multiprocessing.Queue(1024)
     hitQueue = multiprocessing.Queue(1024)
-    logging.debug("Queues built. Starting threads.")
+    logUtils.debug("Queues built. Starting threads.")
     scannerProcesses = []
     for i in range(numThreads - 2):
         scanProc = multiprocessing.Process(target=scannerThread,
@@ -1050,22 +1050,22 @@ def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThr
     writeProc = multiprocessing.Process(target=writerThread,
                                         args=[hitQueue, numThreads - 2, tsvFname],
                                         daemon=True)
-    logging.info("Starting threads.")
+    logUtils.info("Starting threads.")
     [x.start() for x in scannerProcesses]  # pylint: disable=expression-not-assigned
 
     writeProc.start()
     with h5py.File(contribH5Fname, "r") as fp:
         # How many queries do I need to stuff down the query queue?
         numRegions = np.array(fp["coords_start"]).shape[0]
-    logging.debug("Starting to send queries to the processes.")
+    logUtils.debug("Starting to send queries to the processes.")
 
     for i in wrapTqdm(range(numRegions)):
         # The queries are generated by the main thread.
         queryQueue.put(i, timeout=QUEUE_TIMEOUT)
-    logging.debug("Done adding queries to the processes. Waiting for scanners to finish.")
+    logUtils.debug("Done adding queries to the processes. Waiting for scanners to finish.")
     for i in range(numThreads - 2):
         queryQueue.put(-1, timeout=QUEUE_TIMEOUT)
 
     [x.join() for x in scannerProcesses]  # pylint: disable=expression-not-assigned
     writeProc.join()
-    logging.info("Done scanning.")
+    logUtils.info("Done scanning.")

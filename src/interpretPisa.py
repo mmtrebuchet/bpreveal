@@ -129,7 +129,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 from bpreveal import interpretUtils
-from bpreveal import logging
+from bpreveal import logUtils
 
 
 def main(config):
@@ -137,18 +137,18 @@ def main(config):
 
     :param config: A JSON object matching the interpretPisa specification.
     """
-    logging.setVerbosity(config["verbosity"])
+    logUtils.setVerbosity(config["verbosity"])
     receptiveField = config["input-length"] - config["output-length"]
     kmerSize = 1
     if "kmer-size" in config:
         kmerSize = config["kmer-size"]
     else:
-        logging.info("Did not find a kmer-size property in configuration file. "
+        logUtils.info("Did not find a kmer-size property in configuration file. "
                      "Using default kmer-size of 1.")
     if "fasta-file" in config or "sequence-fasta" in config:
         # We're doing a fasta run.
         if "sequence-fasta" in config:
-            logging.warning("DEPRECATION: You are referring to the fasta file in your pisa JSON as "
+            logUtils.warning("DEPRECATION: You are referring to the fasta file in your pisa JSON as "
                             "sequence-fasta. This is deprecated, please change the parameter "
                             "name to fasta-file. This will be an error in BPReveal 5.0.0.")
             config["fasta-file"] = config["sequence-fasta"]
@@ -180,7 +180,7 @@ def main(config):
 if __name__ == "__main__":
     import sys
     if sys.argv[0] in ["interpretPisaBed", "interpretPisaFasta"]:
-        logging.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
+        logUtils.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
             "It is now just called interpretPisa and automatically detects if you're "
             "using a bed or fasta file. Instructions for updating: Call the program "
             "interpretPisa. These old program names will be removed in BPReveal 5.0.0.")

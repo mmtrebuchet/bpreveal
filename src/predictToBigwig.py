@@ -4,7 +4,7 @@ import h5py
 import pyBigWig
 import numpy as np
 import argparse
-from bpreveal import logging
+from bpreveal import logUtils
 import tqdm
 import multiprocessing
 from bpreveal import utils
@@ -48,7 +48,7 @@ def getChromInserts(arg):
     with h5py.File(h5Fname, "r") as h5fp:
         vec = getChromVector(regionList, h5fp, headID, taskID, mode)
         inserts = vectorToListOfInserts(vec)
-    logging.info("Finished region {0:s}".format(str(regionList[0].chromIdx)))
+    logUtils.info("Finished region {0:s}".format(str(regionList[0].chromIdx)))
     return inserts
 
 
@@ -86,11 +86,11 @@ def buildRegionList(inH5):
     numRegions = inH5['coords_chrom'].shape[0]
 
     # Sort the regions.
-    logging.debug("Loading coordinate data")
+    logUtils.debug("Loading coordinate data")
     coordsChrom = list(inH5['coords_chrom'])
     coordsStart = np.array(inH5['coords_start'])
     coordsStop = np.array(inH5['coords_stop'])
-    logging.debug("Region data loaded. Sorting.")
+    logUtils.debug("Region data loaded. Sorting.")
     regionList = []
     regionRange = range(numRegions)
     for regionNumber in regionRange:
@@ -98,10 +98,10 @@ def buildRegionList(inH5):
                                  coordsStart[regionNumber],
                                  coordsStop[regionNumber],
                                  regionNumber))
-    logging.debug("Generated list of regions to sort.")
+    logUtils.debug("Generated list of regions to sort.")
     regionOrder = sorted(range(numRegions),
                          key=lambda x: (regionList[x].chromIdx, regionList[x].start))
-    logging.info("Region order calculated.")
+    logUtils.info("Region order calculated.")
 
     regionsByChrom = dict()
     for idx in regionOrder:
@@ -114,15 +114,15 @@ def buildRegionList(inH5):
 
 def writeBigWig(inH5Fname, outFname, headID, taskID, mode, verbose, negate, numThreads):
     inH5 = h5py.File(inH5Fname, "r")
-    logging.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headID, taskID))
+    logUtils.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headID, taskID))
     bwHeader = []
     for i, name in enumerate(inH5["chrom_names"].asstr()):
         bwHeader.append(("{0:s}".format(name), int(inH5['chrom_sizes'][i])))
     outBw = pyBigWig.open(outFname, 'w')
 
     outBw.addHeader(bwHeader)
-    logging.debug(bwHeader)
-    logging.info("Added header.")
+    logUtils.debug(bwHeader)
+    logUtils.info("Added header.")
     regionsByChrom = buildRegionList(inH5)
     chromList = sorted(regionsByChrom.keys())
     # In order to use multiprocessing, I need to unstaple the dict into a list.
@@ -130,13 +130,13 @@ def writeBigWig(inH5Fname, outFname, headID, taskID, mode, verbose, negate, numT
     chromRegionLists = []
     for chromIdx in chromList:
         chromRegionLists.append((regionsByChrom[chromIdx], inH5Fname, headID, taskID, mode))
-    logging.info("Extracted list of regions to process.")
-    logging.info("Beginning to extract profile data.")
+    logUtils.info("Extracted list of regions to process.")
+    logUtils.info("Beginning to extract profile data.")
 
     with multiprocessing.Pool(numThreads) as p:
         # Get the insert list for each chromosome in a subprocess.
         chromInsertLists = p.map(getChromInserts, chromRegionLists)
-    logging.info("Insert lists calculated. Writing bigwig.")
+    logUtils.info("Insert lists calculated. Writing bigwig.")
     pbar = None
     if verbose:
         totalInserts = 0
@@ -159,9 +159,9 @@ def writeBigWig(inH5Fname, outFname, headID, taskID, mode, verbose, negate, numT
                              span=1, step=1)
     if pbar is not None:
         pbar.close()
-    logging.info("Bigwig written. Closing.")
+    logUtils.info("Bigwig written. Closing.")
     outBw.close()
-    logging.info("Done.")
+    logUtils.info("Done.")
 
 
 def getParser() -> argparse.ArgumentParser:
@@ -194,9 +194,9 @@ def main():
     """Run the program."""
     args = getParser().parse_args()
     if args.verbose:
-        logging.setVerbosity("INFO")
+        logUtils.setVerbosity("INFO")
     else:
-        logging.setVerbosity("WARNING")
+        logUtils.setVerbosity("WARNING")
     writeBigWig(args.h5, args.bw, args.headID, args.taskID, args.mode, args.verbose,
                 args.negate, args.numThreads)
 
