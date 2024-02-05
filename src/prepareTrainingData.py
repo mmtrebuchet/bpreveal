@@ -108,7 +108,22 @@ def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
     return np.flip(oneHotSeq)
 
 
-def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
+def getSequences(bed: pybedtools.BedTool, genome: pysam.FastaFile, outputLength: int,
+                 inputLength: int, jitter: int, revcomp: bool):
+    """Extract sequences from the fasta.
+
+    :param bed: A BedTool containing the regions to get sequence data for.
+        These regions should be outputLength wide.
+    :param genome: The (open) FastaFile containing your genome sequence
+    :param outputLength: The output length of your model
+    :param inputLength: The input length of your model
+    :param jitter: The maximum jitter that will be applied during training
+    :param revcomp: Should the returned sequence include reverse-complement data?
+        If so, then each region will produce two sequences: one forward and
+        one reverse-complemented.
+    :return: An array of one-hot-encoded sequences of shape
+        ```(numSequences x inputLength + 2*jitter, 4)```.
+    """
     numSequences = bed.count()
     if not revcomp:
         seqs = np.zeros((numSequences, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
@@ -129,8 +144,22 @@ def getSequences(bed, genome, outputLength, inputLength, jitter, revcomp):
     return seqs
 
 
-def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
-            revcomp: Literal[False] | list[int]) -> PRED_AR_T:
+def getHead(bed: pybedtools.BedTool, bigwigFnames: list[str], outputLength: int,
+            jitter: int, revcomp: Literal[False] | list[int]) -> PRED_AR_T:
+    """Get all the data for a particular head.
+
+    :param bed: A BedTool containing the regions that will be used to train.
+        Each interval in this BedTool should have length outputLength.
+    :param bigwigFnames: The names of the bigwig files that will be loaded.
+    :param outputLength: The output length of your model
+    :param jitter: The jitter that will be applied during training.
+    :param revcomp: If no reverse-complement is desired, this is just ``False``.
+        Otherwise, see the section on ``revcomp-task-order`` for what this list means.
+    :return: An array of data that can be put in the training hdf5. It has shape
+        (numSequences * outputLength + 2 * jitter, numTasks). numSequences will be
+        the length of your bed file if ``revcomp == False``, or twice the length of your
+        bed file if you include revcomp augmentation.
+    """
     # Note that revcomp should be either False or the task-order array (which is truthy).
     numSequences = bed.count()
     if not revcomp:
@@ -156,7 +185,10 @@ def getHead(bed, bigwigFnames: list[str], outputLength: int, jitter: int,
 
 
 def writeH5(config):
-    """Main method, load the config and then generate training data hdf5 files."""
+    """Main method, load the config and then generate training data hdf5 files.
+
+    :param config: The configuration json.
+    """
     regions = pybedtools.BedTool(config["regions"])
     outputLength = config["output-length"]
     inputLength = config["input-length"]

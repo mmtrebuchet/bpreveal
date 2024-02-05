@@ -117,20 +117,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         startTime = time.perf_counter()
         self.rng.shuffle(self.regionIndexes)
         for i in range(self.numRegions):
-            tmpSequence = self.fullSequences[i]
-            # fullData is (num-heads)
-            #            x (  num-regions
-            #               x output-width+jitter*2
-            #               x numTasks)
-            # so this slice takes the ith region of each of the head datasets.
-            tmpData = [x[i, :, :] for x in self.fullData]
-            if self.maxJitter > 0:
-                jitterOffset = self.rng.integers(0, self.maxJitter * 2 + 1)
-                tmpSequence = tmpSequence[jitterOffset:jitterOffset + self.inputLength, :]
-                for j in range(len(tmpData)):  # pylint: disable=consider-using-enumerate
-                    tmpData[j] = tmpData[j][jitterOffset:jitterOffset + self.outputLength, :]
-                # Note that this generator does *not* revcomp the data,
-                # in case the input are stranded like chip-nexus.
+            tmpData, tmpSequence = self._offsetJitter(i)
             # We've collected and trimmed the data, now to fill in the
             # batch arrays.
             regionIdx = self.regionIndexes[i]
@@ -139,14 +126,39 @@ class H5BatchGenerator(keras.utils.Sequence):
             batchSeqs = self.batchSequences[batchIdx]
             batchVals = self.batchVals[batchIdx]
             batchCounts = self.batchCounts[batchIdx]
-            batchSeqs[batchRegionIdx, :] = tmpSequence
-            for headIdx, _ in enumerate(self.headList):
-                batchVals[headIdx][batchRegionIdx, :] = tmpData[headIdx]
-                batchCounts[headIdx][batchRegionIdx] = \
-                    np.log(np.sum(tmpData[headIdx]))
+            self._shiftSequence(batchSeqs, tmpSequence, batchRegionIdx)
+            self._shiftData(batchVals, batchCounts, tmpData, batchRegionIdx)
         stopTime = time.perf_counter()
         Δt = stopTime - startTime
         logUtils.debug("Loaded new batch in {0:5f} seconds.".format(Δt))
+
+    def _shiftSequence(self, batchSeqs, tmpSequence, batchRegionIdx):
+        # This is a good target for optimization - it takes multiple seconds!
+        batchSeqs[batchRegionIdx, :] = tmpSequence
+
+    def _shiftData(self, batchVals, batchCounts, tmpData, batchRegionIdx):
+        # This is a big target for optimization - it takes multiple seconds to load a batch.
+        for headIdx, _ in enumerate(self.headList):
+            batchVals[headIdx][batchRegionIdx, :] = tmpData[headIdx]
+            batchCounts[headIdx][batchRegionIdx] = \
+                np.log(np.sum(tmpData[headIdx]))
+
+    def _offsetJitter(self, i):
+        tmpSequence = self.fullSequences[i]
+        # fullData is (num-heads)
+        #            x (  num-regions
+        #               x output-width+jitter*2
+        #               x numTasks)
+        # so this slice takes the ith region of each of the head datasets.
+        tmpData = [x[i, :, :] for x in self.fullData]
+        if self.maxJitter > 0:
+            jitterOffset = self.rng.integers(0, self.maxJitter * 2 + 1)
+            tmpSequence = tmpSequence[jitterOffset:jitterOffset + self.inputLength, :]
+            for j in range(len(tmpData)):  # pylint: disable=consider-using-enumerate
+                tmpData[j] = tmpData[j][jitterOffset:jitterOffset + self.outputLength, :]
+            # Note that this generator does *not* revcomp the data,
+            # in case the input are stranded like chip-nexus.
+        return tmpData, tmpSequence
 
     def on_epoch_end(self):  # pylint: disable=invalid-name
         """When the epoch is done, re-jitter the data by calling refreshData."""

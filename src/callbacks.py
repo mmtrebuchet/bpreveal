@@ -105,7 +105,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         for head in heads:
             self.λHistory[head["head-name"]] = []
 
-    def on_train_begin(self, logs=None):  # pylint: disable=invalid-name
+    def on_train_begin(self, logs=None):  # pylint: disable=invalid-name,unused-argument
         """Set up the initial guesses for λ.
 
         :param logs: Ignored.

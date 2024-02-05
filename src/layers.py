@@ -19,7 +19,7 @@ class LinearRegression(keras.layers.Layer):
 
     def __init__(self, **kwargs):
         """Construct."""
-        super(LinearRegression, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         slopeInit = tf.ones_initializer()
         self.slope = tf.Variable(
             initial_value=slopeInit(shape=(1,), dtype='float32'),

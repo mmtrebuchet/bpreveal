@@ -73,8 +73,9 @@ from bpreveal import logUtils
 import tensorflow as tf
 
 
-def trainModel(model, inputLength, outputLength, trainBatchGen, valBatchGen, epochs, earlyStop,
-               outputPrefix, plateauPatience, heads, tensorboardDir=None):
+def trainModel(model, inputLength, outputLength, trainBatchGen,  # pylint: disable=unused-argument
+               valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience,
+               heads, tensorboardDir=None):
     """Run the training."""
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
     if tensorboardDir is not None:

@@ -344,7 +344,7 @@ indent-string='    '
 max-line-length=100
 
 # Maximum number of lines in a module.
-max-module-lines=1000
+max-module-lines=1500
 
 # Allow the body of a class to be on the same line as the declaration if body
 # contains single statement.
@@ -432,8 +432,6 @@ disable=consider-using-f-string,
         duplicate-code,
         global-statement,
         import-outside-toplevel,
-        logging-not-lazy,
-        no-else-return,
         non-ascii-name,
         protected-access,
         too-few-public-methods,
@@ -441,7 +439,6 @@ disable=consider-using-f-string,
         too-many-instance-attributes,
         too-many-locals,
         ungrouped-imports,
-        unidiomatic-typecheck,
         unspecified-encoding,
         use-dict-literal,
         wrong-import-order,

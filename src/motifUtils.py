@@ -821,8 +821,6 @@ class Hit:
 class PatternScanner:
     """TODO MELANIE Document initializer."""
 
-    warnedAboutOldScores = False
-
     def __init__(self, hitQueue: multiprocessing.Queue, contribFname: str,
                  patternConfig: dict) -> None:
         """A tool to run the actual scans.
@@ -859,35 +857,36 @@ class PatternScanner:
         This function will look for hits in this region and then stuff any hits it finds
         into hitQueue for saving by the writer thread.
         """
-        if self.firstIndex:
-            logUtils.debug("Got first index for thread {0:d}".format(
-                multiprocessing.current_process().pid))
+        logUtils.logFirstN(logUtils.DEBUG,
+            "Got first index for thread {0:d}".format(
+                multiprocessing.current_process().pid),
+            1)
 
         # Get all the data for this index.
         chromIdx = self.contribFp["coords_chrom"][idx]
-        if type(chromIdx) is bytes:
-            if not self.warnedAboutOldScores:
-                logUtils.warning("Detected an importance score file from before version 4.0. "
-                                "This will be an error in BPReveal 5.0. "
-                                "Instructions for updating: Re-calculate importance scores.")
-                self.warnedAboutOldScores = True
+        if isinstance(chromIdx, bytes):
+            logUtils.logFirstN(logUtils.WARNING,
+                               "Detected an importance score file from before version 4.0. "
+                               "This will be an error in BPReveal 5.0. "
+                               "Instructions for updating: Re-calculate importance scores.",
+                               1)
             chrom = chromIdx.decode('utf-8')
         else:
             chrom = self.chromIdxToName[chromIdx]
-            if self.firstIndex:
-                logUtils.debug("First index, found chrom {0:s}".format(str(chrom)))
+            logUtils.logFirstN(logUtils.DEBUG,
+                               "First index, found chrom {0:s}".format(str(chrom)), 1)
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')
         contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order='C')
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
-            if self.firstIndex:
-                logUtils.debug("Scanning pattern {0:s}".format(pattern.shortName))
+            logUtils.logFirstN(logUtils.DEBUG,
+                               "Scanning pattern {0:s}".format(pattern.shortName), 1)
 
             hits = pattern.scan(oneHotSequence, contribScores)
-            if self.firstIndex:
-                logUtils.debug("Completed scanning {0:s}".format(pattern.shortName))
+            logUtils.logFirstN(logUtils.DEBUG,
+                               "Completed scanning {0:s}".format(pattern.shortName), 1)
             if len(hits) > 0:
                 # Hey, we found something!
                 for hit in hits:
@@ -909,13 +908,11 @@ class PatternScanner:
                                   hit[2],
                                   hit[3], hit[4])
                     self.hitQueue.put(madeHit, timeout=QUEUE_TIMEOUT)
-                    if self.firstHit:
-                        logUtils.debug("First hit from thread {0:d}".format(
-                            multiprocessing.current_process().pid))
-                        self.firstHit = False
-        if self.firstIndex:
-            logUtils.debug("First pattern complete.")
-        self.firstIndex = False
+                    logUtils.logFirstN(logUtils.DEBUG,
+                                       "First hit from thread {0:d}".format(
+                                           multiprocessing.current_process().pid),
+                                       1)
+        logUtils.logFirstN(logUtils.DEBUG, "First pattern complete.", 1)
 
     def done(self) -> None:
         """TODO MELANIE Document"""
@@ -988,13 +985,12 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
                                 delimiter='\t', lineterminator='\n')
         writer.writeheader()
         numWaits = 0
-        firstOne = True
         while True:
             try:
                 ret = hitQueue.get(timeout=QUEUE_TIMEOUT)
-                if firstOne:
-                    logUtils.debug("Writer got first hit, {0:s}".format(str(ret)))
-                    firstOne = False
+                logUtils.logFirstN(logUtils.DEBUG,
+                                   "Writer got first hit, {0:s}".format(str(ret)),
+                                   1)
             except queue.Empty:
                 logUtils.warning("Exceeded timeout waiting to see a hit. Either your motif is very"
                                 " rare, or there is a bug in the code. If you see this message"

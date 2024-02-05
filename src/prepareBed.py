@@ -131,6 +131,116 @@ from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelC
 random.seed(735014)
 
 
+def loadRegionsByChrom(trainChroms: list[str], valChroms: list[str],
+                       testChroms: list[str], regionFnames: list[str]) -> \
+        tuple[list[pybedtools.Interval], list[pybedtools.Interval],
+              list[pybedtools.Interval], list[pybedtools.Interval]]:
+    """Load splits based on chromosomes.
+
+    Given chromosomes for the training, validation, and test splits, and a list of
+    bed files, generate the regions in each split.
+
+    :param trainChroms: A list of chromosome names for the training split.
+    :param valChroms: A list of chromosomes for the validation split.
+    :param testChroms: A list of chromosome names for the test split.
+    :param regionFnames: A list of bed file names to read in.
+    :return: The training, test, validation, and reject regions as lists.
+    """
+    trainRegions = []
+    testRegions = []
+    valRegions = []
+    rejectRegions = []
+    for bedFile in regionFnames:
+        for line in open(bedFile):
+            if r := lineToInterval(line):
+                if r.chrom in trainChroms:
+                    trainRegions.append(r)
+                elif r.chrom in valChroms:
+                    valRegions.append(r)
+                elif r.chrom in testChroms:
+                    testRegions.append(r)
+                else:
+                    logUtils.debug("        Rejected region {0:s} because it's not in any "
+                                   "of the chromosome sets.".format(line.strip()))
+                    rejectRegions.append(r)
+    return trainRegions, testRegions, valRegions, rejectRegions
+
+
+def loadRegionsByBed(trainRegionFnames: list[str], valRegionFnames: list[str],
+                     testRegionFnames: list[str]) -> \
+        tuple[list[pybedtools.Interval], list[pybedtools.Interval],
+              list[pybedtools.Interval], list[pybedtools.Interval]]:
+    """Given bed file names, load them into lists of intervals.
+
+    :param trainRegionFnames: A list of bed files containing regions to train on.
+    :param valRegionFnames: A list of bed files containing regions to use for validation.
+    :param testRegionFnames: A list of bed files for the test set of regions.
+    :return: Four lists of regions: Training, test, validation, and rejects.
+        (Rejects will always be empty with this function.)
+    """
+    trainRegions = []
+    testRegions = []
+    valRegions = []
+    for trainBedFile in trainRegionFnames:
+        for line in open(trainBedFile):
+            if r := lineToInterval(line):
+                trainRegions.append(r)
+    for valBedFile in valRegionFnames:
+        for line in open(valBedFile):
+            if r := lineToInterval(line):
+                valRegions.append(r)
+    for testBedFile in testRegionFnames:
+        for line in open(testBedFile):
+            if r := lineToInterval(line):
+                testRegions.append(r)
+    return trainRegions, testRegions, valRegions, []
+
+
+def loadRegionsByRegex(trainString: str, testString: str, valString: str,
+                       regionFnames: list[str]) -> \
+        tuple[list[pybedtools.Interval], list[pybedtools.Interval],
+              list[pybedtools.Interval], list[pybedtools.Interval]]:
+    """Go over the bed files and assign splits based on regexes matched against the name column.
+
+    :param trainRegex: The regex that matches samples in the training split
+    :param testRegex: The regex that matches samples in the test split
+    :param valRegex: The regex that matches samples in the validation split.
+    :return: Four lists of Intervals, corresponding to the training, test, validation,
+        and rejected regions.
+    """
+    trainRegions = []
+    testRegions = []
+    valRegions = []
+    rejectRegions = []
+    trainRegex = re.compile(trainString)
+    valRegex = re.compile(valString)
+    testRegex = re.compile(testString)
+    for bedFile in regionFnames:
+        for line in open(bedFile):
+            if r := lineToInterval(line):
+                foundTrain = False
+                foundVal = False
+                foundTest = False
+                if trainRegex.search(r.name) is not None:
+                    foundTrain = True
+                    trainRegions.append(r)
+                if valRegex.search(r.name) is not None:
+                    assert not foundTrain, "Region {0:s} matches multiple "\
+                                           "regexes.".format(line)
+                    foundVal = True
+                    valRegions.append(r)
+                if testRegex.search(r.name) is not None:
+                    assert not (foundTrain or foundVal), "Region {0:s} matches "\
+                                                         "multiple regexes.".format(line)
+                    foundTest = True
+                    testRegions.append(r)
+                if not (foundTrain or foundVal or foundTest):
+                    logUtils.debug("        Rejected region {0:s} because it didn't match "
+                                   "any of your split regexes.".format(line.strip()))
+                    rejectRegions.append(r)
+    return trainRegions, testRegions, valRegions, rejectRegions
+
+
 def loadRegions(config):
     """Given a configuration (see the specification), return four PyBedTools BedTool objects.
 
@@ -146,70 +256,20 @@ def loadRegions(config):
     testRegions = []
     valRegions = []
     rejectRegions = []
-    numRejected = 0
     match config["splits"]:
         case {"train-chroms": trainChroms, "val-chroms": valChroms,
               "test-chroms": testChroms, "regions": regionFnames}:
-            for bedFile in regionFnames:
-                for line in open(bedFile):
-                    if r := lineToInterval(line):
-                        if r.chrom in trainChroms:
-                            trainRegions.append(r)
-                        elif r.chrom in valChroms:
-                            valRegions.append(r)
-                        elif r.chrom in testChroms:
-                            testRegions.append(r)
-                        else:
-                            numRejected += 1
-                            logUtils.debug("        Rejected region {0:s} because it's not in any "
-                                          "of the chromosome sets.".format(line.strip()))
-                            rejectRegions.append(r)
-
+            trainRegions, testRegions, valRegions, rejectRegions = \
+                loadRegionsByChrom(trainChroms, valChroms, testChroms, regionFnames)
         case {"train-regions": trainRegionFnames, "val-regions": valRegionFnames,
               "test-regions": testRegionFnames}:
-            for trainBedFile in trainRegionFnames:
-                for line in open(trainBedFile):
-                    if r := lineToInterval(line):
-                        trainRegions.append(r)
-            for valBedFile in valRegionFnames:
-                for line in open(valBedFile):
-                    if r := lineToInterval(line):
-                        valRegions.append(r)
-            for testBedFile in testRegionFnames:
-                for line in open(testBedFile):
-                    if r := lineToInterval(line):
-                        testRegions.append(r)
-
+            trainRegions, testRegions, valRegions, rejectRegions = \
+                loadRegionsByBed(trainRegionFnames, valRegionFnames,
+                                 testRegionFnames)
         case {"train-regex": trainString, "val-regex": valString,
               "test-regex": testString, "regions": regionFnames}:
-            trainRegex = re.compile(trainString)
-            valRegex = re.compile(valString)
-            testRegex = re.compile(testString)
-            for bedFile in regionFnames:
-                for line in open(bedFile):
-                    if r := lineToInterval(line):
-                        foundTrain = False
-                        foundVal = False
-                        foundTest = False
-                        if trainRegex.search(r.name) is not None:
-                            foundTrain = True
-                            trainRegions.append(r)
-                        if valRegex.search(r.name) is not None:
-                            assert not foundTrain, "Region {0:s} matches multiple "\
-                                                   "regexes.".format(line)
-                            foundVal = True
-                            valRegions.append(r)
-                        if testRegex.search(r.name) is not None:
-                            assert not (foundTrain or foundVal), "Region {0:s} matches "\
-                                                                 "multiple regexes.".format(line)
-                            foundTest = True
-                            testRegions.append(r)
-                        if not (foundTrain or foundVal or foundTest):
-                            numRejected += 1
-                            logUtils.debug("        Rejected region {0:s} because it didn't match "
-                                          "any of your split regexes.".format(line.strip()))
-                            rejectRegions.append(r)
-
+            trainRegions, testRegions, valRegions, rejectRegions = \
+                loadRegionsByRegex(trainString, testString, valString, regionFnames)
         case _:
             assert False, "Config invalid: {0:s}".format(str(config["splits"]))
 
@@ -266,7 +326,113 @@ def removeOverlaps(config, regions, genome):
     return (pybedtools.BedTool(ret), pybedtools.BedTool(rejects))
 
 
-def validateRegions(config, regions, genome, bigwigLists, numThreads):
+def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
+                      bigwigLists: list[str], validRegions: np.ndarray,
+                      numThreads: int) -> pybedtools.BedTool:
+    """Filters the regions in bigRegionList based on the max-quantile or max-counts in the config.
+
+    :param config: Straight from the configuration JSON.
+    :param bigRegionsList: A list of intervals that have already been inflated to account for jitter
+    :param bigwigLists: The bigwigs that should be scanned, grouped by head.
+    :param validRegions: A vector booleans, for each region in bigRegionList, if region i is
+        rejected, then validRegions[i] will be 0 when this function exits.
+    :param numThreads: How many parallel workers should be used?
+    :return: A BedTool containing only valid regions.
+    """
+    pbar = logUtils.wrapTqdm(len(bigRegionsList) * len(config["heads"]) * 2, logUtils.INFO)
+    for i, headSpec in enumerate(config["heads"]):
+        if "max-quantile" in headSpec:
+            if headSpec["max-quantile"] == 1:
+                # Don't reject any regions. Since validRegions starts with all ones
+                # (i.e., all regions are valid), we just jump to the next head to see
+                # if we need to look at max counts there.
+                continue
+        # Get the counts over every region.
+        counter = ParallelCounter(bigwigLists[i], numThreads)
+        bigCounts = np.zeros((len(bigRegionsList),))
+        for j, r in enumerate(bigRegionsList):
+            counter.addQuery((r.chrom, r.start, r.end), j)
+            pbar.update()
+        for _ in range(len(bigRegionsList)):
+            val, idx = counter.getResult()
+            bigCounts[idx] = val
+            pbar.update()
+        counter.done()
+        if "max-counts" in headSpec:
+            maxCounts = headSpec["max-counts"]
+        else:
+            maxCounts = np.quantile(bigCounts, [headSpec["max-quantile"]])[0]
+        logUtils.debug("    Max counts: {0:s}, file {1:s}".format(str(maxCounts),
+                                                                 str(headSpec["bigwig-names"])))
+        numReject = 0
+        for regionIdx in range(len(bigRegionsList)):
+            if bigCounts[regionIdx] > maxCounts:
+                numReject += 1
+                validRegions[regionIdx] = 0
+        logUtils.debug("    Rejected {0:f}% of regions for having too many"
+            "counts.".format(numReject * 100. / len(bigRegionsList)))
+    pbar.close()
+    # We've now validated that the regions don't have too many counts when you inflate them.
+    # We also need to check that the regions won't have too few counts in the output.
+    logUtils.info("    Validated inflated regions. Surviving: {0:d}".format(
+        int(np.sum(validRegions))))
+    bigRegionsBed = pybedtools.BedTool(bigRegionsList)
+    return bigRegionsBed
+
+
+def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
+                      bigRegionsList: list[pybedtools.Interval],
+                      bigwigLists: list[str], validRegions: np.ndarray,
+                      numThreads: int) -> pybedtools.BedTool:
+    """Filters the regions in smallRegionList based on the min-quantile or min-counts in the config.
+
+    :param config: Straight from the configuration JSON.
+    :param bigRegionsList: A list of intervals that have already been inflated to account for jitter
+    :param smallRegionsList: A list of intervals that have already been inflated to
+        account for jitter
+    :param bigwigLists: The bigwigs that should be scanned, grouped by head.
+    :param validRegions: A vector booleans, for each region k in smallRegionList,
+        corresponding to region i in bigRegionsList, if region k is rejected,
+        then validRegions[i] will be 0 when this function exits.
+    :param numThreads: How many parallel workers should be used?
+    :return: Nothing, but sets validRegions.
+    """
+    pbar = logUtils.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logUtils.INFO)
+    for i, headSpec in enumerate(config["heads"]):
+        # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
+        if "min-quantile" in headSpec:
+            if headSpec["min-quantile"] == 0:
+                continue
+        smallCounts = np.zeros((len(smallRegionsList),))
+        counter = ParallelCounter(bigwigLists[i], numThreads)
+        for j, r in enumerate(smallRegionsList):
+            counter.addQuery((r.chrom, r.start, r.end), j)
+            pbar.update()
+        for _ in range(len(smallRegionsList)):
+            val, idx = counter.getResult()
+            smallCounts[idx] = val
+            pbar.update()
+        counter.done()
+        if "min-counts" in headSpec:
+            minCounts = headSpec["min-counts"]
+        else:
+            minCounts = np.quantile(smallCounts, [headSpec["min-quantile"]])[0]
+        logUtils.debug("    Min counts: {0:s}, file {1:s}".format(str(minCounts),
+                                                                 str(headSpec["bigwig-names"])))
+        numReject = 0
+        for regionIdx in range(len(bigRegionsList)):
+            # within len(bigRegions) in case a region was lost during the resize - we want that to
+            # crash because resizing down should never invalidate a region due to sequence problems.
+            if smallCounts[regionIdx] < minCounts:
+                numReject += 1
+                validRegions[regionIdx] = 0
+        logUtils.debug("    Rejected {0:f}% of small regions."
+                      .format(numReject * 100. / len(bigRegionsList)))
+    pbar.close()
+
+
+def validateRegions(config: dict, regions: pybedtools.BedTool | list[pybedtools.Interval],
+                    genome: pysam.FastaFile, bigwigLists: list[list[str]], numThreads: int):
     """The workhorse of this program.
 
     :param config: Straight from the JSON.
@@ -309,80 +475,14 @@ def validateRegions(config, regions, genome, bigwigLists, numThreads):
     # Note: The bigwigLists correspond to the heads in here.
     # So go over every region and measure its counts (unless max-quantile == 1)
     # and reject regions that are over-full on reads.
-    pbar = logUtils.wrapTqdm(len(bigRegionsList) * len(config["heads"]) * 2, logUtils.INFO)
-    for i, headSpec in enumerate(config["heads"]):
-        if "max-quantile" in headSpec:
-            if headSpec["max-quantile"] == 1:
-                # Don't reject any regions. Since validRegions starts with all ones
-                # (i.e., all regions are valid), we just jump to the next head to see
-                # if we need to look at max counts there.
-                continue
-        # Get the counts over every region.
-        counter = ParallelCounter(bigwigLists[i], numThreads)
-        bigCounts = np.zeros((len(bigRegionsList),))
-        for j, r in enumerate(bigRegionsList):
-            counter.addQuery((r.chrom, r.start, r.end), j)
-            pbar.update()
-        for _ in range(len(bigRegionsList)):
-            val, idx = counter.getResult()
-            bigCounts[idx] = val
-            pbar.update()
-        counter.done()
-        if "max-counts" in headSpec:
-            maxCounts = headSpec["max-counts"]
-        else:
-            maxCounts = np.quantile(bigCounts, [headSpec["max-quantile"]])[0]
-        logUtils.debug("    Max counts: {0:s}, file {1:s}".format(str(maxCounts),
-                                                                 str(headSpec["bigwig-names"])))
-        numReject = 0
-        for regionIdx in range(len(bigRegionsList)):
-            if bigCounts[regionIdx] > maxCounts:
-                numReject += 1
-                validRegions[regionIdx] = 0
-        logUtils.debug("    Rejected {0:f}% of regions for having too many"
-            "counts.".format(numReject * 100. / len(bigRegionsList)))
-    pbar.close()
-    # We've now validated that the regions don't have too many counts when you inflate them.
-    # We also need to check that the regions won't have too few counts in the output.
-    logUtils.info("    Validated inflated regions. Surviving: {0:d}".format(
-        int(np.sum(validRegions))))
-    bigRegionsBed = pybedtools.BedTool(bigRegionsList)
+    bigRegionsBed = filterByMaxCounts(config, bigRegionsList, bigwigLists, validRegions, numThreads)
     smallRegionsList = list(bigRegionsBed.each(resize,
                                                'center',
                                                config["output-length"] - config["max-jitter"] * 2,
                                                genome).saveas())
-    pbar = logUtils.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logUtils.INFO)
-    for i, headSpec in enumerate(config["heads"]):
-        # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
-        if "min-quantile" in headSpec:
-            if headSpec["min-quantile"] == 0:
-                continue
-        smallCounts = np.zeros((len(smallRegionsList),))
-        counter = ParallelCounter(bigwigLists[i], numThreads)
-        for j, r in enumerate(smallRegionsList):
-            counter.addQuery((r.chrom, r.start, r.end), j)
-            pbar.update()
-        for _ in range(len(smallRegionsList)):
-            val, idx = counter.getResult()
-            smallCounts[idx] = val
-            pbar.update()
-        counter.done()
-        if "min-counts" in headSpec:
-            minCounts = headSpec["min-counts"]
-        else:
-            minCounts = np.quantile(smallCounts, [headSpec["min-quantile"]])[0]
-        logUtils.debug("    Min counts: {0:s}, file {1:s}".format(str(minCounts),
-                                                                 str(headSpec["bigwig-names"])))
-        numReject = 0
-        for regionIdx in range(len(bigRegionsList)):
-            # within len(bigRegions) in case a region was lost during the resize - we want that to
-            # crash because resizing down should never invalidate a region due to sequence problems.
-            if smallCounts[regionIdx] < minCounts:
-                numReject += 1
-                validRegions[regionIdx] = 0
-        logUtils.debug("    Rejected {0:f}% of small regions."
-                      .format(numReject * 100. / len(bigRegionsList)))
-    pbar.close()
+
+    filterByMinCounts(config, smallRegionsList, bigRegionsList, bigwigLists,
+                      validRegions, numThreads)
     logUtils.info("    Validated small regions. Surviving regions: {0:d}"
                  .format(int(np.sum(validRegions))))
     # Now we resize to the final output size.
@@ -411,6 +511,48 @@ def validateRegions(config, regions, genome, bigwigLists, numThreads):
     return (pybedtools.BedTool(filteredRegions), rejects)
 
 
+def rewriteOldBigwigsFormat(config):
+    """If the config has a bigwigs section, rewrite it to the new style."""
+    logUtils.warning("You are using a deprecated JSON format for prepareBed.py")
+    logUtils.warning("This will result in an error in BPReveal 5.0")
+    logUtils.warning("Instead of providing individual bigwig names with a \"bigwigs\"")
+    logUtils.warning("section in your json, use the new \"heads\" section.")
+    logUtils.warning("Example update: If you currently have")
+    logUtils.warning('"bigwigs": [{"file-name": "protein1_pos.bw",')
+    logUtils.warning('             "max-counts": 10000,')
+    logUtils.warning('             "min-counts": 10},')
+    logUtils.warning('            {"file-name": "protein1_neg.bw",')
+    logUtils.warning('             "max-counts": 10000,')
+    logUtils.warning('             "min-counts": 10},')
+    logUtils.warning('            {"file-name": "protein2_pos.bw",')
+    logUtils.warning('             "max-counts": 3000,')
+    logUtils.warning('             "min-counts": 20},')
+    logUtils.warning('            {"file-name": "protein2_neg.bw",')
+    logUtils.warning('             "max-counts": 3000,')
+    logUtils.warning('              "min-counts" : 20} ]')
+    logUtils.warning("you should update this to reflect the head structure of your model:")
+    logUtils.warning('"heads": [{"bigwig-names": ["protein1_pos.bw", "protein1_neg.bw"],')
+    logUtils.warning('           "max-counts": 20000,')
+    logUtils.warning('           "min-counts": 20},')
+    logUtils.warning('          {"bigwig-names": ["protein2_pos.bw", "protein2_neg.bw"],')
+    logUtils.warning('           "max-counts": 6000,')
+    logUtils.warning('           "min-counts": 40}]')
+    logUtils.warning("Note how the max-counts and min-counts values double, since the bigwigs")
+    logUtils.warning("in each head will be added together to determine the total counts in")
+    logUtils.warning("a region. (You don't need to change quantiles, though.)")
+
+    headsConfig = []
+    for bwConf in config["bigwigs"]:
+        bwNames = [bwConf["file-name"]]
+        bwConf["bigwig-names"] = bwNames
+        del bwConf["file-name"]
+        headsConfig.append(bwConf)
+    logUtils.warning("Your heads config has been automatically converted to the new format,")
+    logUtils.warning("with each bigwig being considered as its own head:")
+    logUtils.warning(str(headsConfig))
+    config["heads"] = headsConfig
+
+
 def prepareBeds(config):
     """The main function of this script.
 
@@ -420,44 +562,7 @@ def prepareBeds(config):
     # FUTURE: In BPReveal 5.0, raise an error inside this if block.
     # In BPReveal 7.0, remove it entirely.
     if "bigwigs" in config:
-        logUtils.warning("You are using a deprecated JSON format for prepareBed.py")
-        logUtils.warning("This will result in an error in BPReveal 5.0")
-        logUtils.warning("Instead of providing individual bigwig names with a \"bigwigs\"")
-        logUtils.warning("section in your json, use the new \"heads\" section.")
-        logUtils.warning("Example update: If you currently have")
-        logUtils.warning('"bigwigs": [{"file-name": "protein1_pos.bw",')
-        logUtils.warning('             "max-counts": 10000,')
-        logUtils.warning('             "min-counts": 10},')
-        logUtils.warning('            {"file-name": "protein1_neg.bw",')
-        logUtils.warning('             "max-counts": 10000,')
-        logUtils.warning('             "min-counts": 10},')
-        logUtils.warning('            {"file-name": "protein2_pos.bw",')
-        logUtils.warning('             "max-counts": 3000,')
-        logUtils.warning('             "min-counts": 20},')
-        logUtils.warning('            {"file-name": "protein2_neg.bw",')
-        logUtils.warning('             "max-counts": 3000,')
-        logUtils.warning('              "min-counts" : 20} ]')
-        logUtils.warning("you should update this to reflect the head structure of your model:")
-        logUtils.warning('"heads": [{"bigwig-names": ["protein1_pos.bw", "protein1_neg.bw"],')
-        logUtils.warning('           "max-counts": 20000,')
-        logUtils.warning('           "min-counts": 20},')
-        logUtils.warning('          {"bigwig-names": ["protein2_pos.bw", "protein2_neg.bw"],')
-        logUtils.warning('           "max-counts": 6000,')
-        logUtils.warning('           "min-counts": 40}]')
-        logUtils.warning("Note how the max-counts and min-counts values double, since the bigwigs")
-        logUtils.warning("in each head will be added together to determine the total counts in")
-        logUtils.warning("a region. (You don't need to change quantiles, though.)")
-
-        headsConfig = []
-        for bwConf in config["bigwigs"]:
-            bwNames = [bwConf["file-name"]]
-            bwConf["bigwig-names"] = bwNames
-            del bwConf["file-name"]
-            headsConfig.append(bwConf)
-        logUtils.warning("Your heads config has been automatically converted to the new format,")
-        logUtils.warning("with each bigwig being considered as its own head:")
-        logUtils.warning(str(headsConfig))
-        config["heads"] = headsConfig
+        rewriteOldBigwigsFormat(config)
     if "num-threads" not in config:
         numThreads = 1
         logUtils.warning("You have not specified a number of threads in your prepareBed config."

@@ -23,21 +23,21 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
     logUtils.debug("Initializing head {0:s}".format(individualHead["head-name"]))
     numOutputs = individualHead["num-tasks"]
     profile = keras.layers.Conv1D(
-            numOutputs, outputFilterWidth, padding='valid',
+            numOutputs, outputFilterWidth, padding='valid',  # noqa
             name='solo_profile_{0:s}'.format(individualHead["head-name"]))\
-        (dilateOutput)
+        (dilateOutput)  # noqa
     countsGap = keras.layers.GlobalAveragePooling1D(
             name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))\
-        (dilateOutput)
+        (dilateOutput)  # noqa
     counts = keras.layers.Dense(
-            1,
+            1,  # noqa
             name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))\
-        (countsGap)
+        (countsGap)  # noqa
     return (profile, counts)
 
 
-def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth,
-              outputFilterWidth, headList, modelName):
+def soloModel(inputLength, outputLength, numFilters, numLayers,  # pylint: disable=unused-argument
+              inputFilterWidth, outputFilterWidth, headList, modelName):
     """This is the classic BPNet architecture.
 
     :param inputLength: is the length of the one-hot encoded DNA sequence.
@@ -66,21 +66,21 @@ def soloModel(inputLength, outputLength, numFilters, numLayers, inputFilterWidth
     inputLayer = keras.Input((inputLength, 4), name=modelName + '_input')
 
     initialConv = keras.layers.Conv1D(
-            numFilters, kernel_size=inputFilterWidth, padding='valid',
+            numFilters, kernel_size=inputFilterWidth, padding='valid',  # noqa
             activation='relu', name=modelName + "_initial_conv")\
-        (inputLayer)
+        (inputLayer)  # noqa
     prevLayer = initialConv
     for i in range(numLayers):
         newConv = keras.layers.Conv1D(
-                numFilters, kernel_size=3, padding='valid', activation='relu',
+                numFilters, kernel_size=3, padding='valid', activation='relu',  # noqa
                 dilation_rate=2 ** (i + 1), name=modelName + '_conv_{0:d}'.format(i))\
-            (prevLayer)
+            (prevLayer)  # noqa
         prevLength = int_shape(prevLayer)[1]
         newLength = int_shape(newConv)[1]
         newCrop = keras.layers.Cropping1D(
-                (prevLength - newLength) // 2,
+                (prevLength - newLength) // 2,  # noqa
                 name=modelName + '_crop{0:d}'.format(i))\
-            (prevLayer)
+            (prevLayer)  # noqa
         prevLayer = keras.layers.add(
             [newConv, newCrop], name=modelName + '_add{0:d}'.format(i))
     countsOutputs = []
@@ -125,7 +125,7 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
                 sigmoided = keras.layers.Activation(
                         activation=keras.activations.sigmoid,  # noqa
                         name='sigmoid_activation_{0:s}'.format(headName))\
-                    (inputLinear)
+                    (inputLinear)  # noqa
                 outputLinear = layers.LinearRegression(
                         name='sigmoid_out_linear_{0:s}'.format(headName))\
                     (sigmoided)  # noqa
@@ -196,7 +196,7 @@ def _transformationHead(soloProfile, soloCounts, individualHead,
     return (profileTransformation, countsTransformation)
 
 
-def transformationModel(soloModel, profileArchitectureSpecification,
+def transformationModel(soloModelIn, profileArchitectureSpecification,
                         countsArchitectureSpecification, headList):
     """Construct a simple model used to regress out the solo model from experimental data.
 
@@ -216,20 +216,20 @@ def transformationModel(soloModel, profileArchitectureSpecification,
     :param headList: Also from the config JSON.
     :return: A Keras model with the same output shape as the soloModel.
     """
-    soloModel.trainable = False
+    soloModelIn.trainable = False
     profileOutputs = []
     countsOutputs = []
     numHeads = len(headList)
     for i, individualHead in enumerate(headList):
         profileHead, countsHead = _transformationHead(
-                soloModel.outputs[i],  # noqa
-                soloModel.outputs[i + numHeads],
+                soloModelIn.outputs[i],  # noqa
+                soloModelIn.outputs[i + numHeads],
                 individualHead,
                 profileArchitectureSpecification,
                 countsArchitectureSpecification)
         profileOutputs.append(profileHead)
         countsOutputs.append(countsHead)
-    m = keras.Model(inputs=soloModel.input,
+    m = keras.Model(inputs=soloModelIn.input,
                     outputs=profileOutputs + countsOutputs,
                     name="transformation_model")
     return m
@@ -352,8 +352,8 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
             addCounts = residualModel.outputs[i + numHeads]
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
-    combinedModel = keras.Model(inputs=inputLayer,
-                                outputs=combinedProfileHeads + combinedCountsHeads,
-                                name='combined_model')
+    combModel = keras.Model(inputs=inputLayer,
+                            outputs=combinedProfileHeads + combinedCountsHeads,
+                            name='combined_model')
     logUtils.debug("Model built")
-    return (combinedModel, residualModel, readyBiasHeads)
+    return (combModel, residualModel, readyBiasHeads)

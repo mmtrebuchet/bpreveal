@@ -121,6 +121,15 @@ descriptions
     and are stored without the leading ``>``. This will have shape
     ``(numSamples,)``
 
+HISTORY
+-------
+Before BPReveal 4.0.0, this was two programs: ``interpretPisaBed`` and
+``interpretPisaFasta``. They shared almost all of the same code, so they were
+merged into interpretPisa. The old names are still present in the bin/
+directory, where they simlink to the same python file in src.
+In BPReveal 6.0.0, the old symlinks will be removed.
+
+
 API
 ---
 
@@ -144,13 +153,14 @@ def main(config):
         kmerSize = config["kmer-size"]
     else:
         logUtils.info("Did not find a kmer-size property in configuration file. "
-                     "Using default kmer-size of 1.")
+                      "Using default kmer-size of 1.")
     if "fasta-file" in config or "sequence-fasta" in config:
         # We're doing a fasta run.
         if "sequence-fasta" in config:
-            logUtils.warning("DEPRECATION: You are referring to the fasta file in your pisa JSON as "
-                            "sequence-fasta. This is deprecated, please change the parameter "
-                            "name to fasta-file. This will be an error in BPReveal 5.0.0.")
+            logUtils.warning("DEPRECATION: You are referring to the fasta file in your "
+                             "pisa JSON as sequence-fasta. This is deprecated, please "
+                             "change the parameter name to fasta-file. This will be an "
+                             "error in BPReveal 6.0.0.")
             config["fasta-file"] = config["sequence-fasta"]
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
         genome = None
@@ -171,9 +181,11 @@ def main(config):
     if "DEBUG_profile-output" in config:
         profileFname = config["DEBUG_profile-output"]
 
-    batcher = interpretUtils.PisaRunner(config["model-file"], config["head-id"], config["task-id"],
-                              10, generator, writer, config["num-shuffles"],
-                              receptiveField, kmerSize, profileFname)
+    batcher = interpretUtils.PisaRunner(config["model-file"],
+                                        config["head-id"], config["task-id"],
+                                        10, generator, writer,
+                                        config["num-shuffles"], receptiveField,
+                                        kmerSize, profileFname)
     batcher.run()
 
 

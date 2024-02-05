@@ -13,9 +13,7 @@ from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-i
 # Constants
 
 ONEHOT_T: typing.TypeAlias = np.uint8
-"""Data type for elements of a one-hot encoded sequence.
-
-"""
+"""Data type for elements of a one-hot encoded sequence."""
 ONEHOT_AR_T: typing.TypeAlias = npt.NDArray[ONEHOT_T]
 """Data type for an array of one-hot encoded sequences"""
 PRED_T: typing.TypeAlias = np.float32
@@ -445,7 +443,7 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
     singleReturn = False
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
 
-    if type(sequences) is str:
+    if isinstance(sequences, str):
         sequences = [sequences]
         singleReturn = True
     else:
@@ -473,8 +471,7 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
             ret.append(headProfiles)
     if singleReturn:
         return ret[0]
-    else:
-        return np.array(ret, dtype=PRED_T)
+    return np.array(ret, dtype=PRED_T)
 
 
 def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
@@ -544,7 +541,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
     logUtils.debug("Starting interpretation of sequences.")
     singleReturn = False
-    if type(sequences) is str:
+    if isinstance(sequences, str):
         sequences = [sequences]
         singleReturn = True
     generator = ListGenerator(sequences)
@@ -559,10 +556,9 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
             return {"profile": profileSaver.shap[0],
                     "counts": countsSaver.shap[0],
                     "sequence": profileSaver.seq[0]}
-        else:
-            return {"profile": profileSaver.shap,
-                    "counts": countsSaver.shap,
-                    "sequence": profileSaver.seq}
+        return {"profile": profileSaver.shap,
+                "counts": countsSaver.shap,
+                "sequence": profileSaver.seq}
     # Collapse down the hypothetical importances.
     profileOneHot = profileSaver.shap * profileSaver.seq
     countsOneHot = countsSaver.shap * countsSaver.seq
@@ -570,8 +566,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
     counts = np.sum(countsOneHot, axis=2)
     if singleReturn:
         return {"profile": profile[0], "counts": counts[0]}
-    else:
-        return {"profile": profile, "counts": counts}
+    return {"profile": profile, "counts": counts}
 
 
 # The batchers.
@@ -993,7 +988,7 @@ class ThreadedBatchPredictor:
         """Get a single output.
 
         Same semantics as
-        :py:meth:`BatchPredictor.getOutput<bpreveal.utils.batchPredictor.getOutput>`.
+        :py:meth:`BatchPredictor.getOutput<bpreveal.utils.BatchPredictor.getOutput>`.
         """
         nextQueueIdx = self._outQueueOrder.pop()
         if self._outQueues[nextQueueIdx].empty():
@@ -1043,7 +1038,7 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
         numWaits = 0
         match inVal:
             case(sequence, label):
-                if type(sequence) is str:
+                if isinstance(sequence, str):
                     batcher.submitString(sequence, label)
                 else:
                     batcher.submitOHE(sequence, label)

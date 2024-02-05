@@ -12,13 +12,32 @@ from bpreveal import utils
 
 class Region:
 
-    def __init__(self, chromIdx, start, end, h5Idx):
+    """Represents a single region.
+
+    It knows where it is in the genome and also what index it occupies in the hdf5.
+
+    :param chromIdx: The chromosome index, corresponding to ``chrom_names`` in the hdf5.
+    :param start: The genomic start coordinate, inclusive.
+    :param end: The genomic end coordinate, exclusive.
+    :param h5Idx: The index in the hdf5 file where this region is found.
+    """
+
+    def __init__(self, chromIdx: int, start: int, end: int, h5Idx: int):
         self.chromIdx = chromIdx
         self.start = start
         self.end = end
         self.h5Idx = h5Idx
 
-    def getValues(self, h5fp, mode, head, taskID):
+    def getValues(self, h5fp: h5py.File, mode: str, head: int, taskID: int) -> np.ndarray:
+        """Get the values in the hdf5 at this region.
+
+        :param h5fp: An opened hdf5 file containing predictions.
+        :param mode: One of ``profile``, ``logits``, ``mnlogits``, ``logcounts``,
+            or ``counts``.
+        :param head: Which head index do you want the data from?
+        :param taskID: Which task do you want the data for?
+        :return: A vector containing the requested data.
+        """
         headLogits = h5fp["head_{0:d}".format(head)]["logits"]
         headLogcounts = h5fp["head_{0:d}".format(head)]["logcounts"]
 
@@ -42,8 +61,13 @@ class Region:
         return profile
 
 
-def getChromInserts(arg):
-    """Packs all the arguments into one so it's easier to use with pool.map()."""
+def getChromInserts(arg: tuple[list[Region], str, int, int, str]) -> \
+        list[tuple[np.ndarray, int]]:
+    """Packs all the arguments into one so it's easier to use with pool.map().
+
+    :param arg: In order, regionList, h5Fname, headID, taskID, mode.
+    :return: The inserts from vectorToListOfInserts.
+    """
     regionList, h5Fname, headID, taskID, mode = arg
     with h5py.File(h5Fname, "r") as h5fp:
         vec = getChromVector(regionList, h5fp, headID, taskID, mode)
@@ -52,7 +76,23 @@ def getChromInserts(arg):
     return inserts
 
 
-def getChromVector(regionList, h5fp, headID, taskID, mode):
+def getChromVector(regionList: list[Region], h5fp: h5py.File, headID: int,
+                   taskID: int, mode: str) -> np.array:
+    """Map the values at each Region onto a vector representing each position on the chromosome.
+
+    regionList should only contain regions from one chromosome, as regionList[0].chromIdx
+    is used to determine the size of the returned vector.
+
+    :param regionList: The regions you want data for.
+    :param h5fp: The (open) hdf5 file of predictions.
+    :param headID: The head you want data for.
+    :param taskID: The task within that head that you want data for.
+    :param mode: One of ``profile``, ``logits``, ``mnlogits``, ``logcounts``,
+        or ``counts``.
+    :return: An array as long as the chromosome, with zeros everywhere that
+        regionList did not cover, and the values of the data wherever the regions
+        do exist. For overlapping regions, the predictions are averaged.
+    """
     chromSize = h5fp["chrom_sizes"][regionList[0].chromIdx]
     regionCounts = np.zeros((chromSize,), dtype=np.uint16)
     regionValues = np.zeros((chromSize,), dtype=np.float32)
@@ -63,7 +103,19 @@ def getChromVector(regionList, h5fp, headID, taskID, mode):
     return regionValues / regionCounts
 
 
-def vectorToListOfInserts(dataVector):
+def vectorToListOfInserts(dataVector: np.array) -> list[tuple[np.ndarray, int]]:
+    """Convert a chromosome vector to a list of regions that actually have data.
+
+    Given a vector of data from getChromVector, remove all the zeros and give you
+    a list of regions with actual data. For example::
+
+        vectorToListOfInserts([0,0,0,1,2,3,0,0,0,5,6,7])
+        [([1, 2, 3], 3), ([5, 6, 7], 9)]
+
+    :param dataVector: An array representing the data along an entire chromosome.
+    :return: A list of tuples. The first element of each tuple is an array of data,
+        and the second is the genomic coordinate where that dataset starts. 
+    """
     rets = []
     regionStart = 0
     poses = np.nonzero(dataVector)[0]
@@ -74,7 +126,8 @@ def vectorToListOfInserts(dataVector):
             pass
         else:
             # We just ended a block.
-            rets.append((dataVector[regionStart:lastPoint + 1], regionStart))
+            if lastPoint > 0:
+                rets.append((dataVector[regionStart:lastPoint + 1], regionStart))
             regionStart = pos
 
         lastPoint = pos
@@ -82,7 +135,12 @@ def vectorToListOfInserts(dataVector):
     return rets
 
 
-def buildRegionList(inH5):
+def buildRegionList(inH5: h5py.File) -> dict[int, list[Region]]:
+    """Builds a list of Region objects for each chromosome in the hdf5.
+
+    :param inH5: The (open) h5py file containing predictions.
+    :return: A dict mapping chromosome ID to a list of Regions on that chromosome.
+    """
     numRegions = inH5['coords_chrom'].shape[0]
 
     # Sort the regions.
@@ -112,7 +170,20 @@ def buildRegionList(inH5):
     return regionsByChrom
 
 
-def writeBigWig(inH5Fname, outFname, headID, taskID, mode, verbose, negate, numThreads):
+def writeBigWig(inH5Fname: str, outFname: str, headID: int, taskID: int, mode: str,
+                verbose: bool, negate: bool, numThreads: int) -> None:
+    """Load in the h5 files and write the predictions to a bigwig file.
+
+    :param inH5Fname: The name of an hdf5 file on disk containing predictions.
+    :param outFname: The name of the bigwig file to write.
+    :param headID: The head you want predictions from.
+    :param taskID: The task within that head that you want predictions for.
+    :param mode: One of ``profile``, ``logits``, ``mnlogits``, ``logcounts``,
+        or ``counts``.
+    :param verbose: Should the program emit logging information?
+    :param negate: Should the predictions be negated in the output bigwig? Useful for chip-nexus.
+    :param numThreads: How many threads should be used?
+    """
     inH5 = h5py.File(inH5Fname, "r")
     logUtils.info("Starting to write {0:s}, head {1:d} task {2:d}".format(outFname, headID, taskID))
     bwHeader = []

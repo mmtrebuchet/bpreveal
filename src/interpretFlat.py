@@ -130,7 +130,7 @@ Additional Information
 No fasta coordinate data
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-While you can use :py:mod:`shapToNumpy<bpreveal.shapToNumpy` on either format of
+While you can use :py:mod:`shapToNumpy<bpreveal.shapToNumpy>` on either format of
 ``interpretFlat`` output, you cannot convert a fasta-based interpretation
 h5 to a bigwig, since it doesn't contain coordinate information. You can get
 around this limitation by providing a bed file and a genome in a ``coordinates``

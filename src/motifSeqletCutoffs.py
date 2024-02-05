@@ -44,13 +44,13 @@ modisco-contrib-h5
     BY MODISCO*
 
 There are two ways of specifying patterns,
-    either by giving each
-    pattern and metacluster pair individually, or by listing multiple
-    patterns under a single metacluster.
-    The short-names, if provided, will be used to populate the name field in
-    the generated tsv.
-    You could use this to give a particular pattern the name of its binding
-    protein.
+either by giving each
+pattern and metacluster pair individually, or by listing multiple
+patterns under a single metacluster.
+The short-names, if provided, will be used to populate the name field in
+the generated tsv.
+You could use this to give a particular pattern the name of its binding
+protein.
 
 seq-match-quantile
     TODO MELANIE Document

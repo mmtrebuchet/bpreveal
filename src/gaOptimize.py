@@ -303,19 +303,18 @@ class Organism:
             if mine[0] < them[0]:
                 # My corruptor comes first.
                 return -1
-            elif mine[0] > them[0]:
+            if mine[0] > them[0]:
                 # My corruptor comes second.
                 return 1
-            else:
-                if mine[1] < them[1]:
-                    # My letter is earlier.
-                    return -1
-                elif mine[1] > them[1]:
-                    # My letter is later.
-                    return 1
+            if mine[1] < them[1]:
+                # My letter is earlier.
+                return -1
+            if mine[1] > them[1]:
+                # My letter is later.
+                return 1
         if len(self.corruptors) > len(other.corruptors):
             return 1
-        elif len(self.corruptors) < len(other.corruptors):
+        if len(self.corruptors) < len(other.corruptors):
             return -1
         # We have identical corruptors, we are the same organism.
         return 0

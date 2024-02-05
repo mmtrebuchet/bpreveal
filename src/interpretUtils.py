@@ -714,13 +714,6 @@ class PisaH5Saver(Saver):
         self._outFile.create_dataset("shuffle_predictions",
                                      (self.numSamples, self.numShuffles),
                                      dtype='f4')
-        # self._outFile.create_dataset("shap",
-        #                             (self.numSamples, self.receptiveField, 4),
-        #                             dtype='f4')
-        # TODO for later: Adding compression to the sequence here absolutely tanks performance
-        # self._outFile.create_dataset('sequence',
-        #                             (self.numSamples, self.receptiveField, 4),
-        #                             dtype='u1')
         self._chunksToWrite = dict()
 
         self._outFile.create_dataset("shap",
@@ -1247,10 +1240,9 @@ class _PisaBatcher:
             shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
             shuffles = np.array(shuffles)
             return [shuffles]
-        else:
-            shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
-                                           seed=355687)
-            return [shuffles]
+        shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
+                                        seed=355687)
+        return [shuffles]
 
     def addSample(self, query: Query):
         """Add a query to the batch.
@@ -1391,10 +1383,9 @@ class _FlatBatcher:
             shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
             shuffles = np.array(shuffles)
             return [shuffles]
-        else:
-            shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
-                                           seed=355687)
-            return [shuffles]
+        shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
+                                       seed=355687)
+        return [shuffles]
 
     def addSample(self, query: Query):
         """Append the sample to the work queue."""
