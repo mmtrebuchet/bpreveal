@@ -15,6 +15,10 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
 1. The :py:mod:`showModel<bpreveal.showModel>` tool will be removed since it just
    wraps a single keras function call, and getting graphical output requires two
    rather large dependencies.
+2. ``interpretPisaFasta`` and ``interpretPisaBed`` are old names for
+   :py:mod:`interpretPisa<bpreveal.interpretPisa>`. They exist only as symlinks
+   in the bin/ directory, and using them has emitted a warning since 4.0.0.
+   In BPReveal 6.0.0, the symlinks will be removed.
 
 
 BPReveal 5.x
@@ -30,7 +34,11 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 2. Using an importance hdf5 from before version 4.0.0 will now result in an
    error instead of a deprecation warning.
 3. When doing PISA interpretation on a fasta, you must call the fasta
-   ``fasta-file`` instead of ``sequence-fasta``.
+   ``fasta-file`` instead of ``sequence-fasta``. (Has emitted a warning
+   since 4.0.0.)
+4. The first argument to
+   :py:func:`models.transformationModel<bpreveal.models.transformationModel>`
+   will be renamed to get rid of a name collision that pylint gets upset about.
 
 BPReveal 4.x
 ------------

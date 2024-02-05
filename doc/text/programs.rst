@@ -138,3 +138,10 @@ to do useful things in your code.
     A set of JSON schemas that validate the inputs to the BPReveal programs.
     These are used to make sure that incorrect inputs trigger errors early, and
     that those errors are clearer to the user.
+
+TOOLS
+-----
+
+These are miscellaneous programs that are not part of BPReveal proper, but that
+I have found useful. They are not actively maintained, and tend to have subpar
+documentation.

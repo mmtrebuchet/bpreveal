@@ -31,6 +31,8 @@ clean:
 
 html: Makefile ${allGenerated}
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	cp fonts/Libertinus-7.040/libertinus.css _build/html/_static
+	cp -R fonts/Libertinus-7.040/static/* _build/html/_static
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 latexpdf: Makefile ${allGenerated}

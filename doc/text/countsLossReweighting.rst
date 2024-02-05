@@ -14,12 +14,12 @@ As an equation,
    f \equiv \frac{\lambda c}{\lambda c + p}
 
 
-Where $f$ is the fraction of loss due to counts, :math:`c` is the raw counts loss,
+Where :math:`f` is the fraction of loss due to counts, :math:`c` is the raw counts loss,
 :math:`p` is the raw profile loss, and :math:`{\lambda}` is the ``counts-loss-weight``
 parameter.
 If you want, say, ten percent of your loss to come from counts, you need to pick
 a value of :math:`{\lambda}` so that that :math:`f = 0.1`.
-But since we don't know the values of $c$ and $p$ that we'll get during
+But since we don't know the values of :math:`c` and :math:`p` that we'll get during
 training, we have to guess.
 
 The adaptive counts loss algorithm skirts this issue by updating :math:`{\lambda}`

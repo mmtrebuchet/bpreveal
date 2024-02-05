@@ -20,8 +20,13 @@ ENHANCEMENTS:
     * Dramatically sped up the whitelist calculation for tiling the genome in
       :py:func:`makeWhitelistSegments<bpreveal.bedUtils.makeWhitelistSegments>`.
     * Made the verbosity of the training step match the user-specified verbosity.
-      If your configuration json says that verbosity should be WARNING, then there
+      If your configuration json says that verbosity should be ``WARNING``, then there
       is much less output from the training scripts.
+    * Extracted the logging functions into a new module,
+      :py:mod:`logUtils<bpreveal.logUtils>`. It separates BPReveal logging into
+      its own class of messages, so you can still use logging with your own
+      code without stepping on BPReveal's toes.
+    * Switched the documentation to a serif font.
 
 DEPRECATIONS:
     * The showModel script is deprecated and will be removed in 6.0.0.
@@ -51,14 +56,7 @@ BREAKING CHANGES:
     * A few internal variable names were switched from snake_case to camelCase.
       This should not have any effect on code that uses BPReveal.
 
-ENHANCEMENTS:
-    * A complete overhaul of the documentation means that we now have on-line
-      docs for all of the components of BPReveal, all with type annotations.
-      The old overview.pdf has been removed and split up across many webpages.
-    * Many functions that were previously undocumented are now
-      fully-documented.
-    * Automated the testing of schemas. The runTests.py script will
-      automatically go through all the test cases.
+NEW FEATURES:
     * Added a feature to
       :py:mod:`makePredictionsFasta<bpreveal.makePredictionsFasta>` where you
       can specify a bed file and a genome. If you do, then the coordinate
@@ -69,6 +67,15 @@ ENHANCEMENTS:
     * Two new functions:
       :py:func:`utils.blankChromosomeArrays<bpreveal.utils.blankChromosomeArrays>`
       and :py:func:`utils.writeBigwig<bpreveal.utils.writeBigwig>`
+
+ENHANCEMENTS:
+    * A complete overhaul of the documentation means that we now have on-line
+      docs for all of the components of BPReveal, all with type annotations.
+      The old overview.pdf has been removed and split up across many webpages.
+    * Many functions that were previously undocumented are now
+      fully-documented.
+    * Automated the testing of schemas. The runTests.py script will
+      automatically go through all the test cases.
     * Added new arguments to
       :py:func:`utils.loadChromSizes<bpreveal.utils.loadChromSizes`. These let
       you pass in things other than a ``chrom.sizes`` file name. You can now
@@ -86,19 +93,22 @@ CONTRIBUTORS:
 Version 4.0.1, 2024-01-17
 '''''''''''''''''''''''''
 
-ENHANCEMENTS:
+NEW FEATURES:
     * Added the option to specify the kmer size for the shuffles in shap value
       calculations. interpretFlat and interpretPisa now have an optional
       "kmer-size" parameter in their configuration jsons. If omitted, the
       default (non-kmer-preserving) shuffle is performed.
-    * All BPReveal programs that take JSON input now check that input against a
-      schema.
     * There are now easy functions that you can use to make predictions and get
       interpretation scores in :py:mod:`utils<bpreveal.utils>`.
     * A new
       :py:class:`ThreadedBatchPredictor<bpreveal.utils.ThreadedBatchPredictor>`
       runs predictions in another thread, and lets you hold it in a context
       manager so that it shuts down and starts up when you need it.
+
+
+ENHANCEMENTS:
+    * All BPReveal programs that take JSON input now check that input against a
+      schema.
     * Lots of enhancements to the pisa plotting tools!
 
 BUG FIXES:

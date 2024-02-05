@@ -59,8 +59,8 @@ autodoc_type_aliases = {
 autodoc_unqualified_typehints = False
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-# html_theme = "alabaster"
+#html_theme = "alabaster"
 templates_path = []
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_generated/static"]
-html_css_files = ["custom-styles.css"]
+html_css_files = ["custom-styles.css", "libertinus.css"]
