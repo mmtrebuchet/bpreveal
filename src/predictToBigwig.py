@@ -11,7 +11,6 @@ from bpreveal import utils
 
 
 class Region:
-
     """Represents a single region.
 
     It knows where it is in the genome and also what index it occupies in the hdf5.
@@ -114,7 +113,7 @@ def vectorToListOfInserts(dataVector: np.array) -> list[tuple[np.ndarray, int]]:
 
     :param dataVector: An array representing the data along an entire chromosome.
     :return: A list of tuples. The first element of each tuple is an array of data,
-        and the second is the genomic coordinate where that dataset starts. 
+        and the second is the genomic coordinate where that dataset starts.
     """
     rets = []
     regionStart = 0

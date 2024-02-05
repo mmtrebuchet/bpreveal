@@ -4,7 +4,6 @@ import pybedtools
 import pysam
 from bpreveal import logUtils
 from bpreveal import bedUtils
-from bpreveal import utils
 
 
 def getParser():

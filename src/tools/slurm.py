@@ -135,8 +135,7 @@ def jobsLocal(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     import os
     from stat import S_IREAD, S_IWRITE, S_IEXEC, S_IRGRP, S_IROTH
     # Chmod the file to rwxr--r--.
-    os.chmod(scriptFname, mode=S_IREAD | S_IWRITE |
-             S_IEXEC | S_IRGRP | S_IROTH)
+    os.chmod(scriptFname, mode=S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IROTH)
     return scriptFname
 
 

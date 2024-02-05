@@ -1241,7 +1241,7 @@ class _PisaBatcher:
             shuffles = np.array(shuffles)
             return [shuffles]
         shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
-                                        seed=355687)
+                                       seed=355687)
         return [shuffles]
 
     def addSample(self, query: Query):
