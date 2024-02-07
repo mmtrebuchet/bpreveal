@@ -95,7 +95,7 @@ def getLogger() -> _logging.Logger:
 
     The `msg` can contain string formatting.  An example of logging at the `ERROR`
     level
-    using string formating is:
+    using string formatting is:
 
     >>> logUtils.getLogger().error("The value %d is invalid.", 3)
 

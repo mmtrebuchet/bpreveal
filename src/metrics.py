@@ -128,7 +128,7 @@ class MetricsCalculator:
 
     :param referenceBwFname: The file name of the reference bigwig.
     :param predictedBwFname: The file name of the predicted bigwig.
-    :param applyAbs: Should the vaulues in the bigwig be made positive?
+    :param applyAbs: Should the values in the bigwig be made positive?
     :param inQueue: The queue that will provide queries.
     :param outQueue: The queue where results will be put.
     :param tid: The thread ID of this process.
@@ -209,7 +209,7 @@ def calculatorThread(referenceBwFname, predictedBwFname, applyAbs, inQueue,
 
     :param referenceBwFname: The file name of the reference bigwig.
     :param predictedBwFname: The file name of the predicted bigwig.
-    :param applyAbs: Should the vaulues in the bigwig be made positive?
+    :param applyAbs: Should the values in the bigwig be made positive?
     :param inQueue: The queue that will provide queries.
     :param outQueue: The queue where results will be put.
     :param tid: The thread ID of this process.

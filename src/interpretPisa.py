@@ -126,7 +126,7 @@ HISTORY
 Before BPReveal 4.0.0, this was two programs: ``interpretPisaBed`` and
 ``interpretPisaFasta``. They shared almost all of the same code, so they were
 merged into interpretPisa. The old names are still present in the bin/
-directory, where they simlink to the same python file in src.
+directory, where they symlink to the same python file in src.
 In BPReveal 6.0.0, the old symlinks will be removed.
 
 
