@@ -23,5 +23,5 @@ and see doc/osknExample.ipynb for a demonstration notebook.
 # Patch increments will not alter the environment setup, so you can just pull the new BPReveal code
 # and it will work with your current conda environment.
 
-__version__ = "4.0.3"
+__version__ = "4.0.4"
 __author__ = "Charles McAnany, Melanie Weilert, Haining Jiang"
