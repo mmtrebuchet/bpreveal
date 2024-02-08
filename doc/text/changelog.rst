@@ -12,14 +12,14 @@ BPReveal 4.0.x
 ^^^^^^^^^^^^^^
 
 Version 4.0.4, 2024-02-07
--------------------------
+'''''''''''''''''''''''''
 
 BUG FIXES:
     * Fixed a bug that prevented ``null`` quantile cutoffs in
       :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles>`.
 
 Version 4.0.3, 2024-01-30
--------------------------
+'''''''''''''''''''''''''
 
 BUG FIXES:
     * Fixed a bug in the Easy prediction function incorrectly assuming that models
