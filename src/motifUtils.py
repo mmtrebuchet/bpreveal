@@ -428,12 +428,18 @@ class Pattern:
         if quantileSeqMatch is not None:
             self.cutoffSeqMatch =\
                 np.quantile(self.seqletSeqMatches, quantileSeqMatch)  # type: ignore
+        else:
+            self.cutoffSeqMatch = None
         if quantileContribMatch is not None:
             self.cutoffContribMatch =\
                 np.quantile(self.seqletContribMatches, quantileContribMatch)  # type: ignore
+        else:
+            self.cutoffContribMatch = None
         if quantileContribMagnitude is not None:
             self.cutoffContribMagnitude =\
                 np.quantile(self.seqletContribMagnitudes, quantileContribMagnitude)  # type: ignore
+        else:
+            self.cutoffContribMagnitude = None
 
     def seqletInfoIterator(self):
         """Make an iterator to go over the seqlets.
