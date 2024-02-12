@@ -1,5 +1,16 @@
 """TODO MELANIE Document
 """
+import csv
+import multiprocessing
+import queue
+from typing import Optional, Literal
+import h5py
+import numpy as np
+import numpy.typing as npt
+import scipy.signal
+from bpreveal import utils
+from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
+from bpreveal.logUtils import wrapTqdm
 from bpreveal import logUtils
 try:
     from bpreveal import jaccard
@@ -7,24 +18,6 @@ except ModuleNotFoundError:
     logUtils.error("Could not find the Jaccard module. You may need to run `make`"
                   " in the src/ directory.")
     raise
-
-import h5py
-import numpy as np
-from bpreveal import utils
-import csv
-import scipy.signal
-import multiprocessing
-from pstats import SortKey
-import cProfile
-import pstats
-import io
-import queue
-ENABLE_DEBUG_PROFILING = False
-import numpy.typing as npt
-from typing import Optional, Literal
-from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
-from bpreveal.logUtils import wrapTqdm
-PROFILING_SORT_ORDER = SortKey.TIME
 
 
 def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
@@ -85,7 +78,7 @@ def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArr
     # The funny slice here is because scipy.signal.correlate doesn't collapse the
     # length-one dimension that is a result of both sequences having the same
     # second dimension.
-    return scipy.signal.correlate(seqletValues, pssm, mode='valid')[:, 0]
+    return scipy.signal.correlate(seqletValues, pssm, mode="valid")[:, 0]
 
 
 def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
@@ -465,7 +458,7 @@ class Pattern:
             }
         """
         for i in range(self.numSeqlets):
-            ret = dict()
+            ret = {}
             # TODO Once we have the ability to map back the seqlet positions, make this meaningful!
             ret["chrom"] = self.seqletChroms[i]
             # TODO ditto
@@ -474,7 +467,7 @@ class Pattern:
             ret["end"] = self.seqletGenomicEnds[i]
             ret["short_name"] = self.shortName
             ret["contrib_magnitude"] = self.seqletContribMagnitudes[i]
-            ret["strand"] = '-' if self.seqletRevcomps[i] else '+'
+            ret["strand"] = "-" if self.seqletRevcomps[i] else "+"
             ret["metacluster_name"] = self.metaclusterName
             ret["pattern_name"] = self.patternName
             ret["sequence"] = self.seqletSequences[i]
@@ -578,10 +571,6 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
     directly to the motif scanning Python functions.
 
     """
-    pr = cProfile.Profile()
-    if ENABLE_DEBUG_PROFILING:
-        pr.enable()
-
     patterns = makePatternObjects(patternSpec, modiscoH5Fname)
     logUtils.info("Initialized patterns, beginning to load data.")
     with h5py.File(modiscoH5Fname, "r") as modiscoFp:
@@ -597,13 +586,13 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
             for pattern in patterns:
                 pattern.loadSeqletCoordinates(contribH5fp)
         # Now, write the output.
-        with open(outputSeqletsFname, "w", newline='') as outFp:
+        with open(outputSeqletsFname, "w", newline="") as outFp:
             # Write the header.
             fieldNames = ["chrom", "start", "end", "short_name", "contrib_magnitude", "strand",
                           "metacluster_name", "pattern_name", "sequence", "region_index",
                           "seq_match", "contrib_match"]
             writer = csv.DictWriter(outFp, fieldnames=fieldNames,
-                                    delimiter='\t', lineterminator='\n')
+                                    delimiter="\t", lineterminator="\n")
             writer.writeheader()
             for pattern in patterns:
                 for seqletDict in pattern.seqletInfoIterator():
@@ -615,13 +604,6 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
         ret.append(pattern.getScanningInfo())
     logUtils.info("Done with analyzing seqlets.")
 
-    if ENABLE_DEBUG_PROFILING:
-        pr.disable()
-        s = io.StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats(PROFILING_SORT_ORDER)
-        ps.print_stats()
-        with open("MOTIF_SCAN_SEQLET_THREAD_STATS.dat", "w") as fp:
-            fp.write(s.getvalue())
     return ret
 
 
@@ -722,8 +704,8 @@ class MiniPattern:
 
     def _scanOneWay(self, sequence: ONEHOT_AR_T,
                     scores: npt.NDArray[MOTIF_FLOAT_T], cwm: npt.NDArray[MOTIF_FLOAT_T],
-                    pssm: npt.NDArray[MOTIF_FLOAT_T], strand: Literal['+', '-']
-                    ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
+                    pssm: npt.NDArray[MOTIF_FLOAT_T], strand: Literal["+", "-"]
+                    ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Don't do revcomp - let scan take care of that.
 
         You should never call this method. Use scan instead!
@@ -733,7 +715,7 @@ class MiniPattern:
         if self.contribMatchCutoff is not None:
             contribMatchPass = contribMatchScores > self.contribMatchCutoff
         else:
-            contribMatchPass = np.full(contribMatchScores.shape, True, dtype='bool')
+            contribMatchPass = np.full(contribMatchScores.shape, True, dtype="bool")
 
         if self.contribMagnitudeCutoff is not None:
             contribMagnitudePass = contribMagnitudes > self.contribMagnitudeCutoff
@@ -759,7 +741,7 @@ class MiniPattern:
         return ret
 
     def scan(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
-             ) -> list[tuple[int, Literal['+', '-'], float, float, float]]:
+             ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Given a sequence and a contribution track, identify places where this pattern matches.
 
         sequence is a (length, 4) one-hot encoded
@@ -775,8 +757,8 @@ class MiniPattern:
 
         TODO MELANIE Convert to RST.
         """
-        hitsPos = self._scanOneWay(sequence, scores, self.cwm, self.pssm, '+')
-        hitsNeg = self._scanOneWay(sequence, scores, self.rcwm, self.rpssm, '-')
+        hitsPos = self._scanOneWay(sequence, scores, self.cwm, self.pssm, "+")
+        hitsNeg = self._scanOneWay(sequence, scores, self.rcwm, self.rpssm, "-")
         return hitsPos + hitsNeg
 
 
@@ -787,7 +769,7 @@ class Hit:
     """
 
     def __init__(self, chrom: str, start: int, end: int, shortName: str,
-                 metaclusterName: str, patternName: str, strand: Literal['+', '-'],
+                 metaclusterName: str, patternName: str, strand: Literal["+", "-"],
                  sequence: str, index: int, contribMagnitude: float,
                  contribMatchScore: float, seqMatchScore: float) -> None:
         self.chrom = chrom
@@ -808,7 +790,7 @@ class Hit:
 
         TODO MELANIE Document returned dictionary.
         """
-        ret = dict()
+        ret = {}
         ret["chrom"] = self.chrom
         ret["start"] = self.start
         ret["end"] = self.end
@@ -849,7 +831,7 @@ class PatternScanner:
         self.contribFp = h5py.File(contribFname, "r")
         self.firstHit = True
         self.firstIndex = True
-        self.chromIdxToName = dict()
+        self.chromIdxToName = {}
         for i, name in enumerate(self.contribFp["chrom_names"].asstr()):
             self.chromIdxToName[i] = name
 
@@ -876,15 +858,15 @@ class PatternScanner:
                                "This will be an error in BPReveal 5.0. "
                                "Instructions for updating: Re-calculate importance scores.",
                                1)
-            chrom = chromIdx.decode('utf-8')
+            chrom = chromIdx.decode("utf-8")
         else:
             chrom = self.chromIdxToName[chromIdx]
             logUtils.logFirstN(logUtils.DEBUG,
                                "First index, found chrom {0:s}".format(str(chrom)), 1)
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
-        hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order='C')
-        contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order='C')
+        hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")
+        contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order="C")
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
             logUtils.logFirstN(logUtils.DEBUG,
@@ -901,7 +883,7 @@ class PatternScanner:
                     end = hit[0] + pattern.cwm.shape[0]
                     strand = hit[1]
                     hitOneHot = oneHotSequence[start:end, :]
-                    if strand == '-':
+                    if strand == "-":
                         hitOneHot = np.flip(hitOneHot)
                     hitSequence = utils.oneHotDecode(hitOneHot)
                     madeHit = Hit(chrom, regionStart + start,
@@ -939,30 +921,16 @@ def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Q
     a cwm, pssm, and cutoff values for each pattern you want to scan for.
     TODO MELANIE Convert to RST
     """
-    pr = cProfile.Profile()
     scanner = PatternScanner(hitQueue, contribFname, patternConfig)
-    wasIOne = False
     logUtils.debug("Started scanner {0:d}".format(multiprocessing.current_process().pid))
     while True:
         curQuery = queryQueue.get(timeout=QUEUE_TIMEOUT)
-        if curQuery == 1 and ENABLE_DEBUG_PROFILING:
-            wasIOne = True
         if curQuery == -1:
             # End of the line, finish up!
             logUtils.debug("Done with scanner {0:d}".format(multiprocessing.current_process().pid))
             scanner.done()
             break
-        if wasIOne:
-            pr.enable()
         scanner.scanIndex(curQuery)
-        if wasIOne:
-            pr.disable()
-    if wasIOne:
-        s = io.StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats(PROFILING_SORT_ORDER)
-        ps.print_stats()
-        with open("MOTIF_SCAN_SCAN_THREAD_STATS.dat", "w") as fp:
-            fp.write(s.getvalue())
 
 
 def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname: str) -> None:
@@ -977,18 +945,15 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
         special values to expect before it knows that all the scanners have finished.
     :param tsvFname: The name of the tsv file that should be written.
     """
-    pr = cProfile.Profile()
-    if ENABLE_DEBUG_PROFILING:
-        pr.enable()
     threadsRemaining = scannerThreads
     logUtils.debug("Starting writer.")
-    with open(tsvFname, "w", newline='') as outTsv:
+    with open(tsvFname, "w", newline="") as outTsv:
         # Must match Hit.toDict()
         fieldNames = ["chrom", "start", "end", "short_name", "contrib_magnitude", "strand",
                       "metacluster_name", "pattern_name", "sequence", "region_index",
                       "seq_match", "contrib_match"]
         writer = csv.DictWriter(outTsv, fieldnames=fieldNames,
-                                delimiter='\t', lineterminator='\n')
+                                delimiter="\t", lineterminator="\n")
         writer.writeheader()
         numWaits = 0
         while True:
@@ -1014,13 +979,6 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
                     break
                 continue
             writer.writerow(ret.toDict())
-    if ENABLE_DEBUG_PROFILING:
-        pr.disable()
-        s = io.StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats(PROFILING_SORT_ORDER)
-        ps.print_stats()
-        with open("MOTIF_SCAN_WRITE_THREAD_STATS.dat", "w") as fp:
-            fp.write(s.getvalue())
 
 
 def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThreads: int) -> None:

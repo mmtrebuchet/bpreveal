@@ -9,21 +9,21 @@ Here's what you do.
 4. Call .run() on the Runner.
 """
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = '4'
-from bpreveal import utils
+from typing import Any, Optional, Iterator, Iterable
+import multiprocessing
+import ctypes
 import pysam
 import numpy as np
 import numpy.typing as npt
-from typing import Any, Optional, Iterator, Iterable
 import tqdm
 import h5py
-from bpreveal import logUtils
 import pybedtools
-import multiprocessing
+from bpreveal import logUtils
+from bpreveal import utils
 from bpreveal import ushuffle
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
     H5_CHUNK_SIZE, MODEL_ONEHOT_T
-import ctypes
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "4"
 
 
 class Query:
@@ -275,15 +275,11 @@ class FlatRunner:
         shap evaluation. (I recommend 20 or so)
     :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
         If kmerSize > 1, preserve the distribution of kmers of the given size.
-    :param profileFname: is an optional parameter. If provided, profiling data (i.e., performance
-        of this code) will be written to the given file name. Note that this has
-        nothing to do with genomic profiles, it's just benchmarking data for this code.
     """
 
     def __init__(self, modelFname: str, headID: int, numHeads: int, taskIDs: list[int],
                  batchSize: int, generator: Generator, profileSaver: Saver,
-                 countsSaver: Saver, numShuffles: int, kmerSize: int,
-                 profileFname: Optional[str] = None):
+                 countsSaver: Saver, numShuffles: int, kmerSize: int):
         logUtils.info("Initializing interpretation runner.")
         self._profileSaver = profileSaver
         self._countsSaver = countsSaver
@@ -292,41 +288,25 @@ class FlatRunner:
         self._profileOutQueue = multiprocessing.Queue(1000)
         self._countsOutQueue = multiprocessing.Queue(1000)
 
-        def ap(txt) -> Optional[str]:
-            """Add some text to the profileFname"""
-            if profileFname is None:
-                return None
-            return profileFname + txt
-
         self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._profileInQueue, self._countsInQueue], generator,
-                  ap("_gen.dat")),
+            args=([self._profileInQueue, self._countsInQueue], generator),
             daemon=True)
 
         self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._profileInQueue, self._profileOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize,
-                  ap("_profile.dat")),
+                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize),
             daemon=True)
         self._countsBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._countsInQueue, self._countsOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize,
-                  ap("_counts.dat")),
+                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize),
             daemon=True)
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._profileOutQueue, profileSaver, ap("_profileWrite.dat")),
+            args=(self._profileOutQueue, profileSaver),
             daemon=True)
         self._countsSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._countsOutQueue, countsSaver, ap("_countsWrite.dat")),
+            args=(self._countsOutQueue, countsSaver),
             daemon=True)
-        if profileFname is not None:
-            import pstats
-            for end in ["_gen", "_profile", "_counts", "_profileWrite", "_countsWrite"]:
-                with open(ap(end + ".txt"), "w") as fp:  # type: ignore
-                    s = pstats.Stats(ap(end + ".dat"), stream=fp)
-                    s.sort_stats('cumulative')
-                    s.print_stats()
 
     def run(self):
         """Start up the threads and waits for them to finish."""
@@ -374,33 +354,23 @@ class PisaRunner:
         of the base being shapped.
     :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
         If kmerSize > 1, preserve the distribution of kmers of the given size.
-    :param profileFname: is an optional parameter. If provided, profiling data (i.e., performance
-        of this code) will be written to the given file name. Note that this has
-        nothing to do with genomic profiles, it's just benchmarking data for this code.
     """
 
     def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
-                 receptiveField: int, kmerSize: int, profileFname: Optional[str] = None):
+                 receptiveField: int, kmerSize: int):
         logUtils.info("Initializing pisa runner.")
         self._inQueue = multiprocessing.Queue(1000)
         self._outQueue = multiprocessing.Queue(1000)
 
-        def ap(txt):
-            """Add some text to the profileFname"""
-            if profileFname is None:
-                return None
-            return profileFname + txt
-
         self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._inQueue], generator, ap("_generate.dat")),
+            args=([self._inQueue], generator),
             daemon=True)
         self._batchThread = multiprocessing.Process(target=_pisaBatcherThread,
                                                     args=(modelFname, batchSize,
                                                           self._inQueue, self._outQueue, headID,
                                                           taskID, numShuffles, receptiveField,
-                                                          kmerSize,
-                                                          ap("batcher.dat")),
+                                                          kmerSize),
                                                     daemon=True)
         self._saver = saver
 
@@ -550,21 +520,21 @@ class FlatH5Saver(Saver):
         """
         logUtils.info("Initializing saver.")
         self._outFile = h5py.File(self._outputFname, "w")
-        self._chunksToWrite = dict()
+        self._chunksToWrite = {}
 
         self._outFile.create_dataset("hyp_scores",
                                      (self.numSamples, self.inputLength, 4),
                                      dtype=IMPORTANCE_T, chunks=self.chunkShape,
-                                     compression='gzip')
-        self._outFile.create_dataset('input_seqs',
+                                     compression="gzip")
+        self._outFile.create_dataset("input_seqs",
                                      (self.numSamples, self.inputLength, 4),
                                      dtype=ONEHOT_T, chunks=self.chunkShape,
-                                     compression='gzip')
+                                     compression="gzip")
         if self.genomeFname is not None:
             self._loadGenome()
         else:
             self._outFile.create_dataset("descriptions", (self.numSamples,),
-                                         dtype=h5py.string_dtype('utf-8'))
+                                         dtype=h5py.string_dtype("utf-8"))
         logUtils.debug("Saver initialized, hdf5 file created.")
 
     def _loadGenome(self):
@@ -582,33 +552,33 @@ class FlatH5Saver(Saver):
         with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
                                          (genome.nreferences,),
-                                         dtype=h5py.string_dtype(encoding='utf-8'))
-            self.chromNameToIdx = dict()
-            posDtype = 'u4'
+                                         dtype=h5py.string_dtype(encoding="utf-8"))
+            self.chromNameToIdx = {}
+            posDtype = "u4"
             for chromName in genome.references:
                 # Are any chromosomes longer than 2^31 bp long? If so (even though it's unlikely),
                 # I must increase the storage size for positions.
                 if genome.get_reference_length(chromName) > 2**31:
-                    posDtype = 'u8'
+                    posDtype = "u8"
 
             self._outFile.create_dataset("chrom_sizes", (genome.nreferences, ), dtype=posDtype)
 
             for i, chromName in enumerate(genome.references):
-                self._outFile['chrom_names'][i] = chromName
+                self._outFile["chrom_names"][i] = chromName
                 self.chromNameToIdx[chromName] = i
-                self._outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
+                self._outFile["chrom_sizes"][i] = genome.get_reference_length(chromName)
 
             if genome.nreferences <= 255:  # type: ignore
                 # If there are less than 255 chromosomes,
                 # I only need 8 bits to store the chromosome ID.
-                chromDtype = 'u1'
+                chromDtype = "u1"
             elif genome.nreferences <= 65535:  # type: ignore
                 # If there are less than 2^16 chromosomes, I can use 16 bits.
-                chromDtype = 'u2'
+                chromDtype = "u2"
             else:
                 # If you have over four billion chromosomes, you deserve to have code
                 # that will break. So I just assume that 32 bits will be enough.
-                chromDtype = 'u4'
+                chromDtype = "u4"
             self._outFile.create_dataset("coords_chrom", (self.numSamples, ), dtype=chromDtype)
 
             self._outFile.create_dataset("coords_start", (self.numSamples, ), dtype=posDtype)
@@ -710,20 +680,20 @@ class PisaH5Saver(Saver):
         """Run in the child thread."""
         self._outFile = h5py.File(self._outputFname, "w")
         self._outFile.create_dataset("input_predictions",
-                                     (self.numSamples,), dtype='f4')
+                                     (self.numSamples,), dtype="f4")
         self._outFile.create_dataset("shuffle_predictions",
                                      (self.numSamples, self.numShuffles),
-                                     dtype='f4')
-        self._chunksToWrite = dict()
+                                     dtype="f4")
+        self._chunksToWrite = {}
 
         self._outFile.create_dataset("shap",
                                      (self.numSamples, self.receptiveField, 4),
                                      dtype=IMPORTANCE_T, chunks=self.chunkShape,
-                                     compression='gzip')
-        self._outFile.create_dataset('sequence',
+                                     compression="gzip")
+        self._outFile.create_dataset("sequence",
                                      (self.numSamples, self.receptiveField, 4),
                                      dtype=ONEHOT_T, chunks=self.chunkShape,
-                                     compression='gzip')
+                                     compression="gzip")
         self.pbar = None
         if self._useTqdm:
             self.pbar = tqdm.tqdm(total=self.numSamples)
@@ -731,7 +701,7 @@ class PisaH5Saver(Saver):
             self._loadGenome()
         else:
             self._outFile.create_dataset("descriptions", (self.numSamples,),
-                                         dtype=h5py.string_dtype('utf-8'))
+                                         dtype=h5py.string_dtype("utf-8"))
         logUtils.debug("Saver initialized, hdf5 file created.")
 
     def _loadGenome(self):
@@ -749,35 +719,35 @@ class PisaH5Saver(Saver):
         with pysam.FastaFile(self.genomeFname) as genome:  # type: ignore
             self._outFile.create_dataset("chrom_names",
                                          (genome.nreferences,),
-                                         dtype=h5py.string_dtype(encoding='utf-8'))
-            self.chromNameToIdx = dict()
-            posDtype = 'u4'
+                                         dtype=h5py.string_dtype(encoding="utf-8"))
+            self.chromNameToIdx = {}
+            posDtype = "u4"
             for chromName in genome.references:
                 # Are any chromosomes longer than 2^31 bp long? If so (even though it's unlikely),
                 # I must increase the storage size for positions.
                 if genome.get_reference_length(chromName) > 2**31:
-                    posDtype = 'u8'
+                    posDtype = "u8"
 
             self._outFile.create_dataset("chrom_sizes", (genome.nreferences, ), dtype=posDtype)
 
             for i, chromName in enumerate(genome.references):
-                self._outFile['chrom_names'][i] = chromName
+                self._outFile["chrom_names"][i] = chromName
                 self.chromNameToIdx[chromName] = i
-                self._outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
+                self._outFile["chrom_sizes"][i] = genome.get_reference_length(chromName)
 
             if genome.nreferences <= 255:  # type: ignore
                 # If there are less than 255 chromosomes,
                 # I only need 8 bits to store the chromosome ID.
-                chromDtype = 'u1'
+                chromDtype = "u1"
             elif genome.nreferences <= 65535:  # type: ignore
                 # If there are less than 2^16 chromosomes, I can use 16 bits.
-                chromDtype = 'u2'
+                chromDtype = "u2"
             else:
                 # If you have over four billion chromosomes, you deserve to have code
                 # that will break. So I just assume that 32 bits will be enough.
-                chromDtype = 'u4'
+                chromDtype = "u4"
             self._outFile.create_dataset("coords_chrom", (self.numSamples, ), dtype=chromDtype)
-            self._outFile.create_dataset("coords_base", (self.numSamples, ), dtype='u4')
+            self._outFile.create_dataset("coords_base", (self.numSamples, ), dtype="u4")
         logUtils.debug("Genome data loaded.")
 
     def done(self):
@@ -1085,14 +1055,9 @@ class PisaBedGenerator(Generator):
 
 def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, numHeads: int,
-                       taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int,
-                       profileFname: Optional[str] = None):
+                       taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int):
     """The thread that spins up the batcher."""
     logUtils.debug("Starting flat batcher thread.")
-    import cProfile
-    profiler = cProfile.Profile()
-    if profileFname is not None:
-        profiler.enable()
     b = _FlatBatcher(modelName, batchSize, outQueue, headID,
                      numHeads, taskIDs, numShuffles, mode, kmerSize)
     logUtils.debug("Batcher created.")
@@ -1105,22 +1070,14 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     b.finishBatch()
     outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
-    if profileFname is not None:
-        profiler.create_stats()
-        profiler.dump_stats(profileFname)
     logUtils.debug("Batcher thread finished.")
 
 
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, taskID: int,
-                       numShuffles: int, receptiveField: int, kmerSize: int,
-                       profileFname: Optional[str] = None):
+                       numShuffles: int, receptiveField: int, kmerSize: int):
     """The thread that spins up the batcher."""
     logUtils.debug("Starting batcher thread.")
-    import cProfile
-    profiler = cProfile.Profile()
-    if profileFname is not None:
-        profiler.enable()
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
                      receptiveField, kmerSize)
     logUtils.debug("Batcher created.")
@@ -1133,19 +1090,11 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     b.finishBatch()
     outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
     outQueue.close()
-    if profileFname is not None:
-        profiler.create_stats()
-        profiler.dump_stats(profileFname)
     logUtils.debug("Batcher thread finished.")
 
 
-def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
-                     profileFname: Optional[str] = None):
+def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator):
     """The thread that spins up the generator and emits queries."""
-    import cProfile
-    profiler = cProfile.Profile()
-    if profileFname is not None:
-        profiler.enable()
     logUtils.debug("Starting generator thread.")
     generator.construct()
     for elem in generator:
@@ -1157,19 +1106,11 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     logUtils.debug("Done with generator, None added to queue.")
     generator.done()
     logUtils.debug("Generator thread finished.")
-    if profileFname is not None:
-        profiler.create_stats()
-        profiler.dump_stats(profileFname)
 
 
-def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
-                 profileFname: Optional[str] = None):
+def _saverThread(outQueue: multiprocessing.Queue, saver: Saver):
     """The thread that spins up the saver."""
     logUtils.debug("Saver thread started.")
-    import cProfile
-    profiler = cProfile.Profile()
-    if profileFname is not None:
-        profiler.enable()
     saver.construct()
     while True:
         rv = outQueue.get(timeout=utils.QUEUE_TIMEOUT)
@@ -1178,9 +1119,6 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
         saver.add(rv)
     saver.done()
     logUtils.debug("Saver thread finished.")
-    if profileFname is not None:
-        profiler.create_stats()
-        profiler.dump_stats(profileFname)
 
 
 class _PisaBatcher:
@@ -1204,9 +1142,9 @@ class _PisaBatcher:
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=import-outside-toplevel
         tf.compat.v1.disable_eager_execution()
-        from bpreveal import shap
+        from bpreveal import shap  # pylint: disable=import-outside-toplevel
         utils.setMemoryGrowth()
         self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
@@ -1336,9 +1274,9 @@ class _FlatBatcher:
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=import-outside-toplevel
         tf.compat.v1.disable_eager_execution()
-        from bpreveal import shap
+        from bpreveal import shap  # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = utils.loadModel(modelFname)
@@ -1436,10 +1374,10 @@ def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-n
     """
     # This is copied from Zahoor's code.
     projectedHypotheticalContribs = \
-        np.zeros_like(bg_data[0]).astype('float')
+        np.zeros_like(bg_data[0]).astype("float")
     assert len(orig_inp[0].shape) == 2
     for i in range(4):  # We're going to go over all the base possibilities.
-        hypotheticalInput = np.zeros_like(orig_inp[0]).astype('float')
+        hypotheticalInput = np.zeros_like(orig_inp[0]).astype("float")
         hypotheticalInput[:, i] = 1.0
         hypotheticalDiffref = hypotheticalInput[None, :, :] - bg_data[0]
         hypotheticalContribs = hypotheticalDiffref * mult[0]

@@ -14,8 +14,8 @@ def getParser() -> argparse.ArgumentParser:
                  "specified, the returned value will be the required input "
                  "sequence length. Exactly one of --input-len or --output-len "
                  "must be specified.",
-            dest='outputLen',
-            metavar='OL',
+            dest="outputLen",
+            metavar="OL",
             type=int)
 
     parser.add_argument("--input-len",
@@ -24,16 +24,16 @@ def getParser() -> argparse.ArgumentParser:
                  "the predicted profile. If no profile can be predicted, the "
                  "program will print a negative number and throw an error. "
                  "Exactly one of --input-len or --output-len must be specified.",
-            dest='inputLen',
-            metavar='IL',
+            dest="inputLen",
+            metavar="IL",
             type=int)
 
     parser.add_argument("--n-dil-layers",
             help="The number of diluted convolutional layers in the network, "
                  "typically on the order of 10.",
-            dest='nDilLayers',
+            dest="nDilLayers",
             type=int,
-            metavar='NL',
+            metavar="NL",
             required=True)
 
     parser.add_argument("--initial-convolution-widths",
@@ -42,13 +42,13 @@ def getParser() -> argparse.ArgumentParser:
                  "since --conv1-kernel-size N is equivalent to --initial-convolution-widths N",
             dest="initialConvolutionWidths",
             type=int,
-            nargs='+',
-            metavar='ICW',
+            nargs="+",
+            metavar="ICW",
             required=False)
 
     parser.add_argument("--conv1-kernel-size",
             help="The size of the first convolution in the network, typically on the order of 25",
-            dest='conv1KernelSize',
+            dest="conv1KernelSize",
             type=int,
             metavar="C1KS",
             required=False)
@@ -56,14 +56,14 @@ def getParser() -> argparse.ArgumentParser:
     parser.add_argument("--profile-kernel-size",
             help="The width of the final convolutional filter in the output heads, "
                  "typically on the order of 75.",
-            dest='profileKernelSize',
+            dest="profileKernelSize",
             type=int,
-            metavar='PKS',
+            metavar="PKS",
             required=True)
     parser.add_argument("--verbose",
             help="Display the receptive field at each level of the network",
-            action='store_true',
-            dest='verbose')
+            action="store_true",
+            dest="verbose")
     return parser
 
 
@@ -190,5 +190,5 @@ def lengthCalcMain():
         assert False, "Must provide one of --input-len or --output-len"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     lengthCalcMain()

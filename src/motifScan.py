@@ -125,9 +125,9 @@ API
 ---
 
 """
+import json
 from bpreveal import logUtils
 from bpreveal import motifUtils
-import json
 
 
 def main(config):

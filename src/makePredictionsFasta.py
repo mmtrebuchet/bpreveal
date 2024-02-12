@@ -89,11 +89,14 @@ API
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 from bpreveal import utils
 import numpy as np
 import h5py
+import pybedtools
+import pysam
+from bpreveal import makePredictionsBed
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.utils import PRED_T
@@ -121,7 +124,7 @@ class FastaReader:
                 line = line.strip()  # Get rid of newlines.
                 if len(line) == 0:
                     continue  # There is a blank line. Ignore it.
-                if line[0] == '>':
+                if line[0] == ">":
                     self.numPredictions += 1
             fp.close()
         logUtils.info("Found {0:d} entries in input fasta".format(self.numPredictions))
@@ -139,7 +142,7 @@ class FastaReader:
         inSequence = True
         curLine = self._fp.readline()
         while inSequence and len(curLine) > 1:
-            if curLine[0] != '>':
+            if curLine[0] != ">":
                 self.curSequence = self.curSequence + curLine.strip()
             else:
                 self._nextLabel = curLine[1:].strip()
@@ -160,7 +163,7 @@ class H5Writer:
     def __init__(self, fname, numHeads, numPredictions,
                  bedFname: str | None = None, genomeFname: str | None = None):
         """Load everything that can be loaded before the subprocess launches."""
-        self._fp = h5py.File(fname, 'w')
+        self._fp = h5py.File(fname, "w")
         self.numHeads = numHeads
         self.numPredictions = numPredictions
         self.writeHead = 0
@@ -168,9 +171,6 @@ class H5Writer:
         self.writeChunkSize = 100
         if bedFname is not None:
             logUtils.info("Adding coordinate information.")
-            import pybedtools
-            import pysam
-            from bpreveal import makePredictionsBed
             assert genomeFname is not None, "Must supply a genome to get coordinate information."
             regions = pybedtools.BedTool(bedFname)
             with pysam.FastaFile(genomeFname) as genome:
@@ -256,7 +256,7 @@ class H5Writer:
         """
         if self.batchWriteHead != 0:
             self.commit()
-        stringDType = h5py.string_dtype(encoding='utf-8')
+        stringDType = h5py.string_dtype(encoding="utf-8")
         self._fp.create_dataset("descriptions", dtype=stringDType, data=self._descriptionList)
         logUtils.info("Closing h5.")
         self._fp.close()

@@ -1,13 +1,13 @@
 """Some utilities for dealing with bed files."""
+from typing import Literal
+import multiprocessing
+from collections import deque
 import pybedtools
 import pysam
-from bpreveal import logUtils
 import numpy as np
-import multiprocessing
 import pyBigWig
-from collections import deque
+from bpreveal import logUtils
 from bpreveal import utils
-from typing import Literal
 from bpreveal.logUtils import wrapTqdm
 
 
@@ -33,7 +33,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
     segments = []
 
     logUtils.debug("Building segments.")
-    blacklistsByChrom = dict()
+    blacklistsByChrom = {}
     if blacklist is not None:
         # We're going to iterate over blacklist several times,
         # so save it in case it's a streaming bedtool.
@@ -51,7 +51,7 @@ def makeWhitelistSegments(genome: pysam.FastaFile,
                 if blackInterval.start >= seqVector.shape[0]:
                     continue
                 endPt = min(seqVector.shape[0], blackInterval.end)
-                seqVector[blackInterval.start:endPt] = ord('N')
+                seqVector[blackInterval.start:endPt] = ord("N")
         segments.extend(_findNonN(seqVector, chromName))
     return pybedtools.BedTool(segments)
 
@@ -70,7 +70,7 @@ def _findNonN(inSeq: np.ndarray, chromName: str) -> list[pybedtools.Interval]:
     """
     segments = []
     # All bases that are not N.
-    isValid = np.logical_not(np.logical_or(inSeq == ord('N'), inSeq == ord('n')))
+    isValid = np.logical_not(np.logical_or(inSeq == ord("N"), inSeq == ord("n")))
     # ends is 1 if this base is the end of a valid region, 0 otherwise.
     ends = np.empty(isValid.shape, dtype=np.bool_)
     # starts is 1 if this base is the beginning of a valid region, 0 otherwise.
@@ -254,7 +254,7 @@ def sequenceChecker(interval: pybedtools.Interval, genome: pysam.FastaFile) -> b
         ``False`` otherwise.
     """
     seq = genome.fetch(interval.chrom, interval.start, interval.end)
-    if len(seq.upper().lstrip('ACGT')) != 0:
+    if len(seq.upper().lstrip("ACGT")) != 0:
         # There were letters that aren't regular bases. (probably Ns)
         return False
     return True
@@ -267,7 +267,7 @@ def lineToInterval(line: str) -> pybedtools.Interval | Literal[False]:
     :return: A newly-allocated pyBedTools Interval object, or ``False`` if
         the line is not a valid bed line.
     """
-    if len(line.strip()) == 0 or line[0] == '#':
+    if len(line.strip()) == 0 or line[0] == "#":
         return False
     initInterval = pybedtools.cbedtools.create_interval_from_list(line.split())
     return initInterval

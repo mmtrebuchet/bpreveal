@@ -58,10 +58,10 @@ API
 ---
 """
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 import h5py
 from bpreveal import utils
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 from bpreveal import generators
@@ -75,21 +75,18 @@ import tensorflow as tf
 
 def trainModel(model, inputLength, outputLength, trainBatchGen,  # pylint: disable=unused-argument
                valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience,
-               heads, tensorboardDir=None):
+               heads):
     """Run the training."""
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
-    if tensorboardDir is not None:
-        from bpreveal.callbacks import tensorboardCallback
-        callbacks.append(tensorboardCallback(tensorboardDir))
     if logUtils.getLogger().isEnabledFor(logUtils.INFO):
-        verbosity = 'auto'
+        verbosity = "auto"
     else:
         verbosity = 0
     history = model.fit(trainBatchGen, epochs=epochs,
                         validation_data=valBatchGen, callbacks=callbacks,
                         verbose=verbosity)
     # Turn the learning rates into python floats for json serialization.
-    history.history['lr'] = [float(x) for x in history.history['lr']]
+    history.history["lr"] = [float(x) for x in history.history["lr"]]
     lossCallback = callbacks[3]
     history.history["counts-loss-weight"] = lossCallback.λHistory
     return history
@@ -114,7 +111,7 @@ def main(config):
     countsLosses = []
     profileWeights = []
     countsWeights = []
-    for head in config['heads']:
+    for head in config["heads"]:
         profileWeights.append(head["profile-loss-weight"])
         λInit = head["counts-loss-weight"] if "counts-loss-weight" in head else 1
         λ = tf.Variable(λInit, dtype=tf.float32)
@@ -139,17 +136,13 @@ def main(config):
         inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logUtils.info("Generators initialized. Training.")
-    tensorboardDir = None
-    if "tensorboard-log-dir" in config:
-        tensorboardDir = config["tensorboard-log-dir"]
 
     history = trainModel(model, inputLength, outputLength, trainGenerator,
                          valGenerator, config["settings"]["epochs"],
                          config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
-                         config["heads"],
-                         tensorboardDir)
+                         config["heads"])
 
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:

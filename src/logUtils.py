@@ -28,7 +28,6 @@ import logging as _logging
 import sys as _sys
 import _thread
 import typing
-import tqdm
 import traceback as _traceback
 from logging import DEBUG
 from logging import ERROR
@@ -36,6 +35,7 @@ from logging import CRITICAL
 from logging import INFO
 from logging import WARNING
 import threading
+import tqdm
 
 # Don't use this directly. Use get_logger() instead.
 _LOGGER = None
@@ -63,10 +63,10 @@ def _loggerFindCaller(stackInfo=False, stacklevel=1):
     code, frame = _getCaller(4)
     sinfo = None
     if stackInfo:
-        sinfo = '\n'.join(_traceback.format_stack())
+        sinfo = "\n".join(_traceback.format_stack())
     if code:
         return (code.co_filename, frame.f_lineno, code.co_name, sinfo)
-    return '(unknown file)', 0, '(unknown function)', sinfo
+    return "(unknown file)", 0, "(unknown function)", sinfo
 
 
 def getLogger() -> _logging.Logger:
@@ -118,7 +118,7 @@ def getLogger() -> _logging.Logger:
             return _LOGGER
 
         # Scope the TensorFlow logger to not conflict with users' loggers.
-        logger = _logging.getLogger('BPReveal')
+        logger = _logging.getLogger("BPReveal")
 
         # Override findCaller on the logger to skip internal helper functions
         logger.findCaller = _loggerFindCaller
@@ -145,9 +145,9 @@ def getLogger() -> _logging.Logger:
                 _loggingTarget = _sys.stderr
 
             # Add the output handler.
-            loggingFormat = _logging.Formatter('%(levelname)s : %(asctime)s :'
-                                               '%(filename)s:%(lineno)d : %(message)s',
-                                               datefmt='%Y-%m-%d %H:%M:%S')
+            loggingFormat = _logging.Formatter("%(levelname)s : %(asctime)s :"
+                                               "%(filename)s:%(lineno)d : %(message)s",
+                                               datefmt="%Y-%m-%d %H:%M:%S")
             _handler = _logging.StreamHandler(_loggingTarget)
             _handler.setFormatter(loggingFormat)
             logger.addHandler(_handler)
@@ -192,11 +192,11 @@ def warning(msg: str, *args, **kwargs):
 
 
 _LEVEL_NAMES = {
-    CRITICAL: 'CRITICAL',
-    ERROR: 'ERROR',
-    WARNING: 'WARNING',
-    INFO: 'INFO',
-    DEBUG: 'DEBUG',
+    CRITICAL: "CRITICAL",
+    ERROR: "ERROR",
+    WARNING: "WARNING",
+    INFO: "INFO",
+    DEBUG: "DEBUG",
 }
 
 _LEVEL_MAP = {"CRITICAL": _logging.CRITICAL,
@@ -240,7 +240,7 @@ def _getFileAndLine():
     """Returns (filename, linenumber) for the stack frame."""
     code, f = _getCaller()
     if not code:
-        return ('<unknown>', 0)
+        return ("<unknown>", 0)
     return (code.co_filename, f.f_lineno)
 
 

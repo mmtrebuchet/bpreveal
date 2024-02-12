@@ -149,10 +149,14 @@ API
 
 """
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 from bpreveal import interpretUtils
 from bpreveal import logUtils
+import h5py
+from bpreveal import makePredictionsBed
+import pybedtools
+import pysam
 
 
 def main(config):
@@ -185,26 +189,14 @@ def main(config):
     countsWriter = interpretUtils.FlatH5Saver(config["counts-h5"], generator.numRegions,
                                               config["input-length"], genome=genomeFname,
                                               useTqdm=False)
-    # For benchmarking, I've added a feature where you can dump a
-    # python profiling session to disk. You should probably
-    # never use this feature unless you're tuning shap performance or something.
-    # Long story short, all of the code's time is spent inside the shap library.
-    profileFname = None
-    if "DEBUG_profile-output" in config:
-        profileFname = config["DEBUG_profile-output"]
 
     batcher = interpretUtils.FlatRunner(config["model-file"], config["head-id"], config["heads"],
                                         config["profile-task-ids"], 10, generator, profileWriter,
-                                        countsWriter, config["num-shuffles"], kmerSize,
-                                        profileFname)
+                                        countsWriter, config["num-shuffles"], kmerSize)
     batcher.run()
 
     # Finishing touch - if someone gave coordinate information, load that.
     if "coordinates" in config:
-        import h5py
-        from bpreveal import makePredictionsBed
-        import pybedtools
-        import pysam
         for ftype in ["profile-h5", "counts-h5"]:
             with h5py.File(config[ftype], "r+") as h5fp, \
                  pysam.FastaFile(config["coordinates"]["genome"]) as genome:

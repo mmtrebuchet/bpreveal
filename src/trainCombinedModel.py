@@ -62,22 +62,18 @@ import tensorflow as tf
 
 def trainModel(model, inputLength, outputLength, trainBatchGen,  # pylint: disable=unused-argument
                valBatchGen, epochs, earlyStop, outputPrefix,
-               plateauPatience, heads, tensorboardDir=None):
+               plateauPatience, heads):
     """Train the model."""
     callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
-    if tensorboardDir is not None:
-        logUtils.info("Including logUtils.")
-        from bpreveal.callbacks import tensorboardCallback
-        callbacks.append(tensorboardCallback(tensorboardDir))
     if logUtils.getLogger().isEnabledFor(logUtils.INFO):
-        verbosity = 'auto'
+        verbosity = "auto"
     else:
         verbosity = 0
     history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen,
                         callbacks=callbacks, max_queue_size=1000,
                         verbose=verbosity)
     # Turn the learning rates into native python float values so they can be saved to json.
-    history.history['lr'] = [float(x) for x in history.history['lr']]
+    history.history["lr"] = [float(x) for x in history.history["lr"]]
     lossCallback = callbacks[3]
     history.history["counts-loss-weight"] = lossCallback.λHistory
     return history
@@ -105,7 +101,7 @@ def main(config):
     countsLosses = []
     profileWeights = []
     countsWeights = []
-    for head in config['heads']:
+    for head in config["heads"]:
         profileWeights.append(head["profile-loss-weight"])
         # For adaptive loss weights, make the counts loss a keras variable so I
         # can update it during training.
@@ -142,17 +138,12 @@ def main(config):
                                                config["settings"]["batch-size"])
     logUtils.info("Generators initialized. Training.")
 
-    tensorboardDir = None
-    if "tensorboard-log-dir" in config:
-        tensorboardDir = config["tensorboard-log-dir"]
-
     history = trainModel(combinedModel, inputLength, outputLength, trainGenerator,
                          valGenerator, config["settings"]["epochs"],
                          config["settings"]["early-stopping-patience"],
                          config["settings"]["output-prefix"],
                          config["settings"]["learning-rate-plateau-patience"],
-                         config["heads"],
-                         tensorboardDir)
+                         config["heads"])
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".model")
     residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:

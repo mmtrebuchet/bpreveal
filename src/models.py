@@ -23,15 +23,15 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
     logUtils.debug("Initializing head {0:s}".format(individualHead["head-name"]))
     numOutputs = individualHead["num-tasks"]
     profile = keras.layers.Conv1D(
-            numOutputs, outputFilterWidth, padding='valid',  # noqa
-            name='solo_profile_{0:s}'.format(individualHead["head-name"]))\
+            numOutputs, outputFilterWidth, padding="valid",  # noqa
+            name="solo_profile_{0:s}".format(individualHead["head-name"]))\
         (dilateOutput)  # noqa
     countsGap = keras.layers.GlobalAveragePooling1D(
-            name='solo_counts_gap_{0:s}'.format(individualHead["head-name"]))\
+            name="solo_counts_gap_{0:s}".format(individualHead["head-name"]))\
         (dilateOutput)  # noqa
     counts = keras.layers.Dense(
             1,  # noqa
-            name='solo_logcounts_{0:s}'.format(individualHead["head-name"]))\
+            name="solo_logcounts_{0:s}".format(individualHead["head-name"]))\
         (countsGap)  # noqa
     return (profile, counts)
 
@@ -63,26 +63,26 @@ def soloModel(inputLength, outputLength, numFilters, numLayers,  # pylint: disab
     such as an input that is too long.
     """
     logUtils.debug("Building solo model")
-    inputLayer = keras.Input((inputLength, 4), name=modelName + '_input')
+    inputLayer = keras.Input((inputLength, 4), name=modelName + "_input")
 
     initialConv = keras.layers.Conv1D(
-            numFilters, kernel_size=inputFilterWidth, padding='valid',  # noqa
-            activation='relu', name=modelName + "_initial_conv")\
+            numFilters, kernel_size=inputFilterWidth, padding="valid",  # noqa
+            activation="relu", name=modelName + "_initial_conv")\
         (inputLayer)  # noqa
     prevLayer = initialConv
     for i in range(numLayers):
         newConv = keras.layers.Conv1D(
-                numFilters, kernel_size=3, padding='valid', activation='relu',  # noqa
-                dilation_rate=2 ** (i + 1), name=modelName + '_conv_{0:d}'.format(i))\
+                numFilters, kernel_size=3, padding="valid", activation="relu",  # noqa
+                dilation_rate=2 ** (i + 1), name=modelName + "_conv_{0:d}".format(i))\
             (prevLayer)  # noqa
         prevLength = int_shape(prevLayer)[1]
         newLength = int_shape(newConv)[1]
         newCrop = keras.layers.Cropping1D(
                 (prevLength - newLength) // 2,  # noqa
-                name=modelName + '_crop{0:d}'.format(i))\
+                name=modelName + "_crop{0:d}".format(i))\
             (prevLayer)  # noqa
         prevLayer = keras.layers.add(
-            [newConv, newCrop], name=modelName + '_add{0:d}'.format(i))
+            [newConv, newCrop], name=modelName + "_add{0:d}".format(i))
     countsOutputs = []
     profileOutputs = []
     for individualHead in headList:
@@ -116,37 +116,37 @@ def _buildSimpleTransformationModel(architectureSpecification, headName, inputLa
             case "linear":
                 activationLayers.append(
                     layers.LinearRegression(
-                            name='regress_linear_{0:s}'.format(headName))  # noqa
+                            name="regress_linear_{0:s}".format(headName))  # noqa
                         (inputLayer))  # noqa
-            case 'sigmoid':
+            case "sigmoid":
                 inputLinear = layers.LinearRegression(
-                        name='sigmoid_in_linear_{0:s}'.format(headName))\
+                        name="sigmoid_in_linear_{0:s}".format(headName))\
                     (inputLayer)  # noqa
                 sigmoided = keras.layers.Activation(
                         activation=keras.activations.sigmoid,  # noqa
-                        name='sigmoid_activation_{0:s}'.format(headName))\
+                        name="sigmoid_activation_{0:s}".format(headName))\
                     (inputLinear)  # noqa
                 outputLinear = layers.LinearRegression(
-                        name='sigmoid_out_linear_{0:s}'.format(headName))\
+                        name="sigmoid_out_linear_{0:s}".format(headName))\
                     (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
-            case 'relu':
+            case "relu":
                 inputLinear = layers.LinearRegression(
-                        name='relu_in_linear_{0:s}'.format(headName))\
+                        name="relu_in_linear_{0:s}".format(headName))\
                     (inputLayer)  # noqa
                 sigmoided = keras.layers.Activation(
                         activation=keras.activations.relu,  # noqa
-                        name='relu_activation_{0:s}'.format(headName))\
+                        name="relu_activation_{0:s}".format(headName))\
                     (inputLinear)  # noqa
                 outputLinear = layers.LinearRegression(
-                        name='relu_out_linear_{0:s}'.format(headName))\
+                        name="relu_out_linear_{0:s}".format(headName))\
                     (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
             case _:
                 raise ValueError("The simple layer type you gave ({0:s}) is not supported"
                         .format(layerType))  # noqa
     if len(activationLayers) > 1:
-        sumLayer = keras.layers.Add(name='regress_sum_{0:s}'.format(headName))(activationLayers)
+        sumLayer = keras.layers.Add(name="regress_sum_{0:s}".format(headName))(activationLayers)
     else:
         sumLayer = activationLayers[0]
     return sumLayer
@@ -172,7 +172,7 @@ def _transformationHead(soloProfile, soloCounts, individualHead,
     """
     logUtils.debug("Building transformation head {0:s}".format(individualHead["head-name"]))
     match profileArchitectureSpecification["name"]:
-        case 'simple':
+        case "simple":
             profileTransformation = _buildSimpleTransformationModel(
                 profileArchitectureSpecification,
                 "profile_" + individualHead["head-name"],
@@ -295,16 +295,16 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
                               inputFilterWidth, outputFilterWidth, headList, "residual")
     inputLayer = residualModel.inputs
 
-    assert len(inputLayer) == 1, 'Input layer of Keras model is >1--this breaks cropdown feature.'
+    assert len(inputLayer) == 1, "Input layer of Keras model is >1--this breaks cropdown feature."
     cropDiff = residualModel.inputs[0].shape[1] - biasModel.inputs[0].shape[1]
     assert cropDiff % 2 == 0, "Cropping returns an odd number: "\
                               "redo your model input sizes to be even numbers."
     cropFlankSize = int(cropDiff / 2)
     logUtils.info("Auto cropdown calculated, will trim {0:d} bases from the bias model input."
                  .format(cropFlankSize))
-    assert cropFlankSize >= 0, 'Bias model inputs are larger than residual inputs'
+    assert cropFlankSize >= 0, "Bias model inputs are larger than residual inputs"
     croppedInputLayer = tf.keras.layers.Cropping1D(cropFlankSize,
-                                                   name='auto_crop_input_tensor')\
+                                                   name="auto_crop_input_tensor")\
                                                 (inputLayer[0])  # noqa
     readyBiasHeads = biasModel([croppedInputLayer])
 
@@ -321,7 +321,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
     for i, individualHead in enumerate(headList):
         # Just straight-up add the logit tensors.
         addProfile = keras.layers.Add(
-                name='combined_add_profile_{0:s}'.format(individualHead["head-name"]))\
+                name="combined_add_profile_{0:s}".format(individualHead["head-name"]))\
             ([readyBiasHeads[i], residualModel.outputs[i]])  # noqa
         if individualHead["use-bias-counts"]:
             # While we add logits, we have to convert from log space to linear space
@@ -332,18 +332,18 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
             # numerical stability problems.
             absBiasCounts = keras.layers.Activation(
                     tf.math.exp,  # noqa
-                    name='combined_exponentiate_bias_{0:s}'.format(individualHead["head-name"]))\
+                    name="combined_exponentiate_bias_{0:s}".format(individualHead["head-name"]))\
                 (readyBiasHeads[i + numHeads])  # noqa
             absResidualCounts = keras.layers.Activation(
                     tf.math.exp,  # noqa
-                    name='combined_exp_residual_{0:s}'.format(individualHead["head-name"])) \
+                    name="combined_exp_residual_{0:s}".format(individualHead["head-name"])) \
                 (residualModel.outputs[i + numHeads])  # noqa
             absCombinedCounts = keras.layers.Add(
-                    name='combined_add_counts_{0:s}'.format(individualHead["head-name"])) \
+                    name="combined_add_counts_{0:s}".format(individualHead["head-name"])) \
                 ([absBiasCounts, absResidualCounts])  # noqa
             addCounts = keras.layers.Activation(
                     tf.math.log,  # noqa
-                    name='combined_log_counts_{0:s}'.format(individualHead["head-name"]))\
+                    name="combined_log_counts_{0:s}".format(individualHead["head-name"]))\
                 (absCombinedCounts)  # noqa
         else:
             # The user doesn't want the counts value from the regression used,
@@ -354,6 +354,6 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
         combinedCountsHeads.append(addCounts)
     combModel = keras.Model(inputs=inputLayer,
                             outputs=combinedProfileHeads + combinedCountsHeads,
-                            name='combined_model')
+                            name="combined_model")
     logUtils.debug("Model built")
     return (combModel, residualModel, readyBiasHeads)

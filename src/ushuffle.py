@@ -1,8 +1,8 @@
 """A wrapper around the ushuffle C implementation."""
+import threading
 import numpy as np
 from bpreveal.internal import libushuffle
 from bpreveal.utils import ONEHOT_AR_T
-import threading
 
 # The ushuffle implementation in C makes heavy use of global variables.
 # To avoid multiple threads trampling over each other and causing races,
@@ -28,14 +28,14 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
 
     Returns a list of shuffled strings.
     """
-    ar = np.frombuffer(sequence.encode('utf-8'), dtype=np.int8)
+    ar = np.frombuffer(sequence.encode("utf-8"), dtype=np.int8)
     with _SHUFFLE_LOCK:
         if seed is not None:
             libushuffle.seedRng(seed)
         shuffledArrays = libushuffle.shuffleStr(ar, kmerSize, numShuffles)
     ret = []
     for i in range(numShuffles):
-        ret.append(shuffledArrays[i].tobytes().decode('utf-8'))
+        ret.append(shuffledArrays[i].tobytes().decode("utf-8"))
     return ret
 
 

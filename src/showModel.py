@@ -15,12 +15,13 @@
                    show_layer_names=True, expand_nested=True, show_layer_activations=True)
 
 """
+import argparse
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 from bpreveal import logUtils
-import argparse
 from bpreveal import utils
+from tensorflow.keras.utils import plot_model
 
 
 if __name__ == "__main__":
@@ -32,7 +33,6 @@ def main(modelFname: str, pngFile: str | None):
     model = utils.loadModel(modelFname)
     print(model.summary(expand_nested=True, show_trainable=True))
     if pngFile is not None:
-        from tensorflow.keras.utils import plot_model
         plot_model(model, pngFile, show_shapes=True, show_dtype=True,
                 show_layer_names=True, expand_nested=True, show_layer_activations=True)
 

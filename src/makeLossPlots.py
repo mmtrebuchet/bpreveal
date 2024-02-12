@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """A little utility to plot loss values during training."""
 import json
-import matplotlib.pyplot as plt
-import numpy as np
-import argparse
 import re
-from bpreveal import logUtils
 import math
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+from bpreveal import logUtils
 
-plt.rcParams['font.size'] = 8
+plt.rcParams["font.size"] = 8
 
 
 def getParser() -> argparse.ArgumentParser:
@@ -21,26 +21,26 @@ def getParser() -> argparse.ArgumentParser:
     parser.add_argument("--output",
             help="The name of the png-format image file that should be written.")
     parser.add_argument("--dpi",
-            help='(optional) The resolution of the image that should be saved.',
+            help="(optional) The resolution of the image that should be saved.",
             default=300,
             type=int)
     parser.add_argument("--exclude",
             help="(optional) Don't include loss plots from these components of the loss. "
                 "Specified as a regex, may be specified multiple times.",
-            nargs='+',
+            nargs="+",
             type=str)
     parser.add_argument("--start-from",
-            help='(optional) Instead of starting at epoch 0, start at epoch N',
+            help="(optional) Instead of starting at epoch 0, start at epoch N",
             type=int,
             default=0,
-            dest='startFrom')
+            dest="startFrom")
     parser.add_argument("--verbose",
             help="Display extra information as the losses are being processed.",
-            action='store_true')
+            action="store_true")
     parser.add_argument("--total-only",
             help="(optional) Instead of plotting all the loss components, "
                  "just show the total loss.",
-            action='store_true')
+            action="store_true")
     return parser
 
 
@@ -108,18 +108,18 @@ def main():
         logUtils.setVerbosity("INFO")
     else:
         logUtils.setVerbosity("WARNING")
-    with open(args.json, 'r') as fp:
+    with open(args.json, "r") as fp:
         history = json.load(fp)
 
     if args.total_only:
-        lossTypes = [['loss', 'val_loss']]
+        lossTypes = [["loss", "val_loss"]]
     else:
         lossTypes = []
         for lt in history.keys():
-            if lt == 'counts-loss-weight':
+            if lt == "counts-loss-weight":
                 logUtils.info("Fount adaptive counts loss history.")
                 continue
-            if not re.search('val', lt):
+            if not re.search("val", lt):
                 if ("val_" + lt) in history:  # pylint: disable=superfluous-parens
                     lossTypes.append([lt, "val_" + lt])
                 else:

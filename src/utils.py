@@ -1,12 +1,17 @@
 """Lots of helpful utilities for working with models."""
 from __future__ import annotations
+from collections import deque
 import multiprocessing
-import numpy as np
-import scipy
-import numpy.typing as npt
+import os
+import queue
+import re
+import subprocess as sp
 import typing
+import scipy
 import pyBigWig
 import pysam
+import numpy as np
+import numpy.typing as npt
 from bpreveal import logUtils
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 
@@ -91,8 +96,10 @@ def loadModel(modelFname: str):
     The returned model does NOT support additional training, since it uses a
     dummy loss.
     """
+    # pylint: disable=import-outside-toplevel
     from keras.models import load_model
     from bpreveal.losses import multinomialNll, dummyMse
+    # pylint: enable=import-outside-toplevel
     model = load_model(modelFname,
                        custom_objects={"multinomialNll": multinomialNll,
                                        "reweightableMse": dummyMse})
@@ -110,8 +117,8 @@ def setMemoryGrowth() -> None:
     All of the main programs in BPReveal do this, so that you can
     use your GPU for other stuff as you work with models.
     """
-    import tensorflow as tf
-    gpus = tf.config.list_physical_devices('GPU')
+    import tensorflow as tf  # pylint: disable=import-outside-toplevel
+    gpus = tf.config.list_physical_devices("GPU")
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
         logUtils.debug("GPU memory growth enabled.")
@@ -151,9 +158,6 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     :return: The memory (in MB) reserved.
     """
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
-    import os
-    import subprocess as sp
-    import re
     free = total = 0.0
     if "CUDA_VISIBLE_DEVICES" in os.environ:
         # Do we have a MIG GPU? If so, I need to get its memory available from its name.
@@ -164,7 +168,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
                               "available based on name.")
                 cmd = ["nvidia-smi", "-L"]
                 ret = sp.run(cmd, capture_output=True, check=True)
-                lines = ret.stdout.decode('utf-8').split('\n')
+                lines = ret.stdout.decode("utf-8").split("\n")
                 matchRe = re.compile(r".*MIG.* ([0-9]+)g\.([0-9]+)gb.*{0:s}.*".format(
                                      os.environ["CUDA_VISIBLE_DEVICES"]))
                 if (smiOut := re.match(matchRe, lines[1])):
@@ -176,15 +180,15 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         # We didn't find memory in CUDA_VISIBLE_DEVICES.
         cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
         ret = sp.run(cmd, capture_output=True, check=True)
-        line = ret.stdout.decode('utf-8').split('\n')[1]
+        line = ret.stdout.decode("utf-8").split("\n")[1]
         logUtils.debug("Memory usage limited based on {0:s}".format(line))
-        lsp = line.split(' ')
+        lsp = line.split(" ")
         total = float(lsp[0])
         free = float(lsp[2])
     assert total * fraction < free, "Attempting to request more memory than is free!"
 
-    import tensorflow as tf
-    gpus = tf.config.list_physical_devices('GPU')
+    import tensorflow as tf  # pylint: disable=import-outside-toplevel
+    gpus = tf.config.list_physical_devices("GPU")
     useMem = int(total * fraction - offset)
     tf.config.set_logical_device_configuration(
         gpus[0],
@@ -215,8 +219,8 @@ def loadChromSizes(chromSizesFname: str | None = None,
 
     """
     if chromSizesFname is not None:
-        ret = dict()
-        with open(chromSizesFname, 'r') as fp:
+        ret = {}
+        with open(chromSizesFname, "r") as fp:
             for line in fp:
                 if len(line) > 2:
                     chrom, size = line.split()
@@ -225,7 +229,7 @@ def loadChromSizes(chromSizesFname: str | None = None,
     if genomeFname is not None:
         with pysam.FastaFile(genomeFname) as genome:
             chromNames = genome.references
-            ret = dict()
+            ret = {}
             for chromName in chromNames:
                 ret[chromName] = genome.get_reference_length(chromName)
         return ret
@@ -235,7 +239,7 @@ def loadChromSizes(chromSizesFname: str | None = None,
         return bw.chroms()
     if fasta is not None:
         chromNames = fasta.references
-        ret = dict()
+        ret = {}
         for chromName in chromNames:
             ret[chromName] = fasta.get_reference_length(chromName)
         return ret
@@ -273,7 +277,7 @@ def blankChromosomeArrays(genomeFname: str | None = None, chromSizesFname: str |
         chromSizes = loadChromSizes(genomeFname=genomeFname,
                                     chromSizesFname=chromSizesFname,
                                     bwHeader=bwHeader, bw=bw, fasta=fasta)
-    ret = dict()
+    ret = {}
     for chromName in chromSizes.keys():
         newAr = np.zeros((chromSizes[chromName], numTracks), dtype=dtype)
         ret[chromName] = newAr
@@ -312,7 +316,7 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
             chrom, start, end = r
             chromDict[chrom][start:end] = regionData[i]
     else:
-        chromSizes = dict()
+        chromSizes = {}
         for c in chromDict.keys():
             chromSizes[c] = len(chromDict[c])
     # Now we just write the chrom dict.
@@ -360,10 +364,10 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
         initFunc = np.empty
     ret = initFunc((len(sequence), 4), dtype=ONEHOT_T)
     ordSeq = np.fromstring(sequence, np.int8)  # type:ignore
-    ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord('a'))
-    ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord('c'))
-    ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord('g'))
-    ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord('t'))
+    ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord("a"))
+    ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord("c"))
+    ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord("g"))
+    ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord("t"))
     if not allowN:
         assert (np.sum(ret) == len(sequence)), \
             "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
@@ -390,13 +394,13 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     oneHotArray = oneHotSequence.astype(ONEHOT_T)
 
     ret = \
-        oneHotArray[:, 0] * ord('A') + \
-        oneHotArray[:, 1] * ord('C') + \
-        oneHotArray[:, 2] * ord('G') + \
-        oneHotArray[:, 3] * ord('T')
+        oneHotArray[:, 0] * ord("A") + \
+        oneHotArray[:, 1] * ord("C") + \
+        oneHotArray[:, 2] * ord("G") + \
+        oneHotArray[:, 3] * ord("T")
     # Anything that was not encoded is N.
-    ret[ret == 0] = ord('N')
-    return ret.tobytes().decode('ascii')
+    ret[ret == 0] = ord("N")
+    return ret.tobytes().decode("ascii")
 
 
 def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
@@ -433,7 +437,7 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
     GPU after it's done so other programs and stuff can use it.
     If ``sequences`` is a single string containing a sequence to predict
     on, that's okay, it will be treated as a length-one list of sequences
-    to predict. ``sequences`` should be as long as the receptive field of
+    to predict. ``sequences`` should be as long as the input length of
     your model.
 
     The shape of the returned array will be (numSequences x outputLength)
@@ -537,7 +541,9 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
           {"profile": array of shape (inputLength,),
            "counts": array of shape (inputLength,)}
     """
+    # pylint: disable=import-outside-toplevel
     from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
+    # pylint: enable=import-outside-toplevel
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
     logUtils.debug("Starting interpretation of sequences.")
     singleReturn = False
@@ -606,7 +612,6 @@ class BatchPredictor:
         This will load your model, and get ready to make predictions.
         """
         logUtils.debug("Creating batch predictor.")
-        from collections import deque
         if not GLOBAL_TENSORFLOW_LOADED:
             # We haven't loaded Tensorflow yet.
             setMemoryGrowth()
@@ -896,7 +901,6 @@ class ThreadedBatchPredictor:
             self._inFlight = 0
             self._inQueueIdx = 0
             self.running = True
-            from collections import deque
             self._outQueueOrder = deque()
         else:
             logUtils.warning("Attempted to start a batcher that was already running.")
@@ -1011,7 +1015,6 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
         "after loading tensorflow."
     logUtils.debug("Starting subthread")
-    import queue
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches
     # just creates a BatchPredictor.
@@ -1026,7 +1029,9 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
         except queue.Empty:
             numWaits += 1
             # There was no input. Are we sitting on predictions that we could go ahead and make?
+            # pylint: disable=protected-access
             if batcher._inWaiting > batcher._batchSize / numWaits:
+                # pylint: enable=protected-access
                 # division by numWeights so that if you wait a long time, it will even
                 # run a partial batch.
                 # Nope, go ahead and give the batcher a spin while we wait.

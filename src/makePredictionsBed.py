@@ -86,20 +86,19 @@ API
 
 """
 import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = '1'
 import json
 import pybedtools
 from bpreveal import utils
 from bpreveal.utils import ONEHOT_T, PRED_T
 from bpreveal.logUtils import wrapTqdm
-if __name__ == "__main__":
-    utils.setMemoryGrowth()
 import numpy as np
 import pysam
 import h5py
 from bpreveal import logUtils
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+if __name__ == "__main__":
+    utils.setMemoryGrowth()
 
 # Generate a simple sequence model taking one-hot encoded input and
 # producing a logits profile and a log(counts) scalar.
@@ -151,10 +150,10 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
         I'm sorry that this parameter exists.
 
     """
-    stringDtype = h5py.string_dtype(encoding='utf-8')
-    outFile.create_dataset('chrom_names', (genome.nreferences,), dtype=stringDtype)
-    outFile.create_dataset('chrom_sizes', (genome.nreferences,), dtype='u8')
-    chromNameToIndex = dict()
+    stringDtype = h5py.string_dtype(encoding="utf-8")
+    outFile.create_dataset("chrom_names", (genome.nreferences,), dtype=stringDtype)
+    outFile.create_dataset("chrom_sizes", (genome.nreferences,), dtype="u8")
+    chromNameToIndex = {}
     chromDtype = np.uint8
     if genome.nreferences > 127:
         # We could store up to 255 in a uint8, but people might
@@ -169,14 +168,14 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
                                            "names for each sequence."
     chromPosDtype = np.uint32
     for i, chromName in enumerate(genome.references):
-        outFile['chrom_names'][i] = chromName
+        outFile["chrom_names"][i] = chromName
         chromNameToIndex[chromName] = i
         refLen = genome.get_reference_length(chromName)
         if refLen > (2 ** 31 - 1):
             logUtils.debug("The genome contains a chromosome that is over four billion bases long. "
                           "Using an 8-byte integer for chromosome positions.")
             chromPosDtype = np.uint64
-        outFile['chrom_sizes'][i] = genome.get_reference_length(chromName)
+        outFile["chrom_sizes"][i] = genome.get_reference_length(chromName)
 
     # Build a table of chromosome numbers. For space savings, only store the
     # index into the chrom_names table.
@@ -184,7 +183,7 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]
     logUtils.debug("Datasets created. Populating regions.")
-    outFile.create_dataset('coords_chrom', dtype=chromDtype, data=chromDset)
+    outFile.create_dataset("coords_chrom", dtype=chromDtype, data=chromDset)
     outFile.create_dataset("coords_start", dtype=chromPosDtype, data=startDset)
     outFile.create_dataset(stopName, dtype=chromPosDtype, data=stopDset)
 
@@ -212,7 +211,7 @@ def writePreds(regions, preds, outFile, numHeads, genome):
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r", encoding='utf-8') as configFp:
+    with open(sys.argv[1], "r") as configFp:
         configJson = json.load(configFp)
     import bpreveal.schema
     bpreveal.schema.makePredictionsBed.validate(configJson)

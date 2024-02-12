@@ -77,7 +77,7 @@ jobs=0
 # Control the amount of potential inferred values when inferring a single
 # object. This can help the performance when dealing with large functions or
 # complex, nested conditions.
-limit-inference-results=100
+limit-inference-results=1000
 
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
@@ -91,7 +91,7 @@ persistent=yes
 py-version=3.11
 
 # Discover python modules and packages in the file system subtree.
-recursive=no
+recursive=yes
 
 # Add paths to the list of the source roots. Supports globbing patterns. The
 # source root is an absolute path or a path relative to the current working
@@ -200,7 +200,7 @@ good-names-rgxs=
 include-naming-hint=no
 
 # Naming style matching correct inline iteration names.
-inlinevar-naming-style=any
+inlinevar-naming-style=camelCase
 
 # Regular expression matching correct inline iteration names. Overrides
 # inlinevar-naming-style. If left empty, inline iteration names will be checked
@@ -328,7 +328,7 @@ overgeneral-exceptions=builtins.BaseException,builtins.Exception
 [FORMAT]
 
 # Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
-expected-line-ending-format=
+expected-line-ending-format=LF
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=^\s*(# )?<?https?://\S+>?$
@@ -431,17 +431,13 @@ disable=consider-using-f-string,
         consider-using-with,
         duplicate-code,
         global-statement,
-        import-outside-toplevel,
         non-ascii-name,
-        protected-access,
         too-few-public-methods,
         too-many-arguments,
         too-many-instance-attributes,
         too-many-locals,
         ungrouped-imports,
         unspecified-encoding,
-        use-dict-literal,
-        wrong-import-order,
         wrong-import-position
 
 
@@ -556,7 +552,7 @@ spelling-store-unknown-words=no
 
 # This flag controls whether inconsistent-quotes generates a warning when the
 # character used as a quote delimiter is used inconsistently within a module.
-check-quote-consistency=no
+check-quote-consistency=yes
 
 # This flag controls whether the implicit-str-concat should generate a warning
 # on implicit string concatenation in sequences defined over several lines.

@@ -88,15 +88,15 @@ History
 API
 ---
 """
+from typing import Literal
+import json
 import numpy as np
 import h5py
 import pyBigWig
-import json
 import pysam
-from bpreveal import logUtils
 import pybedtools
+from bpreveal import logUtils
 from bpreveal import utils
-from typing import Literal
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
 
 
@@ -201,7 +201,7 @@ def writeH5(config):
                         inputLength, jitter, config["reverse-complement"])
 
     outFile.create_dataset("sequence", data=seqs, dtype=ONEHOT_T,
-                           chunks=(H5_CHUNK_SIZE, seqs.shape[1], 4), compression='gzip')
+                           chunks=(H5_CHUNK_SIZE, seqs.shape[1], 4), compression="gzip")
     logUtils.debug("Sequence dataset created.")
     for i, head in enumerate(config["heads"]):
         if config["reverse-complement"]:
@@ -221,7 +221,7 @@ def writeH5(config):
         headVals = getHead(regions, head["bigwig-files"], outputLength, jitter, revcomp)
         outFile.create_dataset("head_{0:d}".format(i), data=headVals, dtype=PRED_T,
                                chunks=(H5_CHUNK_SIZE, headVals.shape[1], headVals.shape[2]),
-                               compression='gzip')
+                               compression="gzip")
         logUtils.debug("Added data for head {0:d}".format(i))
     outFile.close()
     logUtils.info("File created; closing.")

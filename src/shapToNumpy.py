@@ -3,9 +3,9 @@
 numpy arrays that can be fed to the tfmodisco-lite suite.
 """
 
+import argparse
 import numpy as np
 import h5py
-import argparse
 from bpreveal import logUtils
 from bpreveal.utils import IMPORTANCE_T, ONEHOT_T
 
@@ -25,7 +25,7 @@ def flipAndSave(inpAr: np.ndarray[IMPORTANCE_T] | np.ndarray[ONEHOT_T],
     ar = np.array(inpAr, dtype=dtype)
     transAr = np.transpose(ar, [0, 2, 1])
     logUtils.info("Saving {0:s}".format(fname))
-    if fname[-3:] == 'npz':
+    if fname[-3:] == "npz":
         np.savez(fname, transAr)
     else:
         np.save(fname, transAr)
@@ -48,7 +48,7 @@ def getParser() -> argparse.ArgumentParser:
     parser.add_argument("--scores",
         help="The name of the .npy/.npz-format file containing the hypothetical importance "
              "scores. This is an output.")
-    parser.add_argument("--verbose", help="Display progress messages.", action='store_true')
+    parser.add_argument("--verbose", help="Display progress messages.", action="store_true")
     return parser
 
 

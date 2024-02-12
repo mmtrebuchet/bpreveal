@@ -120,13 +120,13 @@ API
 # This file contains several helper functions for dealing with bed files.
 
 import json
+import random
+import re
 import jsonschema
 import pysam
 from bpreveal import logUtils
 import numpy as np
 import pybedtools
-import random
-import re
 from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter
 random.seed(735014)
 
@@ -296,7 +296,7 @@ def removeOverlaps(config, regions, genome):
     """
     # Resize the regions down to the minimum size.
     resizedRegions = regions.each(resize,
-                                  config['resize-mode'],
+                                  config["resize-mode"],
                                   config["overlap-max-distance"], genome).saveas()
     # The algorithm here requires that the regions be sorted.
     sortedRegions = resizedRegions.sort()
@@ -477,7 +477,7 @@ def validateRegions(config: dict, regions: pybedtools.BedTool | list[pybedtools.
     # and reject regions that are over-full on reads.
     bigRegionsBed = filterByMaxCounts(config, bigRegionsList, bigwigLists, validRegions, numThreads)
     smallRegionsList = list(bigRegionsBed.each(resize,
-                                               'center',
+                                               "center",
                                                config["output-length"] - config["max-jitter"] * 2,
                                                genome).saveas())
 
@@ -488,7 +488,7 @@ def validateRegions(config: dict, regions: pybedtools.BedTool | list[pybedtools.
     # Now we resize to the final output size.
     smallRegionsBed = pybedtools.BedTool(smallRegionsList)
     outRegionsBed = smallRegionsBed.each(resize,
-                                         'center',
+                                         "center",
                                          config["output-length"],
                                          genome).saveas()
 

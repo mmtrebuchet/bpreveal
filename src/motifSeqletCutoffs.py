@@ -105,9 +105,9 @@ API
 ---
 
 """
+import json
 from bpreveal import logUtils
 from bpreveal import motifUtils
-import json
 
 
 def main(config):
@@ -135,13 +135,13 @@ def main(config):
     logUtils.info("Analysis complete.")
     if "quantile-json" in config:
         logUtils.info("Saving pattern json.")
-        with open(config["quantile-json"], "w", encoding='utf-8') as fp:
+        with open(config["quantile-json"], "w") as fp:
             json.dump(scanPatternDict, fp, indent=4)
 
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r", encoding='utf-8') as configFp:
+    with open(sys.argv[1], "r") as configFp:
         configJson = json.load(configFp)
     import bpreveal.schema
     bpreveal.schema.motifSeqletCutoffs.validate(configJson)

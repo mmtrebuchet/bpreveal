@@ -1,8 +1,8 @@
 """A set of callbacks useful for training a model."""
-from bpreveal import logUtils
+import re
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
-import re
+from bpreveal import logUtils
 
 
 def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads):
@@ -30,19 +30,19 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
     logUtils.debug("Creating callbacks based on earlyStop "
                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
                       earlyStop, outputPrefix, plateauPatience))
-    earlyStopCallback = EarlyStopping(monitor='val_loss',
+    earlyStopCallback = EarlyStopping(monitor="val_loss",
                                       patience=earlyStop,
                                       verbose=1,
-                                      mode='min',
+                                      mode="min",
                                       restore_best_weights=True)
 
     filepath = "{}.checkpoint.model".format(outputPrefix)
     checkpointCallback = ModelCheckpoint(filepath,
-                                         monitor='val_loss',
+                                         monitor="val_loss",
                                          verbose=1,
                                          save_best_only=True,
-                                         mode='min')
-    plateauCallback = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                         mode="min")
+    plateauCallback = ReduceLROnPlateau(monitor="val_loss", factor=0.5,
                                         patience=plateauPatience, verbose=1)
     adaptiveLossCallback = ApplyAdaptiveCountsLoss(heads, 0.3, plateauCallback,
                                                    earlyStopCallback, checkpointCallback)
@@ -101,7 +101,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback = earlyStopCallback
         self.checkpointCallback = checkpointCallback
         self.logsHistory = []
-        self.λHistory = dict()
+        self.λHistory = {}
         for head in heads:
             self.λHistory[head["head-name"]] = []
 
@@ -321,17 +321,3 @@ class ApplyAdaptiveCountsLoss(Callback):
         # We've updated the loss. But now we have to go mess with the callbacks so that
         # the increased loss value isn't interpreted as the model getting worse.
         self.resetCallbacks()
-
-
-def tensorboardCallback(logDir: str):
-    """For debugging, generate a callback that updates TensorBoard.
-
-    :param logDir: The directory where you'd like the logs to be stored.
-    """
-    logUtils.debug("Creating tensorboard callback in {0:s}".format(logDir))
-    from tensorflow.keras.callbacks import TensorBoard
-    return TensorBoard(log_dir=logDir,
-                       histogram_freq=1,
-                       write_graph=True,
-                       write_steps_per_second=True,
-                       profile_batch=(1, 2000))

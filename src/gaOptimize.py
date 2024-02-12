@@ -1,11 +1,12 @@
 """Useful tools for creating sequences with a desired property."""
 from __future__ import annotations
+import ast
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import random
-import matplotlib.colors
 from typing import TypeAlias, Callable, Optional, Literal
+import matplotlib.colors
 import numpy.typing as npt
 from bpreveal import utils
 from bpreveal.utils import PRED_AR_T
@@ -170,7 +171,6 @@ def stringToCorruptorList(corruptorStr: str) -> list[Corruptor]:
 
     (The inverse of this function is simply `str` on a corruptor list.)
     """
-    import ast
     ret = []
     tree = ast.parse(corruptorStr)
     elems = tree.body[0].value.elts  # type: ignore
@@ -265,7 +265,7 @@ class Organism:
             "Attempting to score organism with no profile."
         self.score = scoreFn(self.profile, self.corruptors)
 
-    def __eq__(self, other: 'Organism') -> bool:
+    def __eq__(self, other: "Organism") -> bool:
         """Return True if this organism has the same corruptors as the other.
 
         :param other: The organism to check against
@@ -286,7 +286,7 @@ class Organism:
         """
         return str(self.corruptors).__hash__()
 
-    def cmp(self, other: 'Organism') -> int:  # pylint: disable=too-many-return-statements
+    def cmp(self, other: "Organism") -> int:  # pylint: disable=too-many-return-statements
         """A general comparator between two organisms based on their corruptors.
 
         :param other: The organism to compare against.
@@ -320,7 +320,7 @@ class Organism:
         return 0
 
     def mutated(self, allowedCorruptors: list[CandidateCorruptor],
-                checkCorruptors: Callable[[list[Corruptor]], bool]) -> 'Organism':
+                checkCorruptors: Callable[[list[Corruptor]], bool]) -> "Organism":
         """Mutate this organism's corruptors.
 
         :param allowedCorruptors: All corruptors that this organism has access to
@@ -358,8 +358,8 @@ class Organism:
                 found = checkCorruptors(candidateCorruptors)
         return Organism(candidateCorruptors)  # type: ignore
 
-    def mixed(self, other: 'Organism',
-              checkCorruptors: Callable[[list[Corruptor]], bool]) -> 'Organism':
+    def mixed(self, other: "Organism",
+              checkCorruptors: Callable[[list[Corruptor]], bool]) -> "Organism":
         """Make a new organism by combining this one with another.
 
         :param other: Another organism that this should be mixed with.

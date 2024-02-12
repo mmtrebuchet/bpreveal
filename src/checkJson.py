@@ -15,14 +15,14 @@ def getParser():
     parser.add_argument("-s", "--schema-name",
         help="The name of the schema, like prepareBed. If omitted, check all schemas.",
         dest="schemaName")
-    parser.add_argument("jsons", help="The name of the json files to validate.", nargs='+')
+    parser.add_argument("jsons", help="The name of the json files to validate.", nargs="+")
     return parser
 
 
 def main():
     """Run the checks."""
     args = getParser().parse_args()
-    fnameByMatchedSchema = dict()
+    fnameByMatchedSchema = {}
     failedFnames = []
     for jsonFname in args.jsons:
         with open(jsonFname, "r") as fp:
