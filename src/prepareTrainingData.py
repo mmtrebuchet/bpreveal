@@ -24,7 +24,7 @@ genome
     The name of the fasta-format file for your organism.
 regions
     is the name of the bed file of regions you will train on. These regions
-    must be ``output-width`` in length.
+    must be ``output-length`` in length.
 reverse-complement
     A boolean that sets whether the data files will include reverse-complement
     augmentation. If this is set to ``true`` then you must include
@@ -46,7 +46,7 @@ head_0, head_1, head_2, ...
     shape ``(num-regions x (output-length + 2*jitter) x num-tasks)``.
 sequence
     The one-hot encoded sequence for each corresponding region. It will have
-    shape ``(num-regions x (input-width + 2*jitter) x 4)``.
+    shape ``(num-regions x (input-length + 2*jitter) x 4)``.
 
 Additional information
 ----------------------

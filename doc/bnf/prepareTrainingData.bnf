@@ -9,10 +9,6 @@
      "heads" : [<prepare-data-heads-list>],
      <verbosity-section>}
 
-<boolean> ::=
-    true
-  | false
-
 <prepare-data-heads-list> ::=
    <prepare-data-individual-head>
  | <prepare-data-individual-head>, <prepare-data-heads-list>
@@ -24,15 +20,8 @@
 <revcomp-head-section> ::=
     <empty>
   | "revcomp-task-order" : "auto",
-  | "revcomp-task-order" : [<list-of-integers>],
+  | "revcomp-task-order" : [<list-of-integer>],
 
 <list-of-bigwig-file-names> ::=
    <file-name>
  | <file-name>, <file-name>
-
-<verbosity-section> ::=
-    "verbosity" : <verbosity-level>
-
-<verbosity-level> ::= "DEBUG"
-  | "INFO"
-  | "WARNING"

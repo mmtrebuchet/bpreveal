@@ -926,7 +926,7 @@ class FastaGenerator(Generator):
 class FlatBedGenerator(Generator):
     """Reads in lines from a bed file and fetches the genomic sequence around them.
 
-    Note that the regions should have width outputLength, and they will be automatically
+    Note that the regions should have length outputLength, and they will be automatically
     padded to the appropriate input length.
 
     :param bedFname: The bed file to read.

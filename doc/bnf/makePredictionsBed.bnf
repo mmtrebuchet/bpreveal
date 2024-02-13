@@ -1,4 +1,4 @@
-<prediction-input-configuration>::=
+<prediction-input-configuration> ::=
     {<prediction-settings-section>, <prediction-bed-section>,
     <verbosity-section>}
 

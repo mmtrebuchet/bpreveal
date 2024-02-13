@@ -18,7 +18,7 @@ clean: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
 defined_schemas = prepareBed prepareBed_old prepareTrainingData trainSoloModel\
 				  trainTransformationModel trainCombinedModel makePredictionsBed\
 				  makePredictionsFasta interpretFlat interpretPisa\
-				  motifSeqletCutoffs motifScan
+				  motifSeqletCutoffs motifScan addNoise base
 
 schema_files = $(addprefix schematools/,$(addsuffix .schema,${defined_schemas}))
 

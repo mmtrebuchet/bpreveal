@@ -85,12 +85,12 @@ architecture-name
     supported. See :doc:`modelArchitectures` for details.
 
 input-length
-    The width of the input sequence that will be fed into the network. You can
+    The length of the input sequence that will be fed into the network. You can
     use the :py:mod:`lengthCalc<bpreveal.lengthCalc>` script to calculate this
-    based on a desired profile width and architecture.
+    based on a desired profile length and architecture.
 
 output-length
-    The width of the predicted profile. This is usually on the order of 1000.
+    The length of the predicted profile. This is usually on the order of 1000.
 
 model-name
     A string that is stored along with the model. BPReveal does not use it

@@ -1,0 +1,188 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "addNoise",
+    "description": "Schema for :py:mod:addNoise<bpreveal.tools.addNoise>",
+    "definitions": {
+        "add-mutation-type": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "add"
+                },
+                "maximum-reads": {
+                    "oneOf": [
+                        {
+                            "type": "number",
+                            "minimum": 0
+                        },
+                        {
+                            "const": null
+                        }
+                    ]
+                },
+                "minimum-reads": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "max-change": {
+                    "type": "integer"
+                },
+                "fraction-mutated": { "$ref": "/schema/base#/definitions/fraction"},
+                "output-distribution-fraction":  { "$ref": "/schema/base#/definitions/fraction"}
+            },
+            "additionalProperties": false,
+            "required": [
+                "type",
+                "maximum-reads",
+                "minimum-reads",
+                "max-change",
+                "fraction-mutated",
+                "output-distribution-fraction"
+            ]
+        },
+        "subtract-mutation-type": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "subtract"
+                },
+                "maximum-reads": {
+                    "oneOf": [
+                        {
+                            "type": "number",
+                            "minimum": 1
+                        },
+                        {
+                            "const": null
+                        }
+                    ]
+                },
+                "minimum-reads": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "max-change": {
+                    "type": "integer"
+                },
+                "fraction-mutated":  { "$ref": "/schema/base#/definitions/fraction"},
+                "output-distribution-fraction":  { "$ref": "/schema/base#/definitions/fraction"}
+            },
+            "additionalProperties": false,
+            "required": [
+                "type",
+                "maximum-reads",
+                "minimum-reads",
+                "max-change",
+                "fraction-mutated",
+                "output-distribution-fraction"
+            ]
+        },
+        "shift-mutation-type": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "shift"
+                },
+                "shift-max-distance": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "shift-reads-independently": {
+                    "type": "boolean"
+                },
+                "fraction-mutated":  { "$ref": "/schema/base#/definitions/fraction"},
+                "output-distribution-fraction":  { "$ref": "/schema/base#/definitions/fraction"}
+            },
+            "additionalProperties": false,
+            "required": [
+                "type",
+                "shift-max-distance",
+                "shift-reads-independently",
+                "fraction-mutated",
+                "output-distribution-fraction"
+            ]
+        }
+    },
+    "type": "object",
+    "properties": {
+        "input-h5": {
+            "type": "string"
+        },
+        "output-h5": {
+            "type": "string"
+        },
+        "num-output-samples": {
+            "type": "integer"
+        },
+        "output-size-ratio": {
+            "type": "number"
+        },
+        "keep-original-data": {
+            "type": "boolean"
+        },
+        "sequence-fraction-mutated": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+        },
+        "sequence-distribution-fraction": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+        },
+        "profile-mutation-types": {
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/add-mutation-type"
+                    },
+                    {
+                        "$ref": "#/definitions/subtract-mutation-type"
+                    },
+                    {
+                        "$ref": "#/definitions/shift-mutation-type"
+                    }
+                ]
+            }
+        },
+        "num-threads": {
+            "type": "integer"
+        },
+        "verbosity": {
+            "$ref": "/schema/base#/definitions/verbosity"
+        }
+    },
+    "required": [
+        "input-h5",
+        "output-h5",
+        "keep-original-data",
+        "sequence-fraction-mutated",
+        "sequence-distribution-fraction",
+        "profile-mutation-types",
+        "num-threads",
+        "verbosity"
+    ],
+    "oneOf": [
+        {
+            "required": [
+                "num-output-samples"
+            ],
+            "not": {
+                "required": [
+                    "output-size-ratio"
+                ]
+            }
+        },
+        {
+            "required": [
+                "output-size-ratio"
+            ],
+            "not": {
+                "required": [
+                    "num-output-samples"
+                ]
+            }
+        }
+    ]
+}

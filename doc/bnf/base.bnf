@@ -1,0 +1,63 @@
+<verbosity-section> ::=
+    "verbosity" : "<verbosity-level>"
+
+<verbosity-level> ::=
+    DEBUG
+  | INFO
+  | WARNING
+  | ERROR
+  | CRITICAL
+
+<list-of-integer> ::=
+    <integer>
+  | <integer>, <list-of-integer>
+
+<integer> ::=
+    -<nonzero-digit><list-of-digits>
+  | <nonzero-digit><list-of-digits>
+  | 0
+
+<nonzero-digit> ::=
+    1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+<digit> ::=
+    <nonzero-digit>
+  | 0
+
+<list-of-digits> ::=
+    <empty>
+  | <digit>
+  | <digit><list-of-digits>
+
+<number> ::=
+    <integer>
+  | <integer>.
+  | <integer>.<list-of-digits>
+
+<file-name> ::=
+    <string>
+
+<list-of-string> ::=
+    <string>
+  | <string>, <list-of-string>
+
+<string> ::=
+    "<list-of-character>"
+
+<number-or-null> ::=
+    <number>
+  | null
+
+<boolean> ::=
+    true
+  | false
+
+<list-of-character> ::=
+    <empty>
+  | <character>
+  | <character><list-of-character>
+
+<character> ::=
+   (any UTF-8 glyph)
+
+<empty> ::=

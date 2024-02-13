@@ -15,7 +15,7 @@ def _soloModelHead(dilateOutput, individualHead, outputFilterWidth):
 
     :return: A tuple of (profile, counts), each one is a keras Layer.
 
-        * The profile layer is a (batch x) number-of-tracks x output-width tensor
+        * The profile layer is a (batch x) number-of-tracks x output-length tensor
           containing the logits for each track.
         * The counts layer is a (batch x 1) scalar-valued layer containing the total
           counts for the current head.
@@ -41,7 +41,7 @@ def soloModel(inputLength, outputLength, numFilters, numLayers,  # pylint: disab
     """This is the classic BPNet architecture.
 
     :param inputLength: is the length of the one-hot encoded DNA sequence.
-    :param outputLength: is the width of the predicted profile.
+    :param outputLength: is the length of the predicted profile.
     :param numFilters: is the number of convolutional filters used at each layer.
     :param numLayers: is the number of dilated convolutions.
     :param inputFilterWidth: is the width of the first convolutional layer,
@@ -261,7 +261,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
 
     :param inputLength: The length of the one-hot encoded DNA sequence (which must be the
         same for the bias model and the residual model).
-    :param outputLength: The width of the predicted profile.
+    :param outputLength: The length of the predicted profile.
     :param numFilters: The number of convolutional filters used at each layer in the residual model.
     :param numLayers: The number of dilated convolutions in the residual model.
     :param inputFilterWidth: The width of the first convolutional layer in the residual model,

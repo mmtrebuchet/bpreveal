@@ -65,7 +65,7 @@
                              "head-name", "use-bias-counts"]
             }
         },
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["heads", "train-data", "val-data", "settings",  "verbosity"]
 }

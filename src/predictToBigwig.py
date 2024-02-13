@@ -43,7 +43,7 @@ class Region:
         match mode:
             case "profile":
                 logits = headLogits[self.h5Idx]
-                # Logits will have shape (output-width x numTasks)
+                # Logits will have shape (output-length x numTasks)
                 logCounts = headLogcounts[self.h5Idx]
                 headProfile = utils.logitsToProfile(logits, logCounts)
                 taskProfile = headProfile[:, taskID]

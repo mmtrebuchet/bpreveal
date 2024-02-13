@@ -9,16 +9,16 @@
                 "seqlets-tsv": {"type": "string"},
                 "modisco-h5": {"type": "string"},
                 "modisco-contrib-h5": {"type": "string"},
-                "seq-match-quantile": {"type": ["number", "null"]},
-                "contrib-match-quantile": {"type": ["number", "null"]},
-                "contrib-magnitude-quantile": {"type": ["number", "null"]},
-                "trim-threshold": {"type": "number"},
+                "seq-match-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
+                "contrib-match-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
+                "contrib-magnitude-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
+                "trim-threshold": {"$ref": "/schema/base#/definitions/fraction-or-null"},
                 "trim-padding": {"type": "integer"},
                 "background-probs": {
                     "type": "array",
                     "minItems": 4,
                     "maxItems": 4,
-                    "items": {"type": "number"}},
+                    "items": {"$ref": "/schema/base#/definitions/fraction"}},
                 "quantile-json": {"type": "string"},
                 "patterns": {
                     "oneOf":[
@@ -58,7 +58,7 @@
 
     "type": "object",
     "properties": {
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "allOf": [
             {"$ref": "#/definitions/seqlet-scanning-settings"},

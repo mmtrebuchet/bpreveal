@@ -8,7 +8,7 @@
             "type": "string"
         },
         "seqlet-cutoff-settings": {
-            "$ref": "/schemas/motifSeqletCutoffs#definitions/seqlet-scanning-settings"
+            "$ref": "/schema/motifSeqletCutoffs#definitions/seqlet-scanning-settings"
         },
         "scan-settings": {
             "type": "object",
@@ -20,7 +20,8 @@
                     "type": "string"
                 },
                 "num-threads": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum" : 3
                 }
             },
             "required": [
@@ -29,14 +30,7 @@
                 "num-threads"
             ]
         },
-        "verbosity": {
-            "type": "string",
-            "enum": [
-                "DEBUG",
-                "WARNING",
-                "INFO", "ERROR", "CRITICAL"
-            ]
-        }
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "oneOf": [
         {

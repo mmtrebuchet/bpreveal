@@ -7,7 +7,7 @@
      "max-jitter" : <integer>,
      <output-file-name-section>,
      "resize-mode" : <resize-mode>,
-     <overlaps-section>
+     <overlap-section>
      <num-threads-section>
      <verbosity-section>}
 
@@ -55,9 +55,9 @@
   | <split-by-bed-settings>
 
 <split-by-chromosome-settings> ::=
-    "train-chroms" : [<list-of-strings>],
-    "val-chroms" : [<list-of-strings> ],
-    "test-chroms" : [<list-of-strings> ],
+    "train-chroms" : [<list-of-string>],
+    "val-chroms" : [<list-of-string> ],
+    "test-chroms" : [<list-of-string> ],
     "regions" : [<list-of-bed-files>]
 
 <split-by-bed-settings> ::=

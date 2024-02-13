@@ -11,7 +11,7 @@
         "regions": {"type": "string"},
         "output-h5": {"type": "string"},
         "reverse-complement": {"type": "boolean"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]},
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"},
         "heads": {
             "type": "array",
             "items": {

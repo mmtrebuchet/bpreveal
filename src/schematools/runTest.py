@@ -2,7 +2,7 @@
 """Make sure that all of the schemas are correct by testing them on known good and bad inputs."""
 import jsonschema
 import json
-import bpreveal.schema
+import bpreveal.schema as schemas
 import os
 
 import argparse
@@ -24,7 +24,7 @@ def runTest(schema, jsonFname, good):
     with open("testcases/" + jsonFname, "r") as fp:
         dats = json.load(fp)
     try:
-        bpreveal.schema.schemaMap[schema].validate(dats)
+        schemas.schemaMap[schema].validate(dats)
         if good:
             if args.showCorrect:
                 print("    \u2713 Good, pass {0:s}, {1:s}".format(jsonFname, schema))
@@ -37,11 +37,11 @@ def runTest(schema, jsonFname, good):
         else:
             if args.showCorrect:
                 print("    \u2611 Bad, fail {0:s}, {1:s}".format(jsonFname, schema))
-    for otherSchema in bpreveal.schema.schemaMap.keys():
+    for otherSchema in schemas.schemaMap.keys():
         if otherSchema == schema:
             continue
         try:
-            bpreveal.schema.schemaMap[otherSchema].validate(dats)
+            schemas.schemaMap[otherSchema].validate(dats)
             print("\u29B8 {0:s}, {1:s}".format(jsonFname, otherSchema))
         except jsonschema.ValidationError:
             pass

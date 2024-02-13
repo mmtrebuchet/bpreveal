@@ -26,10 +26,9 @@
         },
         "profile-h5": {"type": "string"},
         "counts-h5": {"type": "string"},
-        "num-shuffles": {"type": "integer"},
-        "kmer-size": {"type": "integer"},
-        "DEBUG_profile-output": {"type": "string"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "num-shuffles": {"type": "integer", "minimum" : 1},
+        "kmer-size": {"type": "integer", "minimum" : 1},
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["input-length", "output-length", "heads", "head-id",
         "profile-task-ids", "profile-h5", "counts-h5", "num-shuffles", "verbosity"],

@@ -13,10 +13,9 @@
         "head-id": {"type": "integer"},
         "task-id": {"type": "integer"},
         "output-h5": {"type": "string"},
-        "num-shuffles": {"type": "integer"},
-        "kmer-size": {"type": "integer"},
-        "DEBUG_profile-output": {"type": "string"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "num-shuffles": {"type": "integer", "minimum" : 1},
+        "kmer-size": {"type": "integer", "minimum" : 1},
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["input-length", "output-length", "head-id", "task-id",
         "output-h5", "num-shuffles", "verbosity"],

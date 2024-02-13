@@ -90,7 +90,7 @@
         "remove-overlaps": {"type": "boolean"},
         "overlap-max-distance": {"type": "integer"},
         "num-threads" : {"type" : "integer"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRICICAL"]}
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["heads", "splits", "genome", "output-length", "input-length",
                  "max-jitter", "remove-overlaps",  "verbosity"],

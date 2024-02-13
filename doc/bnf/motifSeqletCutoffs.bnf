@@ -7,17 +7,13 @@
     "modisco-h5" : <file-name>,
     <seqlet-contrib-section>
     <pattern-spec-section>,
-    "seq-match-quantile" : <float-or-null>,
-    "contrib-match-quantile" : <float-or-null>,
-    "contrib-magnitude-quantile" : <float-or-null>,
-    "trim-threshold" : <float>,
+    "seq-match-quantile" : <number-or-null>,
+    "contrib-match-quantile" : <number-or-null>,
+    "contrib-magnitude-quantile" : <number-or-null>,
+    "trim-threshold" : <number>,
     "trim-padding" : <integer>,
-    "background-probs" : [<float>, <float>, <float>, <float>],
+    "background-probs" : [<number>, <number>, <number>, <number>],
     <quantile-json-section>
-
-<float-or-null> ::=
-    <float>
-  | null
 
 <pattern-spec-section> ::=
     "patterns" : "all"

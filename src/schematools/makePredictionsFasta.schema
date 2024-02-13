@@ -24,7 +24,7 @@
             "not": {"required": ["genome"]}
         },
         "fasta-file": {"type": "string"},
-        "num-threads": {"type": "integer"},
+        "num-threads": {"type": "integer", "minimum" : 1},
         "coordinates": {
             "type": "object",
             "properties": {
@@ -33,7 +33,7 @@
             },
             "required" : ["bed-file", "genome"]
         },
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["fasta-file", "settings",  "verbosity"]
 }

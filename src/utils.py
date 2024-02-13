@@ -412,7 +412,7 @@ def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
     :return: An array of shape (output-length * num-tasks), giving the profile
         predictions.
     """
-    # Logits will have shape (output-width x numTasks)
+    # Logits will have shape (output-length x numTasks)
     assert len(logitsAcrossSingleRegion.shape) == 2
     # If the logcounts passed in is a float, this will break.
     # assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value

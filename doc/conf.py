@@ -28,7 +28,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
                     "makeHeader"]
 reSubs = [
     ["λ", r":math:`{\\lambda}`"],
-    ["½", r":math:`{1/2}`"]]
+    ["½", r":math:`{1/2}`"],
+    [r".. literalinclude:: ../../doc/bnf/(.*).bnf",
+     r".. include:: ../../doc/_generated/bnf/\1.rst"]
+]
 
 
 def fixLambda(app, what, name, obj, options, lines):  # pylint: disable=unused-argument

@@ -1,0 +1,28 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "base",
+    "description": "Useful definitions",
+    "definitions": {
+        "fraction": {
+            "type": "number",
+            "maximum" : 1,
+            "minimum" : 0
+        },
+        "number-or-null": {
+            "oneOf": [
+                {"type" : "null"},
+                {"type" : "number"}
+                ]
+        },
+        "fraction-or-null": {
+            "oneOf": [
+                {"type" : "null"},
+                {"$ref": "#/definitions/fraction"}
+                ]
+        },
+        "verbosity": {
+            "type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]
+        }
+    },
+    "not": {}
+}

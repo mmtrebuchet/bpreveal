@@ -28,9 +28,9 @@
     "properties": {
         "settings": {
             "$ref":
-            "/schemas/makePredictionsBed#definitions/prediction-settings-section"},
+            "#/definitions/prediction-settings-section"},
         "bed-file": {"type": "string"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["bed-file", "settings",  "verbosity"]
 }

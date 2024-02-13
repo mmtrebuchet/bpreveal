@@ -147,7 +147,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         tmpSequence = self.fullSequences[i]
         # fullData is (num-heads)
         #            x (  num-regions
-        #               x output-width+jitter*2
+        #               x output-length+jitter*2
         #               x numTasks)
         # so this slice takes the ith region of each of the head datasets.
         tmpData = [x[i, :, :] for x in self.fullData]

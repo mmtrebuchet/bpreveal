@@ -6,11 +6,11 @@ import argparse
 def getParser() -> argparse.ArgumentParser:
     """Command line arguments for the length_calc script."""
     parser = argparse.ArgumentParser(description="Calculates the input sequence "
-        "length required to run BPReveal for a given configuration and output width. "
+        "length required to run BPReveal for a given configuration and output length. "
         "The required length is written to stdout.")
 
     parser.add_argument("--output-len",
-            help="The width of the output profile that is to be predicted. If "
+            help="The length of the output profile that is to be predicted. If "
                  "specified, the returned value will be the required input "
                  "sequence length. Exactly one of --input-len or --output-len "
                  "must be specified.",
@@ -19,8 +19,8 @@ def getParser() -> argparse.ArgumentParser:
             type=int)
 
     parser.add_argument("--input-len",
-            help="The width of the input sequence for which profiles will be "
-                 "predicted. If specified, the returned value is the width of "
+            help="The length of the input sequence for which profiles will be "
+                 "predicted. If specified, the returned value is the length of "
                  "the predicted profile. If no profile can be predicted, the "
                  "program will print a negative number and throw an error. "
                  "Exactly one of --input-len or --output-len must be specified.",
@@ -79,8 +79,9 @@ def getLengthDifference(numDilLayers, initialConvolutionWidths, profileKernelSiz
         25, so this argument would be [25].
     :param profileKernelSize: The width of the final kernel that generates the profiles,
         typically around 75.
-    :return: An integer representing the number of extra bases in the input compared to the width of
-        the predicted profile. Divide by two to get the overhang on each side of the input.
+    :return: An integer representing the number of extra bases in the input compared to
+        the length of the predicted profile. Divide by two to get the overhang on each
+        side of the input.
     """
     overhang = 0
     for convWidth in initialConvolutionWidths:
@@ -124,7 +125,7 @@ def getOutputLength(seqLen, numDilLayers, initialConvolutionWidths,
                     profileKernelSize, verbose):
     """Determine how long the output will be.
 
-    Given a BPNet architecture and a length of the input sequence, calculate the width of the
+    Given a BPNet architecture and a length of the input sequence, calculate the length of the
     predicted profile.
 
     :param seqLen: : The length of the input sequence, in bp.
@@ -134,7 +135,7 @@ def getOutputLength(seqLen, numDilLayers, initialConvolutionWidths,
         width 25, so this argument would be [25].
     :param profileKernelSize: : The width of the final kernel that generates the profiles,
         typically around 75.
-    :return: An integer representing the width of the profile that will be calculated. If this
+    :return: An integer representing the length of the profile that will be calculated. If this
         value is zero or lower, then no bases will have their profile predicted and the
         model is invalid.
     """
@@ -147,8 +148,8 @@ def getInputLength(outPredLen, numDilLayers, initialConvolutionWidths,
                    profileKernelSize, verbose):
     """Given an output length, calculate input length.
 
-    Given a BPNet architecture and a length of the output profile, calculate the width of the
-    input sequence necessary to get that profile..
+    Given a BPNet architecture and a length of the output profile, calculate the length
+    of the input sequence necessary to get that profile..
 
     :param outPredLen: : The length of the output profile, in bp.
     :param numDilLayers: : The number of dilated convolutional layers in BPNet.
@@ -157,7 +158,7 @@ def getInputLength(outPredLen, numDilLayers, initialConvolutionWidths,
         width 25, so this argument would be [25].
     :param profileKernelSize: : The width of the final kernel that generates the profiles,
         typically around 75.
-    :return: An integer representing the width of the sequence necessary to calculate the profile.
+    :return: An integer representing the length of the sequence necessary to calculate the profile.
     """
     return outPredLen \
         + getLengthDifference(numDilLayers, initialConvolutionWidths,

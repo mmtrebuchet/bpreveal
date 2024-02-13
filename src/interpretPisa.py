@@ -84,7 +84,7 @@ sequence
     A one-hot encoded array representing the sequence
     under each PISA value.
     The shape is ``(num regions * receptive-field * 4)``.
-    Note that this is receptive field, not input width, since each base
+    Note that this is receptive field, not input length, since each base
     being shapped will only be affected by bases in its receptive field,
     and there's no reason to store the noise.
 

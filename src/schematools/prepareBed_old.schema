@@ -77,7 +77,7 @@
         "resize-mode": {"type": "string", "enum": ["none", "center", "start"]},
         "remove-overlaps": {"type": "boolean"},
         "overlap-max-distance": {"type": "integer"},
-        "verbosity": {"type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]}
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["bigwigs", "splits", "genome", "output-length", "input-length", "max-jitter",
                "remove-overlaps",  "verbosity"],

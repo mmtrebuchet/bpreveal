@@ -1,0 +1,44 @@
+{
+    "input-h5": "/n/projects/cm2363/bpreveal/test/addNoise/pho4/input/base_train.h5",
+    "output-h5": "/n/projects/cm2363/bpreveal/test/addNoise/pho4/input/noised_010_train.h5",
+    "output-size-ratio": 0.2,
+    "keep-original-data": false,
+    "sequence-fraction-mutated": 0,
+    "sequence-distribution-fraction": 0.1,
+    "profile-mutation-types": [
+        {
+            "type": "add",
+            "maximum-reads": 0,
+            "minimum-reads": 0,
+            "max-change": 1,
+            "fraction-mutated": 0.05,
+            "output-distribution-fraction": 0.5
+        },
+        {
+            "type": "add",
+            "maximum-reads": 5,
+            "minimum-reads": 0,
+            "shift-max-distance": 20,
+            "max-change": 20,
+            "fraction-mutated": 0.1,
+            "output-distribution-fraction": 0.1
+        },
+        {
+            "type": "subtract",
+            "maximum-reads": 5,
+            "minimum-reads": 1,
+            "max-change": 5,
+            "fraction-mutated": 0.05,
+            "output-distribution-fraction": 0
+        },
+        {
+            "type": "shift",
+            "shift-max-distance": 20,
+            "shift-reads-independently": false,
+            "fraction-mutated": 0.01,
+            "output-distribution-fraction": 0.05
+        }
+    ],
+    "num-threads": 24,
+    "verbosity": "WARNING"
+}
