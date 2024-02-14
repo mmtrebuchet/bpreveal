@@ -54,29 +54,10 @@ import h5py
 from tensorflow import keras
 from bpreveal import generators
 from bpreveal import losses
-from bpreveal.callbacks import getCallbacks
+import bpreveal.training
 from bpreveal import models
 from bpreveal import logUtils
 import tensorflow as tf
-
-
-def trainModel(model, inputLength, outputLength, trainBatchGen,  # pylint: disable=unused-argument
-               valBatchGen, epochs, earlyStop, outputPrefix,
-               plateauPatience, heads):
-    """Train the model."""
-    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
-    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
-        verbosity = "auto"
-    else:
-        verbosity = 0
-    history = model.fit(trainBatchGen, epochs=epochs, validation_data=valBatchGen,
-                        callbacks=callbacks, max_queue_size=1000,
-                        verbose=verbosity)
-    # Turn the learning rates into native python float values so they can be saved to json.
-    history.history["lr"] = [float(x) for x in history.history["lr"]]
-    lossCallback = callbacks[3]
-    history.history["counts-loss-weight"] = lossCallback.λHistory
-    return history
 
 
 def main(config):
@@ -138,16 +119,18 @@ def main(config):
                                                config["settings"]["batch-size"])
     logUtils.info("Generators initialized. Training.")
 
-    history = trainModel(combinedModel, inputLength, outputLength, trainGenerator,
-                         valGenerator, config["settings"]["epochs"],
-                         config["settings"]["early-stopping-patience"],
-                         config["settings"]["output-prefix"],
-                         config["settings"]["learning-rate-plateau-patience"],
-                         config["heads"])
+    history = bpreveal.training.trainModel(combinedModel, inputLength,
+        outputLength, trainGenerator,
+        valGenerator, config["settings"]["epochs"],
+        config["settings"]["early-stopping-patience"],
+        config["settings"]["output-prefix"],
+        config["settings"]["learning-rate-plateau-patience"],
+        config["heads"])
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".model")
     residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii=False, indent=4)
+    logUtils.info("Training job completed successfully.")
 
 
 if __name__ == "__main__":

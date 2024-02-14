@@ -1,11 +1,15 @@
 """A set of callbacks useful for training a model."""
 import re
+import time
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 from bpreveal import logUtils
+from bpreveal import generators
 
 
-def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads):
+def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads,
+                 trainBatchGen: generators.H5BatchGenerator,
+                 valBatchGen: generators.H5BatchGenerator):
     """Return a set of callbacks for your model.
 
     :param earlyStop: The ``early-stopping-patience`` from the config file.
@@ -13,6 +17,10 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
     :param plateauPatience: The ``learning-rate-plateau-patience`` from the config file.
     :param heads: The heads list for your model, to which adaptive loss λ tensors
         have been added.
+    :param trainBatchGen: The batch generator for training. Just used to see how many
+        batches there will be.
+    :param valBatchGen: The batch generator for validation. Just used to see how many
+        batches there will be.
     :return: A list of Keras callbacks that you should use to train your model.
 
     The returned callbacks are:
@@ -28,25 +36,290 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads)
 
     """
     logUtils.debug("Creating callbacks based on earlyStop "
-                  "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
-                      earlyStop, outputPrefix, plateauPatience))
+                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
+                       earlyStop, outputPrefix, plateauPatience))
+    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
+        verbose = 1
+    else:
+        verbose = 0
     earlyStopCallback = EarlyStopping(monitor="val_loss",
                                       patience=earlyStop,
-                                      verbose=1,
+                                      verbose=verbose,
                                       mode="min",
                                       restore_best_weights=True)
 
     filepath = "{}.checkpoint.model".format(outputPrefix)
     checkpointCallback = ModelCheckpoint(filepath,
                                          monitor="val_loss",
-                                         verbose=1,
+                                         verbose=verbose,
                                          save_best_only=True,
                                          mode="min")
     plateauCallback = ReduceLROnPlateau(monitor="val_loss", factor=0.5,
-                                        patience=plateauPatience, verbose=1)
+                                        patience=plateauPatience, verbose=verbose)
     adaptiveLossCallback = ApplyAdaptiveCountsLoss(heads, 0.3, plateauCallback,
                                                    earlyStopCallback, checkpointCallback)
-    return [earlyStopCallback, checkpointCallback, plateauCallback, adaptiveLossCallback]
+    displayCallback = DisplayCallback(plateauCallback, earlyStopCallback,
+                                      adaptiveLossCallback,
+                                      trainBatchGen, valBatchGen)
+    return [earlyStopCallback, checkpointCallback, plateauCallback,
+            adaptiveLossCallback, displayCallback]
+
+
+class DisplayCallback(Callback):
+    """Replaces the tensorflow progress bar logger with lots of printing to stderr.
+
+    :param trainBatchGen: The training batch generator.
+    :param valBatchGen: The validation batch generator.
+    :param plateauCallback: The plateau callback, used to access the LR schedule.
+    :param earlyStopCallback: The EarlyStopping callback, used to see how long we have left.
+    :param adaptiveLossCallback: The adaptive loss callback, used to read λ values.
+    """
+
+    epochNumber = 0
+    """What is the currently-running epoch number?"""
+    batchNumber = 0
+    """What is the currently-running training batch number?"""
+    printLocationsEpoch = {}
+    """For a given data type, what row should it be printed on
+    in the epoch pane? For example, "val_loss" might go on row 5."""
+
+    printLocationsBatch = {}
+    """What row should each data type go on in the batch pane?"""
+    multipliers = {}
+    """For a given data type, what constant should it be multiplied by
+    for display? This is used to weight profile losses by profile-loss-weight.
+    """
+    prevEpochLogs = None
+    """The logs from last epoch"""
+    lastBatchEndTime = 0
+    """When did the last batch finish?"""
+    lastValBatchEndTime = 0
+    """When did the last validation batch finish?"""
+    lastEpochEndTime = None
+    """When did the last epoch finish?"""
+    lastEpochStartTime = None
+    """When did the current epoch start?"""
+    numEpochs: int
+    """What is the maximum number of training epochs?"""
+    numBatches: int
+    """How many training batches per epoch?"""
+    numValBatches: int
+    """How many validation batches per epoch?"""
+    curEpochWaitTime = None
+    """How long between the end of the last epoch and the start of this one?"""
+    maxLen = 0
+    """Of all the data types, what is the length of the longest name?
+    Used to calculate column positions."""
+
+    def __init__(self, plateauCallback, earlyStopCallback,
+                 adaptiveLossCallback, trainBatchGen, valBatchGen):
+        self.plateauCallback = plateauCallback
+        self.earlyStopCallback = earlyStopCallback
+        self.adaptiveLossCallback = adaptiveLossCallback
+        self.numBatches = len(trainBatchGen)
+        self.numValBatches = len(valBatchGen)
+
+    def _calcPositions(self, initialLogs: dict):
+        """Assign rows and columns to all log types.
+
+        Given the first set of logs from a training batch,
+        work out where all of the logs need to be displayed in their window.
+        """
+        profileLosses = []
+        countsLosses = []
+        remainingTerms = []
+        for lossName in initialLogs.keys():
+            foundInHeads = False
+            for head in self.adaptiveLossCallback.heads:
+                headName = head["head-name"]
+                profileRe = r".*profile_{0:s}_loss".format(headName)
+                countsRe = r".*logcounts_{0:s}_loss".format(headName)
+                if re.fullmatch(profileRe, lossName):
+                    profileLosses.append(lossName)
+                    profileLosses.append("val_" + lossName)
+                    profileLosses.append("EPOCH_SPACER")
+                    self.multipliers[lossName] = head["profile-loss-weight"]
+                    self.multipliers["val_" + lossName] = head["profile-loss-weight"]
+                    foundInHeads = True
+                    break
+                if re.fullmatch(countsRe, lossName):
+                    countsLosses.append(lossName)
+                    countsLosses.append("val_" + lossName)
+                    countsLosses.append("EPOCH_SPACER")
+                    foundInHeads = True
+                    break
+            if not foundInHeads:
+                if lossName not in ["lr", "epoch", "batch", "loss"]:
+                    remainingTerms.append(lossName)
+        assert len(remainingTerms) == 0, str(remainingTerms) + " includes unknown loss component. "\
+            "not " + str(profileLosses) + "/" + str(countsLosses)
+
+        printOrder = ["epoch", "batch", "lr", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
+        printOrder.extend(profileLosses)
+        printOrder.extend(countsLosses)
+        printOrder.extend(["Best epoch", "Best loss", "Epochs until earlystop",
+                           "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
+                           "Training time", "Validation time",
+                           "Seconds / epoch", "Minutes to earlystop"])
+        # Now that we have the orders, just enumerate them and put them in
+        # printLocations.
+        for i, po in enumerate(printOrder):
+            self.printLocationsEpoch[po] = i + 2
+        for i, po in enumerate([x for x in printOrder if x != "EPOCH_SPACER"]):
+            self.printLocationsBatch[po] = i + 2
+        self.maxLen = max((len(x) for x in printOrder))
+
+    def on_train_begin(self, logs: dict | None = None):  # pylint: disable=invalid-name
+        """Just loads in the total number of epochs."""
+        del logs
+        params = self.params.get
+        autoTotal = params("epochs", params("nb_epochs", None))
+        if autoTotal is not None:
+            self.numEpochs = autoTotal
+
+    def on_epoch_begin(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
+        """Just sets the timers up, so you can check how long an epoch took at the end."""
+        del logs
+        self.epochNumber = epoch
+        # pylint: disable=attribute-defined-outside-init
+        self.batchNumber = 0
+        self.curEpochStartTime = time.perf_counter()
+        self.firstBatchTime = time.perf_counter() + 1e10
+        self.firstValBatchTime = time.perf_counter() + 1e10
+        if self.lastEpochEndTime is not None:
+            self.curEpochWaitTime = time.perf_counter() - self.lastEpochEndTime
+        # pylint: enable=attribute-defined-outside-init
+
+    def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
+        """Writes out all the logs for this epoch and the last one at INFO logging level."""
+        del epoch
+        logs = {k: logs[k] for k in logs.keys()}
+        recordEpoch = self.earlyStopCallback.best_epoch
+        correctedLoss = self.earlyStopCallback.best
+        # Add some extra data to the logs. (Note that I copied the logs dict)
+        logs["Best epoch"] = "{0:>10d}".format(recordEpoch)
+        logs["Best loss"] = "{0:>10.3f}".format(float(correctedLoss))
+        logs["Epochs until earlystop"] = "{0:>3d} / {1:>4d}".format(
+            self.earlyStopCallback.wait, self.earlyStopCallback.patience)
+        logs["Epochs until LR plateau"] = "{0:>3d} / {1:>4d}".format(
+            self.plateauCallback.wait, self.plateauCallback.patience)
+        if self.lastEpochEndTime is not None:
+            timePerEpoch = time.perf_counter() - self.lastEpochEndTime
+            logs["Seconds / epoch"] = "{0:>10.3f}".format(timePerEpoch)
+            logs["Minutes to earlystop"] = timePerEpoch * (
+                self.earlyStopCallback.patience - self.earlyStopCallback.wait) / 60
+        if self.curEpochWaitTime is not None:
+            logs["Setup time"] = self.curEpochWaitTime
+        logs["Training time"] = self.lastBatchTime - self.firstBatchTime
+        logs["Validation time"] = self.lastValBatchTime - self.firstValBatchTime
+        self.lastEpochEndTime = time.perf_counter()
+        lines = self._getEpochLines(logs)
+        self._writeLogLines(lines, logUtils.info, "E")
+        lines = self._getλLines()
+        self._writeLogLines(lines, logUtils.debug, "λ")
+        self.prevEpochLogs = logs
+
+    def on_train_batch_end(self, batch: int,  # pylint: disable=invalid-name
+                           logs: dict | None = None):
+        """Write the loss info for the current batch at DEBUG level."""
+        # pylint: disable=attribute-defined-outside-init
+        self.firstBatchTime = min(time.perf_counter(), self.firstBatchTime)
+        self.lastBatchTime = time.perf_counter()
+        # pylint: enable=attribute-defined-outside-init
+        if len(list(self.printLocationsEpoch.keys())) == 0:
+            # We haven't calculated any print locations yet.
+            self._calcPositions(logs)
+        if (time.perf_counter() - self.lastBatchEndTime > 0.1)\
+                or batch in [self.numBatches - 1, 0]:
+            self.lastBatchEndTime = time.perf_counter()
+
+            logs = {k: logs[k] for k in logs.keys()}
+            self.batchNumber = batch
+            self._writeLogLines(self._getBatchLines(logs), logUtils.debug,
+                                "BH" if batch == 0 else "B")
+
+    def on_test_batch_end(self, batch: int,  # pylint: disable=invalid-name
+                          logs: dict | None = None):
+        """Just emit a counter with the batch number at DEBUG level."""
+        del logs
+        # pylint: disable=attribute-defined-outside-init
+        self.firstValBatchTime = min(time.perf_counter(), self.firstValBatchTime)
+        self.lastValBatchTime = time.perf_counter()
+        # pylint: enable=attribute-defined-outside-init
+        if (time.perf_counter() - self.lastValBatchEndTime > 0.1) \
+                or batch in [self.numValBatches - 1, 0]:
+            self.lastValBatchEndTime = time.perf_counter()
+            lines = [((max(self.printLocationsBatch.values()), 1, "Eval batch"),
+                    (max(self.printLocationsBatch.values()), 20, "{0:>3d} / {1:>4d}".format(
+                        batch, self.numValBatches)))]
+            self._writeLogLines(lines, logUtils.debug, "V")
+
+    def _writeLogLines(self, lines: list[tuple[int, int, str]], writer, win: str):
+        """Actually write the lines to the logger.
+
+        :param writer: The logger to use
+        :type writer: logging.logger
+        :param lines: A list of tuples containing (row, column, string) data.
+        :param win: A character (or two, if you want to include highlighting)
+            that determines which window will be used in the display program.
+        """
+        for line in lines:
+            for row, col, text in line:
+                writer("∬{0:d}∬{1:d}∬{2:s}∬{3:s}".format(row, col, win, text))
+
+    def _getλLines(self) -> list[tuple[int, int, str]]:
+        lines = []
+        for i, headName in enumerate(self.adaptiveLossCallback.λHistory.keys()):
+            λValue = self.adaptiveLossCallback.λHistory[headName][-1]
+            lines.append([((i + 2, 1, headName)), (i + 2, 20, "{0:8.3f}".format(λValue))])
+        return lines
+
+    def _getEpochLines(self, logs) -> list[tuple[int, int, str]]:
+        lines = []
+        logs["epoch"] = "{0:>3d} / {1:>4d}".format(
+            self.epochNumber, self.numEpochs)
+        logs["lr"] = "{0:10.7f}".format(logs["lr"])
+        for lk in logs.keys():
+            lines.append([(self.printLocationsEpoch[lk], 1, lk)])
+            val = logs[lk]
+            match val:
+                case int():
+                    outStr = "{0:>10d}    ".format(val)
+                case float():
+                    outStr = "{0:>10.3f}    ".format(val)
+                case _:
+                    outStr = str(val)
+            lines[-1].append((self.printLocationsEpoch[lk], self.maxLen + 2, outStr))
+            if self.prevEpochLogs is not None:
+                valOld = self.prevEpochLogs.get(lk, "")
+                match valOld:
+                    case int():
+                        outStrOld = "{0:>10d}    ".format(valOld)
+                    case float():
+                        outStrOld = "{0:>10.3f}    ".format(valOld)
+                    case _:
+                        outStrOld = str(valOld)
+                lines[-1].append(
+                    (self.printLocationsEpoch[lk], self.maxLen + 2 + 14, outStrOld))
+        return lines
+
+    def _getBatchLines(self, logs) -> list[tuple[int, int, str]]:
+        lines = []
+        logs["batch"] = "{0:>3d} / {1:>4d}".format(
+            self.batchNumber, self.numBatches)
+
+        for lk in logs.keys():
+            lines.append([(self.printLocationsBatch[lk], 1, lk)])
+            val = logs[lk]
+            match val:
+                case int():
+                    outStr = "{0:10d}    ".format(val)
+                case float():
+                    outStr = "{0:10.3f}    ".format(val)
+                case _:
+                    outStr = str(val)
+            lines[-1].append((self.printLocationsBatch[lk], self.maxLen + 2, outStr))
+        return lines
 
 
 class ApplyAdaptiveCountsLoss(Callback):
@@ -118,18 +391,20 @@ class ApplyAdaptiveCountsLoss(Callback):
                 if "counts-loss-weight" in head:
                     # We've been given a starting point. Don't use the heuristic.
                     λ = head["counts-loss-weight"]
-                    logUtils.debug("An initial counts-loss-weight was provided.")
+                    logUtils.debug(
+                        "An initial counts-loss-weight was provided.")
                     logUtils.debug("Setting λ = {0:f} for head {1:s}"
-                                  .format(λ, head["head-name"]))
+                                   .format(λ, head["head-name"]))
                     head["INTERNAL_λ-variable"].assign(λ)
                 else:
                     # Get the desired λ value. INTERNAL_mean-counts is added by the
                     # generator, which calls addMeanCounts in its constructor.
-                    λ = head["INTERNAL_mean-counts"] * head["counts-loss-frac-target"]
+                    λ = head["INTERNAL_mean-counts"] * \
+                        head["counts-loss-frac-target"]
                     # Now for a bit of magic - experimentation has determined this number.
                     λ = λ * 37.0
                     logUtils.info("Estimated initial λ of {0:f} for head {1:s} based on ĉ of {2:f}"
-                                 .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
+                                  .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
                     head["INTERNAL_λ-variable"].assign(λ)
 
     def getLosses(self, epoch: int, headName: str) -> tuple[float, float, float, float]:
@@ -201,7 +476,7 @@ class ApplyAdaptiveCountsLoss(Callback):
             oldλ = self.λHistory[head["head-name"]][epoch]
             valTotalLoss += vcl * curλ / oldλ
         logUtils.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"
-                      .format(valTotalLoss, epoch, logs["val_loss"]))
+                       .format(valTotalLoss, epoch, logs["val_loss"]))
         return valTotalLoss
 
     def resetCallbacks(self):
@@ -233,7 +508,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         # Now, set the callbacks to have a corrected loss at the record-setting epoch.
         correctedLoss = self.whatWouldValLossBe(recordEpoch)
         logUtils.debug("Resetting callbacks from old loss {0:f} to new loss {1:f}"
-                      .format(self.lrPlateauCallback.best, correctedLoss))
+                       .format(self.lrPlateauCallback.best, correctedLoss))
         self.lrPlateauCallback.best = correctedLoss
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
@@ -250,12 +525,14 @@ class ApplyAdaptiveCountsLoss(Callback):
 
         for head in self.heads:
             if epoch > 0:
-                profileLoss, countsLoss, _, _ = self.getLosses(epoch, head["head-name"])
+                profileLoss, countsLoss, _, _ = self.getLosses(
+                    epoch, head["head-name"])
             else:
                 # In the first epoch, use the validation losses.
                 # Since the actual losses include extremely high
                 # values from the very first few batches.
-                _, _, profileLoss, countsLoss = self.getLosses(epoch, head["head-name"])
+                _, _, profileLoss, countsLoss = self.getLosses(
+                    epoch, head["head-name"])
 
             λVar = head["INTERNAL_λ-variable"]
             curλ = λVar.read_value()
@@ -276,11 +553,13 @@ class ApplyAdaptiveCountsLoss(Callback):
                 # λ₁ c (1 - t) = p t
                 # λ₁ = p t / (c * (1 - t))
                 target = head["counts-loss-frac-target"]
-                correctedλ = target * profileLoss / (countsLossRaw * (1 - target))
+                correctedλ = target * profileLoss / \
+                    (countsLossRaw * (1 - target))
                 # Approach the new target weight slowly, using exponential damping.
                 if epoch > 1:
                     # Use exponential damping after the second epoch.
-                    newλ = curλ * (1 - self.aggression) + correctedλ * self.aggression
+                    newλ = curλ * (1 - self.aggression) + \
+                        correctedλ * self.aggression
                 else:
                     # Jump early in training.
                     newλ = correctedλ
@@ -288,7 +567,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                 threshold = 2 if epoch > 1 else 10
                 if (max(newλ, curλ) / min(newλ, curλ)) > threshold:
                     logUtils.debug("Large λ change detected. Old: {0:f}, new {1:f}"
-                                  .format(curλ, newλ))
+                                   .format(curλ, newλ))
                     if newλ > curλ:
                         # λ₁ / λ₀ > 2
                         # make λ₁ = λ₀ * 2
@@ -302,20 +581,20 @@ class ApplyAdaptiveCountsLoss(Callback):
                         # We jumped and had a large threshold - user should choose
                         # a better counts weight.
                         logUtils.warning("A large λ change was detected in the first epoch. "
-                                        "Consider changing the starting counts-loss-weight for "
-                                        "head {0:s} to a value near {1:f}".format(head["head-name"],
-                                                                                  correctedλ))
+                                         "Consider changing the starting counts-loss-weight for "
+                                         "head {0:s} to a value near {1:f}".format(
+                                             head["head-name"], correctedλ))
                 # With current loss weight, what is the loss fraction due to counts?
                 # (This doesn't enter our calculation, it's for logging.
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
 
                 logUtils.debug(("countsLoss: head {0:s} λ₀ {1:f}, λ₁ {2:f} (A=1: {3:f})."
                                " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})."
-                               " Epoch {8:d}")
-                              .format(head["head-name"], curλ, newλ,
-                                      correctedλ, scaledCurFrac,
-                                      head["counts-loss-frac-target"],
-                                      countsLossRaw, countsLoss, epoch))
+                                " Epoch {8:d}")
+                               .format(head["head-name"], curλ, newλ,
+                                       correctedλ, scaledCurFrac,
+                                       head["counts-loss-frac-target"],
+                                       countsLossRaw, countsLoss, epoch))
 
                 λVar.assign(newλ)
         # We've updated the loss. But now we have to go mess with the callbacks so that

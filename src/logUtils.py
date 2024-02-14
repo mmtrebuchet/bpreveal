@@ -38,8 +38,8 @@ import threading
 import tqdm
 
 # Don't use this directly. Use get_logger() instead.
-_LOGGER = None
-_LOGGER_LOCK = threading.Lock()
+_BPREVEAL_LOGGER = None
+_BPREVEAL_LOGGER_LOCK = threading.Lock()
 
 
 def _getCaller(offset=3):
@@ -105,27 +105,27 @@ def getLogger() -> _logging.Logger:
     >>> logUtils.setVerbosity("ERROR")
     >>> logUtils.getLogger().warning("This is a warning.")
     """
-    global _LOGGER
+    global _BPREVEAL_LOGGER
 
     # Use double-checked locking to avoid taking lock unnecessarily.
-    if _LOGGER:
-        return _LOGGER
+    if _BPREVEAL_LOGGER:
+        return _BPREVEAL_LOGGER
 
-    _LOGGER_LOCK.acquire()
+    _BPREVEAL_LOGGER_LOCK.acquire()
 
     try:
-        if _LOGGER:
-            return _LOGGER
+        if _BPREVEAL_LOGGER:
+            return _BPREVEAL_LOGGER
 
         # Scope the TensorFlow logger to not conflict with users' loggers.
         logger = _logging.getLogger("BPReveal")
-
+        logger.propagate = False
         # Override findCaller on the logger to skip internal helper functions
         logger.findCaller = _loggerFindCaller
 
         # Don't further configure the TensorFlow logger if the root logger is
         # already configured. This prevents double logging in those cases.
-        if not _logging.getLogger().handlers:
+        if not logger.handlers:
             # Determine whether we are in an interactive environment
             _interactive = False
             try:
@@ -152,11 +152,11 @@ def getLogger() -> _logging.Logger:
             _handler.setFormatter(loggingFormat)
             logger.addHandler(_handler)
 
-        _LOGGER = logger
-        return _LOGGER
+        _BPREVEAL_LOGGER = logger
+        return _BPREVEAL_LOGGER
 
     finally:
-        _LOGGER_LOCK.release()
+        _BPREVEAL_LOGGER_LOCK.release()
 
 
 def log(level: int | str, msg: str, *args, **kwargs):
@@ -168,7 +168,8 @@ def log(level: int | str, msg: str, *args, **kwargs):
 
 def debug(msg: str, *args, **kwargs):
     """For nitty-gritty details."""
-    getLogger().debug(msg, *args, **kwargs)
+    logger = getLogger()
+    logger.debug(msg, *args, **kwargs)
 
 
 def error(msg: str, *args, **kwargs):
@@ -183,7 +184,8 @@ def critical(msg: str, *args, **kwargs):
 
 def info(msg: str, *args, **kwargs):
     """Normal progress messages."""
-    getLogger().info(msg, *args, **kwargs)
+    logger = getLogger()
+    logger.info(msg, *args, **kwargs)
 
 
 def warning(msg: str, *args, **kwargs):

@@ -158,30 +158,9 @@ from tensorflow import keras
 from bpreveal import generators
 from bpreveal import losses
 from bpreveal import logUtils
-from bpreveal.callbacks import getCallbacks
 from bpreveal import models
+import bpreveal.training
 import tensorflow as tf
-
-
-def trainModel(model, inputLength, outputLength, trainBatchGen,  # pylint: disable=unused-argument
-               valBatchGen, epochs, earlyStop, outputPrefix, plateauPatience,
-               heads):
-    """Run the training."""
-    callbacks = getCallbacks(earlyStop, outputPrefix, plateauPatience, heads)
-    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
-        verbosity = "auto"
-    else:
-        verbosity = 0
-    history = model.fit(trainBatchGen, epochs=epochs,
-                        validation_data=valBatchGen, callbacks=callbacks,
-                        verbose=verbosity)
-    # Turn the learning rate data into python floats, since they come as
-    # numpy floats and those are not serializable.
-    history.history["lr"] = [float(x) for x in history.history["lr"]]
-    # Add the counts loss weight history to the history json.
-    lossCallback = callbacks[3]
-    history.history["counts-loss-weight"] = lossCallback.λHistory
-    return history
 
 
 def main(config):
@@ -231,16 +210,18 @@ def main(config):
         config["heads"], valH5, inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logUtils.info("Generators initialized.")
-    history = trainModel(model, inputLength, outputLength, trainGenerator, valGenerator,
-                         config["settings"]["epochs"],
-                         config["settings"]["early-stopping-patience"],
-                         config["settings"]["output-prefix"],
-                         config["settings"]["learning-rate-plateau-patience"],
-                         config["heads"])
+    history = bpreveal.training.trainModel(model, inputLength, outputLength,
+        trainGenerator, valGenerator,
+        config["settings"]["epochs"],
+        config["settings"]["early-stopping-patience"],
+        config["settings"]["output-prefix"],
+        config["settings"]["learning-rate-plateau-patience"],
+        config["heads"])
     logUtils.debug("Model trained. Saving.")
     model.save(config["settings"]["output-prefix"] + ".model")
     with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
         json.dump(history.history, fp, ensure_ascii=False, indent=4)
+    logUtils.info("Training job completed successfully.")
 
 
 if __name__ == "__main__":

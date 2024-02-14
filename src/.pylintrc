@@ -265,7 +265,8 @@ defining-attr-methods=__init__,
                       construct,
                       start,
                       __post_init__,
-                      buildDatasets
+                      buildDatasets,
+                      _initWindow
 
 # List of member names, which should be excluded from the protected access
 # warning.

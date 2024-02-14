@@ -10,9 +10,9 @@ import numpy as np
 from bpreveal.utils import ONEHOT_T, PRED_T, H5_CHUNK_SIZE
 from bpreveal import logUtils
 random.seed(1234)
-from numba import njit
 SEQ_AR = None
 HEAD_DATS = []
+
 
 def loadFile(h5Fname: str, numHeads: int) -> None:
     """Initializer for a multiprocessing pool, loads up a global hdf5 file.
@@ -24,7 +24,6 @@ def loadFile(h5Fname: str, numHeads: int) -> None:
     SEQ_AR = np.array(h5fp["sequence"])
     for i in range(numHeads):
         HEAD_DATS.append(np.array(h5fp["head_{0:d}".format(i)]))
-
 
 
 def gmstar(getMutArgs: tuple[str, list[int], int]):
@@ -70,7 +69,18 @@ def applyAddSub(maxReads: int, minReads: int, fracMut: float, headData: np.ndarr
     if not add:
         headData[headData < 0] = 0
 
-def applyShift(maxDistance: int, shiftIndependently: bool, fracMut: float, headData: np.ndarray, rng):
+
+def applyShift(maxDistance: int, shiftIndependently: bool, fracMut: float,
+               headData: np.ndarray, rng):
+    """Shift the data randomly but keep it near its source.
+
+    :param rng: A numpy random number generator.
+    :param maxDistance: What is the furthest that a read is allowed to drift?
+    :param shiftIndependently: Should each read be moved on its own, or should all of
+        the reads at one position move together?
+    :param fracMut: What fraction of bases should be subject to the shuffling?
+    :param headData: An array containing the data for a specific head.
+    """
     readIdxes = np.nonzero(headData)
     if shiftIndependently:
         readProbs = headData[readIdxes]
@@ -81,11 +91,19 @@ def applyShift(maxDistance: int, shiftIndependently: bool, fracMut: float, headD
     numSamples = int(fracMut * headData.shape[0] * headData.shape[1])
     numSamples = min(len(readIdxes), numSamples)
     shiftInputs = rng.choice(np.array(readIdxes).T, size=numSamples, replace=False,
-                                 p = readProbs)
+                             p=readProbs)
     runShiftAlgo(shiftInputs, maxDistance, headData, shiftIndependently)
 
-@njit
-def runShiftAlgo(shiftInputs, maxDistance, headData, shiftIndependently):
+
+def runShiftAlgo(shiftInputs: np.ndarray, maxDistance: int,
+                 headData: np.ndarray, shiftIndependently: bool):
+    """Actually perform the shifting.
+
+    :param shiftInputs: The read indexes that should have their data shifted.
+    :param maxDistance: What's the furthest that a read can be shifted?
+    :param headData: The array of data for a head.
+    :param shiftIndependently: Should each read be shifted independently?
+    """
     for inIdx in shiftInputs:
         offset = random.randint(1, maxDistance)
         if random.random() < 0.5:
