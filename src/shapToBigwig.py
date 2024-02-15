@@ -168,10 +168,7 @@ def getParser() -> argparse.ArgumentParser:
 def main():
     """Run the program."""
     args = getParser().parse_args()
-    if args.verbose:
-        logUtils.setVerbosity("INFO")
-    else:
-        logUtils.setVerbosity("WARNING")
+    logUtils.setBooleanVerbosity(args.verbose)
     inH5 = h5py.File(args.h5, "r")
     writeBigWig(inH5, args.bw, args.verbose)
 

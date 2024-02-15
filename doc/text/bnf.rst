@@ -38,6 +38,7 @@ either the string ``dog`` or the string ``cat``, but not both, and nothing else.
 
 Anything that is not a pipe character or inside ``<`` angle brackets ``>`` is a literal.
 
-Here are the base terms that are used throughout the documentation: 
+Here are the base terms that are used throughout the documentation:
 
 .. include:: bnf/base.rst
+

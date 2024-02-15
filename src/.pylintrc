@@ -142,7 +142,7 @@ bad-names=foo,
 bad-names-rgxs=
 
 # Naming style matching correct class attribute names.
-class-attribute-naming-style=any
+class-attribute-naming-style=camelCase
 
 # Regular expression matching correct class attribute names. Overrides class-
 # attribute-naming-style. If left empty, class attribute names will be checked
@@ -185,19 +185,23 @@ function-naming-style=camelCase
 #function-rgx=
 
 # Good variable names which should always be accepted, separated by a comma.
-good-names=i,
-           j,
-           k,
-           ex,
-           Run,
-           _
+good-names=
 
+
+
+# i,
+#            j,
+#            k,
+#            ex,
+#            Run,
+#            _
+#
 # Good variable names regexes, separated by a comma. If names match any regex,
 # they will always be accepted
 good-names-rgxs=
 
 # Include a hint for the correct naming format with invalid-name.
-include-naming-hint=no
+include-naming-hint=yes
 
 # Naming style matching correct inline iteration names.
 inlinevar-naming-style=camelCase
@@ -266,7 +270,6 @@ defining-attr-methods=__init__,
                       start,
                       __post_init__,
                       buildDatasets,
-                      _initWindow
 
 # List of member names, which should be excluded from the protected access
 # warning.
@@ -399,11 +402,11 @@ preferred-modules=
 
 # The type of string formatting that logging methods do. `old` means using %
 # formatting, `new` is for `{}` formatting.
-logging-format-style=old
+logging-format-style=new
 
 # Logging modules to check that the string format arguments are in logging
 # function parameter format.
-logging-modules=logging
+logging-modules=logUtils,logging
 
 
 [MESSAGES CONTROL]
@@ -427,10 +430,8 @@ confidence=HIGH,
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=consider-using-f-string,
-        consider-using-get,
         consider-using-max-builtin,
         consider-using-with,
-        duplicate-code,
         global-statement,
         non-ascii-name,
         too-few-public-methods,
@@ -585,10 +586,13 @@ ignore-none=yes
 ignore-on-opaque-inference=yes
 
 # List of symbolic message names to ignore for Mixin members.
-ignored-checks-for-mixins=no-member,
-                          not-async-context-manager,
-                          not-context-manager,
-                          attribute-defined-outside-init
+ignored-checks-for-mixins=
+
+
+# no-member,
+#                           not-async-context-manager,
+#                           not-context-manager,
+#                           attribute-defined-outside-init
 
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
@@ -633,7 +637,8 @@ callbacks=cb_,
 
 # A regular expression matching the name of dummy variables (i.e. expected to
 # not be used).
-dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_
+dummy-variables-rgx=_+$|^ignored_|^unused_
+# dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_
 
 # Argument names that match this expression will be ignored.
 ignored-argument-names=_.*|^ignored_|^unused_
@@ -643,4 +648,6 @@ init-import=no
 
 # List of qualified module names which can have objects that can redefine
 # builtins.
-redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io
+redefining-builtins-modules=
+
+#six.moves,past.builtins,future.builtins,builtins,io

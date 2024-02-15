@@ -265,13 +265,12 @@ def percentileStats(name, vector, jsonDict, header=False, write=True):
     jsonDict[name] = {"quantile-cutoffs": list(quantileCutoffs),
                       "quantiles": list(quantiles)}
     if header:
-        print("{0:10s}".format("metric")
-              + "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
-              + "\t{0:s}".format("regions"))
+        cutoffStr = "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
+        print("{0:10s}".format("metric") + cutoffStr + "\t{0:s}".format("regions"))
     if write:
-        print("{0:10s}".format(name)
-              + "".join(["\t{0:15f}".format(x) for x in quantiles])
-              + "\t{0:d}".format(vector.shape[0]))
+        quantileStr = "".join(["\t{0:15f}".format(x) for x in quantiles])
+
+        print("{0:10s}".format(name) + quantileStr + "\t{0:d}".format(vector.shape[0]))
 
 
 def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
@@ -324,9 +323,11 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
     percentileStats("jsd", jsds, jsonDict, header=False, write=w)
     percentileStats("pearsonr", pearsonrs, jsonDict, header=False, write=w)
     percentileStats("spearmanr", spearmanrs, jsonDict, header=False, write=w)
-
-    countsPearson = scipy.stats.pearsonr(referenceCounts, predictedCounts)
-    countsSpearman = scipy.stats.spearmanr(referenceCounts, predictedCounts)
+    if referenceCounts.shape[0] > 2:
+        countsPearson = scipy.stats.pearsonr(referenceCounts, predictedCounts)
+        countsSpearman = scipy.stats.spearmanr(referenceCounts, predictedCounts)
+    else:
+        countsPearson = countsSpearman = [np.nan, np.nan]
     if not jsonOutput:
         print("Counts pearson \t{0:10f}".format(countsPearson[0]))
         print("Counts spearman\t{0:10f}".format(countsSpearman[0]))

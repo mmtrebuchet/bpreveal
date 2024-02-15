@@ -50,22 +50,19 @@ import json
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-import h5py
 from tensorflow import keras
-from bpreveal import generators
-from bpreveal import losses
 import bpreveal.training
 from bpreveal import models
 from bpreveal import logUtils
-import tensorflow as tf
+# pylint: disable=duplicate-code
 
 
 def main(config):
     """Build and train a combined model."""
     logUtils.setVerbosity(config["verbosity"])
+    logUtils.debug("Initializing")
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    numHeads = len(config["heads"])
     regressionModel = utils.loadModel(
         config["settings"]["transformation-model"]["transformation-model-file"])
     regressionModel.trainable = False
@@ -77,59 +74,20 @@ def main(config):
         config["settings"]["architecture"]["input-filter-width"],
         config["settings"]["architecture"]["output-filter-width"],
         config["heads"], regressionModel)
-    logUtils.debug("Created combined model.")
-    profileLosses = [losses.multinomialNll] * numHeads
-    countsLosses = []
-    profileWeights = []
-    countsWeights = []
-    for head in config["heads"]:
-        profileWeights.append(head["profile-loss-weight"])
-        # For adaptive loss weights, make the counts loss a keras variable so I
-        # can update it during training.
-        λInit = head["counts-loss-weight"] if "counts-loss-weight" in head else 1
-        λ = tf.Variable(λInit, dtype=tf.float32)
-        # Store the (keras) variable with the loss weight in the head dictionary.
-        # We'll need it in the callbacks, and this is a reasonable place to store it.
-        head["INTERNAL_λ-variable"] = λ
-        countsWeights.append(1)
-        countsLosses.append(losses.weightedMse(λ))
+    losses, lossWeights = bpreveal.training.buildLosses(config["heads"])
 
     residualModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
-        jit_compile=True,
-        loss=profileLosses + countsLosses,
-        loss_weights=profileWeights + countsWeights)  # + is list concatenation, not addition!
+        loss=losses, loss_weights=lossWeights)
 
     combinedModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
-        jit_compile=True,
-        loss=profileLosses + countsLosses,
-        loss_weights=profileWeights + countsWeights)  # + is list concatenation, not addition!
+        loss=losses, loss_weights=lossWeights)
+
     logUtils.debug("Models compiled.")
-    trainH5 = h5py.File(config["train-data"], "r")
-    valH5 = h5py.File(config["val-data"], "r")
-
-    trainGenerator = generators.H5BatchGenerator(config["heads"], trainH5,
-                                                 inputLength, outputLength,
-                                                 config["settings"]["max-jitter"],
-                                                 config["settings"]["batch-size"])
-    valGenerator = generators.H5BatchGenerator(config["heads"], valH5,
-                                               inputLength, outputLength,
-                                               config["settings"]["max-jitter"],
-                                               config["settings"]["batch-size"])
-    logUtils.info("Generators initialized. Training.")
-
-    history = bpreveal.training.trainModel(combinedModel, inputLength,
-        outputLength, trainGenerator,
-        valGenerator, config["settings"]["epochs"],
-        config["settings"]["early-stopping-patience"],
-        config["settings"]["output-prefix"],
-        config["settings"]["learning-rate-plateau-patience"],
-        config["heads"])
+    bpreveal.training.trainWithGenerators(combinedModel, config)
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".model")
     residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".model")
-    with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
-        json.dump(history.history, fp, ensure_ascii=False, indent=4)
     logUtils.info("Training job completed successfully.")
 
 

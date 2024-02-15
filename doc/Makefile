@@ -23,18 +23,18 @@ _generated/makeHeader: build.py
 #And then include it.
 include _generated/makeHeader
 
-gen: build.py ${allGenerated}
+gen: build.py ${allGenerated} conf.py
 
 clean:
 	if [ -d "_generated" ]; then rm -r _generated; fi
 	if [ -d "_build" ]; then rm -r _build; fi
 
-html: Makefile ${allGenerated}
+html: Makefile ${allGenerated} conf.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	cp fonts/Libertinus-7.040/libertinus.css _build/html/_static
 	cp -R fonts/Libertinus-7.040/static/* _build/html/_static
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-latexpdf: Makefile ${allGenerated}
+latexpdf: Makefile ${allGenerated} conf.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 

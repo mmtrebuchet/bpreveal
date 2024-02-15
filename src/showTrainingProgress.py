@@ -5,7 +5,7 @@ import sys
 import argparse
 import re
 from bpreveal import logUtils
-_COLOR_GREENBG = _COLOR_REDBG = _COLOR_ALARM = _COLOR_HIGHLIGHT = _COLOR_CRITICAL= None
+_COLOR_GREENBG = _COLOR_REDBG = _COLOR_ALARM = _COLOR_HIGHLIGHT = _COLOR_CRITICAL = None
 
 _NORMAL_REGEXES = [
     re.compile(r"^INFO.*"),
@@ -180,7 +180,7 @@ class Screen:
         return win, width, title
 
     def printString(self, row: int, col: int, winName: str, text: str, color=None):
-        """Print a given string ath a location in a window.
+        """Print a given string at a location in a window.
 
         :param row: What row within the window should the string start at?
         :param col: What column should the string start at?
@@ -252,7 +252,13 @@ class Screen:
         elif winName in "FX":
             self.shutdown(winName)
 
-    def shutdown(self, winName):
+    def shutdown(self, winName: str):
+        """Keep the display up for a bit, then close it out.
+
+        :param winName: Either ``X`` or ``F``. If ``X``, make the window green
+            and show a happy message; if ``F``, make the window red and display
+            a sad message.
+        """
         msgHeader = "Training complete."
         color = _COLOR_HIGHLIGHT
         winColor = _COLOR_GREENBG
@@ -268,7 +274,7 @@ class Screen:
         self._stdscr.refresh()
         # Drawing the border on stdscr causes all the other windows to disappear.
         for windowName in "BλESMD":
-            win, width, title = self._getWindowProperties(windowName)
+            win, _, _ = self._getWindowProperties(windowName)
             win.redrawwin()
             win.refresh()
         if self.exitWhenDone:
@@ -292,7 +298,7 @@ class Screen:
                     return
 
     def addLine(self, line: str) -> bool:
-        """Take a line from the log and put the info in the right place.
+        r"""Take a line from the log and put the info in the right place.
 
         :param line: A line from a BPReveal log file.
         :return: True if more lines are expected, False if it's time to shut down.
@@ -301,15 +307,16 @@ class Screen:
         input will be added to the logs, but we can look for a line that contains
         ``Training job completed successfully`` and know it's time to quit.
         Lines that have position information will contain a double integral sign
-        as a delimiter, like this::
+        as a delimiter, like this:
 
-            INFO : 2024-02-14 13:39:11 :callbacks.py:207 : ∬2∬30∬E∬ 47 /  200
+        :math:`\tt INFO : 2024-02-14 13:39:11 :callbacks.py:207 :
+        \iint{}2\iint{}30\iint{}E\iint{} 47 /  200`
 
         The entries are, in order: row, column, window, message.
         A window may be two characters, the second one being either ``H`` or ``A``,
         meaning that the text should be shown in green or red, respectively.
 
-        If a line does not contain ``∬``, then it is displayed in the message tab
+        If a line does not contain ":math:`\tt \iint`", then it is displayed in the message tab
         or the debug tab. The debug tab is reserved for messages starting with the
         string ``DEBUG``, and messages gets everything else.
         """
@@ -356,7 +363,8 @@ def getParser() -> argparse.ArgumentParser:
     parser.add_argument("--delay", help="After reading a line, pause for this many milliseconds.",
                         type=int, default=0)
     parser.add_argument("--read-tty", help="Allow the program to read from a terminal. "
-                        "There are no good times to use this except for debugging.", dest='readTTY')
+                        "There are no good times to use this except for debugging.",
+                        dest="readTTY")
     return parser
 
 
@@ -381,9 +389,9 @@ def runScreen(stdscr, args):
 
 
 if __name__ == "__main__":
-    args = getParser().parse_args()
-    if sys.stdin.isatty() and not args.readTTY:
+    parsedArgs = getParser().parse_args()
+    if sys.stdin.isatty() and not parsedArgs.readTTY:
         logUtils.error("Refusing to read from tty. This program expects input"
                        " to be piped in over stdin.")
     else:
-        curses.wrapper(runScreen, args)
+        curses.wrapper(runScreen, parsedArgs)

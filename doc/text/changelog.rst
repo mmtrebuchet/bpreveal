@@ -14,6 +14,23 @@ BPReveal 4.1.x
 BPReveal 4.1.0, DATEDATEDATE
 ''''''''''''''''''''''''''''
 
+BREAKING CHANGES:
+    * The output from training now has a radically different format. If you were parsing
+      progress bars from log files, I hope that the new format will make your life
+      easier.
+
+NEW FEATURES:
+    * Extracted the logging functions into a new module,
+      :py:mod:`logUtils<bpreveal.logUtils>`. It separates BPReveal logging into
+      its own class of messages, so you can still use logging with your own
+      code without stepping on BPReveal's toes.
+    * Removed the old progress bar logging system during training. Training now produces
+      a spew of logging messages that are easier to grep, and they can be displayed in
+      real time by the new :py:mod:`showTrainingProgress<bpreveal.showTrainingProgress>`
+      tool. This tool requires training the model with INFO or DEBUG verbosity, otherwise
+      no useful output is produced. The format of the output is still flexible and will
+      not be finalized until 4.3.0.
+
 ENHANCEMENTS:
     * Added parallelization to :py:mod:`prepareBed<bpreveal.prepareBed>`.
       It should now be a lot faster. Output is bit-for-bit identical.
@@ -22,10 +39,6 @@ ENHANCEMENTS:
     * Made the verbosity of the training step match the user-specified verbosity.
       If your configuration json says that verbosity should be ``WARNING``, then there
       is much less output from the training scripts.
-    * Extracted the logging functions into a new module,
-      :py:mod:`logUtils<bpreveal.logUtils>`. It separates BPReveal logging into
-      its own class of messages, so you can still use logging with your own
-      code without stepping on BPReveal's toes.
     * Switched the documentation to a serif font.
 
 DEPRECATIONS:
@@ -33,6 +46,10 @@ DEPRECATIONS:
       It does very little and required two large dependencies (pydot and graphviz)
       to get the image out.
 
+BUG FIXES:
+    * The :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles>` script used to add
+      a new copy of quantile information if the file already had that data. Now it
+      replaces the old quantile information.
 
 BPReveal 4.0.x
 ^^^^^^^^^^^^^^

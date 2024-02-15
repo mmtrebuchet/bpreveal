@@ -270,6 +270,21 @@ def setVerbosity(userLevel: str | int):
     debug("Logging configured.")
 
 
+def setBooleanVerbosity(verbose: bool, verboseLevel: str = "INFO", quietLevel: str = "WARNING"):
+    """Instead of passing in an int or a string, use a boolean to set verbosity.
+
+    :param verbose: Should the logging be verbose?
+    :param verboseLevel: If verbose, how much chatter do you want? Options are the same
+        as for :py:func:`setVerbosity<bpreveal.logUtils.setVerbosity>`.
+    :param quietLevel: If not verbose, how much chatter do you want? Options are the same
+        as for :py:func:`setVerbosity<bpreveal.logUtils.setVerbosity>`.
+    """
+    if verbose:
+        getLogger().setLevel(verboseLevel)
+    else:
+        getLogger().setLevel(quietLevel)
+
+
 def _getThreadId():
     """Get id of current thread, suitable for logging as an unsigned quantity."""
     threadId = _thread.get_ident()

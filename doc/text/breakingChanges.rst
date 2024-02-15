@@ -43,6 +43,13 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 BPReveal 4.x
 ------------
 
+BPReveal 4.1.0
+^^^^^^^^^^^^^^
+The output format from training was totally re-written to be easier to use in log files.
+A new tool, :py:mod:`showTrainingProgress<bpreveal.showTrainingProgress>` can be used to
+get a nice view of your model's progress as it trains up.
+
+
 BPReveal 4.0.2
 ^^^^^^^^^^^^^^
 

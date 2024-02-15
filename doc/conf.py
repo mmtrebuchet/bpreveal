@@ -21,14 +21,16 @@ release = bpreveal.__version__
 
 extensions = ['sphinx.ext.autodoc',
               'sphinx_rtd_theme',
-              'sphinxarg.ext']
+              'sphinxarg.ext',
+              "sphinx_rtd_dark_mode"]
 
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
-                    "demos", "presentations", "scripts",
+                    "demos", "presentations", "scripts", "_generated/bnf/base.rst",
                     "makeHeader"]
 reSubs = [
     ["λ", r":math:`{\\lambda}`"],
     ["½", r":math:`{1/2}`"],
+    ["∬", r":math:`{\\iint}`"],
     [r".. literalinclude:: ../../doc/bnf/(.*).bnf",
      r".. include:: ../../doc/_generated/bnf/\1.rst"]
 ]
@@ -66,4 +68,5 @@ templates_path = []
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_generated/static"]
 html_css_files = ["custom-styles.css", "libertinus.css"]
+default_dark_mode = False
 # pylint: enable=invalid-name

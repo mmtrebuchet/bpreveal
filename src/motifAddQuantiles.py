@@ -229,10 +229,7 @@ def getParser() -> argparse.ArgumentParser:
 def main():
     """Add quantile information."""
     args = getParser().parse_args()
-    if args.verbose:
-        logUtils.setVerbosity("INFO")
-    else:
-        logUtils.setVerbosity("WARNING")
+    logUtils.setBooleanVerbosity(args.verbose)
     seqletInFname = args.seqletTsvFname
     scanInFname = args.scanTsvFname
     seqletOutFname = args.seqletOutFname

@@ -6,13 +6,12 @@ Coding philosophy
     than complicate old programs by adding new features.
 *   Expect the output of every program to become the input to another,
     as yet unknown, program.
-*   Don't clutter the output with extraneous information.
 *   Don't insist on interactive input.
+*   Don't clutter the output with extraneous information.
 *   But do include logging messages that can be enabled for debugging.
 *   Explicit is better than implicit.
     Wherever possible, do not allow for defaults when a value is not
-    specified.
-    (Looking at you, MoDISco!)
+    specified. (Looking at you, MoDISco!)
 *   For substantial programs, prefer configuration files over a sea of
     command-line arguments.
     Use JSON for all data that aren't (1.) bed files, (2.) bigwig files,
@@ -36,3 +35,9 @@ Coding philosophy
 *   Use only well-established and stable dependencies.
     Don't require specific versions of libraries, and only require packages
     that are truly essential.
+
+
+Coding Standards
+----------------
+As of 4.1.0, BPReveal gets a perfect score from pylint, flake8, and pydocstyle.
+

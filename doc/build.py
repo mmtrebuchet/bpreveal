@@ -18,7 +18,7 @@ filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePredictionsBed.py",
 # Things that take command-line arguments
 filesMinor = ["checkJson.py", "lengthCalc.py", "makeLossPlots.py", "metrics.py",
               "motifAddQuantiles.py", "predictToBigwig.py", "shapToBigwig.py",
-              "shapToNumpy.py", "showModel.py"]
+              "shapToNumpy.py", "showModel.py", "showTrainingProgress.py"]
 
 # Libraries that can't be executed on their own
 filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
@@ -65,8 +65,12 @@ def makeHeader():
 
 def makeCss():
     with open("_generated/static/custom-styles.css", "w") as fp:
+        fp.write('html[data-theme="dark"] .rst-content code.literal:not(code.xref) {\n')
+        fp.write("    color: #90B090;\n")
+        fp.write("    background-color: #232323;\n")
+        fp.write("}\n")
         fp.write(".rst-content code.literal:not(code.xref) {\n")
-        fp.write("    color: #205020;\n")
+        fp.write("    color: #207020;\n")
         fp.write("    background-color: #fbfbfb;\n")
         fp.write("}\n")
         fp.write('p {\n')
@@ -102,6 +106,12 @@ def makeCss():
         fp.write('    font-family:"Libertinus Mono",monospace;\n')
         fp.write('    font-feature-settings: "zero" on;\n')
         fp.write("    background-color: #fbfbfb;\n")
+        fp.write("}\n")
+        fp.write('html[data-theme="dark"] .rst-content code.xref {\n')
+        fp.write("    color: #2980B9;\n")
+        fp.write('    font-family:"Libertinus Mono",monospace;\n')
+        fp.write('    font-feature-settings: "zero" on;\n')
+        fp.write("    background-color: #2d2d2d;\n")
         fp.write("}\n")
 
 def makeBase():
@@ -181,7 +191,6 @@ def makeBase():
         fpBig.write("    _generated/toolsmajor\n")
         fpBig.write("    _generated/toolsminor\n")
         fpBig.write("    _generated/toolsapi\n")
-        fpBig.write("\n\n.. include:: _generated/bnf/addNoise.rst\n")
 
         fpBig.write("\n\n*******\nIndices\n*******\n\n")
         fpBig.write(
@@ -201,7 +210,7 @@ def makeBnf():
                     outFp.write(".. _{0:s}:\n\n".format(m.group(1)))
                     outFp.write(".. highlight:: none\n\n")
                     outFp.write(".. parsed-literal::\n\n")
-                    outFp.write("    " + line)
+                    outFp.write("    <:ref:`{0:s}<{0:s}>`> ::=\n".format(m.group(1)))
                 else:
                     outFp.write("    ")
                     inName = False

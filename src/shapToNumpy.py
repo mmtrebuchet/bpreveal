@@ -55,10 +55,7 @@ def getParser() -> argparse.ArgumentParser:
 def main():
     """Runs the program"""
     args = getParser().parse_args()
-    if args.verbose:
-        logUtils.setVerbosity("INFO")
-    else:
-        logUtils.setVerbosity("WARNING")
+    logUtils.setBooleanVerbosity(args.verbose)
     logUtils.info("Loading input file {0:s}.".format(args.h5))
     inFile = h5py.File(args.h5, "r")
     if args.seqs is not None:

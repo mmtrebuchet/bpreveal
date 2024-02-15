@@ -146,7 +146,7 @@ if [ "$INSTALL_JUPYTER" = true ] ; then
 fi
 
 
-# 2. Install flake8 (used in development to check code style,
+# 2. Install things for development (used in development to check code style,
 # never needed to run bpreveal.)
 if [ "$INSTALL_DEVTOOLS" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge flake8
@@ -164,6 +164,8 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge sphinx-autodoc-typehints
     check
     ${CONDA_BIN} install --yes -c conda-forge coverage
+    check
+    ${PIP_BIN} install --no-input sphinx-rtd-dark-mode
     check
 fi
 

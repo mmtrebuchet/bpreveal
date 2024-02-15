@@ -263,10 +263,7 @@ def getParser() -> argparse.ArgumentParser:
 def main():
     """Run the program."""
     args = getParser().parse_args()
-    if args.verbose:
-        logUtils.setVerbosity("INFO")
-    else:
-        logUtils.setVerbosity("WARNING")
+    logUtils.setBooleanVerbosity(args.verbose)
     writeBigWig(args.h5, args.bw, args.headID, args.taskID, args.mode, args.verbose,
                 args.negate, args.numThreads)
 

@@ -153,14 +153,11 @@ import json
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-import h5py
 from tensorflow import keras
-from bpreveal import generators
-from bpreveal import losses
 from bpreveal import logUtils
 from bpreveal import models
 import bpreveal.training
-import tensorflow as tf
+# pylint: disable=duplicate-code
 
 
 def main(config):
@@ -169,7 +166,6 @@ def main(config):
     logUtils.debug("Initializing")
     inputLength = config["settings"]["architecture"]["input-length"]
     outputLength = config["settings"]["architecture"]["output-length"]
-    numHeads = len(config["heads"])
 
     model = models.soloModel(
         inputLength, outputLength,
@@ -179,48 +175,12 @@ def main(config):
         config["settings"]["architecture"]["output-filter-width"],
         config["heads"], "solo")
     logUtils.debug("Model built.")
-    profileLosses = [losses.multinomialNll] * numHeads
-    countsLosses = []
-    profileWeights = []
-    countsWeights = []
-    for head in config["heads"]:
-        profileWeights.append(head["profile-loss-weight"])
-        λInit = head["counts-loss-weight"] if "counts-loss-weight" in head else 1
-        λ = tf.Variable(λInit, dtype=tf.float32)
-        head["INTERNAL_λ-variable"] = λ
-        # The actual loss_weights parameter will be one - weighting
-        # will be done inside the loss function proper.
-        countsWeights.append(1)
-        countsLosses.append(losses.weightedMse(λ))
-
+    losses, lossWeights = bpreveal.training.buildLosses(config["heads"])
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
-        loss=profileLosses + countsLosses,
-        loss_weights=profileWeights + countsWeights)  # + is list concatenation, not addition!
-    logUtils.info("Model compiled.")
-    model.summary(print_fn=logUtils.debug)
-
-    trainH5 = h5py.File(config["train-data"], "r")
-    valH5 = h5py.File(config["val-data"], "r")
-
-    trainGenerator = generators.H5BatchGenerator(
-        config["heads"], trainH5, inputLength, outputLength,
-        config["settings"]["max-jitter"], config["settings"]["batch-size"])
-    valGenerator = generators.H5BatchGenerator(
-        config["heads"], valH5, inputLength, outputLength,
-        config["settings"]["max-jitter"], config["settings"]["batch-size"])
-    logUtils.info("Generators initialized.")
-    history = bpreveal.training.trainModel(model, inputLength, outputLength,
-        trainGenerator, valGenerator,
-        config["settings"]["epochs"],
-        config["settings"]["early-stopping-patience"],
-        config["settings"]["output-prefix"],
-        config["settings"]["learning-rate-plateau-patience"],
-        config["heads"])
-    logUtils.debug("Model trained. Saving.")
+        loss=losses, loss_weights=lossWeights)
+    bpreveal.training.trainWithGenerators(model, config)
     model.save(config["settings"]["output-prefix"] + ".model")
-    with open("{0:s}.history.json".format(config["settings"]["output-prefix"]), "w") as fp:
-        json.dump(history.history, fp, ensure_ascii=False, indent=4)
     logUtils.info("Training job completed successfully.")
 
 

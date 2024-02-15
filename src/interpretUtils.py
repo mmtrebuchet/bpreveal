@@ -176,6 +176,7 @@ class Generator:
         raise NotImplementedError()
 
     def __iter__(self) -> Iterator[Query]:
+        """Construct an iterator that generates all of the queries."""
         raise NotImplementedError()
 
     def __next__(self):
@@ -964,6 +965,7 @@ class FlatBedGenerator(Generator):
             self.shapTargets.append(line)
 
     def __iter__(self):
+        """An iterator that makes a query for every region in the bed file."""
         logUtils.debug("Creating iterator for bed generator.")
         return self
 
@@ -1030,6 +1032,7 @@ class PisaBedGenerator(Generator):
                 self.shapTargets.append((line.chrom, pos))
 
     def __iter__(self):
+        """An iterable that gives a Query for every *base* that the bed file contains."""
         logUtils.debug("Creating iterator for bed generator.")
         return self
 
