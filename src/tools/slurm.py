@@ -259,7 +259,7 @@ def writeDependencyScript(config: dict, jobspecs: list[list[str, list[str]]],
                 for dep in deps:
                     depStr = depStr + \
                         ":${{DEP_{0:d}}}".format(jobToDepNumber[dep])
-            batchStr = "sbatch" + depStr + " {0:s}".format(job)
+            batchStr = "sbatch --kill-on-invalid-dep=yes " + depStr + " {0:s}".format(job)
             fp.write(batchStr + "\n")
             fp.write(("DEP_{0:d}=$(squeue -u $(whoami) | awk '{{print $1}}' |"
                       "sed 's/_.*//'| sort -n | tail -n 1)\n").format(jobToDepNumber[job]))

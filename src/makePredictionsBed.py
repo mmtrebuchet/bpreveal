@@ -85,7 +85,6 @@ API
 ---
 
 """
-import os
 import json
 import pybedtools
 from bpreveal import utils
@@ -95,8 +94,7 @@ import numpy as np
 import pysam
 import h5py
 from bpreveal import logUtils
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 if __name__ == "__main__":
     utils.setMemoryGrowth()
 

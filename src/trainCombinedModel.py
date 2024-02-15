@@ -44,9 +44,8 @@ to remove this restriction.
 API
 ---
 """
-import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
+import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
@@ -85,7 +84,7 @@ def main(config):
         loss=losses, loss_weights=lossWeights)
 
     logUtils.debug("Models compiled.")
-    bpreveal.training.trainWithGenerators(combinedModel, config)
+    bpreveal.training.trainWithGenerators(combinedModel, config, inputLength, outputLength)
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".model")
     residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".model")
     logUtils.info("Training job completed successfully.")

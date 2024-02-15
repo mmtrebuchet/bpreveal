@@ -14,6 +14,9 @@ _NORMAL_REGEXES = [
     re.compile(".*val_loss did not improve"),
     re.compile("^Restoring model weights.*"),
     re.compile(".*early stopping$"),
+    re.compile(".*Unable to register cu.*"),
+    re.compile(".*Could not find TensorRT.*"),
+    re.compile(".*is called are written to STDERR.*"),
     re.compile(".*ReduceLROnPlateau reducing.*")]
 
 
@@ -54,8 +57,8 @@ class Screen:
     exitWhenDone = True
     """Should the screen ever exit after it gets the last line?"""
 
-    def __init__(self, stdscr, border: int = 2, colSep: int = 1,
-                 statusHeight: int = 3, messageHeight: int = 15):
+    def __init__(self, stdscr, border: int = 1, colSep: int = 0,
+                 statusHeight: int = 3, messageHeight: int = 10):
         self._border = border
 
         self._stdscr = stdscr
@@ -193,15 +196,18 @@ class Screen:
         if len(text) > printWidth:
             text = text[:printWidth]
         clearLen = self._charsToClear.get((row, col, winName), 1)
-        win.addstr(row, col, " " * clearLen)
-        self._charsToClear[(row, col, winName)] = len(text)
-        if color is not None and curses.has_colors():
-            win.addstr(row, col, text, color)
-        else:
-            win.addstr(row, col, text)
-        if winName != "S":
-            self._drawBorders(winName)
-        win.refresh()
+        try:
+            win.addstr(row, col, " " * clearLen)
+            self._charsToClear[(row, col, winName)] = len(text)
+            if color is not None and curses.has_colors():
+                win.addstr(row, col, text, color)
+            else:
+                win.addstr(row, col, text)
+            if winName != "S":
+                self._drawBorders(winName)
+            win.refresh()
+        except curses.error:
+            pass
 
     def _drawBorders(self, highlightWin: str | None = None):
         """Update all the borders, and highlight the label for the given window."""

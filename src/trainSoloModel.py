@@ -147,9 +147,8 @@ API
 ---
 
 """
-import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
+import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
@@ -179,7 +178,7 @@ def main(config):
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
         loss=losses, loss_weights=lossWeights)
-    bpreveal.training.trainWithGenerators(model, config)
+    bpreveal.training.trainWithGenerators(model, config, inputLength, outputLength)
     model.save(config["settings"]["output-prefix"] + ".model")
     logUtils.info("Training job completed successfully.")
 

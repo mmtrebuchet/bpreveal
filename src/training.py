@@ -57,7 +57,7 @@ def buildLosses(heads: dict) -> tuple[list, list]:
     return (allLosses, allWeights)
 
 
-def trainWithGenerators(model: keras.Model, config: dict) -> dict:
+def trainWithGenerators(model: keras.Model, config: dict, inputLength, outputLength) -> dict:
     """Load up the generators from your config file and train the model!
 
     :param model: A compiled Keras model.
@@ -68,8 +68,6 @@ def trainWithGenerators(model: keras.Model, config: dict) -> dict:
     model.summary(print_fn=logUtils.debug)
 
     logUtils.info("Loading data into generators.")
-    inputLength = config["settings"]["architecture"]["input-length"]
-    outputLength = config["settings"]["architecture"]["output-length"]
     trainH5 = h5py.File(config["train-data"], "r")
     valH5 = h5py.File(config["val-data"], "r")
 

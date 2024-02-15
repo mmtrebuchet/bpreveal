@@ -148,12 +148,11 @@ API
 
 
 """
-import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
+import h5py
 from bpreveal import interpretUtils
 from bpreveal import logUtils
-import h5py
+import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import makePredictionsBed
 import pybedtools
 import pysam

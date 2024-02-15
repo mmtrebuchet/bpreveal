@@ -97,6 +97,7 @@ def loadModel(modelFname: str):
     dummy loss.
     """
     # pylint: disable=import-outside-toplevel
+    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
     from keras.models import load_model
     from bpreveal.losses import multinomialNll, dummyMse
     # pylint: enable=import-outside-toplevel
@@ -117,6 +118,7 @@ def setMemoryGrowth() -> None:
     All of the main programs in BPReveal do this, so that you can
     use your GPU for other stuff as you work with models.
     """
+    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
     import tensorflow as tf  # pylint: disable=import-outside-toplevel
     gpus = tf.config.list_physical_devices("GPU")
     try:
@@ -187,6 +189,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         free = float(lsp[2])
     assert total * fraction < free, "Attempting to request more memory than is free!"
 
+    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
     import tensorflow as tf  # pylint: disable=import-outside-toplevel
     gpus = tf.config.list_physical_devices("GPU")
     useMem = int(total * fraction - offset)
@@ -1014,6 +1017,7 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     """
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
         "after loading tensorflow."
+    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
     logUtils.debug("Starting subthread")
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches

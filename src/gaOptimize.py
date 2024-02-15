@@ -3,11 +3,11 @@ from __future__ import annotations
 import ast
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import random
 from typing import TypeAlias, Callable, Optional, Literal
 import matplotlib.colors
 import numpy.typing as npt
+import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 from bpreveal.utils import PRED_AR_T
 import numpy as np

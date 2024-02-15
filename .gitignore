@@ -6,6 +6,7 @@ scratch
 src/__pycache__
 src/tools/__pycache__
 src/schematools/__pycache__
+src/internal/__pycache__
 src/schema.py
 doc/_*
 doc/*.rst

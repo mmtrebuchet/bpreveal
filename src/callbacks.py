@@ -154,20 +154,24 @@ class DisplayCallback(Callback):
         assert len(remainingTerms) == 0, str(remainingTerms) + " includes unknown loss component. "\
             "not " + str(profileLosses) + "/" + str(countsLosses)
 
-        printOrder = ["epoch", "batch", "lr", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
-        printOrder.extend(profileLosses)
-        printOrder.extend(countsLosses)
-        printOrder.extend(["Best epoch", "Best loss", "Epochs until earlystop",
-                           "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
+        printOrderEpoch = ["epoch", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
+        printOrderEpoch.extend(profileLosses)
+        printOrderEpoch.extend(countsLosses)
+        printOrderEpoch.extend(["Best epoch", "Best loss", "Epochs until earlystop",
+                           "lr", "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
                            "Training time", "Validation time",
                            "Seconds / epoch", "Minutes to earlystop"])
+
+        printOrderBatch = ["batch", "loss", "EPOCH_SPACER" ]
+        printOrderBatch.extend(profileLosses)
+        printOrderBatch.extend(countsLosses)
         # Now that we have the orders, just enumerate them and put them in
         # printLocations.
-        for i, po in enumerate(printOrder):
+        for i, po in enumerate(printOrderEpoch):
             self.printLocationsEpoch[po] = i + 2
-        for i, po in enumerate([x for x in printOrder if x != "EPOCH_SPACER"]):
+        for i, po in enumerate([x for x in printOrderBatch if x != "EPOCH_SPACER"]):
             self.printLocationsBatch[po] = i + 2
-        self.maxLen = max((len(x) for x in printOrder))
+        self.maxLen = max((len(x) for x in printOrderEpoch))
 
     def on_train_begin(self, logs: dict | None = None):  # pylint: disable=invalid-name
         """Just loads in the total number of epochs."""
@@ -190,6 +194,29 @@ class DisplayCallback(Callback):
             self.curEpochWaitTime = time.perf_counter() - self.lastEpochEndTime
         # pylint: enable=attribute-defined-outside-init
 
+    def formatStr(self, val: str | int | float | tuple[int, int]) -> str:
+        """Formats an object to be 10 characters wide.
+
+        If a second object is provided, format as a ratio.
+
+        :param str1: The thing to format
+        :param str2: Optional. If provided, format the two inputs as a ratio.
+        :return: A 10 character wide formatted string.
+        """
+        match val:
+            case str():
+                return "{0:>10s}".format(val)
+            case int():
+                return "{0:>10d}".format(val)
+            case float():
+                return "{0:>10.3f}".format(val)
+            case int(), int():
+                return "{0:>3d} / {1:>4d}".format(*val)
+            case _, None:
+                return "{0:>10s}".format(str(val))
+            case _:
+                return "{0:10s}".format("FMT_ERR")
+
     def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
         """Writes out all the logs for this epoch and the last one at INFO logging level."""
         del epoch
@@ -197,15 +224,15 @@ class DisplayCallback(Callback):
         recordEpoch = self.earlyStopCallback.best_epoch
         correctedLoss = self.earlyStopCallback.best
         # Add some extra data to the logs. (Note that I copied the logs dict)
-        logs["Best epoch"] = "{0:>10d}".format(recordEpoch)
-        logs["Best loss"] = "{0:>10.3f}".format(float(correctedLoss))
-        logs["Epochs until earlystop"] = "{0:>3d} / {1:>4d}".format(
-            self.earlyStopCallback.wait, self.earlyStopCallback.patience)
-        logs["Epochs until LR plateau"] = "{0:>3d} / {1:>4d}".format(
-            self.plateauCallback.wait, self.plateauCallback.patience)
+        logs["Best epoch"] = recordEpoch
+        logs["Best loss"] = float(correctedLoss)
+        logs["Epochs until earlystop"] = (self.earlyStopCallback.wait,
+                                          self.earlyStopCallback.patience)
+        logs["Epochs until LR plateau"] = (self.plateauCallback.wait,
+                                           self.plateauCallback.patience)
         if self.lastEpochEndTime is not None:
             timePerEpoch = time.perf_counter() - self.lastEpochEndTime
-            logs["Seconds / epoch"] = "{0:>10.3f}".format(timePerEpoch)
+            logs["Seconds / epoch"] = timePerEpoch
             logs["Minutes to earlystop"] = timePerEpoch * (
                 self.earlyStopCallback.patience - self.earlyStopCallback.wait) / 60
         if self.curEpochWaitTime is not None:
@@ -250,8 +277,9 @@ class DisplayCallback(Callback):
                 or batch in [self.numValBatches - 1, 0]:
             self.lastValBatchEndTime = time.perf_counter()
             lines = [((max(self.printLocationsBatch.values()), 1, "Eval batch"),
-                    (max(self.printLocationsBatch.values()), 20, "{0:>3d} / {1:>4d}".format(
-                        batch, self.numValBatches)))]
+                      (max(self.printLocationsBatch.values()),
+                       20,
+                       self.formatStr((batch, self.numValBatches - 1))))]
             self._writeLogLines(lines, logUtils.debug, "V")
 
     def _writeLogLines(self, lines: list[tuple[int, int, str]], writer, win: str):
@@ -276,48 +304,29 @@ class DisplayCallback(Callback):
 
     def _getEpochLines(self, logs) -> list[tuple[int, int, str]]:
         lines = []
-        logs["epoch"] = "{0:>3d} / {1:>4d}".format(
-            self.epochNumber, self.numEpochs)
+        logs["epoch"] = (self.epochNumber, self.numEpochs)
         logs["lr"] = "{0:10.7f}".format(logs["lr"])
         for lk in logs.keys():
             lines.append([(self.printLocationsEpoch[lk], 1, lk)])
-            val = logs[lk]
-            match val:
-                case int():
-                    outStr = "{0:>10d}    ".format(val)
-                case float():
-                    outStr = "{0:>10.3f}    ".format(val)
-                case _:
-                    outStr = str(val)
+
+            outStr = self.formatStr(logs[lk])
             lines[-1].append((self.printLocationsEpoch[lk], self.maxLen + 2, outStr))
+
             if self.prevEpochLogs is not None:
-                valOld = self.prevEpochLogs.get(lk, "")
-                match valOld:
-                    case int():
-                        outStrOld = "{0:>10d}    ".format(valOld)
-                    case float():
-                        outStrOld = "{0:>10.3f}    ".format(valOld)
-                    case _:
-                        outStrOld = str(valOld)
+                outStrOld = self.formatStr(self.prevEpochLogs.get(lk, ""))
                 lines[-1].append(
                     (self.printLocationsEpoch[lk], self.maxLen + 2 + 14, outStrOld))
+
         return lines
 
     def _getBatchLines(self, logs) -> list[tuple[int, int, str]]:
-        lines = []
-        logs["batch"] = "{0:>3d} / {1:>4d}".format(
-            self.batchNumber, self.numBatches)
 
+        logs["batch"] = (self.batchNumber, self.numBatches - 1)
+
+        lines = []
         for lk in logs.keys():
             lines.append([(self.printLocationsBatch[lk], 1, lk)])
-            val = logs[lk]
-            match val:
-                case int():
-                    outStr = "{0:10d}    ".format(val)
-                case float():
-                    outStr = "{0:10.3f}    ".format(val)
-                case _:
-                    outStr = str(val)
+            outStr = self.formatStr(logs[lk])
             lines[-1].append((self.printLocationsBatch[lk], self.maxLen + 2, outStr))
         return lines
 

@@ -8,7 +8,6 @@ Here's what you do.
 3. Pass those to a Runner.
 4. Call .run() on the Runner.
 """
-import os
 from typing import Any, Optional, Iterator, Iterable
 import multiprocessing
 import ctypes
@@ -23,7 +22,6 @@ from bpreveal import utils
 from bpreveal import ushuffle
 from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
     H5_CHUNK_SIZE, MODEL_ONEHOT_T
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "4"
 
 
 class Query:
@@ -1145,6 +1143,7 @@ class _PisaBatcher:
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
+        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         import tensorflow as tf  # pylint: disable=import-outside-toplevel
         tf.compat.v1.disable_eager_execution()
         from bpreveal import shap  # pylint: disable=import-outside-toplevel
@@ -1277,6 +1276,7 @@ class _FlatBatcher:
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
+        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         import tensorflow as tf  # pylint: disable=import-outside-toplevel
         tf.compat.v1.disable_eager_execution()
         from bpreveal import shap  # pylint: disable=import-outside-toplevel

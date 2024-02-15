@@ -86,16 +86,13 @@ API
 """
 
 
-import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import json
 from bpreveal import utils
 import numpy as np
 import h5py
 import pybedtools
 import pysam
+import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import makePredictionsBed
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm

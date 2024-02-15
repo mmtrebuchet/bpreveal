@@ -159,6 +159,13 @@ def readTsv(fname):
             if tmpName not in patternIDs:
                 patternIDs.append(tmpName)
 
+    # Check for existing quantile information.
+    baseNames = ["contrib_magnitude", "seq_match", "contrib_match"]
+    quantileNames = [x + "_quantile" for x in baseNames]
+    for qn in quantileNames:
+        if qn in fieldNames:
+            # Weird, we already have a column for this data. Issue a warning.
+            logUtils.warning("The tsv {0:s} seems to already have quantile columns.".format(fname))
     return fieldNames, records, patternIDs
 
 
