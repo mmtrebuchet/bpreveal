@@ -118,8 +118,10 @@ def setMemoryGrowth() -> None:
     All of the main programs in BPReveal do this, so that you can
     use your GPU for other stuff as you work with models.
     """
-    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-    import tensorflow as tf  # pylint: disable=import-outside-toplevel
+    # pylint: disable=import-outside-toplevel, unused-import
+    import bpreveal.internal.disableTensorflowLogging  # noqa
+    import tensorflow as tf
+    # pylint: enable=import-outside-toplevel, unused-import
     gpus = tf.config.list_physical_devices("GPU")
     try:
         tf.config.experimental.set_memory_growth(gpus[0], True)
@@ -189,8 +191,10 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         free = float(lsp[2])
     assert total * fraction < free, "Attempting to request more memory than is free!"
 
-    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-    import tensorflow as tf  # pylint: disable=import-outside-toplevel
+    # pylint: disable=import-outside-toplevel, unused-import
+    import bpreveal.internal.disableTensorflowLogging  # noqa
+    import tensorflow as tf
+    # pylint: enable=import-outside-toplevel, unused-import
     gpus = tf.config.list_physical_devices("GPU")
     useMem = int(total * fraction - offset)
     tf.config.set_logical_device_configuration(
@@ -1017,7 +1021,9 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     """
     assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
         "after loading tensorflow."
-    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
+    # pylint: disable=import-outside-toplevel, unused-import
+    import bpreveal.internal.disableTensorflowLogging  # noqa
+    # pylint: enable=import-outside-toplevel, unused-import
     logUtils.debug("Starting subthread")
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches

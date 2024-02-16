@@ -21,9 +21,7 @@ release = bpreveal.__version__
 
 extensions = ['sphinx.ext.autodoc',
               'sphinx_rtd_theme',
-              'sphinxarg.ext',
-              "sphinx_rtd_dark_mode"]
-
+              'sphinxarg.ext']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
                     "demos", "presentations", "scripts", "_generated/bnf/base.rst",
                     "makeHeader"]

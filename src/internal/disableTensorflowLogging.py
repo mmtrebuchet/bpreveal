@@ -2,6 +2,9 @@
 
 You can import this before you import tensorflow in your code, and all the warning
 messages will go away.
+
+(There are no functions to call here, everything happens globally when you import
+this module.)
 """
 
 import os

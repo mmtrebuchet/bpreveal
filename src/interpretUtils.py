@@ -1143,10 +1143,12 @@ class _PisaBatcher:
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
+        # pylint: disable=import-outside-toplevel
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        import tensorflow as tf  # pylint: disable=import-outside-toplevel
+        import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
-        from bpreveal import shap  # pylint: disable=import-outside-toplevel
+        from bpreveal import shap
+        # pylint: enable=import-outside-toplevel
         utils.setMemoryGrowth()
         self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
@@ -1276,10 +1278,12 @@ class _FlatBatcher:
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
-        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        import tensorflow as tf  # pylint: disable=import-outside-toplevel
+        # pylint: disable=import-outside-toplevel, unused-import
+        import bpreveal.internal.disableTensorflowLogging # noqa
+        import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
-        from bpreveal import shap  # pylint: disable=import-outside-toplevel
+        from bpreveal import shap
+        # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = utils.loadModel(modelFname)

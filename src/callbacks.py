@@ -162,7 +162,7 @@ class DisplayCallback(Callback):
                            "Training time", "Validation time",
                            "Seconds / epoch", "Minutes to earlystop"])
 
-        printOrderBatch = ["batch", "loss", "EPOCH_SPACER" ]
+        printOrderBatch = ["batch", "loss", "EPOCH_SPACER"]
         printOrderBatch.extend(profileLosses)
         printOrderBatch.extend(countsLosses)
         # Now that we have the orders, just enumerate them and put them in

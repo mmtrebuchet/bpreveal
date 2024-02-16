@@ -40,6 +40,7 @@ ENHANCEMENTS:
       If your configuration json says that verbosity should be ``WARNING``, then there
       is much less output from the training scripts.
     * Switched the documentation to a serif font.
+    * Cleaned up the documentation building process a lot.
 
 DEPRECATIONS:
     * The showModel script is deprecated and will be removed in 6.0.0.

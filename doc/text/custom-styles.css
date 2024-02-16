@@ -1,0 +1,48 @@
+html[data-theme="dark"] .rst-content code.literal:not(code.xref) {
+    color: #90B090;
+    background-color: #232323;
+}
+.rst-content code.literal:not(code.xref) {
+    color: #207020;
+    background-color: #fbfbfb;
+}
+p {
+    font-family:"Libertinus Serif",serif;
+    font-feature-settings: "zero" on;
+}
+h1 {
+    font-family:"Libertinus Serif",serif;
+    font-feature-settings: "zero" on;
+}
+h2 {
+    font-family:"Libertinus Serif",serif;
+    font-feature-settings: "zero" on;
+}
+h3 {
+    font-family:"Libertinus Serif",serif;
+    font-feature-settings: "zero" on;
+}
+h4 {
+    font-family:"Libertinus Serif",serif;
+    font-feature-settings: "zero" on;
+}
+body {
+    font-family:"Libertinus Serif",serif;
+    font-feature-settings: "zero" on;
+}
+a:visited .pre {
+    color: #9B59B6;
+    background-color: #fbfbfb;
+}
+.rst-content code.xref {
+    color: #2980B9;
+    font-family:"Libertinus Mono",monospace;
+    font-feature-settings: "zero" on;
+    background-color: #fbfbfb;
+}
+html[data-theme="dark"] .rst-content code.xref {
+    color: #2980B9;
+    font-family:"Libertinus Mono",monospace;
+    font-feature-settings: "zero" on;
+    background-color: #2d2d2d;
+}

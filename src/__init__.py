@@ -1,8 +1,8 @@
 """Utilities for machine learning on genomics data.
 
 See README for a brief description of the programs,
-see doc/overview.pdf for a specification,
-and see doc/osknExample.ipynb for a demonstration notebook.
+See the documentation (which you can build) for a specification,
+and see doc/demos/osknExample.ipynb for a demonstration notebook.
 """
 
 
