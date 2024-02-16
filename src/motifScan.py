@@ -110,7 +110,19 @@ seq-match-cutoff, contrib-match-cutoff, contrib-magnitude-cutoff
     are calculated by
     :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>`. You could set
     these manually, but why would you?
-    TODO MELANIE More documentation.
+
+    seq-match: Cutoff where a sequence must have a PSSM score higher than the
+    original TF-MoDISco pattern seqlets' quantile value.
+
+    contrib-match: Cutoff where a sequence must have a CWM score higher than the
+    original TF-MoDISco pattern seqlets' quantile value.
+
+    contrib-match: Cutoff where a sequence must have contribution (L1 magnitude)
+    higher than the original TF-MoDISco pattern seqlets' quantile value.
+
+    Note: Setting any of these cutoff values to 0 will mean that no value can
+    be less that the lowest seqlet. Setting a cutoff to 0 is not the same as
+    setting a cutoff to None.
 
 Output Specification
 --------------------
