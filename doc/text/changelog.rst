@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.1.0, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 4.1.0, 2024-02-16
+''''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * The output from training now has a radically different format. If you were parsing
