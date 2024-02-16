@@ -53,19 +53,33 @@ There are two ways of specifying patterns,
     protein.
 
 seq-match-quantile
-    TODO MELANIE Document
+    Given the PSSM score of each mapped hit to the original TF-MoDISco PSSM,
+    calculate the quantile value of this score, given the distribution of
+    seqlets corresponding to the TF-MoDISco pattern.
 
 contrib-match-quantile
-    TODO MELANIE Document
+    Given the CWM score (i.e. Jaccardian-similarity) of each mapped hit's
+    contribution to the original TF-MoDISco CWM, calculate the quantile value
+    of this score, given the distribution of seqlets corresponding to the
+    TF-MoDISco pattern.
 
 contrib-magnitude-quantile
-    TODO MELANIE Document
+    Given the total L1 magnitude of contribution across a mapped hit, calculate
+    the quantile value of this magnitude, given the distribution of seqlets
+    corresponding to theTF-MoDISco pattern.
 
 trim-threshold
-    TODO MELANIE Document
+    For each pattern, acts as a threshold for trimming non-contributing bases
+    from TF-MoDISco's specified pattern length. This trimming is a
+    reimplementation of tfmodiscolite's `core.trim_to_support` feature that
+    trims off the edges of each pattern along the boundaries that are less than
+    `trim-threshold*max(contribution)`. Default: .3
 
 trim-padding
-    TODO MELANIE Document
+    After the pattern trimming step (see `trim-threshold` parameter), pad each
+    pattern with `trim-padding` bases to prevent removal of important flanking
+    sequence features. This padding is a reimplementation of tfmodiscolite.
+    Default: 1
 
 background-probs
     Gives the genetic content of your genome.
