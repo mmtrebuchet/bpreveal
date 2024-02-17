@@ -11,6 +11,14 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
+BPReveal 4.1.1, DATEDATEDATE
+
+ENHANCEMENTS:
+    * Integrated documentation from Melanie on the motif scanning tools.
+
+CONTRIBUTORS:
+    Melanie Weilert
+
 BPReveal 4.1.0, 2024-02-16
 ''''''''''''''''''''''''''
 
@@ -52,6 +60,9 @@ BUG FIXES:
       a new copy of quantile information if the file already had that data. Now it
       replaces the old quantile information.
 
+CONTRIBUTORS:
+    Charles McAnany
+
 BPReveal 4.0.x
 ^^^^^^^^^^^^^^
 
@@ -61,6 +72,9 @@ Version 4.0.4, 2024-02-07
 BUG FIXES:
     * Fixed a bug that prevented ``null`` quantile cutoffs in
       :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles>`.
+
+CONTRIBUTORS:
+    Charles McAnany
 
 Version 4.0.3, 2024-01-30
 '''''''''''''''''''''''''
