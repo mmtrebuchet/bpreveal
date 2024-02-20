@@ -133,20 +133,18 @@ def main(config):
     writePreds(regions, preds, outFile, numHeads, genome)
 
 
-def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
-    """Initialize an hdf5 with coordinate information.
+def addGenomeInfo(outFile: h5py.File, genome: pysam.FastaFile) -> \
+        tuple[type, type, dict[str, int]]:
+    """Create a chrom name and chrom size dataset so that this h5 can be converted into a bigwig.
 
-    Creates the chrom_names, chrom_sizes, coords_chrom, coords_start,
-    and coords_stop datasets.
-
-    :param regions: A BedTool of regions that will be written.
-    :param outFile: The opened hdf5 file.
-    :param genome: An opened pysam.FastaFile with your genome.
-    :param stopName: What should the stop point dataset be called?
-        For interpretation scores, it should be called coords_end, while
-        for predictions it should be called coords_stop.
-        I'm sorry that this parameter exists.
-
+    :param outFile: The (opened) hdf5 file to write.
+    :param genome: The (opened) FastaFile object containing genome information.
+    :return: The types you need to use to store chromosome index and position information,
+        as well as a dictionary to map chromosome name to index.
+        The first is what you need for coords_chrom, the second for coords_start and coords_end.
+        They will each be one of ``np.uint8``, ``np.uint16``, ``np.uint32``, or ``np.uint64``.
+        The dictionary (the third element) maps string chromosome names (like ``chrII``) to
+        integers. It is the inverse of the created ``chrom_names`` dataset.
     """
     stringDtype = h5py.string_dtype(encoding="utf-8")
     outFile.create_dataset("chrom_names", (genome.nreferences,), dtype=stringDtype)
@@ -174,7 +172,25 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
                           "Using an 8-byte integer for chromosome positions.")
             chromPosDtype = np.uint64
         outFile["chrom_sizes"][i] = genome.get_reference_length(chromName)
+    return chromDtype, chromPosDtype, chromNameToIndex
 
+
+def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
+    """Initialize an hdf5 with coordinate information.
+
+    Creates the chrom_names, chrom_sizes, coords_chrom, coords_start,
+    and coords_stop datasets.
+
+    :param regions: A BedTool of regions that will be written.
+    :param outFile: The opened hdf5 file.
+    :param genome: An opened pysam.FastaFile with your genome.
+    :param stopName: What should the stop point dataset be called?
+        For interpretation scores, it should be called coords_end, while
+        for predictions it should be called coords_stop.
+        I'm sorry that this parameter exists.
+
+    """
+    chromDtype, chromPosDtype, chromNameToIndex = addGenomeInfo(outFile, genome)
     # Build a table of chromosome numbers. For space savings, only store the
     # index into the chrom_names table.
     chromDset = [chromNameToIndex[r.chrom] for r in regions]

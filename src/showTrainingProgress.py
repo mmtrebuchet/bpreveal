@@ -5,6 +5,7 @@ import sys
 import argparse
 import re
 from bpreveal import logUtils
+# These will be initialized after we have a window.
 _COLOR_GREENBG = _COLOR_REDBG = _COLOR_ALARM = _COLOR_HIGHLIGHT = _COLOR_CRITICAL = None
 
 _NORMAL_REGEXES = [

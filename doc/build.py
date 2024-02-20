@@ -95,65 +95,14 @@ def makeHeader():
         fp.write("allGenerated = " + " ".join(allTargets) + "\n")
 
 
-# def makeCss():
-#     with open("_generated/static/custom-styles.css", "w") as fp:
-#         fp.write('html[data-theme="dark"] .rst-content code.literal:not(code.xref) {\n')
-#         fp.write("    color: #90B090;\n")
-#         fp.write("    background-color: #232323;\n")
-#         fp.write("}\n")
-#         fp.write(".rst-content code.literal:not(code.xref) {\n")
-#         fp.write("    color: #207020;\n")
-#         fp.write("    background-color: #fbfbfb;\n")
-#         fp.write("}\n")
-#         fp.write('p {\n')
-#         fp.write('    font-family:"Libertinus Serif",serif;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write('}\n')
-#         fp.write('h1 {\n')
-#         fp.write('    font-family:"Libertinus Serif",serif;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write('}\n')
-#         fp.write('h2 {\n')
-#         fp.write('    font-family:"Libertinus Serif",serif;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write('}\n')
-#         fp.write('h3 {\n')
-#         fp.write('    font-family:"Libertinus Serif",serif;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write('}\n')
-#         fp.write('h4 {\n')
-#         fp.write('    font-family:"Libertinus Serif",serif;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write('}\n')
-#         fp.write('body {\n')
-#         fp.write('    font-family:"Libertinus Serif",serif;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write('}\n')
-#         fp.write("a:visited .pre {\n")
-#         fp.write("    color: #9B59B6;\n")
-#         fp.write("    background-color: #fbfbfb;\n")
-#         fp.write("}\n")
-#         fp.write(".rst-content code.xref {\n")
-#         fp.write("    color: #2980B9;\n")
-#         fp.write('    font-family:"Libertinus Mono",monospace;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write("    background-color: #fbfbfb;\n")
-#         fp.write("}\n")
-#         fp.write('html[data-theme="dark"] .rst-content code.xref {\n')
-#         fp.write("    color: #2980B9;\n")
-#         fp.write('    font-family:"Libertinus Mono",monospace;\n')
-#         fp.write('    font-feature-settings: "zero" on;\n')
-#         fp.write("    background-color: #2d2d2d;\n")
-#         fp.write("}\n")
-
 def makeBase():
     ftypes = [["text", "Overview", filesText],
               ["majorcli", "Main CLI", filesMajor],
               ["minorcli", "Utility CLI", filesMinor],
+              ["api", "API", filesApi],
               ["toolsminor", "Tools Utility CLI", filesToolsMinor],
               ["toolsmajor", "Tools Main CLI", filesToolsMajor],
               ["toolsapi", "Tools API", filesToolsApi],
-              ["api", "API", filesApi],
               ["internalapi", "Internal", filesInternalApi],
               ["development", "Development", filesDevelopment]]
 
