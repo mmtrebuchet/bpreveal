@@ -8,6 +8,7 @@
      "output-length" : <integer>,
      "input-length" : <integer>,
      <kmer-size-section>
+     <num-batchers-section>
      <verbosity-section>}
 
 <bed-or-fasta> ::=
@@ -18,4 +19,8 @@
 
 <kmer-size-section> ::=
     "kmer-size" : <integer>,
+  | <empty>
+
+<num-batchers-section> ::=
+    "num-batchers" : <integer>,
   | <empty>

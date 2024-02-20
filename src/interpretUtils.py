@@ -288,7 +288,7 @@ class FlatRunner:
         self._countsOutQueue = multiprocessing.Queue(1000)
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._profileInQueue, self._countsInQueue], generator),
+            args=([self._profileInQueue, self._countsInQueue], generator, 1),
             daemon=True)
 
         self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
@@ -301,10 +301,10 @@ class FlatRunner:
             daemon=True)
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._profileOutQueue, profileSaver),
+            args=(self._profileOutQueue, profileSaver, 1),
             daemon=True)
         self._countsSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._countsOutQueue, countsSaver),
+            args=(self._countsOutQueue, countsSaver, 1),
             daemon=True)
 
     def run(self):
@@ -353,24 +353,44 @@ class PisaRunner:
         of the base being shapped.
     :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
         If kmerSize > 1, preserve the distribution of kmers of the given size.
+    :param numBatchers: How many parallel batchers should be run? I find that my GPU usage
+        is very efficient with three, but you can use just one if you're running into memory
+        issues.
     """
+
 
     def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
-                 receptiveField: int, kmerSize: int):
+                 receptiveField: int, kmerSize: int, numBatchers: int):
         logUtils.info("Initializing pisa runner.")
+        self.numBatchers = numBatchers
         self._inQueue = multiprocessing.Queue(1000)
         self._outQueue = multiprocessing.Queue(1000)
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._inQueue], generator),
+            args=([self._inQueue], generator, self.numBatchers),
             daemon=True)
-        self._batchThread = multiprocessing.Process(target=_pisaBatcherThread,
-                                                    args=(modelFname, batchSize,
-                                                          self._inQueue, self._outQueue, headID,
-                                                          taskID, numShuffles, receptiveField,
-                                                          kmerSize),
-                                                    daemon=True)
+        match numBatchers:
+            case 1:
+                memFrac = 0.9
+            case 2:
+                memFrac = 0.4
+            case 3:
+                memFrac = 0.28
+            case _:
+                logUtils.error("Very high number of batchers requested. "
+                               "BPReveal has not been tested with 4 batchers!")
+                memFrac = 0.7 / numBatchers
+
+        self._batchThreads = []
+        for _ in range(self.numBatchers):
+            self._batchThreads.append(multiprocessing.Process(
+                target=_pisaBatcherThread,
+                args=(modelFname, batchSize,
+                      self._inQueue, self._outQueue, headID,
+                      taskID, numShuffles, receptiveField,
+                      kmerSize, memFrac),
+                daemon=True))
         self._saver = saver
 
     def run(self):
@@ -378,13 +398,17 @@ class PisaRunner:
         logUtils.info("Beginning pisa run.")
         self._genThread.start()
         logUtils.debug("Started generator.")
-        self._batchThread.start()
+        for bt in self._batchThreads:
+            bt.start()
+        # self._batchThread.start()
         logUtils.debug("Started batcher.")
-        _saverThread(self._outQueue, self._saver)
+        _saverThread(self._outQueue, self._saver, self.numBatchers)
         logUtils.info("Saver complete. Finishing.")
         self._genThread.join()
         logUtils.debug("Generator joined.")
-        self._batchThread.join()
+        for bt in self._batchThreads:
+            bt.join()
+        # self._batchThread.join()
         logUtils.debug("Batcher joined.")
         self._saver.parentFinish()
         logUtils.info("Done.")
@@ -1076,11 +1100,12 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, taskID: int,
-                       numShuffles: int, receptiveField: int, kmerSize: int):
+                       numShuffles: int, receptiveField: int, kmerSize: int,
+                       memFrac: float):
     """The thread that spins up the batcher."""
     logUtils.debug("Starting batcher thread.")
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
-                     receptiveField, kmerSize)
+                     receptiveField, kmerSize, memFrac)
     logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
@@ -1094,7 +1119,8 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
     logUtils.debug("Batcher thread finished.")
 
 
-def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator):
+def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
+                     numBatchers: int):
     """The thread that spins up the generator and emits queries."""
     logUtils.debug("Starting generator thread.")
     generator.construct()
@@ -1102,21 +1128,27 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
         for inQueue in inQueues:
             inQueue.put(elem, timeout=utils.QUEUE_TIMEOUT)
     for inQueue in inQueues:
-        inQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
+        for _ in range(numBatchers):
+            inQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
         inQueue.close()
     logUtils.debug("Done with generator, None added to queue.")
     generator.done()
     logUtils.debug("Generator thread finished.")
 
 
-def _saverThread(outQueue: multiprocessing.Queue, saver: Saver):
+def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
+                 numBatchers: int):
     """The thread that spins up the saver."""
     logUtils.debug("Saver thread started.")
     saver.construct()
+    batchersLeft = numBatchers
     while True:
         rv = outQueue.get(timeout=utils.QUEUE_TIMEOUT)
         if rv is None:
-            break
+            batchersLeft -= 1
+            if batchersLeft == 0:
+                break
+            continue
         saver.add(rv)
     saver.done()
     logUtils.debug("Saver thread finished.")
@@ -1136,12 +1168,12 @@ class _PisaBatcher:
     :param numShuffles: How many shuffled samples should be run?
     :param receptiveField: What is the receptive field of the model?
     :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
-
+    :param memFrac: What fraction of the total GPU memory is this batcher allowed to use?
     """
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
-                 kmerSize: int):
+                 kmerSize: int, memFrac: float):
         logUtils.info("Initializing batcher.")
         # pylint: disable=import-outside-toplevel
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
@@ -1149,7 +1181,7 @@ class _PisaBatcher:
         tf.compat.v1.disable_eager_execution()
         from bpreveal import shap
         # pylint: enable=import-outside-toplevel
-        utils.setMemoryGrowth()
+        utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
         self.batchSize = batchSize
         self.outQueue = outQueue
