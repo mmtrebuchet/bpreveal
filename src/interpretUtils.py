@@ -358,7 +358,6 @@ class PisaRunner:
         issues.
     """
 
-
     def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
                  receptiveField: int, kmerSize: int, numBatchers: int):

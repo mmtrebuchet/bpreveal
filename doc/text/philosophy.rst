@@ -1,6 +1,8 @@
+Developer's Manifesto
+=====================
 
 Coding philosophy
-=================
+-----------------
 
 *   Make each program do one thing well. To do a new job, build afresh rather
     than complicate old programs by adding new features.
@@ -17,8 +19,6 @@ Coding philosophy
     Use JSON for all data that aren't (1.) bed files, (2.) bigwig files,
     (3.) fasta files, or (4.) potentially enormous
     (for large datasets, prefer hdf5.).
-*   Flat is better than nested.
-    Write code that has minimal architectural overhead.
 *   Don't be too clever.
     The code should use the standard idioms of the language, even if an
     operation could be completed in fewer characters or slightly more
@@ -39,5 +39,8 @@ Coding philosophy
 
 Coding Standards
 ----------------
+
 As of 4.1.0, BPReveal gets a perfect score from pylint, flake8, and pydocstyle.
 
+The integration test includes coverage testing, and new features should always
+be added to the integration test suite.
