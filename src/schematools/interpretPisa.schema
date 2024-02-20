@@ -15,6 +15,7 @@
         "output-h5": {"type": "string"},
         "num-shuffles": {"type": "integer", "minimum" : 1},
         "kmer-size": {"type": "integer", "minimum" : 1},
+        "num-batchers": {"type": "integer", "minimum" : 1},
         "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["input-length", "output-length", "head-id", "task-id",
@@ -26,9 +27,9 @@
                               {"required": ["sequence-fasta"]}]}
         },
         {
-            "not": {"required": ["genome", "bed-file"]},
             "oneOf": [{"required": ["fasta-file"]},
-                                    {"required": ["sequence-fasta"]}]
+                      {"required": ["sequence-fasta"]}],
+            "not": {"required": ["genome", "bed-file"]}
         }
     ]
 }

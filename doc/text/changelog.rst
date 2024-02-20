@@ -13,6 +13,10 @@ BPReveal 4.1.x
 
 BPReveal 4.1.1, DATEDATEDATE
 
+NEW FEATURES:
+    * The PISA code now runs in parallel, if you provide a ``num-batchers`` parameter
+      in its configuration file. Three-fold speedup is very possible.
+
 ENHANCEMENTS:
     * Integrated documentation from Melanie on the motif scanning tools.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A script to generate PISA scores.
 
-PISA is described in detail in the overview document.
+PISA is described :doc:`here<pisa>`
 
 BNF
 ---
