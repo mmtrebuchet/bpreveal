@@ -184,7 +184,8 @@ def main(config):
 
     writer = interpretUtils.PisaH5Saver(config["output-h5"], generator.numRegions,
                                         config["num-shuffles"],
-                                        receptiveField, genome=genome, useTqdm=True)
+                                        receptiveField, genome=genome,
+                                        useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
     batcher = interpretUtils.PisaRunner(config["model-file"],
                                         config["head-id"], config["task-id"],
                                         10, generator, writer,

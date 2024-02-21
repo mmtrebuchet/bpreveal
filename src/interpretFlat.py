@@ -184,7 +184,7 @@ def main(config):
 
     profileWriter = interpretUtils.FlatH5Saver(config["profile-h5"], generator.numRegions,
                                                config["input-length"], genome=genomeFname,
-                                               useTqdm=True)
+                                               useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
     countsWriter = interpretUtils.FlatH5Saver(config["counts-h5"], generator.numRegions,
                                               config["input-length"], genome=genomeFname,
                                               useTqdm=False)

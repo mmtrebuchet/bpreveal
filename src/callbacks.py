@@ -292,8 +292,16 @@ class DisplayCallback(Callback):
             that determines which window will be used in the display program.
         """
         for line in lines:
-            for row, col, text in line:
-                writer("∬{0:d}∬{1:d}∬{2:s}∬{3:s}".format(row, col, win, text))
+            # Condense all of the outputs on one line into one string.
+            if len(line) == 0:
+                return
+            row = line[0][0]
+            lineLen = line[-1][1] + len(line[-1][2])
+            outChrs = list(" " * lineLen)
+            for _, col, text in line:
+                for i, c in enumerate(text):
+                    outChrs[i + col] = c
+            writer("∬{0:d}∬{1:d}∬{2:s}∬{3:s}".format(row, 1, win, ''.join(outChrs)))
 
     def _getλLines(self) -> list[tuple[int, int, str]]:
         lines = []

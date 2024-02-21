@@ -203,11 +203,12 @@ class H5Writer:
             self.headBuffers.append(headBuffer)
             headGroup.create_dataset("logcounts", (self.numPredictions,),
                                      dtype=PRED_T,
-                                     chunks=(self.writeChunkSize,))
+                                     chunks=(min(self.writeChunkSize, self.numPredictions),))
             headGroup.create_dataset("logits",
                                      ((self.numPredictions,) + sampleOutputs[headID].shape),
                                      dtype=PRED_T,
-                                     chunks=(self.writeChunkSize,) + sampleOutputs[headID].shape)
+                                     chunks=(min(self.writeChunkSize, self.numPredictions),)
+                                            + sampleOutputs[headID].shape)  # noqa
         logUtils.debug("Initialized datasets.")
 
     def addEntry(self, batcherOut):
