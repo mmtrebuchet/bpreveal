@@ -18,7 +18,7 @@ and see doc/demos/osknExample.ipynb for a demonstration notebook.
 # If any changes are made to the conda environment (new python version,
 # different install procedure, etc.), then the minor version will be incremented.
 
-# A patch change will not break any existing code and does not alter any publically-usable API.
+# A patch change will not break any existing code and does not alter any publicly-usable API.
 # New minor features and bug fixes will cause patch increments.
 # Patch increments will not alter the environment setup, so you can just pull the new BPReveal code
 # and it will work with your current conda environment.

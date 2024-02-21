@@ -301,7 +301,7 @@ class DisplayCallback(Callback):
             for _, col, text in line:
                 for i, c in enumerate(text):
                     outChrs[i + col] = c
-            writer("∬{0:d}∬{1:d}∬{2:s}∬{3:s}".format(row, 1, win, ''.join(outChrs)))
+            writer("∬{0:d}∬{1:d}∬{2:s}∬{3:s}".format(row, 1, win, "".join(outChrs)))
 
     def _getλLines(self) -> list[tuple[int, int, str]]:
         lines = []

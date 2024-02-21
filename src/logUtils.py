@@ -44,7 +44,6 @@ _BPREVEAL_LOGGER_LOCK = threading.Lock()
 
 def _getCaller(offset=3):
     """Returns a code and frame object for the lowest non-logging stack frame."""
-    # Use sys._getframe().  This avoids creating a traceback object.
     # pylint: disable=protected-access
     f = _sys._getframe(offset)
     # pylint: enable=protected-access

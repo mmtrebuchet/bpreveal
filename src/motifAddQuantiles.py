@@ -214,7 +214,7 @@ def addFieldQuantileData(standardRecords, sampleRecords, recordNames, readName, 
 
 
 def addAllMetadata(standardRecords, sampleRecords, recordNames, readNames, writeNames):
-    """Add all of the quantile metedata.
+    """Add all of the quantile metadata.
 
     For each mapped hit, appends ALL quantile values calculated from the seqlet distribution
     of the considered score. These scores usually will consist of seq-match,

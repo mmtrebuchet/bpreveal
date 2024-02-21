@@ -157,7 +157,6 @@ class Screen:
                                         height - messageHeight - border,
                                         border)
 
-
         for winName in "BλESMD":
             self.printString(1, 1, winName, " ")
         status = "Waiting for input."
@@ -394,7 +393,7 @@ def getParser() -> argparse.ArgumentParser:
                         "There are no good times to use this except for debugging.",
                         dest="readTTY")
     parser.add_argument("--no-debug", help="Don't show debug-level messages.",
-                        dest='noDebug', action="store_true")
+                        dest="noDebug", action="store_true")
     parser.add_argument("--message-height", help="The height (rows) of the message area at "
                         "the bottom of the window.", default=None, dest="messageHeight")
     return parser
