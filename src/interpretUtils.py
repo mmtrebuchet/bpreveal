@@ -20,8 +20,8 @@ import pybedtools
 from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal import ushuffle
-from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
-    H5_CHUNK_SIZE, MODEL_ONEHOT_T
+from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
+    H5_CHUNK_SIZE, MODEL_ONEHOT_T, QUEUE_TIMEOUT
 
 
 class Query:
@@ -1086,13 +1086,13 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                      numHeads, taskIDs, numShuffles, mode, kmerSize)
     logUtils.debug("Batcher created.")
     while True:
-        query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
+        query = inQueue.get(timeout=QUEUE_TIMEOUT)
         if query is None:
             break
         b.addSample(query)
     logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
+    outQueue.put(None, timeout=QUEUE_TIMEOUT)
     outQueue.close()
     logUtils.debug("Batcher thread finished.")
 
@@ -1107,13 +1107,13 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                      receptiveField, kmerSize, memFrac)
     logUtils.debug("Batcher created.")
     while True:
-        query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
+        query = inQueue.get(timeout=QUEUE_TIMEOUT)
         if query is None:
             break
         b.addSample(query)
     logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    outQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
+    outQueue.put(None, timeout=QUEUE_TIMEOUT)
     outQueue.close()
     logUtils.debug("Batcher thread finished.")
 
@@ -1125,10 +1125,10 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     generator.construct()
     for elem in generator:
         for inQueue in inQueues:
-            inQueue.put(elem, timeout=utils.QUEUE_TIMEOUT)
+            inQueue.put(elem, timeout=QUEUE_TIMEOUT)
     for inQueue in inQueues:
         for _ in range(numBatchers):
-            inQueue.put(None, timeout=utils.QUEUE_TIMEOUT)
+            inQueue.put(None, timeout=QUEUE_TIMEOUT)
         inQueue.close()
     logUtils.debug("Done with generator, None added to queue.")
     generator.done()
@@ -1142,7 +1142,7 @@ def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
     saver.construct()
     batchersLeft = numBatchers
     while True:
-        rv = outQueue.get(timeout=utils.QUEUE_TIMEOUT)
+        rv = outQueue.get(timeout=QUEUE_TIMEOUT)
         if rv is None:
             batchersLeft -= 1
             if batchersLeft == 0:
@@ -1283,7 +1283,7 @@ class _PisaBatcher:
             queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
             ret = PisaResult(queryPred, queryShufPreds, querySequence,  # type: ignore
                              queryShapScores, q.passData, q.index)
-            self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
+            self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
 
 class _FlatBatcher:
@@ -1402,7 +1402,7 @@ class _FlatBatcher:
             querySequence = oneHotBuf[i, :, :]
             queryScores = scores[i, :, :]  # type: ignore
             ret = FlatResult(querySequence, queryScores, q.passData, q.index)  # type: ignore
-            self.outQueue.put(ret, timeout=utils.QUEUE_TIMEOUT)
+            self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
 
 def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-name

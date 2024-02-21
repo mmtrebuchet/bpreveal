@@ -35,7 +35,7 @@ filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
             "losses.py", "models.py", "motifUtils.py", "schema.py",
             "ushuffle.py", "utils.py"]
 
-filesInternalApi = ["disableTensorflowLogging.py"]
+filesInternalApi = ["disableTensorflowLogging.py", "constants.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py"]

@@ -110,7 +110,7 @@ import numpy as np
 import scipy.stats
 import scipy.spatial.distance
 from bpreveal import logUtils
-from bpreveal.utils import QUEUE_TIMEOUT
+from bpreveal.internal.constants import QUEUE_TIMEOUT
 
 
 class Region:

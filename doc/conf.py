@@ -15,6 +15,7 @@ copyright = '2024, Charles McAnany, Melanie Weilert, Haining Jiang'  # pylint: d
 author = 'Charles McAnany, Melanie Weilert, Haining Jiang'
 release = bpreveal.__version__
 # pylint: enable=invalid-name
+import bpreveal.internal.constants
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -33,6 +34,12 @@ reSubs = [
      r".. include:: ../../doc/_generated/bnf/\1.rst"]
 ]
 
+for definedType in ["ONEHOT_T", "ONEHOT_AR_T", "PRED_T", "PRED_AR_T",
+              "IMPORTANCE_T", "IMPORTANCE_AR_T", "MODEL_ONEHOT_T",
+              "MOTIF_FLOAT_T"]:
+    reSubs.append(
+        [definedType, f" :py:data:`{definedType}<bpreveal.internal.constants.{definedType}>` "])
+
 
 def fixLambda(app, what, name, obj, options, lines):  # pylint: disable=unused-argument
     """Replace Greek and other unicode letters in docstrings with something that TeX can handle."""
@@ -48,17 +55,18 @@ def setup(app):
 
 
 autodoc_mock_imports = ["tensorflow", 'keras']
-autodoc_typehints = 'both'  # pylint: disable=invalid-name
+autodoc_typehints = 'description'  # pylint: disable=invalid-name
 autodoc_member_order = 'bysource'  # pylint: disable=invalid-name
 autodoc_type_aliases = {
     "ANNOTATION_T": "ANNOTATION_T",
+    "ONEHOT_T": "ONEHOT_T",
     "CorruptorLetter": "CorruptorLetter",
     "Corruptor": "Corruptor",
     "CandidateCorruptor": "CandidateCorruptor",
     "Profile": "Profile"
 }
 # pylint: disable=invalid-name
-autodoc_unqualified_typehints = False
+autodoc_unqualified_typehints = True
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 # html_theme = "alabaster"

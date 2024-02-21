@@ -26,7 +26,7 @@ import numpy as np
 import numpy.typing as npt
 import scipy.signal
 from bpreveal import utils
-from bpreveal.utils import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
+from bpreveal.internal.constants import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
 from bpreveal.logUtils import wrapTqdm
 from bpreveal import logUtils
 try:

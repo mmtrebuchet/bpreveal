@@ -9,7 +9,7 @@ import matplotlib.colors
 import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
-from bpreveal.utils import PRED_AR_T
+from bpreveal.internal.constants import PRED_AR_T
 import numpy as np
 import matplotlib.axes
 
@@ -37,6 +37,8 @@ Profile: TypeAlias = list[tuple[PRED_AR_T, float]]
 """A profile is the result from running a model.
 
 It is a list of (logits, logcounts) tuples.
+
+:type: list[tuple[PRED_AR_T, float]
 """
 
 CandidateCorruptor: TypeAlias = tuple[int, str]
@@ -257,7 +259,7 @@ class Organism:
 
         :param scoreFn: A function that takes this organism's profile and its corruptor list
             and returns a float.
-        :type scoreFn: Callable[[:py:data:`~Profile`, list[:py:data:`~Corruptor`]], float]
+        :type scoreFn: Callable(:py:data:`~Profile`, list[:py:data:`~Corruptor`]) -> float
 
         This function can only be called after the organism's profile has been set!
         """

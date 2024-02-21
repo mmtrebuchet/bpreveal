@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 from tensorflow import keras
 from bpreveal import logUtils
-from bpreveal.utils import MODEL_ONEHOT_T
+from bpreveal.internal.constants import MODEL_ONEHOT_T, PRED_T
 
 
 class H5BatchGenerator(keras.utils.Sequence):
@@ -43,7 +43,8 @@ class H5BatchGenerator(keras.utils.Sequence):
         # and are named "head_N", where N is 0,1,2, etc.
         self.fullData = []
         for i, _ in enumerate(headList):
-            self.fullData.append(np.array(dataH5["head_{0:d}".format(i)]))
+            self.fullData.append(np.array(dataH5["head_{0:d}".format(i)],
+                                          dtype=PRED_T))
         self.loadData()
         self.addMeanCounts()
         logUtils.info("Batch generator initialized.")
@@ -101,7 +102,7 @@ class H5BatchGenerator(keras.utils.Sequence):
                     np.empty((curBatchSize,
                               self.outputLength,
                               head["num-tasks"]),
-                             dtype=np.float32))
+                             dtype=PRED_T))
                 newBatchCounts.append(np.empty((curBatchSize, )))
             self.batchVals.append(newBatchVals)
             self.batchCounts.append(newBatchCounts)

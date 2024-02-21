@@ -6,7 +6,7 @@ import pyBigWig
 import numpy as np
 import tqdm
 from bpreveal import logUtils
-from bpreveal.utils import H5_CHUNK_SIZE
+from bpreveal.internal.constants import H5_CHUNK_SIZE
 
 
 class BatchedH5Reader:

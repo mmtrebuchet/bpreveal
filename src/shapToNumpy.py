@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 import h5py
 from bpreveal import logUtils
-from bpreveal.utils import IMPORTANCE_T, ONEHOT_T
+from bpreveal.internal.constants import IMPORTANCE_T, ONEHOT_T
 
 
 def flipAndSave(inpAr: np.ndarray[IMPORTANCE_T] | np.ndarray[ONEHOT_T],

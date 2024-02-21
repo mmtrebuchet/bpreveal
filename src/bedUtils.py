@@ -7,8 +7,8 @@ import pysam
 import numpy as np
 import pyBigWig
 from bpreveal import logUtils
-from bpreveal import utils
 from bpreveal.logUtils import wrapTqdm
+from bpreveal.internal import constants
 
 
 def makeWhitelistSegments(genome: pysam.FastaFile,
@@ -302,10 +302,10 @@ class ParallelCounter:
         :param query: A tuple of (chromosome, start, end) giving the region to look at.
         :param idx: An index that will be returned with the results.
         """
-        self.inQueue.put(query + (idx,), timeout=utils.QUEUE_TIMEOUT)
+        self.inQueue.put(query + (idx,), timeout=constants.QUEUE_TIMEOUT)
         self.inFlight += 1
         while not self.outQueue.empty():
-            self.outDeque.appendleft(self.outQueue.get(timeout=utils.QUEUE_TIMEOUT))
+            self.outDeque.appendleft(self.outQueue.get(timeout=constants.QUEUE_TIMEOUT))
             self.numInDeque += 1
             self.inFlight -= 1
 
@@ -325,7 +325,7 @@ class ParallelCounter:
         values.
         """
         if self.inFlight and self.numInDeque == 0:
-            self.outDeque.appendleft(self.outQueue.get(timeout=utils.QUEUE_TIMEOUT))
+            self.outDeque.appendleft(self.outQueue.get(timeout=constants.QUEUE_TIMEOUT))
             self.numInDeque += 1
             self.inFlight -= 1
         self.numInDeque -= 1
@@ -368,7 +368,7 @@ def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
     outDeque = deque()
     inDeque = 0
     while True:
-        query = inQueue.get(timeout=utils.QUEUE_TIMEOUT)
+        query = inQueue.get(timeout=constants.QUEUE_TIMEOUT)
         match query:
             case (chrom, start, end, idx):
                 r = getCounts(pybedtools.Interval(chrom, start, end), bwFiles)
@@ -380,6 +380,6 @@ def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
             case None:
                 break
     while inDeque:
-        outQueue.put(outDeque[-1], timeout=utils.QUEUE_TIMEOUT)
+        outQueue.put(outDeque[-1], timeout=constants.QUEUE_TIMEOUT)
         inDeque -= 1
     [x.close() for x in bwFiles]  # pylint: disable=expression-not-assigned

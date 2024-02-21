@@ -88,7 +88,7 @@ API
 import json
 import pybedtools
 from bpreveal import utils
-from bpreveal.utils import ONEHOT_T, PRED_T
+from bpreveal.internal.constants import ONEHOT_T, PRED_T
 from bpreveal.logUtils import wrapTqdm
 import numpy as np
 import pysam

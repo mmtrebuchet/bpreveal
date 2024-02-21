@@ -97,7 +97,8 @@ import pysam
 import pybedtools
 from bpreveal import logUtils
 from bpreveal import utils
-from bpreveal.utils import ONEHOT_T, ONEHOT_AR_T, PRED_T, PRED_AR_T, H5_CHUNK_SIZE
+from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, PRED_AR_T, \
+    H5_CHUNK_SIZE, PRED_T
 
 
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:

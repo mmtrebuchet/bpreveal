@@ -19,6 +19,8 @@ NEW FEATURES:
 
 ENHANCEMENTS:
     * Integrated documentation from Melanie on the motif scanning tools.
+    * Separated type definitions out from the utils module into a new internal.constants
+      module so that the utils documentation isn't full of type annotations.
 
 BUG FIXES:
     * Fixed the name of the counts head in transformation models using bias counts from

@@ -2,7 +2,7 @@
 import threading
 import numpy as np
 from bpreveal.internal import libushuffle
-from bpreveal.utils import ONEHOT_AR_T
+from bpreveal.internal.constants import ONEHOT_AR_T
 
 # The ushuffle implementation in C makes heavy use of global variables.
 # To avoid multiple threads trampling over each other and causing races,

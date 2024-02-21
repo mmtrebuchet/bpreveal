@@ -7,7 +7,7 @@ import json
 import random
 import h5py
 import numpy as np
-from bpreveal.utils import ONEHOT_T, PRED_T, H5_CHUNK_SIZE
+from bpreveal.internal.constants import ONEHOT_T, PRED_T, H5_CHUNK_SIZE
 from bpreveal import logUtils
 random.seed(1234)
 SEQ_AR = None

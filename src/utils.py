@@ -1,5 +1,4 @@
 """Lots of helpful utilities for working with models."""
-from __future__ import annotations
 from collections import deque
 import multiprocessing
 import os
@@ -11,76 +10,10 @@ import scipy
 import pyBigWig
 import pysam
 import numpy as np
-import numpy.typing as npt
 from bpreveal import logUtils
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
-
-# Constants
-
-ONEHOT_T: typing.TypeAlias = np.uint8
-"""Data type for elements of a one-hot encoded sequence."""
-ONEHOT_AR_T: typing.TypeAlias = npt.NDArray[ONEHOT_T]
-"""Data type for an array of one-hot encoded sequences"""
-PRED_T: typing.TypeAlias = np.float32
-"""Data type for logits and logcounts."""
-PRED_AR_T: typing.TypeAlias = npt.NDArray[PRED_T]
-"""Data type for an array of predictions."""
-
-IMPORTANCE_T: typing.TypeAlias = np.float16
-"""Store importance scores with 16 bits of precision.
-
-Since importance scores (particularly PISA values) take up a lot of space, I
-use a small floating point type and compression to mitigate the amount of data.
-"""
-
-MODEL_ONEHOT_T: typing.TypeAlias = np.float32
-"""Inside the models, we use floating point numbers to represent one-hot sequences.
-
-For reasons I don't understand, setting this to uint8 DESTROYS pisa values.
-"""
-
-MOTIF_FLOAT_T: typing.TypeAlias = np.float32
-"""The type used to represent cwms and pwms, and also the type used by the jaccard code.
-
-If you change this, be sure to change libJaccard.c and libJaccard.pyf (and run
-make) so that the jaccard library uses the correct data type.
-"""
-
-
-H5_CHUNK_SIZE: int = 128
-"""When saving large hdf5 files, store the data in compressed chunks.
-
-This constant sets the number of entries in each chunk that gets compressed.
-For good performance, whenever you read a compressed hdf5 file, it really helps
-if you read out whole chunks at a time and buffer them. See, for example,
-:py:mod:`shapToBigwig<bpreveal.shapToBigwig>` for an example of a chunked
-reader.
-"""
-
-QUEUE_TIMEOUT: int = 240  # (seconds)
-"""How long should a queue wait before crashing?
-
-In parallel code, if something goes wrong, a queue could stay stuck forever.
-Python's queues have a nifty timeout parameter so that they'll crash if they
-wait too long. If a queue has been blocking for longer than this timeout, have
-the program crash.
-
-This is measured in seconds.
-"""
-
-
-GLOBAL_TENSORFLOW_LOADED: bool = False
-"""Has Tensorflow been loaded in this process?
-
-This gets set to True if you use any of the tensorflow-importing functions in
-this file. If you import tensorflow in a parent process, child processes will
-not be able to use tensorflow, because tensorflow is dumb like that. Tools like
-the easy® functions and the threaded batcher check to see if Tensorflow has
-been loaded in the parent process before they spawn children.
-"""
-
-
-# Functions
+from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, QUEUE_TIMEOUT
+from bpreveal.internal import constants
 
 
 def loadModel(modelFname: str):
@@ -104,8 +37,7 @@ def loadModel(modelFname: str):
     model = load_model(modelFname,
                        custom_objects={"multinomialNll": multinomialNll,
                                        "reweightableMse": dummyMse})
-    global GLOBAL_TENSORFLOW_LOADED
-    GLOBAL_TENSORFLOW_LOADED = True
+    constants.setTensorflowLoaded()
     return model
 
 
@@ -129,8 +61,7 @@ def setMemoryGrowth() -> None:
     except Exception as inst:  # pylint: disable=broad-exception-caught
         logUtils.warning("Not using GPU")
         logUtils.debug("Because: " + str(inst))
-    global GLOBAL_TENSORFLOW_LOADED
-    GLOBAL_TENSORFLOW_LOADED = True
+    constants.setTensorflowLoaded()
 
 
 def limitMemoryUsage(fraction: float, offset: float) -> float:
@@ -201,8 +132,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         gpus[0],
         [tf.config.LogicalDeviceConfiguration(memory_limit=useMem)])
     logUtils.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
-    global GLOBAL_TENSORFLOW_LOADED
-    GLOBAL_TENSORFLOW_LOADED = True
+    constants.setTensorflowLoaded()
     return useMem
 
 
@@ -259,7 +189,7 @@ def blankChromosomeArrays(genomeFname: str | None = None, chromSizesFname: str |
                           bw: pyBigWig.pyBigWig | None = None,
                           fasta: pysam.FastaFile | None = None,
                           dtype: type = np.float32,
-                          numTracks: int = 1):
+                          numTracks: int = 1) -> dict[str, np.ndarray]:
     """Get a set of blank numpy arrays that you can use to save genome-wide data.
 
     Exactly one of ``chromSizesFname``, ``genomeFname``, ``bwHeader``,
@@ -350,6 +280,7 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
         the sequence contains letters other than ``ACGTacgt``.
         If True, any other characters will be encoded as ``[0, 0, 0, 0]``.
     :return: An array with shape (len(sequence), 4).
+    :rtype: ONEHOT_AR_T
 
 
     The columns are, in order, A, C, G, and T.
@@ -410,14 +341,16 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     return ret.tobytes().decode("ascii")
 
 
-def logitsToProfile(logitsAcrossSingleRegion: npt.NDArray,
-                    logCountsAcrossSingleRegion: float) -> npt.NDArray[np.float32]:
+def logitsToProfile(logitsAcrossSingleRegion: PRED_AR_T,
+                    logCountsAcrossSingleRegion: float) -> PRED_AR_T:
     """Take logits and logcounts and turn it into a profile.
 
     :param logitsAcrossSingleRegion: An array of shape (output-length * num-tasks)
+    :type logitsAcrossSingleRegion: PRED_AR_T
     :param logCountsAcrossSingleRegion: A single floating-point number
     :return: An array of shape (output-length * num-tasks), giving the profile
         predictions.
+    :rtype: PRED_AR_T
     """
     # Logits will have shape (output-length x numTasks)
     assert len(logitsAcrossSingleRegion.shape) == 2
@@ -438,6 +371,7 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
     :param sequences: The DNA sequence(s) that you want to predict on.
     :param modelFname: The name of the Keras model to use.
     :return: An array of profiles or a single profile, depending on ``sequences``
+    :rtype: PRED_AR_T
 
     Spawns a separate process to make a single batch of predictions,
     then shuts it down. Why make it complicated? Because it frees the
@@ -452,7 +386,8 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
     it will be (outputLength,) if you passed in a single string.
     """
     singleReturn = False
-    assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
+    assert not constants.getTensorflowLoaded(), \
+        "Cannot use easy functions after loading tensorflow."
 
     if isinstance(sequences, str):
         sequences = [sequences]
@@ -488,7 +423,7 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
 def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
                       heads: int, headID: int, taskIDs: list[int],
                       numShuffles: int = 20, kmerSize: int = 1,
-                      keepHypotheticals: bool = False) -> dict[str, npt.NDArray]:
+                      keepHypotheticals: bool = False) -> dict[str, PRED_AR_T]:
     """Spin up an entire interpret pipeline just to interpret your sequences.
 
     You should only use this for quick one-off things since it is EXTREMELY
@@ -514,6 +449,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
         contribution scores or just the actual ones.
 
     :return: A dict containing the importance scores.
+    :rtype: dict[str,PRED_AR_T]
 
     If you passed in an iterable of strings (like a list), then the output's first
     dimension will be the number of sequences and it will depend on keepHypotheticals:
@@ -551,7 +487,8 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
     # pylint: disable=import-outside-toplevel
     from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
     # pylint: enable=import-outside-toplevel
-    assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use easy functions after loading tensorflow."
+    assert not constants.getTensorflowLoaded(), \
+        "Cannot use easy functions after loading tensorflow."
     logUtils.debug("Starting interpretation of sequences.")
     singleReturn = False
     if isinstance(sequences, str):
@@ -619,7 +556,7 @@ class BatchPredictor:
         This will load your model, and get ready to make predictions.
         """
         logUtils.debug("Creating batch predictor.")
-        if not GLOBAL_TENSORFLOW_LOADED:
+        if not constants.getTensorflowLoaded():
             # We haven't loaded Tensorflow yet.
             setMemoryGrowth()
         self._model = loadModel(modelFname)  # type: ignore
@@ -777,6 +714,7 @@ class BatchPredictor:
         sequences and use that to determine order.
 
         :return: A two-tuple.
+        :rtype: tuple[list[PRED_AR_T, float], typing.Any]
 
         * The first element will be a list of length numHeads*2, representing the
           output from the model. Since the output of the model will always have
@@ -998,6 +936,9 @@ class ThreadedBatchPredictor:
     def getOutput(self) -> tuple[list, typing.Any]:
         """Get a single output.
 
+        :return: The model's predictions.
+        :rtype: tuple[list[PRED_AR_T, float], typing.Any]
+
         Same semantics as
         :py:meth:`BatchPredictor.getOutput<bpreveal.utils.BatchPredictor.getOutput>`.
         """
@@ -1019,7 +960,7 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     .. note::
         Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
     """
-    assert not GLOBAL_TENSORFLOW_LOADED, "Cannot use the threaded predictor " \
+    assert not constants.getTensorflowLoaded(), "Cannot use the threaded predictor " \
         "after loading tensorflow."
     # pylint: disable=import-outside-toplevel, unused-import
     import bpreveal.internal.disableTensorflowLogging  # noqa

@@ -96,7 +96,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import makePredictionsBed
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
-from bpreveal.utils import PRED_T
+from bpreveal.internal.constants import PRED_T
 
 
 class FastaReader:
