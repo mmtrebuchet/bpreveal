@@ -43,6 +43,14 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 BPReveal 4.x
 ------------
 
+BPReveal 4.1.1
+^^^^^^^^^^^^^^
+The name of the counts head in a transformation model that uses bias counts changed from
+``combined_log_counts`` to ``combined_logcounts``, which might possibly break some very
+obscure use case. This change was necessary to fix a couple bugs with
+:doc:`adaptive counts loss<countsLossReweighting>` and
+:py:mod:`showTrainingProgress<bpreveal.showTrainingProgress>`.
+
 BPReveal 4.1.0
 ^^^^^^^^^^^^^^
 The output format from training was totally re-written to be easier to use in log files.

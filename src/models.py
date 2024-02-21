@@ -343,7 +343,7 @@ def combinedModel(inputLength, outputLength, numFilters, numLayers, inputFilterW
                 ([absBiasCounts, absResidualCounts])  # noqa
             addCounts = keras.layers.Activation(
                     tf.math.log,  # noqa
-                    name="combined_log_counts_{0:s}".format(individualHead["head-name"]))\
+                    name="combined_logcounts_{0:s}".format(individualHead["head-name"]))\
                 (absCombinedCounts)  # noqa
         else:
             # The user doesn't want the counts value from the regression used,

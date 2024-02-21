@@ -11,17 +11,23 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.1.1, DATEDATEDATE
+BPReveal 4.1.1, 2024-02-21
 
 NEW FEATURES:
-    * The PISA code now runs in parallel, if you provide a ``num-batchers`` parameter
+    * The PISA code now runs in parallel if you provide a ``num-batchers`` parameter
       in its configuration file. Three-fold speedup is very possible.
 
 ENHANCEMENTS:
     * Integrated documentation from Melanie on the motif scanning tools.
 
+BUG FIXES:
+    * Fixed the name of the counts head in transformation models using bias counts from
+      ``combined_log_counts_<headname>`` to ``combined_logcounts_<headname>``, making
+      ``use-bias-counts`` compatible with adaptive loss and the new training progress
+      logger. (Melanie Weilert)
+
 CONTRIBUTORS:
-    Melanie Weilert
+    Melanie Weilert, Charles McAnany
 
 BPReveal 4.1.0, 2024-02-16
 ''''''''''''''''''''''''''
