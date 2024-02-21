@@ -205,17 +205,17 @@ class DisplayCallback(Callback):
         """
         match val:
             case str():
-                return "{0:>10s}".format(val)
+                return "{0:>11s}".format(val)
             case int():
-                return "{0:>10d}".format(val)
+                return "{0:>11d}".format(val)
             case float():
-                return "{0:>10.3f}".format(val)
+                return "{0:>11.3f}".format(val)
             case int(), int():
-                return "{0:>3d} / {1:>4d}".format(*val)
+                return "{0:>4d} / {1:>4d}".format(*val)
             case _, None:
-                return "{0:>10s}".format(str(val))
+                return "{0:>11s}".format(str(val))
             case _:
-                return "{0:10s}".format("FMT_ERR")
+                return "{0:11s}".format("FMT_ERR")
 
     def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
         """Writes out all the logs for this epoch and the last one at INFO logging level."""
