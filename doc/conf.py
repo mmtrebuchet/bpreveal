@@ -35,8 +35,9 @@ reSubs = [
 ]
 
 for definedType in ["ONEHOT_T", "ONEHOT_AR_T", "PRED_T", "PRED_AR_T",
-              "IMPORTANCE_T", "IMPORTANCE_AR_T", "MODEL_ONEHOT_T",
-              "MOTIF_FLOAT_T"]:
+                    "LOGIT_T", "LOGIT_AR_T", "LOGCOUNT_T",
+                    "IMPORTANCE_T", "IMPORTANCE_AR_T", "MODEL_ONEHOT_T",
+                    "MOTIF_FLOAT_T"]:
     reSubs.append(
         [definedType, f" :py:data:`{definedType}<bpreveal.internal.constants.{definedType}>` "])
 

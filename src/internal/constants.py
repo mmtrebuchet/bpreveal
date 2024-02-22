@@ -9,17 +9,27 @@ ONEHOT_T: typing.TypeAlias = np.uint8
 ONEHOT_AR_T: typing.TypeAlias = npt.NDArray[ONEHOT_T]
 """Data type for an array of one-hot encoded sequences"""
 PRED_T: typing.TypeAlias = np.float32
-"""Data type for logits and logcounts."""
+"""Data type for coverage."""
 PRED_AR_T: typing.TypeAlias = npt.NDArray[PRED_T]
 """Data type for an array of predictions."""
 
-# IMPORTANCE_T: typing.TypeAlias = np.float16
-IMPORTANCE_T: typing.TypeAlias = list[str]
+LOGIT_T: typing.TypeAlias = np.float32
+"""Data type for logits from the model."""
+LOGIT_AR_T: typing.TypeAlias = npt.NDArray[LOGIT_T]
+"""Data type for an array of logits."""
+
+LOGCOUNT_T: typing.TypeAlias = np.float32
+"""Data type for logcount values."""
+
+IMPORTANCE_T: typing.TypeAlias = np.float16
 """Store importance scores with 16 bits of precision.
 
 Since importance scores (particularly PISA values) take up a lot of space, I
 use a small floating point type and compression to mitigate the amount of data.
 """
+
+IMPORTANCE_AR_T: typing.TypeAlias = npt.NDArray[IMPORTANCE_T]
+"""Data type for an array of importance values."""
 
 MODEL_ONEHOT_T: typing.TypeAlias = np.float32
 """Inside the models, we use floating point numbers to represent one-hot sequences.

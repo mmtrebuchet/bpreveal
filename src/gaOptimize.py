@@ -9,7 +9,7 @@ import matplotlib.colors
 import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
-from bpreveal.internal.constants import PRED_AR_T
+from bpreveal.internal.constants import LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
 import numpy as np
 import matplotlib.axes
 
@@ -33,12 +33,12 @@ Examples::
     (1603, "d")
 """
 
-Profile: TypeAlias = list[tuple[PRED_AR_T, float]]
+Profile: TypeAlias = list[tuple[LOGIT_AR_T, LOGCOUNT_T]]
 """A profile is the result from running a model.
 
 It is a list of (logits, logcounts) tuples.
 
-:type: list[tuple[PRED_AR_T, float]
+:type: list[tuple[LOGIT_AR_T, LOGCOUNT_T]
 """
 
 CandidateCorruptor: TypeAlias = tuple[int, str]

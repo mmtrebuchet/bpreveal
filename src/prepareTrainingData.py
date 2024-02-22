@@ -160,6 +160,7 @@ def getHead(bed: pybedtools.BedTool, bigwigFnames: list[str], outputLength: int,
         (numSequences * outputLength + 2 * jitter, numTasks). numSequences will be
         the length of your bed file if ``revcomp == False``, or twice the length of your
         bed file if you include revcomp augmentation.
+    :rtype: PRED_AR_T
     """
     # Note that revcomp should be either False or the task-order array (which is truthy).
     numSequences = bed.count()

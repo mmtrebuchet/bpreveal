@@ -88,7 +88,7 @@ API
 import json
 import pybedtools
 from bpreveal import utils
-from bpreveal.internal.constants import ONEHOT_T, PRED_T
+from bpreveal.internal.constants import ONEHOT_T, LOGIT_T, LOGCOUNT_T
 from bpreveal.logUtils import wrapTqdm
 import numpy as np
 import pysam
@@ -217,8 +217,8 @@ def writePreds(regions, preds, outFile, numHeads, genome):
     logUtils.debug("Writing predictions.")
     for headID in wrapTqdm(range(numHeads)):
         headGroup = outFile.create_group("head_{0:d}".format(headID))
-        headGroup.create_dataset("logcounts", data=preds[numHeads + headID], dtype=PRED_T)
-        headGroup.create_dataset("logits", data=preds[headID], dtype=PRED_T)
+        headGroup.create_dataset("logcounts", data=preds[numHeads + headID], dtype=LOGCOUNT_T)
+        headGroup.create_dataset("logits", data=preds[headID], dtype=LOGIT_T)
     outFile.close()
     logUtils.info("File saved.")
 

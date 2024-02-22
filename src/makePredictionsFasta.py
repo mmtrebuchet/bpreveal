@@ -96,7 +96,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import makePredictionsBed
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
-from bpreveal.internal.constants import PRED_T
+from bpreveal.internal.constants import LOGIT_T, LOGCOUNT_T
 
 
 class FastaReader:
@@ -197,16 +197,16 @@ class H5Writer:
         for headID in range(self.numHeads):
             headGroup = self._fp.create_group("head_{0:d}".format(headID))
             # These are the storage buffers for incoming data.
-            headBuffer = [np.empty((self.writeChunkSize, ), dtype=PRED_T),  # counts
+            headBuffer = [np.empty((self.writeChunkSize, ), dtype=LOGCOUNT_T),  # counts
                           np.empty((self.writeChunkSize, ) + sampleOutputs[headID].shape,
-                                   dtype=PRED_T)]  # profile
+                                   dtype=LOGIT_T)]  # profile
             self.headBuffers.append(headBuffer)
             headGroup.create_dataset("logcounts", (self.numPredictions,),
-                                     dtype=PRED_T,
+                                     dtype=LOGCOUNT_T,
                                      chunks=(min(self.writeChunkSize, self.numPredictions),))
             headGroup.create_dataset("logits",
                                      ((self.numPredictions,) + sampleOutputs[headID].shape),
-                                     dtype=PRED_T,
+                                     dtype=LOGIT_T,
                                      chunks=(min(self.writeChunkSize, self.numPredictions),)
                                             + sampleOutputs[headID].shape)  # noqa
         logUtils.debug("Initialized datasets.")

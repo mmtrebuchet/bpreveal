@@ -12,7 +12,8 @@ import pysam
 import numpy as np
 from bpreveal import logUtils
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
-from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, QUEUE_TIMEOUT
+from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, QUEUE_TIMEOUT, \
+    LOGIT_T, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
 from bpreveal.internal import constants
 
 
@@ -20,7 +21,7 @@ def loadModel(modelFname: str):
     """Load up a BPReveal model.
 
     .. note::
-        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+        Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
 
     :param modelFname: The name of the model that Keras saved earlier, typically
         a directory.
@@ -45,7 +46,7 @@ def setMemoryGrowth() -> None:
     """Turn on the tensorflow option to grow memory usage as needed.
 
     .. note::
-        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+        Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
 
     All of the main programs in BPReveal do this, so that you can
     use your GPU for other stuff as you work with models.
@@ -68,7 +69,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     """Limit tensorflow to use only the given fraction of memory.
 
     .. note::
-        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+        Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
 
     This will allocate ``total-memory * fraction - offset``
     Why use this? Well, for running multiple processes on the same GPU, you don't
@@ -341,13 +342,14 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     return ret.tobytes().decode("ascii")
 
 
-def logitsToProfile(logitsAcrossSingleRegion: PRED_AR_T,
-                    logCountsAcrossSingleRegion: float) -> PRED_AR_T:
+def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
+                    logCountsAcrossSingleRegion: LOGCOUNT_T) -> PRED_AR_T:
     """Take logits and logcounts and turn it into a profile.
 
     :param logitsAcrossSingleRegion: An array of shape (output-length * num-tasks)
-    :type logitsAcrossSingleRegion: PRED_AR_T
+    :type logitsAcrossSingleRegion: LOGIT_AR_T
     :param logCountsAcrossSingleRegion: A single floating-point number
+    :type logCountsAcrossSingleRegion: LOGCOUNT_T
     :return: An array of shape (output-length * num-tasks), giving the profile
         predictions.
     :rtype: PRED_AR_T
@@ -423,7 +425,8 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
 def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
                       heads: int, headID: int, taskIDs: list[int],
                       numShuffles: int = 20, kmerSize: int = 1,
-                      keepHypotheticals: bool = False) -> dict[str, PRED_AR_T]:
+                      keepHypotheticals: bool = False) \
+                        -> dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]:
     """Spin up an entire interpret pipeline just to interpret your sequences.
 
     You should only use this for quick one-off things since it is EXTREMELY
@@ -449,7 +452,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
         contribution scores or just the actual ones.
 
     :return: A dict containing the importance scores.
-    :rtype: dict[str,PRED_AR_T]
+    :rtype: dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]
 
     If you passed in an iterable of strings (like a list), then the output's first
     dimension will be the number of sequences and it will depend on keepHypotheticals:
@@ -526,7 +529,7 @@ class BatchPredictor:
     """This is a utility class for when you need to make lots of predictions.
 
     .. note::
-        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+        Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
 
     It's doubly-useful if you are generating sequences dynamically. Here's how
     it works. You first create a predictor by calling BatchPredictor(modelName,
@@ -714,7 +717,7 @@ class BatchPredictor:
         sequences and use that to determine order.
 
         :return: A two-tuple.
-        :rtype: tuple[list[PRED_AR_T, float], typing.Any]
+        :rtype: tuple[list[LOGIT_AR_T, LOGIT_T], typing.Any]
 
         * The first element will be a list of length numHeads*2, representing the
           output from the model. Since the output of the model will always have
@@ -937,7 +940,7 @@ class ThreadedBatchPredictor:
         """Get a single output.
 
         :return: The model's predictions.
-        :rtype: tuple[list[PRED_AR_T, float], typing.Any]
+        :rtype: tuple[list[LOGIT_AR_T, LOGCOUNT_T], typing.Any]
 
         Same semantics as
         :py:meth:`BatchPredictor.getOutput<bpreveal.utils.BatchPredictor.getOutput>`.
@@ -958,7 +961,7 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
     """Run batches from the ThreadedBatchPredictor in this separate thread.
 
     .. note::
-        Sets :py:data:`~GLOBAL_TENSORFLOW_LOADED`.
+        Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
     """
     assert not constants.getTensorflowLoaded(), "Cannot use the threaded predictor " \
         "after loading tensorflow."
