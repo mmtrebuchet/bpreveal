@@ -13,7 +13,7 @@ import numpy as np
 from bpreveal import logUtils
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, QUEUE_TIMEOUT, \
-    LOGIT_T, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
+    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
 from bpreveal.internal import constants
 
 
@@ -426,7 +426,7 @@ def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
                       heads: int, headID: int, taskIDs: list[int],
                       numShuffles: int = 20, kmerSize: int = 1,
                       keepHypotheticals: bool = False) \
-                        -> dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]:
+        -> dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]:
     """Spin up an entire interpret pipeline just to interpret your sequences.
 
     You should only use this for quick one-off things since it is EXTREMELY

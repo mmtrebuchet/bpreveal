@@ -410,10 +410,8 @@ def runScreen(stdscr, args):
             if args.delay > 0:
                 curses.napms(args.delay)
             if ret:
+                printer.updateStatus("X")
                 break
-    if ret:
-        # We got the end-of-training message.
-        printer.updateStatus("X")
     else:
         # Abnormal end.
         printer.updateStatus("F")

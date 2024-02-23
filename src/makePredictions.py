@@ -93,6 +93,48 @@ from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal import predictUtils
 
+def getReader(config):
+    """Loads the reader appropriate for the configuration."""
+    if "bed-file" in config:
+        # We're reading from a bed.
+        inputLength = config["settings"]["architecture"]["input-length"]
+        outputLength = config["settings"]["architecture"]["output-length"]
+        padding = (inputLength - outputLength) // 2
+        bedFname = config["bed-file"]
+        genomeFname = config["genome"]
+        reader = predictUtils.BedReader(bedFname, genomeFname, padding)
+    elif "fasta-file" in config:
+        fastaFname = config["fasta-file"]
+        reader = predictUtils.FastaReader(fastaFname)
+    else:
+        assert False, "Could not find an input source in your config."
+    return reader
+
+
+def getWriter(config, numPredictions):
+    """Creates a writer appropriate for the configuration."""
+    outFname = config["settings"]["output-h5"]
+    numHeads = config["settings"]["heads"]
+    if "bed-file" in config:
+        bedFname = config["bed-file"]
+        genomeFname = config["genome"]
+        writer = predictUtils.H5Writer(outFname, numHeads, numPredictions,
+                                       bedFname, genomeFname)
+        logUtils.debug("Initialized writer from a bed reader.")
+    elif "fasta-file" in config:
+        bedFname = config["coordinates"]["bed-file"]
+        genomeFname = config["coordinates"]["genome"]
+        if "coordinates" in config:
+            writer = predictUtils.H5Writer(outFname, numHeads, numPredictions,
+                                           bedFname, genomeFname)
+            logUtils.debug("Initialized writer from a fasta reader with coordinates.")
+        else:
+            writer = predictUtils.H5Writer(outFname, numHeads, numPredictions)
+            logUtils.debug("Initialized writer from a fasta reader without coordinates.")
+    else:
+        assert False, "Could not construct a writer."
+    return writer
+
 
 def main(config):
     """Run the predictions.
@@ -100,34 +142,34 @@ def main(config):
     :param config: is taken straight from the json specification.
     """
     logUtils.setVerbosity(config["verbosity"])
-    fastaFname = config["fasta-file"]
+    if "genome" in config["settings"]:
+        config["genome"] = config["settings"]["genome"]
+        del config["settings"]["genome"]
+        logUtils.warning("You are using an old-format bed prediction json.")
+        logUtils.warning('The genome argument should be moved from "settings"')
+        logUtils.warning("to the root of the JSON object.")
+        logUtils.warning("This will be an error in BPReveal 6.0.0")
+        logUtils.warning("Here is a corrected version:")
+        logUtils.warning(json.dumps(config, indent=4))
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]
-    numHeads = config["settings"]["heads"]
-    logUtils.debug("Opening output hdf5 file.")
-    outFname = config["settings"]["output-h5"]
 
     # Before we can build the output dataset in the hdf5 file, we need to
-    # know how many fasta regions we will be asked to predict.
-    fastaReader = predictUtils.FastaReader(fastaFname)
+    # know how many regions we will be asked to predict.
+    reader = getReader(config)
+    writer = getWriter(config, reader.numPredictions)
     if "num-threads" in config:
         batcher = utils.ThreadedBatchPredictor(modelFname, batchSize,
                                                numThreads=config["num-threads"])
     else:
         batcher = utils.BatchPredictor(modelFname, batchSize)
-    if "coordinates" in config:
-        writer = predictUtils.H5Writer(outFname, numHeads, fastaReader.numPredictions,
-                                       config["coordinates"]["bed-file"],
-                                       config["coordinates"]["genome"])
-    else:
-        writer = predictUtils.H5Writer(outFname, numHeads, fastaReader.numPredictions)
     logUtils.info("Entering prediction loop.")
-    # Now we just iterate over the fasta file and submit to our batcher.
+    # Now we just iterate over the reader and submit to our batcher.
     with batcher:
-        pbar = wrapTqdm(fastaReader.numPredictions)
-        for _ in range(fastaReader.numPredictions):
-            batcher.submitString(fastaReader.curSequence, fastaReader.curLabel)
-            fastaReader.pop()
+        pbar = wrapTqdm(reader.numPredictions)
+        for _ in range(reader.numPredictions):
+            batcher.submitString(reader.curSequence, reader.curLabel)
+            reader.pop()
             while batcher.outputReady():
                 # We've just run a batch. Write it out.
                 ret = batcher.getOutput()
@@ -145,8 +187,14 @@ def main(config):
 
 if __name__ == "__main__":
     import sys
+    if sys.argv[0] in ["makePredictionsBed", "makePredictionsFasta",
+                       "makePredictionsBed.py", "makePredictionsFasta.py"]:
+        logUtils.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
+            "It is now just called makePredictions and automatically detects if you're "
+            "using a bed or fasta file. Instructions for updating: Call the program "
+            "makePredictions. These old program names will be removed in BPReveal 6.0.0.")
     with open(sys.argv[1], "r") as configFp:
         configJson = json.load(configFp)
     import bpreveal.schema
-    bpreveal.schema.makePredictionsFasta.validate(configJson)
+    bpreveal.schema.makePredictions.validate(configJson)
     main(configJson)
