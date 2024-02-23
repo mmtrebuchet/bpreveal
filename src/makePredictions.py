@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A script to make predictions using a list of sequences.
+"""A script to make predictions using a BPReveal model.
 
 This program streams input from disk and writes output as it calculates, so
 it can run with very little memory even for extremely large prediction tasks.
@@ -10,7 +10,7 @@ BNF
 
 .. highlight:: none
 
-.. literalinclude:: ../../doc/bnf/makePredictionsFasta.bnf
+.. literalinclude:: ../../doc/bnf/makePredictions.bnf
 
 
 Parameter Notes
@@ -36,17 +36,30 @@ input-length, output-length
 
 fasta-file
     A file containing the sequences for which you'd like predictions. Each sequence in
-    this bed file must be ``input-length`` long.
+    this bed file must be ``input-length`` long. If you specify ``fasta-file``,
+    you cannot also specify ``bed-file`` and ``genome``
+    (except, optionally, in the ``coordinates`` section.)
+
+bed-file, genome
+    If you do not give ``fasta-file``, you can instead give a
+    ``bed-file`` and ``genome`` fasta. Each region in the bed file should be
+    ``output-length`` long, and the program will automatically inflate the regions
+    to the ``input-length`` of your model.
 
 num-threads
     (Optional) How many parallel predictors should be run? Unless you're really taxed
     for performance, leave this at 1.
 
-bed-file, genome
-    These are optional. If provided, then the output hdf5 will contain ``chrom_names``,
-    ``chrom_sizes``, ``coords_chrom``, ``coords_start``, and ``coords_end`` datasets,
-    in addition to the descriptions dataset. This way, you can make predictions from a
-    fasta but then easily convert it to a bigwig.
+coordinates
+    (Optional, only valid with ``fasta-file``.)
+    The ``bed-file`` and ``genome`` entries may be specified to add coordinate information
+    when you predict from ``fasta-file``. If provided, then the output hdf5 will contain
+    ``chrom_names``, ``chrom_sizes``, ``coords_chrom``, ``coords_start``, and
+    ``coords_end`` datasets, in addition to the descriptions dataset.
+    Only the *coordinate* information is taken from the bed file, and only chromosome
+    size information is loaded from the genome file.
+    The actual sequences to predict will be drawn from ``fasta-file``.
+    This way, you can make predictions from a fasta but then easily convert it to a bigwig.
 
 Output Specification
 --------------------
@@ -55,8 +68,9 @@ It is organized as follows:
 
 descriptions
     A list of strings of length (numRegions,).
-    Each string corresponds to one description line (i.e., a line starting
-    with ``>``).
+    If you give a fasta file, these will correspond to
+    the description lines (i.e., the lines starting with ``>``).
+    If you gave a bed file as input, each one will be an empty string.
 
 head_0, head_1, head_2, ...
     You get a subgroup for each output head of the model. The subgroups are named
@@ -75,10 +89,32 @@ head_0, head_1, head_2, ...
         set of logits, not on each task's logits independently.
         (Use :py:func:`bpreveal.utils.logitsToProfile` to do this.)
 
-chrom_names, chrom_sizes, coords_chrom, coords_start, coords_stop
-    If you provided ``bed-file`` and ``genome`` entries in your json,
-    these datasets will be populated. They mirror their meaning in the
-    output from :py:mod:`makePredictionsBed<bpreveal.makePredictionsBed>`.
+chrom_names
+    A list of strings that give you the meaning
+    of each index in the ``coords_chrom`` dataset.
+    This is particularly handy when you want to make a bigwig file, since
+    you can extract a header from this data.
+    Only populated if a bed file and genome were provided.
+
+chrom_sizes
+    The size of each chromosome in the same order
+    as ``chrom_names``.
+    Mostly used to create bigwig headers.
+    Only populated if a bed file and genome were provided.
+
+coords_chrom
+    A list of integers, one for each region
+    predicted, that gives the chromosome index (see ``chrom_names``)
+    for that region.
+    Only populated if a bed file and genome were provided.
+
+coords_start
+    The start base of each predicted region.
+    Only populated if a bed file and genome were provided.
+
+coords_stop
+    The end point of each predicted region.
+    Only populated if a bed file and genome were provided.
 
 API
 ---
@@ -182,12 +218,13 @@ def main(config):
             ret = batcher.getOutput()
             pbar.update()
             writer.addEntry(ret)
-        writer.close()
+    writer.close()
 
 
 if __name__ == "__main__":
     import sys
-    if sys.argv[0] in ["makePredictionsBed", "makePredictionsFasta",
+    print(sys.argv[0])
+    if sys.argv[0].split('/')[-1] in ["makePredictionsBed", "makePredictionsFasta",
                        "makePredictionsBed.py", "makePredictionsFasta.py"]:
         logUtils.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
             "It is now just called makePredictions and automatically detects if you're "

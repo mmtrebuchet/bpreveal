@@ -35,6 +35,7 @@ class FastaReader:
                 if line[0] == ">":
                     self.numPredictions += 1
             fp.close()
+        self._idx = -1  # We're about to pop to get index zero.
         logUtils.info("Found {0:d} entries in input fasta".format(self.numPredictions))
         # Note that we close the file after that with block, so this re-opens it
         # at position zero.
@@ -46,6 +47,10 @@ class FastaReader:
     def pop(self):
         """Pop the current sequence off the queue. Updates curSequence and curLabel."""
         # We know we're at the start of the sequence section of a fasta.
+        self._idx += 1
+        if self._idx >= self.numPredictions:
+            logUtils.debug("Reached end of fasta generator.")
+            return
         self.curLabel = self._nextLabel
         self.curSequence = ""
         inSequence = True
@@ -106,7 +111,10 @@ class BedReader:
     def pop(self):
         """Pop the current sequence off the queue."""
         self._idx += 1
-        self._fetch()
+        if self._idx >= self.numPredictions:
+            logUtils.debug("Reached end of bed generator.")
+        else:
+            self._fetch()
 
 
 class H5Writer:
