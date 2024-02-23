@@ -123,11 +123,13 @@ API
 
 
 import json
+import pybedtools  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal import predictUtils
+
 
 def getReader(config):
     """Loads the reader appropriate for the configuration."""
@@ -202,7 +204,7 @@ def main(config):
     logUtils.info("Entering prediction loop.")
     # Now we just iterate over the reader and submit to our batcher.
     with batcher:
-        pbar = wrapTqdm(reader.numPredictions)
+        pbar = wrapTqdm(reader.numPredictions, smoothing=0.1)
         for _ in range(reader.numPredictions):
             batcher.submitString(reader.curSequence, reader.curLabel)
             reader.pop()
@@ -224,7 +226,7 @@ def main(config):
 if __name__ == "__main__":
     import sys
     print(sys.argv[0])
-    if sys.argv[0].split('/')[-1] in ["makePredictionsBed", "makePredictionsFasta",
+    if sys.argv[0].split("/")[-1] in ["makePredictionsBed", "makePredictionsFasta",
                        "makePredictionsBed.py", "makePredictionsFasta.py"]:
         logUtils.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
             "It is now just called makePredictions and automatically detects if you're "

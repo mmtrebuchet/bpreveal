@@ -265,7 +265,7 @@ def addGenomeInfo(outFile: h5py.File, genome: pysam.FastaFile) -> \
         refLen = genome.get_reference_length(chromName)
         if refLen > (2 ** 31 - 1):
             logUtils.debug("The genome contains a chromosome that is over four billion bases long. "
-                          "Using an 8-byte integer for chromosome positions.")
+                           "Using an 8-byte integer for chromosome positions.")
             chromPosDtype = np.uint64
         outFile["chrom_sizes"][i] = genome.get_reference_length(chromName)
     return chromDtype, chromPosDtype, chromNameToIndex
@@ -287,12 +287,15 @@ def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
 
     """
     chromDtype, chromPosDtype, chromNameToIndex = addGenomeInfo(outFile, genome)
+    logUtils.debug("Genome info datasets created. Populating regions.")
     # Build a table of chromosome numbers. For space savings, only store the
     # index into the chrom_names table.
     chromDset = [chromNameToIndex[r.chrom] for r in regions]
     startDset = [r.start for r in regions]
     stopDset = [r.stop for r in regions]
-    logUtils.debug("Datasets created. Populating regions.")
+    logUtils.debug("Writing coords_chrom")
     outFile.create_dataset("coords_chrom", dtype=chromDtype, data=chromDset)
+    logUtils.debug("Writing coords_start")
     outFile.create_dataset("coords_start", dtype=chromPosDtype, data=startDset)
+    logUtils.debug("Writing coords_end")
     outFile.create_dataset(stopName, dtype=chromPosDtype, data=stopDset)
