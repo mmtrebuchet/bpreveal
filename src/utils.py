@@ -609,7 +609,7 @@ class BatchPredictor:
         """
         self._inQueue.appendleft((sequence, label))
         self._inWaiting += 1
-        if self._inWaiting > self._batchSize * 64:
+        if self._inWaiting >= self._batchSize:
             # We have a ton of sequences to run, so go ahead
             # and run a batch real quick.
             self.runBatch()

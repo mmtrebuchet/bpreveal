@@ -19,9 +19,8 @@ filesText = ["workflow", "programs", "setup", "breakingChanges",
 filesDevelopment = ["philosophy", "changelog", "releaseChecklist"]
 
 # Things that take a json
-filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePredictionsBed.py",
-              "makePredictionsFasta.py", "motifScan.py",
-              "motifSeqletCutoffs.py", "prepareBed.py",
+filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePredictions.py",
+              "motifScan.py", "motifSeqletCutoffs.py", "prepareBed.py",
               "prepareTrainingData.py", "trainCombinedModel.py",
               "trainSoloModel.py", "trainTransformationModel.py"]
 # Things that take command-line arguments

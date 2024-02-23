@@ -1,0 +1,40 @@
+<prediction-input-configuration> ::=
+    { <prediction-settings-section>,
+      <prediction-input-section>,
+      <prediction-threads-section>,
+      <verbosity-section> }
+
+<prediction-input-section> ::=
+    <prediction-fasta-input-section>
+  | <prediction-bed-input-section>
+
+<prediction-settings-section> ::=
+    "settings" : {
+        "output-h5" : <file-name>,
+        "batch-size" : <integer>,
+        "heads" : <integer>,
+        "architecture" : <prediction-model-settings> }
+
+<prediction-model-settings> ::=
+    {"model-file" : <file-name>,
+     "input-length" : <integer>,
+     "output-length" : <integer> }
+
+<prediction-bed-input-section> ::=
+    "genome": <file-name>,
+    "bed-file": <file-name>
+
+<prediction-fasta-input-section> ::=
+    <prediction-fasta-coordinates-section>
+    "fasta-file" : <file-name>
+
+<prediction-fasta-coordinates-section> ::=
+    <empty>
+  | "coordinates" : {
+        "bed-file" : <file-name>,
+        "genome" : <file-name>},
+
+<prediction-threads-section> ::=
+    "num-threads" : <integer>,
+  | <empty>
+

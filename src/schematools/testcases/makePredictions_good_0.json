@@ -1,0 +1,15 @@
+{
+    "genome": "/scratch/genomes/mm10/all_chr.fa",
+    "settings": {
+        "output-h5": "/n/projects/cm2363/bpreveal/test/oskn/pred/combined.h5",
+        "batch-size": 128,
+        "heads": 4,
+        "architecture": {
+            "model-file": "/n/projects/cm2363/bpreveal/test/oskn/models/joint_combined.model",
+            "input-length": 3092,
+            "output-length": 1000
+        }
+    },
+    "bed-file": "/n/projects/cm2363/bpreveal/test/oskn/bed/peak_all.bed",
+    "verbosity": "DEBUG"
+}

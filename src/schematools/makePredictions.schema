@@ -1,0 +1,56 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "makePredictionsFasta",
+    "description": "Schema for makePredictionsFasta.py",
+    "type": "object",
+    "properties": {
+        "settings": {
+            "type": "object",
+            "properties": {
+                "output-h5": {"type": "string"},
+                "batch-size": {"type": "integer"},
+                "genome": {"type": "string"},
+                "heads": {"type": "integer"},
+                "architecture": {
+                    "type": "object",
+                    "properties": {
+                        "input-length": {"type": "integer"},
+                        "output-length": {"type": "integer"},
+                        "model-file": {"type": "string"}
+                    },
+                    "required": ["input-length", "output-length", "model-file"]
+                }
+            },
+            "required": ["output-h5", "batch-size", "heads", "architecture"]
+        },
+        "fasta-file": {"type": "string"},
+        "bed-file": {"type": "string"},
+        "num-threads": {"type": "integer", "minimum" : 1},
+        "coordinates": {
+            "type": "object",
+            "properties": {
+                "bed-file" : {"type": "string"},
+                "genome" : {"type": "string"}
+            },
+            "required" : ["bed-file", "genome"]
+        },
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
+    },
+    "required": ["settings", "verbosity"],
+    "oneOf": [
+        {
+            "required": ["fasta-file"],
+            "not": {"required": ["bed-file"]}
+        },
+        {
+            "required": ["bed-file"],
+            "oneOf": [
+                {"properties": {"settings": { "required": ["genome"]}}},
+                {"required": ["genome"]}],
+            "not": {"anyOf": [
+                {"required": ["fasta-file"]},
+                {"required": ["coordinates"]}]}
+        }]
+
+}
+

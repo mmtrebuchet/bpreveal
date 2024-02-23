@@ -153,7 +153,7 @@ import h5py
 from bpreveal import interpretUtils
 from bpreveal import logUtils
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-from bpreveal import makePredictionsBed
+from bpreveal.internal import predictUtils
 import pybedtools
 import pysam
 
@@ -200,7 +200,7 @@ def main(config):
             with h5py.File(config[ftype], "r+") as h5fp, \
                  pysam.FastaFile(config["coordinates"]["genome"]) as genome:
                 bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
-                makePredictionsBed.addCoordsInfo(bedFp, h5fp, genome, stopName="coords_end")
+                predictUtils.addCoordsInfo(bedFp, h5fp, genome, stopName="coords_end")
 
 
 if __name__ == "__main__":

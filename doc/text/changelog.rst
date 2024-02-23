@@ -11,7 +11,10 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
+
+
 BPReveal 4.1.1, 2024-02-21
+''''''''''''''''''''''''''
 
 NEW FEATURES:
     * The PISA code now runs in parallel if you provide a ``num-batchers`` parameter
@@ -21,6 +24,8 @@ ENHANCEMENTS:
     * Integrated documentation from Melanie on the motif scanning tools.
     * Separated type definitions out from the utils module into a new internal.constants
       module so that the utils documentation isn't full of type annotations.
+    * Combined the old makePredictionsBed and makePredictionsFasta into a single
+      makePredictions script. The old names will be removed in 6.0.0.
 
 BUG FIXES:
     * Fixed the name of the counts head in transformation models using bias counts from
