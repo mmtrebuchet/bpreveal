@@ -11,8 +11,8 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # pylint: disable=invalid-name
 project = 'BPReveal'
-copyright = '2024, Charles McAnany, Melanie Weilert, Haining Jiang'  # pylint: disable=redefined-builtin # noqa
-author = 'Charles McAnany, Melanie Weilert, Haining Jiang'
+copyright = '2024, Charles McAnany'  # pylint: disable=redefined-builtin # noqa
+author = 'Charles McAnany, Melanie Weilert, Haining Jiang, Patrick Moeller'
 release = bpreveal.__version__
 # pylint: enable=invalid-name
 import bpreveal.internal.constants

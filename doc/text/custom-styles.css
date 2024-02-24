@@ -34,7 +34,7 @@ a:visited .pre {
     color: #9B59B6;
     background-color: #fbfbfb;
 }
-.rst-content code.xref {
+.rst-content a code.xref {
     color: #2980B9;
     font-family:"Libertinus Mono",monospace;
     font-feature-settings: "zero" on;
