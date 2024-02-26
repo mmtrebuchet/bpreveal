@@ -32,9 +32,11 @@ BUG FIXES:
       ``combined_log_counts_<headname>`` to ``combined_logcounts_<headname>``, making
       ``use-bias-counts`` compatible with adaptive loss and the new training progress
       logger. (Melanie Weilert)
+    * Corrected a bug where non-links in the documentation still showed up as blue.
+      (Thanks to Patrick Moeller for the fix!)
 
 CONTRIBUTORS:
-    Melanie Weilert, Charles McAnany
+    Melanie Weilert, Patrick Moeller, Charles McAnany
 
 BPReveal 4.1.0, 2024-02-16
 ''''''''''''''''''''''''''
