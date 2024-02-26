@@ -152,8 +152,9 @@ def main(config):
         assert "seqlet-cutoff-json" not in config, "You cannot name a seqlet-cutoff-json to " \
             "read in the config file if you also specify seqlet-cutoff-settings."
 
-        logUtils.info("Modisco seqlet analysis requested. Starting.")
         cutoffConfig = config["seqlet-cutoff-settings"]
+        logUtils.info("Modisco seqlet analysis requested. Starting with {0:s}."
+                      .format(cutoffConfig["modisco-h5"]))
         # First, make the pattern objects.
         tsvFname = None
         if "seqlets-tsv" in cutoffConfig:
@@ -175,18 +176,21 @@ def main(config):
             # Even though it isn't necessary since we just pass scanPatternDict
             # to the scanner directly, go ahead and save out the quantile json file.
             # In this case, save out the results of the seqlet analysis.
-            logUtils.info("Saving pattern json.")
+            logUtils.info("Saving pattern json to {0:s}."
+                          .format(cutoffConfig["quantile-json"]))
             with open(cutoffConfig["quantile-json"], "w") as fp:
                 json.dump(scanPatternDict, fp, indent=4)
     else:
         # We didn't have quantile-settings, so we'd better have quantile-json.
         # (In this case, we're reading quantile-json)
-        logUtils.debug("Loading scanner parameters.")
+        logUtils.debug("Loading scanner parameters, using json {0:s}."
+                       .format(config["seqlet-cutoff-json"]))
         with open(config["seqlet-cutoff-json"], "r") as fp:
             scanPatternDict = json.load(fp)
 
     scanConfig = config["scan-settings"]
-    logUtils.info("Beginning motif scan.")
+    logUtils.info("Beginning motif scan on file {0:s}."
+                  .format(scanConfig["scan-contrib-h5"]))
     motifUtils.scanPatterns(scanConfig["scan-contrib-h5"],
                             scanPatternDict,
                             scanConfig["hits-tsv"],

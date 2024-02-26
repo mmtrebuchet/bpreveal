@@ -110,6 +110,8 @@ class DisplayCallback(Callback):
     maxLen = 0
     """Of all the data types, what is the length of the longest name?
     Used to calculate column positions."""
+    trainBeginTime: float
+    """When did the whole training process start?"""
 
     def __init__(self, plateauCallback, earlyStopCallback,
                  adaptiveLossCallback, trainBatchGen, valBatchGen):
@@ -154,13 +156,13 @@ class DisplayCallback(Callback):
         assert len(remainingTerms) == 0, str(remainingTerms) + " includes unknown loss component. "\
             "not " + str(profileLosses) + "/" + str(countsLosses)
 
-        printOrderEpoch = ["epoch", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
+        printOrderEpoch = ["Epoch", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
         printOrderEpoch.extend(profileLosses)
         printOrderEpoch.extend(countsLosses)
         printOrderEpoch.extend(["Best epoch", "Best loss", "Epochs until earlystop",
                            "lr", "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
                            "Training time", "Validation time",
-                           "Seconds / epoch", "Minutes to earlystop"])
+                           "Seconds / epoch", "Minutes to earlystop", "Elapsed time"])
 
         printOrderBatch = ["batch", "loss", "EPOCH_SPACER"]
         printOrderBatch.extend(profileLosses)
@@ -177,6 +179,7 @@ class DisplayCallback(Callback):
         """Just loads in the total number of epochs."""
         del logs
         params = self.params.get
+        self.trainBeginTime = time.perf_counter()
         autoTotal = params("epochs", params("nb_epochs", None))
         if autoTotal is not None:
             self.numEpochs = autoTotal
@@ -240,6 +243,7 @@ class DisplayCallback(Callback):
         logs["Training time"] = self.lastBatchTime - self.firstBatchTime
         logs["Validation time"] = self.lastValBatchTime - self.firstValBatchTime
         self.lastEpochEndTime = time.perf_counter()
+        logs["Minutes elapsed"] = (self.lastEpochEndTime - self.trainBeginTime) / 60
         lines = self._getEpochLines(logs)
         self._writeLogLines(lines, logUtils.info, "E")
         lines = self._getλLines()
@@ -312,7 +316,7 @@ class DisplayCallback(Callback):
 
     def _getEpochLines(self, logs) -> list[tuple[int, int, str]]:
         lines = []
-        logs["epoch"] = (self.epochNumber, self.numEpochs)
+        logs["Epoch"] = (self.epochNumber, self.numEpochs)
         logs["lr"] = "{0:10.7f}".format(logs["lr"])
         for lk in logs.keys():
             lines.append([(self.printLocationsEpoch[lk], 1, lk)])
