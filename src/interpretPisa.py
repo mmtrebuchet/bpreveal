@@ -59,10 +59,10 @@ kmer-size
     dimers will be preserved in the shuffled sequences. If you specify
     ``kmer-size=3``, then trimers will be preserved, and so on.
 
-num-batchers
+num-threads
     (Optional) If provided, use multiple batcher threads in parallel, on the same
-    GPU. Shap is relatively inefficient on the GPU, and by using two or three batchers,
-    you can get better throughput. If you run into memory issues, use one batcher.
+    GPU. Shap is relatively inefficient on the GPU, and by using two or three threads,
+    you can get better throughput. If you run into memory issues, use one thread.
 
 
 Output Specification
@@ -159,11 +159,11 @@ def main(config):
     else:
         logUtils.info("Did not find a kmer-size property in configuration file. "
                       "Using default kmer-size of 1.")
-    numBatchers = 1
-    if "num-batchers" in config:
-        numBatchers = config["num-batchers"]
+    numThreads = 1
+    if "num-threads" in config:
+        numThreads = config["num-threads"]
     else:
-        logUtils.info("Did not find a num-batchers property in configuration file. "
+        logUtils.info("Did not find a num-threads property in configuration file. "
                       "Using default of 1. Using more batchers may give a performance boost.")
 
     if "fasta-file" in config or "sequence-fasta" in config:
@@ -191,7 +191,7 @@ def main(config):
                                         10, generator, writer,
                                         config["num-shuffles"], receptiveField,
                                         kmerSize,
-                                        numBatchers)
+                                        numThreads)
     batcher.run()
 
 

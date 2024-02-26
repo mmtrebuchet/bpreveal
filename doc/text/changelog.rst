@@ -17,7 +17,7 @@ BPReveal 4.1.1, 2024-02-21
 ''''''''''''''''''''''''''
 
 NEW FEATURES:
-    * The PISA code now runs in parallel if you provide a ``num-batchers`` parameter
+    * The PISA code now runs in parallel if you provide a ``num-threads`` parameter
       in its configuration file. Three-fold speedup is very possible.
 
 ENHANCEMENTS:
