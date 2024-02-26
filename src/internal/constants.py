@@ -43,6 +43,8 @@ MOTIF_FLOAT_T: typing.TypeAlias = np.float32
 If you change this, be sure to change libJaccard.c and libJaccard.pyf (and run
 make) so that the jaccard library uses the correct data type.
 """
+MOTIF_FLOAT_AR_T: typing.TypeAlias = npt.NDArray[MOTIF_FLOAT_T]
+"""An array of motif data."""
 
 
 H5_CHUNK_SIZE: int = 128

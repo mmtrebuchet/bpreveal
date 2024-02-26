@@ -1,5 +1,5 @@
 """Some utilities for dealing with bed files."""
-from typing import Literal
+from typing import Literal, Any
 import multiprocessing
 from collections import deque
 import pybedtools
@@ -296,7 +296,7 @@ class ParallelCounter:
             for _ in range(numThreads)]
         [x.start() for x in self.threads]  # pylint: disable=expression-not-assigned
 
-    def addQuery(self, query: tuple[str, int, int], idx) -> None:
+    def addQuery(self, query: tuple[str, int, int], idx: Any) -> None:
         """Add a region (chrom, start, end) to the task list.
 
         :param query: A tuple of (chromosome, start, end) giving the region to look at.

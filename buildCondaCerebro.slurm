@@ -165,8 +165,6 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     check
     ${CONDA_BIN} install --yes -c conda-forge coverage
     check
-    ${PIP_BIN} install --no-input sphinx-rtd-dark-mode
-    check
 fi
 
 if [ "$INSTALL_SNAKEMAKE" = true ] ; then

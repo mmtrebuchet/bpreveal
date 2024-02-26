@@ -79,9 +79,10 @@ def makeHeader():
             fp.write("_generated/{0:s}.rst: text/{0:s}.rst build.py\n\t./build.py {0:s}\n\n".
                      format(fname))
             allTargets.append("_generated/{0:s}.rst".format(fname))
-        for fname in filesMajor + filesToolsMajor + ["base.xx"]:
+        for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx"]:
             fp.write(
-                "_generated/bnf/{0:s}.rst: build.py\n\t./build.py bnf/{0:s}.rst\n\n".format(fname[:-3]))
+                "_generated/bnf/{0:s}.rst: build.py\n\t./build.py bnf/{0:s}.rst\n\n"
+                .format(fname[:-3]))
             allTargets.append("_generated/bnf/{0:s}.rst".format(fname[:-3]))
         for fname in ["_generated/text.rst", "_generated/majorcli.rst",
                       "_generated/minorcli.rst", "_generated/api.rst",
@@ -136,7 +137,7 @@ def makeBase():
 
 def makeBnf(request):
     modRequested = request[4:][:-4]  # strip bnf/ and .rst.
-    for fname in filesMajor + filesToolsMajor + ["base.xx"]:
+    for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx"]:
         modName = fname[:-3]
         if modRequested == modName:
             inFname = "bnf/{0:s}.bnf".format(modName)

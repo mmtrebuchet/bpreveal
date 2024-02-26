@@ -4,7 +4,6 @@ import argparse
 import h5py
 import pyBigWig
 import numpy as np
-import tqdm
 from bpreveal import logUtils
 from bpreveal.internal.constants import H5_CHUNK_SIZE
 
@@ -56,13 +55,11 @@ class BatchedH5Reader:
         return self.curSeqs[idx - self._curChunkStart, :, :]
 
 
-def writeBigWig(inH5: h5py.File, outFname: str,  # pylint: disable=too-many-statements
-                verbose: bool):
+def writeBigWig(inH5: h5py.File, outFname: str):  # pylint: disable=too-many-statements
     """Write the data in the h5 file to a bigwig on disk.
 
     :param inH5: The (open) hdf5 file to use
     :param outFname: The name of the bigwig to save
-    :param verbose: Should the program be chatty as it works?
     """
     bwHeader = []
     h5Reader = BatchedH5Reader(inH5, H5_CHUNK_SIZE)
@@ -93,10 +90,8 @@ def writeBigWig(inH5: h5py.File, outFname: str,  # pylint: disable=too-many-stat
     regionStart = coordsStart[regionID]
     regionStop = coordsEnd[regionID]
     logUtils.info("Files opened; writing regions")
-    regionRange = range(numRegions)
+    regionRange = logUtils.wrapTqdm(range(numRegions))
     nextRegion = None
-    if verbose:
-        regionRange = tqdm.tqdm(regionRange)
     for regionNumber in regionRange:
         # Extract the appropriate region from the sorted list.
 
@@ -170,7 +165,7 @@ def main():
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)
     inH5 = h5py.File(args.h5, "r")
-    writeBigWig(inH5, args.bw, args.verbose)
+    writeBigWig(inH5, args.bw)
 
 
 if __name__ == "__main__":

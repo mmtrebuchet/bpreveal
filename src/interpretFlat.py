@@ -158,7 +158,7 @@ import pybedtools
 import pysam
 
 
-def main(config):
+def main(config: dict):
     """Run the interpretation.
 
     :param config: A JSON object matching the interpretFlat specification.
@@ -182,21 +182,24 @@ def main(config):
         logUtils.debug("Configuration specifies a fasta file.")
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
 
-    profileWriter = interpretUtils.FlatH5Saver(config["profile-h5"], generator.numRegions,
-                                               config["input-length"], genome=genomeFname,
-                                               useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
-    countsWriter = interpretUtils.FlatH5Saver(config["counts-h5"], generator.numRegions,
-                                              config["input-length"], genome=genomeFname,
-                                              useTqdm=False)
+    profileWriter = interpretUtils.FlatH5Saver(
+        config["profile-h5"], generator.numRegions,
+        config["input-length"], genome=genomeFname,
+        useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
+    countsWriter = interpretUtils.FlatH5Saver(
+        config["counts-h5"], generator.numRegions,
+        config["input-length"], genome=genomeFname,
+        useTqdm=False)
 
-    batcher = interpretUtils.FlatRunner(config["model-file"], config["head-id"], config["heads"],
-                                        config["profile-task-ids"], 10, generator, profileWriter,
-                                        countsWriter, config["num-shuffles"], kmerSize)
+    batcher = interpretUtils.FlatRunner(
+        config["model-file"], config["head-id"], config["heads"],
+        config["profile-task-ids"], 10, generator, profileWriter,
+        countsWriter, config["num-shuffles"], kmerSize)
     batcher.run()
 
     # Finishing touch - if someone gave coordinate information, load that.
     if "coordinates" in config:
-        for ftype in ["profile-h5", "counts-h5"]:
+        for ftype in ("profile-h5", "counts-h5"):
             with h5py.File(config[ftype], "r+") as h5fp, \
                  pysam.FastaFile(config["coordinates"]["genome"]) as genome:
                 bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])

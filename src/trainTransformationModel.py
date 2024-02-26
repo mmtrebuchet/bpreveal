@@ -75,7 +75,8 @@ def main(config):
     logUtils.debug("Initializing")
     soloModel = utils.loadModel(config["settings"]["solo-model-file"])
 
-    soloModel.trainable = False  # We're in the regression phase, no training the bias model!
+    # We're in the regression phase, no training the bias model!
+    soloModel.trainable = False
 
     model = models.transformationModel(soloModel,
         config["settings"]["profile-architecture"],
@@ -84,7 +85,8 @@ def main(config):
 
     losses, lossWeights = bpreveal.training.buildLosses(config["heads"])
     model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
+        optimizer=keras.optimizers.Adam(
+            learning_rate=config["settings"]["learning-rate"]),
         loss=losses, loss_weights=lossWeights)
     bpreveal.training.trainWithGenerators(model, config,
                                           config["settings"]["input-length"],

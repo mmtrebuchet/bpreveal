@@ -1,11 +1,14 @@
 """Thin wrapper for the internal libjaccard C library."""
 import bpreveal.internal.libjaccard as lj
+from bpreveal.internal import constants
 
 
-def slidingJaccard(importanceScores, cwm):
+def slidingJaccard(importanceScores: constants.IMPORTANCE_AR_T,
+                   cwm: constants.MOTIF_FLOAT_AR_T) -> constants.MOTIF_FLOAT_AR_T:
     """Calculate the sliding Jaccard similarity.
 
-    :param importanceScores: An array of shape (M, 4) giving hypothetical importance scores.
+    :param importanceScores: An array of shape (M, 4) giving hypothetical importance
+        scores.
     :param cwm: An array of shape (N, 4), giving a motif's CWM.
     :return: An array of shape (M - N + 1), giving the sliding Jaccard similarities.
 
@@ -15,7 +18,8 @@ def slidingJaccard(importanceScores, cwm):
     return lj.slidingJaccard(importanceScores, cwm)
 
 
-def jaccardRegion(importanceScores, scaleFactor, cwm):
+def jaccardRegion(importanceScores: constants.IMPORTANCE_AR_T,
+                  scaleFactor: float, cwm: constants.MOTIF_FLOAT_AR_T):
     r"""For given region's importance scores, calculate the continuous Jaccard similarity.
 
     :param importanceScores: An array of shape (length, 4)

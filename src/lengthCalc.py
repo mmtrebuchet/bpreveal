@@ -67,7 +67,8 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def getLengthDifference(numDilLayers, initialConvolutionWidths, profileKernelSize, verbose):
+def getLengthDifference(numDilLayers: int, initialConvolutionWidths: list[int],
+                        profileKernelSize: int, verbose: bool):
     """Determine the padding on each size of the output.
 
     Given a BPNet architecture, calculate how much longer the input sequence will be than
@@ -79,6 +80,7 @@ def getLengthDifference(numDilLayers, initialConvolutionWidths, profileKernelSiz
         25, so this argument would be [25].
     :param profileKernelSize: The width of the final kernel that generates the profiles,
         typically around 75.
+    :param verbose: Should the code tell you what it's doing?
     :return: An integer representing the number of extra bases in the input compared to
         the length of the predicted profile. Divide by two to get the overhang on each
         side of the input.
@@ -121,8 +123,8 @@ def getLengthDifference(numDilLayers, initialConvolutionWidths, profileKernelSiz
     return overhang
 
 
-def getOutputLength(seqLen, numDilLayers, initialConvolutionWidths,
-                    profileKernelSize, verbose):
+def getOutputLength(seqLen: int, numDilLayers: int, initialConvolutionWidths: list[int],
+                    profileKernelSize: int, verbose: bool):
     """Determine how long the output will be.
 
     Given a BPNet architecture and a length of the input sequence, calculate the length of the
@@ -135,6 +137,7 @@ def getOutputLength(seqLen, numDilLayers, initialConvolutionWidths,
         width 25, so this argument would be [25].
     :param profileKernelSize: : The width of the final kernel that generates the profiles,
         typically around 75.
+    :param verbose: Should the code tell you what it's doing?
     :return: An integer representing the length of the profile that will be calculated. If this
         value is zero or lower, then no bases will have their profile predicted and the
         model is invalid.
@@ -144,8 +147,8 @@ def getOutputLength(seqLen, numDilLayers, initialConvolutionWidths,
                               profileKernelSize, verbose)
 
 
-def getInputLength(outPredLen, numDilLayers, initialConvolutionWidths,
-                   profileKernelSize, verbose):
+def getInputLength(outPredLen: int, numDilLayers: int, initialConvolutionWidths: list[int],
+                   profileKernelSize: int, verbose: bool):
     """Given an output length, calculate input length.
 
     Given a BPNet architecture and a length of the output profile, calculate the length
@@ -158,6 +161,7 @@ def getInputLength(outPredLen, numDilLayers, initialConvolutionWidths,
         width 25, so this argument would be [25].
     :param profileKernelSize: : The width of the final kernel that generates the profiles,
         typically around 75.
+    :param verbose: Should the code tell you what it's doing?
     :return: An integer representing the length of the sequence necessary to calculate the profile.
     """
     return outPredLen \

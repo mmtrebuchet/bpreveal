@@ -151,18 +151,19 @@ def loadRegionsByChrom(trainChroms: list[str], valChroms: list[str],
     valRegions = []
     rejectRegions = []
     for bedFile in regionFnames:
-        for line in open(bedFile):
-            if r := lineToInterval(line):
-                if r.chrom in trainChroms:
-                    trainRegions.append(r)
-                elif r.chrom in valChroms:
-                    valRegions.append(r)
-                elif r.chrom in testChroms:
-                    testRegions.append(r)
-                else:
-                    logUtils.debug("        Rejected region {0:s} because it's not in any "
-                                   "of the chromosome sets.".format(line.strip()))
-                    rejectRegions.append(r)
+        with open(bedFile) as fp:
+            for line in fp:
+                if r := lineToInterval(line):
+                    if r.chrom in trainChroms:
+                        trainRegions.append(r)
+                    elif r.chrom in valChroms:
+                        valRegions.append(r)
+                    elif r.chrom in testChroms:
+                        testRegions.append(r)
+                    else:
+                        logUtils.debug("        Rejected region {0:s} because it's not in any "
+                                    "of the chromosome sets.".format(line.strip()))
+                        rejectRegions.append(r)
     return trainRegions, testRegions, valRegions, rejectRegions
 
 
@@ -182,17 +183,20 @@ def loadRegionsByBed(trainRegionFnames: list[str], valRegionFnames: list[str],
     testRegions = []
     valRegions = []
     for trainBedFile in trainRegionFnames:
-        for line in open(trainBedFile):
-            if r := lineToInterval(line):
-                trainRegions.append(r)
+        with open(trainBedFile) as fp:
+            for line in fp:
+                if r := lineToInterval(line):
+                    trainRegions.append(r)
     for valBedFile in valRegionFnames:
-        for line in open(valBedFile):
-            if r := lineToInterval(line):
-                valRegions.append(r)
+        with open(valBedFile) as fp:
+            for line in fp:
+                if r := lineToInterval(line):
+                    valRegions.append(r)
     for testBedFile in testRegionFnames:
-        for line in open(testBedFile):
-            if r := lineToInterval(line):
-                testRegions.append(r)
+        with open(testBedFile) as fp:
+            for line in fp:
+                if r := lineToInterval(line):
+                    testRegions.append(r)
     return trainRegions, testRegions, valRegions, []
 
 
@@ -202,9 +206,10 @@ def loadRegionsByRegex(trainString: str, testString: str, valString: str,
               list[pybedtools.Interval], list[pybedtools.Interval]]:
     """Go over the bed files and assign splits based on regexes matched against the name column.
 
-    :param trainRegex: The regex that matches samples in the training split
-    :param testRegex: The regex that matches samples in the test split
-    :param valRegex: The regex that matches samples in the validation split.
+    :param trainString: The regex that matches samples in the training split
+    :param testString: The regex that matches samples in the test split
+    :param valString: The regex that matches samples in the validation split.
+    :param regionFnames: A list of bed files that will be read in.
     :return: Four lists of Intervals, corresponding to the training, test, validation,
         and rejected regions.
     """
@@ -216,32 +221,33 @@ def loadRegionsByRegex(trainString: str, testString: str, valString: str,
     valRegex = re.compile(valString)
     testRegex = re.compile(testString)
     for bedFile in regionFnames:
-        for line in open(bedFile):
-            if r := lineToInterval(line):
-                foundTrain = False
-                foundVal = False
-                foundTest = False
-                if trainRegex.search(r.name) is not None:
-                    foundTrain = True
-                    trainRegions.append(r)
-                if valRegex.search(r.name) is not None:
-                    assert not foundTrain, "Region {0:s} matches multiple "\
-                                           "regexes.".format(line)
-                    foundVal = True
-                    valRegions.append(r)
-                if testRegex.search(r.name) is not None:
-                    assert not (foundTrain or foundVal), "Region {0:s} matches "\
-                                                         "multiple regexes.".format(line)
-                    foundTest = True
-                    testRegions.append(r)
-                if not (foundTrain or foundVal or foundTest):
-                    logUtils.debug("        Rejected region {0:s} because it didn't match "
-                                   "any of your split regexes.".format(line.strip()))
-                    rejectRegions.append(r)
+        with open(bedFile) as fp:
+            for line in fp:
+                if r := lineToInterval(line):
+                    foundTrain = False
+                    foundVal = False
+                    foundTest = False
+                    if trainRegex.search(r.name) is not None:
+                        foundTrain = True
+                        trainRegions.append(r)
+                    if valRegex.search(r.name) is not None:
+                        assert not foundTrain, "Region {0:s} matches multiple "\
+                                               "regexes.".format(line)
+                        foundVal = True
+                        valRegions.append(r)
+                    if testRegex.search(r.name) is not None:
+                        assert not (foundTrain or foundVal), "Region {0:s} matches "\
+                                                             "multiple regexes.".format(line)
+                        foundTest = True
+                        testRegions.append(r)
+                    if not (foundTrain or foundVal or foundTest):
+                        logUtils.debug("        Rejected region {0:s} because it didn't match "
+                                       "any of your split regexes.".format(line.strip()))
+                        rejectRegions.append(r)
     return trainRegions, testRegions, valRegions, rejectRegions
 
 
-def loadRegions(config):
+def loadRegions(config: dict):
     """Given a configuration (see the specification), return four PyBedTools BedTool objects.
 
     :param config: A JSON object satisfying the prepareBed specification.
@@ -284,7 +290,8 @@ def loadRegions(config):
             pybedtools.BedTool(rejectRegions))
 
 
-def removeOverlaps(config, regions, genome):
+def removeOverlaps(config: dict, regions: pybedtools.BedTool | list,
+                   genome: pysam.FastaFile) -> tuple[pybedtools.BedTool, pybedtools.BedTool]:
     """Remove overlaps among the given regions.
 
     :param config: Straight from the JSON.
@@ -383,7 +390,7 @@ def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
 def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
                       bigRegionsList: list[pybedtools.Interval],
                       bigwigLists: list[str], validRegions: np.ndarray,
-                      numThreads: int) -> pybedtools.BedTool:
+                      numThreads: int):
     """Filters the regions in smallRegionList based on the min-quantile or min-counts in the config.
 
     :param config: Straight from the configuration JSON.
@@ -395,7 +402,6 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
         corresponding to region i in bigRegionsList, if region k is rejected,
         then validRegions[i] will be 0 when this function exits.
     :param numThreads: How many parallel workers should be used?
-    :return: Nothing, but sets validRegions.
     """
     pbar = logUtils.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logUtils.INFO)
     for i, headSpec in enumerate(config["heads"]):
@@ -439,6 +445,7 @@ def validateRegions(config: dict, regions: pybedtools.BedTool | list[pybedtools.
     :param regions: A BedTool or list.
     :param genome: A FastaFile (not the name as a str.)
     :param bigwigLists: The names of the data files to use.
+    :param numThreads: How many parallel workers should be used?
     :return: Two BedTools, one for regions that passed the filters and another for
         those that failed.
 
@@ -553,7 +560,7 @@ def rewriteOldBigwigsFormat(config):
     config["heads"] = headsConfig
 
 
-def prepareBeds(config):
+def prepareBeds(config: dict):
     """The main function of this script.
 
     :param config: A JSON object matching the prepareBed specification.
@@ -620,8 +627,8 @@ def prepareBeds(config):
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r") as fp:
-        configJson = json.load(fp)
+    with open(sys.argv[1], "r") as inFp:
+        configJson = json.load(inFp)
     logUtils.setVerbosity(configJson["verbosity"])
     import bpreveal.schema
     try:

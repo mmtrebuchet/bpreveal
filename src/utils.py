@@ -6,14 +6,15 @@ import queue
 import re
 import subprocess as sp
 import typing
+from collections.abc import Iterable
 import scipy
 import pyBigWig
 import pysam
 import numpy as np
 from bpreveal import logUtils
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
-from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, QUEUE_TIMEOUT, \
-    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
+from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, \
+    QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
 from bpreveal.internal import constants
 
 
@@ -90,7 +91,8 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     And now each process will use (1024 MB less than) half the total GPU memory.
 
     :param fraction: How much of the memory on the GPU can I have?
-    :param offset: How much memory (in MB) should be reserved when I carve out my fraction?
+    :param offset: How much memory (in MB) should be reserved when
+        I carve out my fraction?
     :return: The memory (in MB) reserved.
     """
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
@@ -184,7 +186,8 @@ def loadChromSizes(chromSizesFname: str | None = None,
     assert False, "You can't ask for chrom sizes without some argument!"
 
 
-def blankChromosomeArrays(genomeFname: str | None = None, chromSizesFname: str | None = None,
+def blankChromosomeArrays(genomeFname: str | None = None,
+                          chromSizesFname: str | None = None,
                           bwHeader: dict[str, int] | None = None,
                           chromSizes: dict[str, int] | None = None,
                           bw: pyBigWig.pyBigWig | None = None,
@@ -246,8 +249,11 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
     :param chromSizes: A dict mapping chromosome name → chromosome size.
     """
     if chromDict is None:
-        logUtils.debug("Got regionList, regionData, chromSizes. Building chromosome dict.")
-        assert chromSizes is not None and regionList is not None and regionData is not None, \
+        logUtils.debug("Got regionList, regionData, chromSizes. "
+                       "Building chromosome dict.")
+        assert chromSizes is not None \
+               and regionList is not None \
+               and regionData is not None, \
             "Must provide chromSizes, regionList, and regionData if chromDict is None."
         chromDict = blankChromosomeArrays(bwHeader=chromSizes)
         for i, r in enumerate(regionList):
@@ -309,7 +315,8 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
     ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord("t"))
     if not allowN:
         assert (np.sum(ret) == len(sequence)), \
-            "Sequence contains unrecognized nucleotides. Maybe your sequence contains 'N'?"
+            "Sequence contains unrecognized nucleotides. "\
+            "Maybe your sequence contains 'N'?"
     return ret
 
 
@@ -367,7 +374,7 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
 # Easy functions
 
 
-def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_AR_T:
+def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> PRED_AR_T:
     """Make predictions with your model.
 
     :param sequences: The DNA sequence(s) that you want to predict on.
@@ -422,7 +429,7 @@ def easyPredict(sequences: typing.Iterable[str] | str, modelFname: str) -> PRED_
     return np.array(ret, dtype=PRED_T)
 
 
-def easyInterpretFlat(sequences: typing.Iterable[str] | str, modelFname: str,
+def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
                       heads: int, headID: int, taskIDs: list[int],
                       numShuffles: int = 20, kmerSize: int = 1,
                       keepHypotheticals: bool = False) \
@@ -756,7 +763,7 @@ class BatchPredictor:
 
 
 class ThreadedBatchPredictor:
-    """Mirrors the API of the BachPredictor class, but runs predictions in a separate thread.
+    """Mirrors the API of the BachPredictor class, but predicts in a separate thread.
 
     This can give you a performance boost, and also lets you
     shut down the predictor thread when you don't need it.
@@ -829,8 +836,8 @@ class ThreadedBatchPredictor:
         """
         if not self.running:
             logUtils.debug("Starting threaded batcher.")
-            assert self._batchers is None, "Attempting to start a new batcher when an old "\
-                "one is still alive." + str(self._batchers)
+            assert self._batchers is None, "Attempting to start a new batcher when an "\
+                "old one is still alive." + str(self._batchers)
             self._inQueues = []
             self._outQueues = []
             self._batchers = []
@@ -840,10 +847,10 @@ class ThreadedBatchPredictor:
                 nextOutQueue = multiprocessing.Queue(10000)
                 self._inQueues.append(nextInQueue)
                 self._outQueues.append(nextOutQueue)
-                nextBatcher = multiprocessing.Process(target=_batcherThread,
-                                                      args=(self._modelFname, self._batchSize,
-                                                            nextInQueue, nextOutQueue),
-                                                      daemon=True)
+                nextBatcher = multiprocessing.Process(
+                    target=_batcherThread,
+                    args=(self._modelFname, self._batchSize, nextInQueue, nextOutQueue),
+                    daemon=True)
                 nextBatcher.start()
                 self._batchers.append(nextBatcher)
             self._inFlight = 0
@@ -854,7 +861,7 @@ class ThreadedBatchPredictor:
             logUtils.warning("Attempted to start a batcher that was already running.")
 
     def __del__(self):
-        """General cleanup - kill off the child process when this object goes out of scope."""
+        """General cleanup - kill the child process when this object leaves scope."""
         logUtils.debug("Destructor called.")
         if self.running:
             self.stop()
@@ -982,7 +989,8 @@ def _batcherThread(modelFname, batchSize, inQueue, outQueue):
             inVal = inQueue.get(True, 0.1)
         except queue.Empty:
             numWaits += 1
-            # There was no input. Are we sitting on predictions that we could go ahead and make?
+            # There was no input. Are we sitting on predictions that we could go ahead
+            # and make?
             # pylint: disable=protected-access
             if batcher._inWaiting > batcher._batchSize / numWaits:
                 # pylint: enable=protected-access

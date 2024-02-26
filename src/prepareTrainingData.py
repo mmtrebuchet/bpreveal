@@ -186,7 +186,7 @@ def getHead(bed: pybedtools.BedTool, bigwigFnames: list[str], outputLength: int,
     return headVals
 
 
-def writeH5(config):
+def writeH5(config: dict):
     """Main method, load the config and then generate training data hdf5 files.
 
     :param config: The configuration json.
@@ -219,7 +219,7 @@ def writeH5(config):
                         assert False, "Cannot automatically determine revcomp "\
                                       "order with more than two tasks."
         else:
-            revcomp = False
+            revcomp = False  # pylint: disable=redefined-variable-type
         headVals = getHead(regions, head["bigwig-files"], outputLength, jitter, revcomp)
         outFile.create_dataset("head_{0:d}".format(i), data=headVals, dtype=PRED_T,
                                chunks=(H5_CHUNK_SIZE, headVals.shape[1], headVals.shape[2]),

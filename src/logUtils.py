@@ -1,11 +1,11 @@
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
-#
+
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,7 @@ If you're feeling lazy, you can even ``from bpreveal import logUtils as logging`
 import logging as _logging
 import sys as _sys
 import _thread
-import typing
+from collections.abc import Iterable
 import traceback as _traceback
 from logging import DEBUG
 from logging import ERROR
@@ -110,9 +110,7 @@ def getLogger() -> _logging.Logger:
     if _BPREVEAL_LOGGER:
         return _BPREVEAL_LOGGER
 
-    _BPREVEAL_LOGGER_LOCK.acquire()
-
-    try:
+    with _BPREVEAL_LOGGER_LOCK:
         if _BPREVEAL_LOGGER:
             return _BPREVEAL_LOGGER
 
@@ -153,9 +151,6 @@ def getLogger() -> _logging.Logger:
 
         _BPREVEAL_LOGGER = logger
         return _BPREVEAL_LOGGER
-
-    finally:
-        _BPREVEAL_LOGGER_LOCK.release()
 
 
 def log(level: int | str, msg: str, *args, **kwargs):
@@ -214,7 +209,7 @@ _THREAD_ID_MASK = 2 * _sys.maxsize + 1
 _log_counter_per_token = {}
 
 
-def logFirstN(level, msg, n, *args):
+def logFirstN(level: int, msg: str, n: int, *args):
     """Log 'msg % args' at level 'level' only first 'n' times.
 
     Not threadsafe.
@@ -290,7 +285,7 @@ def _getThreadId():
     return threadId & _THREAD_ID_MASK
 
 
-def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = _logging.INFO,
+def wrapTqdm(iterable: Iterable | int, logLevel: str | int = _logging.INFO,
              **tqdmKwargs) -> tqdm.tqdm:
     """Create a tqdm logger or a dummy, based on current logging level.
 
@@ -327,8 +322,8 @@ def wrapTqdm(iterable: typing.Iterable | int, logLevel: str | int = _logging.INF
         if getLogger().isEnabledFor(logLevelInternal):
             return tqdm.tqdm(total=iterable, **tqdmKwargs)
         return tqdm.tqdm(total=iterable, **tqdmKwargs, disable=True)
-    if isinstance(iterable, typing.Iterable):
-        iterableOut: typing.Iterable = iterable
+    if isinstance(iterable, Iterable):
+        iterableOut: Iterable = iterable
         if getLogger().isEnabledFor(logLevelInternal):
             return tqdm.tqdm(iterableOut, **tqdmKwargs)
         return tqdm.tqdm(iterableOut, **tqdmKwargs, disable=True)

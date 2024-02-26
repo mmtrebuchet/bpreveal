@@ -4,7 +4,8 @@ import ast
 import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 import random
-from typing import TypeAlias, Callable, Optional, Literal
+from typing import TypeAlias, Literal
+from collections.abc import Callable
 import matplotlib.colors
 import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
@@ -100,13 +101,15 @@ IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 This is the inverse of CORRUPTOR_TO_IDX.
 """
 
-_seqCmap = {"A": (0, 204, 148), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
+_seqCmap = {"A": (0, 204, 148), "C": (0, 114, 178),
+            "G": (240, 228, 66), "T": (213, 94, 0)}
 for _k in "ACGT":
     _seqCmap[_k] = tuple((x / 255 for x in _seqCmap[_k]))
-corruptorColors = {"A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "T": _seqCmap["T"],
-                   "d": "black",
-                   "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
-"""BPreveal's canonical coloring scheme for bases. A is green, C is blue, G is yellow, and T is red.
+corruptorColors = {
+    "A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "T": _seqCmap["T"],
+    "d": "black",
+    "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
+"""BPreveal's coloring for bases. A is green, C is blue, G is yellow, and T is red.
 
 These colors are drawn from the Wong palette, but with the green lightened a bit.
 
@@ -124,8 +127,8 @@ def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
     :return: A list of tuples of numbers representing the same information.
 
     Given a list of corruptor tuples, like ``[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]``,
-    convert that to an integer list that can be easily saved. This list will have the format
-    ``[ [1354, 1], [1514, 7], [1693, 8] ]``
+    convert that to an integer list that can be easily saved. This list will have the
+    format ``[ [1354, 1], [1514, 7], [1693, 8] ]``
     where the second number indicates the type of corruptor, as given by CORRUPTOR_TO_IDX.
     Returns a list of lists, not a numpy array!
     If you want an array, use ``np.array(corruptorsToArray(myCorruptors))``
@@ -257,8 +260,8 @@ class Organism:
     def setScore(self, scoreFn: Callable[[Profile, list[Corruptor]], float]) -> None:
         """Apply the score function to this organism's profile.
 
-        :param scoreFn: A function that takes this organism's profile and its corruptor list
-            and returns a float.
+        :param scoreFn: A function that takes this organism's profile and its corruptor
+            list and returns a float.
         :type scoreFn: Callable(:py:data:`~Profile`, list[:py:data:`~Corruptor`]) -> float
 
         This function can only be called after the organism's profile has been set!
@@ -389,17 +392,16 @@ class Organism:
                 # deletion, choose one at random.
                 if newIsSnpDel:
                     corruptorPool[-1] = random.choice((c, corruptorPool[-1]))
-                else:
+                elif corruptorPool[-1][1] == "d":
                     # The new thing is an insertion.
                     # In this case, the only contention is with deletion.
                     # If we have SNP then insertion, that's no problem
                     # but if we have deletion then insertion, that's
                     # equivalent to a SNP. So just pick one.
-                    if corruptorPool[-1][1] == "d":
-                        corruptorPool[-1] = random.choice((c, corruptorPool[-1]))
-                    else:
-                        # Keep the insertion, it's valid.
-                        corruptorPool.append(c)
+                    corruptorPool[-1] = random.choice((c, corruptorPool[-1]))
+                else:
+                    # Keep the insertion, it's valid.
+                    corruptorPool.append(c)
             else:
                 corruptorPool.append(c)
 
@@ -534,8 +536,8 @@ class Population:
         """
         for _ in range(100):
             corLocations = random.sample(self.allowedCorruptors, self.numCorruptors)
-            # Since sample is without replacement, I'm guaranteed to not have corruptors in
-            # places where I've already put a corruptor.
+            # Since sample is without replacement, I'm guaranteed to not have
+            # corruptors in places where I've already put a corruptor.
             # This means that if I'm to have a SNP and insertion at the same place,
             # it has to arise through the evolution, no organism starts that way.
             cors = [(x[0], random.choice(x[1])) for x in corLocations]
@@ -633,7 +635,8 @@ class Population:
         numTries = 0
         while len(ret) < self.populationSize:
             numTries += 1
-            assert numTries < self.populationSize * 2, "Too many iterations building generation."
+            assert numTries < self.populationSize * 2, \
+                "Too many iterations building generation."
             if random.randrange(2):
                 # Do mixing.
                 parents = self._choose2()
@@ -644,14 +647,15 @@ class Population:
                 # Do mutation
                 parent = self._choose1()
                 child = parent.mutated(self.allowedCorruptors, self.checkCorruptors)
-                # mutated can return false, in that case no valid child could be generated.
+                # mutated can return false, in that case no valid child
+                # could be generated.
                 if not child:
                     continue
             ret.add(child)
         self.organisms = list(ret)
 
 
-def getCandidateCorruptorList(sequence: str, regions: Optional[list[tuple[int, int]]] = None,
+def getCandidateCorruptorList(sequence: str, regions: list[tuple[int, int]] | None = None,
                               allowDeletion: bool = True,
                               allowInsertion: bool = True) -> list[CandidateCorruptor]:
     """Give the corruptors that are possible in a given sequence.
@@ -750,7 +754,8 @@ def removeCorruptors(corruptorList: list[CandidateCorruptor],
 
     For example::
 
-        removeCorruptors([(100, "ACG"), (101, "AT"), (102, "CGT"), (103, "CT"), (104, "AGT")],
+        removeCorruptors([(100, "ACG"), (101, "AT"), (102, "CGT"),
+                          (103, "CT"), (104, "AGT")],
                          [(101, "T"), (103, "CT"), (104, "G")])
         -> [(100, "ACG"), (101, "A"), (102, "CGT"), (104, "AT")]
 
@@ -825,7 +830,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
                annotations: list[ANNOTATION_T],
                corruptors: list[Corruptor],
                ax: matplotlib.axes.Axes) -> None:
-    """Generate a nice little plot including pips for corruptors and boxes for annotations.
+    """Generate a nice little plot with pips for corruptors and boxes for annotations.
 
     :param posTraces: The profiles to plot above the X axis.
     :param negTraces: The profiles to plot below the X axis.

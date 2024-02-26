@@ -8,7 +8,8 @@ Here's what you do.
 3. Pass those to a Runner.
 4. Call .run() on the Runner.
 """
-from typing import Any, Optional, Iterator, Iterable
+from typing import Any
+from collections.abc import Iterator, Iterable
 import multiprocessing
 import ctypes
 import pysam
@@ -519,15 +520,15 @@ class FlatH5Saver(Saver):
     chunkShape: tuple[int, int, int]
     _outputFname: str
     numSamples: int
-    genomeFname: Optional[str]
+    genomeFname: str | None
     inputLength: int
     _useTqdm: bool = False
     _outFile: h5py.File
     _chunksToWrite: dict[int, dict]
-    pbar: Optional[tqdm.tqdm] = None
+    pbar: tqdm.tqdm | None = None
 
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
-                 genome: Optional[str] = None, useTqdm: bool = False):
+                 genome: str | None = None, useTqdm: bool = False):
         self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
         self._outputFname = outputFname
         self.numSamples = numSamples
@@ -688,7 +689,7 @@ class PisaH5Saver(Saver):
     """
 
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
-                 genome: Optional[str] = None, useTqdm: bool = False):
+                 genome: str | None = None, useTqdm: bool = False):
         logUtils.info("Initializing saver.")
         self._outputFname = outputFname
         self.numSamples = numSamples
@@ -844,7 +845,7 @@ class ListGenerator(Generator):
     """
 
     def __init__(self, sequences: Iterable[str],
-                 passDataList: Optional[list] = None):
+                 passDataList: list | None = None):
         self._sequences = list(sequences)
         self.numSamples = len(self._sequences)
         self.inputLength = len(self._sequences[0])
@@ -909,7 +910,7 @@ class FastaGenerator(Generator):
     def construct(self):
         """Open the file and start reading."""
         logUtils.info("Constructing fasta generator in its thread.")
-        self.fastaFile = open(self.fastaFname, "r")
+        self.fastaFile = open(self.fastaFname, "r")  # pylint: disable=consider-using-with
         self.nextSequenceID = self.fastaFile.readline()[1:].strip()
         # [1:] to get rid of the '>'.
         logUtils.debug("Initial sequence to read: {0:s}".format(self.nextSequenceID))

@@ -7,9 +7,9 @@ from bpreveal import logUtils
 from bpreveal import generators
 
 
-def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads,
+def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads: list[dict],
                  trainBatchGen: generators.H5BatchGenerator,
-                 valBatchGen: generators.H5BatchGenerator):
+                 valBatchGen: generators.H5BatchGenerator) -> list[Callback]:
     """Return a set of callbacks for your model.
 
     :param earlyStop: The ``early-stopping-patience`` from the config file.
@@ -202,9 +202,8 @@ class DisplayCallback(Callback):
 
         If a second object is provided, format as a ratio.
 
-        :param str1: The thing to format
-        :param str2: Optional. If provided, format the two inputs as a ratio.
-        :return: A 10 character wide formatted string.
+        :param val: The thing to format
+        :return: An 11 character wide formatted string.
         """
         match val:
             case str():
@@ -399,7 +398,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         for head in heads:
             self.λHistory[head["head-name"]] = []
 
-    def on_train_begin(self, logs=None):  # pylint: disable=invalid-name,unused-argument
+    def on_train_begin(self, logs: dict | None = None):  # pylint: disable=invalid-name
         """Set up the initial guesses for λ.
 
         :param logs: Ignored.
@@ -407,6 +406,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         At the beginning of training, see which heads are using adaptive weights.
         For those heads, load in an initial guess for λ based on the BPNet heuristic.
         """
+        del logs
         for head in self.heads:
             if "counts-loss-frac-target" in head:
                 if "counts-loss-weight" in head:
@@ -475,7 +475,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                epochLosses[valCounts])
         return ret
 
-    def whatWouldValLossBe(self, epoch):
+    def whatWouldValLossBe(self, epoch: int):
         """Determine a previous epoch's validation loss but use the current λ values to do it.
 
         :param epoch: The epoch number where you'd like to know what the loss would have been.
@@ -534,7 +534,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
 
-    def on_epoch_end(self, epoch, logs=None):  # pylint: disable=invalid-name
+    def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
         """Update the other callbacks and calculate a new λ.
 
         :param epoch: The epoch number that just finished.

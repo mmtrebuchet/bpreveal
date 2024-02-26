@@ -11,7 +11,7 @@ clear-cache-post-run=no
 
 # Load and enable all available extensions. Use --list-extensions to see a list
 # all available extensions.
-#enable-all-extensions=
+# enable-all-extensions=yes
 
 # In error mode, messages with a category besides ERROR or FATAL are
 # suppressed, and no reports are done by default. Error mode is compatible with
@@ -81,7 +81,22 @@ limit-inference-results=1000
 
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
-load-plugins=
+load-plugins=pylint.extensions.docparams,
+             pylint.extensions.docstyle,
+             pylint.extensions.redefined_variable_type,
+             pylint.extensions.check_elif,
+             pylint.extensions.code_style,
+             pylint.extensions.comparison_placement,
+             pylint.extensions.confusing_elif,
+             pylint.extensions.consider_refactoring_into_while_condition,
+             pylint.extensions.dict_init_mutate,
+             pylint.extensions.empty_comment,
+             pylint.extensions.eq_without_hash,
+             pylint.extensions.redefined_loop_name,
+             pylint.extensions.set_membership,
+             pylint.extensions.typing
+
+
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -262,13 +277,9 @@ check-protected-access-in-special-methods=no
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,
-                      __new__,
-                      setUp,
-                      asyncSetUp,
                       _loadGenome,
                       construct,
                       start,
-                      __post_init__,
                       buildDatasets,
 
 # List of member names, which should be excluded from the protected access
@@ -431,7 +442,8 @@ confidence=HIGH,
 # --disable=W".
 disable=consider-using-f-string,
         consider-using-max-builtin,
-        consider-using-with,
+        consider-using-assignment-expr,
+        consider-using-namedtuple-or-dataclass,
         global-statement,
         non-ascii-name,
         too-few-public-methods,
@@ -441,7 +453,6 @@ disable=consider-using-f-string,
         ungrouped-imports,
         unspecified-encoding,
         wrong-import-position
-
 
 
 # Enable the message, report, category or checker with the given id(s). You can

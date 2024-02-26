@@ -5,7 +5,7 @@ from bpreveal import logUtils
 from keras import backend
 
 
-def multinomialNll(trueCounts, logits):
+def multinomialNll(trueCounts: tf.Tensor, logits: tf.Tensor) -> float:
     """The heart of what makes BPNet great - the loss function for profiles.
 
     :param trueCounts: The experimentally-observed counts.
@@ -31,7 +31,7 @@ def multinomialNll(trueCounts, logits):
     return curLoss
 
 
-def weightedMse(weightTensor):
+def weightedMse(weightTensor: tf.Tensor):
     """Loss for the adaptive counts loss weight.
 
     Given a weight tensor (a tensorflow Variable of shape (1,))
@@ -46,7 +46,7 @@ def weightedMse(weightTensor):
     """
     logUtils.debug("Creating weighted mse.")
 
-    def reweightableMse(yTrue, yPred):
+    def reweightableMse(yTrue: tf.Tensor, yPred: tf.Tensor) -> float:
         yPred = tf.convert_to_tensor(yPred)
         yTrue = tf.cast(yTrue, yPred.dtype)
         mse = backend.mean(tf.math.squared_difference(yPred, yTrue), axis=-1)

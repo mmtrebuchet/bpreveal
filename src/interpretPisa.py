@@ -146,7 +146,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 from bpreveal import interpretUtils
 
 
-def main(config):
+def main(config: dict):
     """Run the calculation.
 
     :param config: A JSON object matching the interpretPisa specification.
@@ -164,7 +164,8 @@ def main(config):
         numThreads = config["num-threads"]
     else:
         logUtils.info("Did not find a num-threads property in configuration file. "
-                      "Using default of 1. Using more batchers may give a performance boost.")
+                      "Using default of 1. Using more batchers may give a "
+                      "performance boost.")
 
     if "fasta-file" in config or "sequence-fasta" in config:
         # We're doing a fasta run.
@@ -197,8 +198,8 @@ def main(config):
 
 if __name__ == "__main__":
     import sys
-    if sys.argv[0] in ["interpretPisaBed", "interpretPisaFasta"]:
-        logUtils.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
+    if sys.argv[0] in {"interpretPisaBed", "interpretPisaFasta"}:
+        logUtils.warning("DEPRECATION: You are calling the program " + sys.argv[0] + ". "
             "It is now just called interpretPisa and automatically detects if you're "
             "using a bed or fasta file. Instructions for updating: Call the program "
             "interpretPisa. These old program names will be removed in BPReveal 5.0.0.")

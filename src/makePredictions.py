@@ -59,7 +59,8 @@ coordinates
     Only the *coordinate* information is taken from the bed file, and only chromosome
     size information is loaded from the genome file.
     The actual sequences to predict will be drawn from ``fasta-file``.
-    This way, you can make predictions from a fasta but then easily convert it to a bigwig.
+    This way, you can make predictions from a fasta but then easily convert it to a
+    bigwig.
 
 Output Specification
 --------------------
@@ -174,7 +175,7 @@ def getWriter(config, numPredictions):
     return writer
 
 
-def main(config):
+def main(config: dict):
     """Run the predictions.
 
     :param config: is taken straight from the json specification.
@@ -226,9 +227,10 @@ def main(config):
 if __name__ == "__main__":
     import sys
     print(sys.argv[0])
-    if sys.argv[0].split("/")[-1] in ["makePredictionsBed", "makePredictionsFasta",
-                       "makePredictionsBed.py", "makePredictionsFasta.py"]:
-        logUtils.warning("DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
+    if sys.argv[0].split("/")[-1] in {"makePredictionsBed", "makePredictionsFasta",
+                       "makePredictionsBed.py", "makePredictionsFasta.py"}:
+        logUtils.warning(
+            "DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
             "It is now just called makePredictions and automatically detects if you're "
             "using a bed or fasta file. Instructions for updating: Call the program "
             "makePredictions. These old program names will be removed in BPReveal 6.0.0.")

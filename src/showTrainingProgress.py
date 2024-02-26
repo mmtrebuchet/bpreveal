@@ -72,7 +72,8 @@ class Screen:
         self._stdscr.clear()
         self._stdscr.refresh()
         if curses.has_colors():
-            global _COLOR_GREENBG, _COLOR_REDBG, _COLOR_ALARM, _COLOR_HIGHLIGHT, _COLOR_CRITICAL
+            global _COLOR_GREENBG, _COLOR_REDBG, _COLOR_ALARM
+            global _COLOR_HIGHLIGHT, _COLOR_CRITICAL
             curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)
             curses.init_pair(2, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
             curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -113,7 +114,7 @@ class Screen:
         # ││                         ││
         # │└─────────────────────────┘│
         # └───────────────────────────┘
-        #
+
         self._width = width = curses.COLS  # pylint: disable=no-member
         height = curses.LINES  # pylint: disable=no-member
         messageHeight = height // 7
@@ -122,9 +123,11 @@ class Screen:
             messageHeight = height // 5
 
         self._messageBufferSize = messageHeight - 2
-        messageAreaHeight = messageHeight if self.joinMessages else 2 * messageHeight + colSep
+        messageAreaHeight = messageHeight if self.joinMessages else \
+            2 * messageHeight + colSep
         tableTotalWidth = width - 2 * border - colSep
-        tableTotalHeight = height - statusHeight - messageAreaHeight - 2 * border - 2 * colSep
+        tableTotalHeight = height - statusHeight - messageAreaHeight \
+            - 2 * border - 2 * colSep
         batchHeight = tableTotalHeight * 3 // 5
         self._epochWidth = epochWidth = (tableTotalWidth) * 3 // 5
         self._batchWidth = batchWidth = tableTotalWidth - epochWidth
@@ -200,7 +203,8 @@ class Screen:
                 assert False, "No window for {0:s}".format(winName)
         return win, width, title
 
-    def printString(self, row: int, col: int, winName: str, text: str, color=None):
+    def printString(self, row: int, col: int, winName: str, text: str,
+                    color: int | None = None):
         """Print a given string at a location in a window.
 
         :param row: What row within the window should the string start at?
@@ -341,8 +345,9 @@ class Screen:
         A window may be two characters, the second one being either ``H`` or ``A``,
         meaning that the text should be shown in green or red, respectively.
 
-        If a line does not contain ":math:`\tt \iint`", then it is displayed in the message tab
-        or the debug tab. The debug tab is reserved for messages starting with the
+        If a line does not contain ":math:`\tt \iint`", then it is displayed in the
+        message tab or the debug tab.
+        The debug tab is reserved for messages starting with the
         string ``DEBUG``, and messages gets everything else.
         """
         # Is this a line with position information?
@@ -382,20 +387,24 @@ class Screen:
 
 def getParser() -> argparse.ArgumentParser:
     """Command line arguments, all optional"""
-    parser = argparse.ArgumentParser(description="Takes the logs from training and shows "
-                                     "them with a little TUI.")
-    parser.add_argument("--no-exit", action="store_true", help="Instead of exiting 10 seconds "
+    parser = argparse.ArgumentParser(
+        description="Takes the logs from training and shows them with a little TUI.")
+    parser.add_argument("--no-exit", action="store_true",
+                        help="Instead of exiting 10 seconds "
                         "after the training is done, keep this window open so you "
                         "can look at numbers.", dest="noExit")
-    parser.add_argument("--delay", help="After reading a line, pause for this many milliseconds.",
+    parser.add_argument("--delay",
+                        help="After reading a line, pause for this many milliseconds.",
                         type=int, default=0)
     parser.add_argument("--read-tty", help="Allow the program to read from a terminal. "
                         "There are no good times to use this except for debugging.",
                         dest="readTTY")
     parser.add_argument("--no-debug", help="Don't show debug-level messages.",
                         dest="noDebug", action="store_true")
-    parser.add_argument("--message-height", help="The height (rows) of the message area at "
-                        "the bottom of the window.", default=None, dest="messageHeight")
+    parser.add_argument("--message-height",
+                        help="The height (rows) of the message area at "
+                        "the bottom of the window.",
+                        default=None, dest="messageHeight")
     return parser
 
 

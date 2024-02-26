@@ -104,6 +104,7 @@ API
 """
 import argparse
 import json
+import typing
 from multiprocessing import Process, Queue
 import pyBigWig
 import numpy as np
@@ -144,16 +145,16 @@ class MetricsCalculator:
         self.outQueue = outQueue
         self.tid = tid
 
-    def runRegions(self, regionReference, regionPredicted, regionID):
+    def runRegions(self, regionReference: Region,
+                   regionPredicted: Region, regionID: typing.Any):
         """Run the calculation on a single region.
 
         :param regionReference: A region in the reference bigwig.
         :param regionPredicted: A region in the predicted bigwig.
         :param regionID: A tag passed into the output queue.
-        :return: Nothing, but does put a result in the outQueue.
 
         Given a region, loads up profiles from the reference and predicted bigwigs
-        and calculates the various metrics.
+        and calculates the various metrics. Puts its results into the output queue.
         """
         referenceData = np.nan_to_num(self.referenceBw.values(regionReference.chrom,
                                                               regionReference.start,
@@ -203,8 +204,8 @@ class MetricsCalculator:
         self.predictedBw.close()
 
 
-def calculatorThread(referenceBwFname, predictedBwFname, applyAbs, inQueue,
-                     outQueue, tid):
+def calculatorThread(referenceBwFname: str, predictedBwFname: str, applyAbs: bool,
+                     inQueue: Queue, outQueue: Queue, tid: int):
     """Just spawns a MetricsCalculator and runs it.
 
     :param referenceBwFname: The file name of the reference bigwig.
@@ -219,7 +220,8 @@ def calculatorThread(referenceBwFname, predictedBwFname, applyAbs, inQueue,
     calc.run()
 
 
-def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
+def regionGenThread(regionsFname: str, regionQueue: Queue,
+                    numThreads: int, numberQueue: Queue):
     """A thread to generate regions and stuff them in the regionQueue.
 
     :param regionsFname: The bed file to read in.
@@ -246,7 +248,8 @@ def regionGenThread(regionsFname, regionQueue, numThreads, numberQueue):
     logUtils.debug("Generator done.")
 
 
-def percentileStats(name, vector, jsonDict, header=False, write=True):
+def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
+                    header: bool = False, write: bool = True):
     """Given a vector of statistics, calculate percentile values.
 
     :param name: The name of the statistic being calculated. Used for output.
@@ -256,7 +259,8 @@ def percentileStats(name, vector, jsonDict, header=False, write=True):
         the quantile cutoff values.
     :param write: Should the results be written at all? If not, they will
         still be added to the jsonDict.
-    :return: Nothing, but does put information in jsonDict.
+
+    Doesn't return anything, but does put information in jsonDict.
     """
     quantileCutoffs = np.linspace(0, 1, 5)
     if vector.shape[0] < 5:
@@ -273,15 +277,16 @@ def percentileStats(name, vector, jsonDict, header=False, write=True):
         print("{0:10s}".format(name) + quantileStr + "\t{0:d}".format(vector.shape[0]))
 
 
-def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
+def receiveThread(numRegions: int, outputQueue: Queue,
+                  skipZeroes: bool, jsonOutput: bool, jsonDict: dict):
     """Listen to the output from the calculator threads and process it.
 
     :param numRegions: How many total regions will be calculated?
         This is calculated inside regionGenThread and passed back through
         numberQueue.
-    :param outQueue: The queue that the calculator threads are putting
+    :param outputQueue: The queue that the calculator threads are putting
         their results in.
-    :param skipZeros: Should regions where the metrics are undefined be
+    :param skipZeroes: Should regions where the metrics are undefined be
         filtered out? If not, your results will be contaminated with NaN,
         but this can also be a good indication that something is wrong.
     :param jsonOutput: Should a json file be written? If so, the normal
@@ -339,7 +344,8 @@ def receiveThread(numRegions, outputQueue, skipZeroes, jsonOutput, jsonDict):
         print(json.dumps(jsonDict, indent=4))
 
 
-def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jsonOutput):
+def runMetrics(reference: str, predicted: str, regions: str, threads: int, applyAbs: bool,
+               skipZeroes: bool, jsonOutput: bool):
     """Run the calculation.
 
     :param reference: The name of the bigwig file with reference data.
@@ -347,11 +353,12 @@ def runMetrics(reference, predicted, regions, threads, applyAbs, skipZeroes, jso
     :param regions: The name of the bed file with regions to analyze.
     :param threads: How many parallel workers should be used?
     :param applyAbs: Should all values in the bigwigs be made positive?
-    :param skipZeros: If one of the metrics from one region is NaN,
+    :param skipZeroes: If one of the metrics from one region is NaN,
         should it be ignored (skipZeros = True) or should all the results
         be contaminated with NaN (skipZeros = False)?
     :param jsonOutput: Should json output be written instead of a table?
-    :return: nothing, but the writer thread prints to stdout.
+
+    Doesn't return anything, but will print to stdout.
     """
     regionQueue = Queue()
     resultQueue = Queue()
