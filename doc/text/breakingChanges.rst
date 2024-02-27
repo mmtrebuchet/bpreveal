@@ -21,7 +21,7 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
    In BPReveal 6.0.0, the symlinks will be removed.
 3. ``makePredictionsFasta`` and ``makePredictionsBed`` are old names for makePredictions.
    They exist only as symlinks in the bin/ directory, and using them has emitted a warning
-   since 4.1.2. The old names will be removed.
+   since 4.1.1. The old names will be removed.
 
 
 BPReveal 5.x

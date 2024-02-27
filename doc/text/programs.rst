@@ -59,8 +59,8 @@ These are the core programs of BPReveal. Each one takes a JSON configuration fil
     Saves a new model to disk, adding a simple layer or two to do the
     regression.
 
-Extra CLI
----------
+Utility CLI
+-----------
 
 These are little tools and utilities that help in dealing with models. These
 take arguments on the command line.
@@ -158,7 +158,7 @@ to do useful things in your code.
     A wrapper around the ushuffle library, used to perform shuffles of sequences that
     preserve k-mer distributions.
 
-TOOLS
+Tools
 -----
 
 These are miscellaneous programs that are not part of BPReveal proper, but that

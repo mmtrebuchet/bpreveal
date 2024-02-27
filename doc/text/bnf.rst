@@ -28,7 +28,7 @@ Here is an example::
     <sentence> ::=
         You should <list-of-actions> the <animal>.
 
-This defines three terms: ``<animal>``, ``<action>``, and ``<sentence>``.
+This defines four terms: ``<animal>``, ``<action>``, ``<list-of-actions>``, and ``<sentence>``.
 We can then use this to ask whether a string of letters is
 a valid sentence. ``feed the dog`` would not be, but
 ``You should feed the cat.`` is, as is ``You should feed and pet and feed the dog``.

@@ -12,8 +12,12 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # pylint: disable=invalid-name
 project = 'BPReveal'
 copyright = '2024, Charles McAnany'  # pylint: disable=redefined-builtin # noqa
-author = 'Charles McAnany, Melanie Weilert, Haining Jiang, Patrick Moeller'
+authorList = bpreveal.__author__.split(',')
+authorList = [x.strip() for x in authorList]
+author = ", ".join(authorList)
+show_authors = True
 release = bpreveal.__version__
+version = release
 # pylint: enable=invalid-name
 import bpreveal.internal.constants
 
@@ -66,6 +70,21 @@ autodoc_type_aliases = {
     "CandidateCorruptor": "CandidateCorruptor",
     "Profile": "Profile"
 }
+texAuthors = r" \and ".join(authorList)
+latex_documents = [
+    ("index", 
+    "bpreveal.tex",
+    "BPReveal",
+    texAuthors,
+    "manual",
+    False)
+]
+latex_elements = {
+    "preamble" : r"""\DeclareRobustCommand{\and}{%
+\end{tabular}\kern-\tabcolsep\\\begin{tabular}[t]{c}%
+}%
+""",
+}
 # pylint: disable=invalid-name
 autodoc_unqualified_typehints = True
 # -- Options for HTML output -------------------------------------------------
@@ -75,5 +94,5 @@ templates_path = []
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_generated/static"]
 html_css_files = ["custom-styles.css", "libertinus.css"]
-default_dark_mode = False
+
 # pylint: enable=invalid-name
