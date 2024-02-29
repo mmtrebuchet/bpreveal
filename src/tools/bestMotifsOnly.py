@@ -9,6 +9,7 @@ import argparse
 from bpreveal import logUtils
 from bpreveal.motifAddQuantiles import readTsv, writeTsv
 
+
 def getParser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Read in a tsv file from the motif scanner and limit each position to "
@@ -35,13 +36,14 @@ def getParser() -> argparse.ArgumentParser:
         action="store_true")
     return p
 
+
 def removeOverlaps(entries, colName):
     outEntries = []
     for i, e in logUtils.wrapTqdm(enumerate(entries), total=len(entries)):
         scanStart = i
         while scanStart > 0 \
-                and entries[scanStart-1]["end"] >= e["start"] \
-                and entries[scanStart-1]["chrom"] == e["chrom"]:
+                and entries[scanStart - 1]["end"] >= e["start"] \
+                and entries[scanStart - 1]["chrom"] == e["chrom"]:
             scanStart -= 1
         scanEnd = i
         while scanEnd < len(entries) - 1 \
