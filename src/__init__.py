@@ -25,4 +25,5 @@ and see doc/demos/osknExample.ipynb for a demonstration notebook.
 # and it will work with your current conda environment.
 
 __version__ = "4.1.1"
-__author__ = "Charles McAnany, Melanie Weilert, Haining Jiang, Patrick Moeller"
+__author__ = "Charles McAnany, Melanie Weilert, Haining Jiang, "\
+             "Patrick Moeller, Anshul Kundaje, Julia Zeitlinger"

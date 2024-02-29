@@ -12,7 +12,7 @@
     "contrib-magnitude-quantile" : <number-or-null>,
     "trim-threshold" : <number>,
     "trim-padding" : <integer>,
-    "background-probs" : [<number>, <number>, <number>, <number>],
+    "background-probs" : <vector-or-genome>,
     <quantile-json-section>
 
 <pattern-spec-section> ::=
@@ -34,6 +34,10 @@
   | {"metacluster-name" : <string>,
      "pattern-names" : [<list-of-string>],
      "short-names" : [<list-of-string>]}
+
+<vector-or-genome> ::=
+    "danRer11" | "hg38" | "dm6" | "mm10" | "sacCer3"
+  | [<number>, <number>, <number>, <number>],
 
 <quantile-json-section> ::=
     <empty>

@@ -15,10 +15,15 @@
                 "trim-threshold": {"$ref": "/schema/base#/definitions/fraction-or-null"},
                 "trim-padding": {"type": "integer"},
                 "background-probs": {
-                    "type": "array",
-                    "minItems": 4,
-                    "maxItems": 4,
-                    "items": {"$ref": "/schema/base#/definitions/fraction"}},
+                    "oneOf": [
+                        {"type": "array",
+                         "minItems": 4,
+                         "maxItems": 4,
+                         "items": {"$ref": "/schema/base#/definitions/fraction"}},
+                        {"type": "string",
+                         "enum": ["danRer11", "hg38", "mm10", "dm6", "sacCer3"]}
+                    ]
+                },
                 "quantile-json": {"type": "string"},
                 "patterns": {
                     "oneOf":[

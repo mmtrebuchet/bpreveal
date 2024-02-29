@@ -13,7 +13,7 @@ BPReveal 4.1.x
 
 
 
-BPReveal 4.1.1, 2024-02-21
+BPReveal 4.1.1, 2024-02-27
 ''''''''''''''''''''''''''
 
 NEW FEATURES:
@@ -26,6 +26,9 @@ ENHANCEMENTS:
       module so that the utils documentation isn't full of type annotations.
     * Combined the old makePredictionsBed and makePredictionsFasta into a single
       makePredictions script. The old names will be removed in 6.0.0.
+    * You can specify a genome name for ``background-probs`` in
+      :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>` and
+      :py:mod:`motifScan<bpreveal.motifScan>`.
 
 BUG FIXES:
     * Fixed the name of the counts head in transformation models using bias counts from

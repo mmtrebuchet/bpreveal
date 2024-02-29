@@ -81,6 +81,8 @@ background-probs
     Gives the genetic content of your genome. For example, if you had a genome
     with 60 percent GC content, this would be [0.2, 0.3, 0.3, 0.2]. The order
     of the bases is A, C, G, and T.
+    This may also be a string naming a genome, such as ``sacCer3``.
+    BPReveal knows about danRer11, hg38, mm10, dm6, and sacCer3.
 
 patterns
     May be either a pattern spec (see below) or the string "all", in which case

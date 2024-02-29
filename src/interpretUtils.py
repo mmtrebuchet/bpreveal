@@ -283,10 +283,10 @@ class FlatRunner:
         logUtils.info("Initializing interpretation runner.")
         self._profileSaver = profileSaver
         self._countsSaver = countsSaver
-        self._profileInQueue = multiprocessing.Queue(1000)
-        self._countsInQueue = multiprocessing.Queue(1000)
-        self._profileOutQueue = multiprocessing.Queue(1000)
-        self._countsOutQueue = multiprocessing.Queue(1000)
+        self._profileInQueue = multiprocessing.Queue(100)
+        self._countsInQueue = multiprocessing.Queue(100)
+        self._profileOutQueue = multiprocessing.Queue(100)
+        self._countsOutQueue = multiprocessing.Queue(100)
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._profileInQueue, self._countsInQueue], generator, 1),
@@ -364,8 +364,8 @@ class PisaRunner:
                  receptiveField: int, kmerSize: int, numBatchers: int):
         logUtils.info("Initializing pisa runner.")
         self.numBatchers = numBatchers
-        self._inQueue = multiprocessing.Queue(1000)
-        self._outQueue = multiprocessing.Queue(1000)
+        self._inQueue = multiprocessing.Queue(100)
+        self._outQueue = multiprocessing.Queue(100)
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._inQueue], generator, self.numBatchers),

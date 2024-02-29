@@ -3,6 +3,8 @@ internal/libushuffle.cpython-311-x86_64-linux-gnu.so: libushuffle.cpython-311-x8
 	mv $^ $@
 internal/libjaccard.cpython-311-x86_64-linux-gnu.so: libjaccard.cpython-311-x86_64-linux-gnu.so
 	mv $^ $@
+internal/libslide.cpython-311-x86_64-linux-gnu.so: libslide.cpython-311-x86_64-linux-gnu.so
+	mv $^ $@
 
 libushuffle.cpython-311-x86_64-linux-gnu.so: internal/libushuffle.c internal/libushuffle.pyf
 	CFLAGS="-Ofast -fexpensive-optimizations -ffast-math" f2py -c $^
@@ -10,8 +12,12 @@ libushuffle.cpython-311-x86_64-linux-gnu.so: internal/libushuffle.c internal/lib
 libjaccard.cpython-311-x86_64-linux-gnu.so: internal/libjaccard.c internal/libjaccard.pyf
 	CFLAGS="-Ofast -fexpensive-optimizations -ffast-math" f2py -c $^
 
+libslide.cpython-311-x86_64-linux-gnu.so: internal/libslide.c internal/libslide.pyf
+	CFLAGS="-Ofast -fexpensive-optimizations -ffast-math -fopenmp" f2py -c -lgomp $^
+
 clean: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
 	internal/libushuffle.cpython-311-x86_64-linux-gnu.so \
+	internal/libslide.cpython-311-x86_64-linux-gnu.so \
 	schema.py
 	rm $^
 
@@ -29,4 +35,5 @@ schemas: schema.py schematools/build.py ${schema_files}
 
 all: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
 	internal/libushuffle.cpython-311-x86_64-linux-gnu.so \
+	internal/libslide.cpython-311-x86_64-linux-gnu.so \
 	schemas

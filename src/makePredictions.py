@@ -226,7 +226,6 @@ def main(config: dict):
 
 if __name__ == "__main__":
     import sys
-    print(sys.argv[0])
     if sys.argv[0].split("/")[-1] in {"makePredictionsBed", "makePredictionsFasta",
                        "makePredictionsBed.py", "makePredictionsFasta.py"}:
         logUtils.warning(

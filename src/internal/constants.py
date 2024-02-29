@@ -79,6 +79,15 @@ the easy® functions and the threaded batcher check to see if Tensorflow has
 been loaded in the parent process before they spawn children.
 """
 
+GENOME_NUCLEOTIDE_FREQUENCY: dict[str, list[float]] = {
+    "danRer11": [0.316952, 0.183272, 0.183253, 0.316520],
+    "dm6":      [0.290034, 0.210142, 0.209919, 0.289903],  # noqa
+    "hg38":     [0.295182, 0.203906, 0.204783, 0.296127],  # noqa
+    "mm10":     [0.291497, 0.208327, 0.208343, 0.291831],  # noqa
+    "sacCer3":  [0.309806, 0.190882, 0.190596, 0.308714]  # noqa
+}
+"""The frequency of A, C, G, and T (in that order) in common reference genomes."""
+
 
 def setTensorflowLoaded():
     """Call this when you first load tensorflow."""

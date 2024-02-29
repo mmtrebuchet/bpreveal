@@ -26,7 +26,8 @@ import numpy as np
 import numpy.typing as npt
 import scipy.signal
 from bpreveal import utils
-from bpreveal.internal.constants import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, QUEUE_TIMEOUT
+from bpreveal.internal.constants import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, \
+    QUEUE_TIMEOUT, GENOME_NUCLEOTIDE_FREQUENCY
 from bpreveal.logUtils import wrapTqdm
 from bpreveal import logUtils
 try:
@@ -640,11 +641,17 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
     directly to the motif scanning Python functions.
 
     """
+    if isinstance(backgroundProbs, str):
+        backgroundProbsVec = GENOME_NUCLEOTIDE_FREQUENCY[backgroundProbs]
+        logUtils.debug("Loaded background {0:s} for genome {1:s}"
+                       .format(str(backgroundProbsVec), backgroundProbs))
+    else:
+        backgroundProbsVec = np.array(backgroundProbs)
     patterns = makePatternObjects(patternSpec, modiscoH5Fname)
     logUtils.info("Initialized patterns, beginning to load data.")
     with h5py.File(modiscoH5Fname, "r") as modiscoFp:
         for pattern in patterns:
-            pattern.loadCwm(modiscoFp, trimThreshold, trimPadding, backgroundProbs)
+            pattern.loadCwm(modiscoFp, trimThreshold, trimPadding, backgroundProbsVec)
             pattern.loadSeqlets(modiscoFp)
             pattern.getCutoffs(quantileSeqMatch, quantileContribMatch, quantileContribMagnitude)
     logUtils.info("Loaded and analyzed seqlet data.")

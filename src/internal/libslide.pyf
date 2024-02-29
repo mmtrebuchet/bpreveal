@@ -1,0 +1,19 @@
+! File libjaccard.pyf
+python module libslide
+interface
+    subroutine slide(source, dest, numRows, numSourceCols, numDestCols, depth, rowIndexes, colIndexes)
+        intent(c) slide
+        intent(c)
+        real intent(in),dimension(numRows, numSourceCols, depth) :: source
+        real intent(inout),dimension(numRows, numDestCols, depth) :: dest
+        integer intent(in),dimension(numRows) :: rowIndexes
+        integer intent(in),dimension(numRows) :: colIndexes
+        integer intent(in) :: numRows
+        integer intent(in) :: numSourceCols
+        integer intent(in) :: numDestCols
+        integer intent(in) :: depth
+    end subroutine slide
+
+
+end interface
+end python module libslide

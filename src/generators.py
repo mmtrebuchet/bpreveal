@@ -10,6 +10,7 @@ import numpy as np
 from tensorflow import keras
 from bpreveal import logUtils
 from bpreveal.internal.constants import MODEL_ONEHOT_T, PRED_T
+from bpreveal.internal.libslide import slide
 
 
 class H5BatchGenerator(keras.utils.Sequence):
@@ -75,38 +76,30 @@ class H5BatchGenerator(keras.utils.Sequence):
 
     def __getitem__(self, idx):
         """Get the next *batch* of data."""
-        return self.batchSequences[idx], (self.batchVals[idx] + self.batchCounts[idx])
+        batchStart = idx * self.batchSize
+        batchEnd = min((idx + 1) * self.batchSize, self.numRegions)
+        vals = []
+        counts = []
+        for i in range(len(self.headList)):
+            vals.append(self._allBatchValues[i][batchStart:batchEnd])
+            counts.append(self._allBatchCounts[i][batchStart:batchEnd])
+        return self._allBatchSequences[batchStart:batchEnd], (vals + counts)
 
     def loadData(self) -> None:
         """Read in the hdf5 file and suck all the data into memory.
 
         Called only once.
         """
-        self.batchSequences = []
-        self.batchVals = []
-        self.batchCounts = []
-        regionsRemaining = self.numRegions
-        for _ in range(len(self)):
-            # Build an empty sequence array. Note we have to special-case the last round
-            # in case the number of regions is not divisible by batch size.
-            if regionsRemaining > self.batchSize:
-                curBatchSize = self.batchSize
-            else:
-                curBatchSize = regionsRemaining
-            regionsRemaining -= self.batchSize
-            self.batchSequences.append(np.empty((curBatchSize, self.inputLength, 4),
-                                                dtype=MODEL_ONEHOT_T))
-            newBatchVals = []
-            newBatchCounts = []
-            for head in self.headList:
-                newBatchVals.append(
-                    np.empty((curBatchSize,
-                              self.outputLength,
-                              head["num-tasks"]),
-                             dtype=PRED_T))
-                newBatchCounts.append(np.empty((curBatchSize, )))
-            self.batchVals.append(newBatchVals)
-            self.batchCounts.append(newBatchCounts)
+        self._allBatchSequences = np.empty((self.numRegions, self.inputLength, 4),
+                                           dtype=MODEL_ONEHOT_T)
+        self._allBatchValues = []
+        self._allBatchCounts = []
+        for head in self.headList:
+            self._allBatchValues.append(
+                np.empty((self.numRegions, self.outputLength, head["num-tasks"]),
+                         dtype=PRED_T))
+            self._allBatchCounts.append(
+                np.empty((self.numRegions,), dtype=PRED_T))
         self.regionIndexes = np.arange(0, self.numRegions)
         self.rng = np.random.default_rng(seed=1234)
         self.refreshData()
@@ -120,49 +113,28 @@ class H5BatchGenerator(keras.utils.Sequence):
         logUtils.debug("Refreshing batch data.")
         startTime = time.perf_counter()
         self.rng.shuffle(self.regionIndexes)
-        for i in range(self.numRegions):
-            tmpData, tmpSequence = self._offsetJitter(i)
-            # We've collected and trimmed the data, now to fill in the
-            # batch arrays.
-            regionIdx = self.regionIndexes[i]
-            batchIdx = regionIdx // self.batchSize
-            batchRegionIdx = regionIdx % self.batchSize
-            batchSeqs = self.batchSequences[batchIdx]
-            batchVals = self.batchVals[batchIdx]
-            batchCounts = self.batchCounts[batchIdx]
-            self._shiftSequence(batchSeqs, tmpSequence, batchRegionIdx)
-            self._shiftData(batchVals, batchCounts, tmpData, batchRegionIdx)
+        sliceCols = self.rng.integers(0,
+                                      self.maxJitter * 2, size=(self.numRegions,),
+                                      dtype=np.int32)
+        self._shiftSequence(self.regionIndexes, sliceCols)
+        self._shiftData(self.regionIndexes, sliceCols)
         stopTime = time.perf_counter()
         Δt = stopTime - startTime
         logUtils.debug("Loaded new batch in {0:5f} seconds.".format(Δt))
 
-    def _shiftSequence(self, batchSeqs, tmpSequence, batchRegionIdx):
+    def _shiftSequence(self, regionIndexes, sliceCols):
         # This is a good target for optimization - it takes multiple seconds!
-        batchSeqs[batchRegionIdx, :] = tmpSequence
+        slide(self.fullSequences, self._allBatchSequences,
+              regionIndexes, sliceCols)
+        # self._allBatchSequences = shuffledSeqs[:, sliceCols, :]
 
-    def _shiftData(self, batchVals, batchCounts, tmpData, batchRegionIdx):
+    def _shiftData(self, regionIndexes, sliceCols):
         # This is a big target for optimization - it takes seconds to load a batch.
         for headIdx, _ in enumerate(self.headList):
-            batchVals[headIdx][batchRegionIdx, :] = tmpData[headIdx]
-            batchCounts[headIdx][batchRegionIdx] = \
-                np.log(np.sum(tmpData[headIdx]))
-
-    def _offsetJitter(self, i):
-        tmpSequence = self.fullSequences[i]
-        # fullData is (num-heads)
-        #            x (  num-regions
-        #               x output-length+jitter*2
-        #               x numTasks)
-        # so this slice takes the ith region of each of the head datasets.
-        tmpData = [x[i, :, :] for x in self.fullData]
-        if self.maxJitter > 0:
-            jitterOffset = self.rng.integers(0, self.maxJitter * 2 + 1)
-            tmpSequence = tmpSequence[jitterOffset:jitterOffset + self.inputLength, :]
-            for j in range(len(tmpData)):  # pylint: disable=consider-using-enumerate
-                tmpData[j] = tmpData[j][jitterOffset:jitterOffset + self.outputLength, :]
-            # Note that this generator does *not* revcomp the data,
-            # in case the input are stranded like chip-nexus.
-        return tmpData, tmpSequence
+            slide(self.fullData[headIdx], self._allBatchValues[headIdx],
+                  regionIndexes, sliceCols)
+            valSums = np.sum(self._allBatchValues[headIdx], axis=(1, 2))
+            self._allBatchCounts[headIdx] = np.log(valSums)
 
     def on_epoch_end(self):  # pylint: disable=invalid-name
         """When the epoch is done, re-jitter the data by calling refreshData."""
