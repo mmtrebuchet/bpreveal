@@ -29,6 +29,11 @@ ENHANCEMENTS:
     * You can specify a genome name for ``background-probs`` in
       :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>` and
       :py:mod:`motifScan<bpreveal.motifScan>`.
+    * Rewrote the generator to use a new C library, making the data loading step
+      at the end of each batch about three times faster. The jitter values will be
+      slightly different than before since I'm using the random number generator
+      differently, but there should be no problems with backwards compatibility.
+      Hooray for better GPU utilization!
 
 BUG FIXES:
     * Fixed the name of the counts head in transformation models using bias counts from

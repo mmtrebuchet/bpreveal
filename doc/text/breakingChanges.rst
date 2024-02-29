@@ -59,6 +59,9 @@ BPReveal 4.1.1
    :py:mod:`internal.predictUtils<bpreveal.internal.predictUtils>`. If you were calling
    them from the old ``makePredictionsFasta.py`` module, they have moved.
 
+3. A new library, libslide, has been added. You will need to re-run make (or reinstall
+   the environment) to use it.
+
 BPReveal 4.1.0
 ^^^^^^^^^^^^^^
 The output format from training was totally re-written to be easier to use in log files.
