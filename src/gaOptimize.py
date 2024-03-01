@@ -187,7 +187,7 @@ def stringToCorruptorList(corruptorStr: str) -> list[Corruptor]:
 
 
 class Organism:
-    """This represents the set of corruptors that are to be applied to the input sequence.
+    """Represents the set of corruptors that are to be applied to the input sequence.
 
     :param corruptors: A list of corruptors that this organism represents.
     :type corruptors: list[:py:data:`~Corruptor`]
@@ -418,7 +418,7 @@ class Organism:
 
 
 class Population:
-    """This is the main class for running the sequence optimization GA.
+    """The main class for running the sequence optimization GA.
 
     This is a heck of a constructor, but you need to make a lot of
     choices to use the GA.

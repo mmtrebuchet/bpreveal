@@ -102,7 +102,7 @@ def reweightCountsLosses(history: dict, lossTypes: list[str]):
 
 
 def main():
-    """Make the plots"""
+    """Make the plots."""
     args = getParser().parse_args()
     if args.verbose:
         logUtils.setVerbosity("INFO")

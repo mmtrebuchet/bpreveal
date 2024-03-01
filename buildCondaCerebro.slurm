@@ -45,7 +45,10 @@ INSTALL_JUPYTER=true
 INSTALL_DEVTOOLS=true
 
 # Do you want to install Snakemake?
-INSTALL_SNAKEMAKE=true
+# XXX
+# WARNING: On Cerebro, installing snakemake breaks tensorflow as of 2024-03-01.
+# XXX
+INSTALL_SNAKEMAKE=false
 
 # Do you want to install pydot and graphviz? This is needed to render an image from showModel.
 INSTALL_PYDOT=true

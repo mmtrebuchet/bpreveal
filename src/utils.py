@@ -533,7 +533,7 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
 
 
 class BatchPredictor:
-    """This is a utility class for when you need to make lots of predictions.
+    """A utility class for when you need to make lots of predictions.
 
     .. note::
         Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.

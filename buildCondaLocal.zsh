@@ -17,7 +17,7 @@ BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 ENV_FLAG=-n
-ENV_NAME=bpreveal-teak
+ENV_NAME=bpreveal-testing
 
 # CHANGE this to conda if you don't have mamba installed.
 # (I recommend using mamba; it's way faster.)
@@ -34,7 +34,10 @@ INSTALL_JUPYTER=true
 INSTALL_DEVTOOLS=true
 
 # Do you want to install Snakemake?
-INSTALL_SNAKEMAKE=true
+# XXX
+# WARNING: On Cerebro, installing snakemake breaks tensorflow as of 2024-03-01.
+# XXX
+INSTALL_SNAKEMAKE=false
 
 # Do you want to install pydot and graphviz? This is needed to render an image from showModel.
 INSTALL_PYDOT=true

@@ -31,5 +31,11 @@ Release Checklist
 
     15. Symlinks in public-bpreveal, including documentation directory.
 
-    16. (major and minor releases only) Announce on Teams.
+    16. Copy documentation to mmtrebuchet.github.io, edit both index.html files.
+
+    17. git add, git commit, git push in mmtrebuchet.github.io.
+
+    18. Issue release on github with pdf of documentation.
+
+    19. (major and minor releases only) Announce on Teams.
 

@@ -116,7 +116,7 @@ def makeBase():
             with open("text/{0:s}.rst".format(outName), "r") as fpIn:
                 for line in fpIn:
                     fp.write(line)
-            fp.write("\n.. toctree::\n    :maxdepth: 2\n    :hidden:\n\n")
+            fp.write("\n.. toctree::\n    :maxdepth: 2\n\n")
             for file in contents:
                 modName = re.sub(r"(\.py$)|(\.rst$)", "", file)
                 fp.write("    {0:s}\n".format(modName))
@@ -128,7 +128,7 @@ def makeBase():
         with open("text/title.rst", "r") as inFp:
             for line in inFp:
                 fpBig.write(line)
-        fpBig.write("\n.. toctree::\n    :maxdepth: 2\n    :hidden:\n")
+        fpBig.write("\n.. toctree::\n    :maxdepth: 2\n")
         fpBig.write("\n")
         for outName, _, _ in ftypes:
             fpBig.write("    _generated/{0:s}\n".format(outName))

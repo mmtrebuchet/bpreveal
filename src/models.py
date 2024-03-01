@@ -11,7 +11,7 @@ from bpreveal import logUtils
 def _soloModelHead(dilateOutput: keras.layers.Layer, individualHead: keras.layers.Layer,
                    outputFilterWidth: int) -> \
         tuple[keras.layers.Layer, keras.layers.Layer]:
-    """This is a single output head for a solo model.
+    """A single output head for a solo model.
 
     :param dilateOutput: The last dilated convolutional layer of the model.
     :param individualHead: Taken straight from the configuration json.
@@ -44,7 +44,7 @@ def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-arg
               numFilters: int, numLayers: int, inputFilterWidth: int,
               outputFilterWidth: int, headList: list[dict],
               modelName: str) -> keras.models.Model:
-    """This is the classic BPNet architecture.
+    """Generate a model using the classic BPNet architecture.
 
     :param inputLength: is the length of the one-hot encoded DNA sequence.
     :param outputLength: is the length of the predicted profile.

@@ -26,7 +26,7 @@ from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
 
 
 class Query:
-    """This is what is passed to the batcher.
+    """A Query is what is passed to the batcher.
 
     It has three things.
 
@@ -79,7 +79,7 @@ class Result:
 
 
 class PisaResult(Result):
-    """This is the output from shapping a single base.
+    """The output from shapping a single base.
 
     It contains a few things.
 
@@ -158,7 +158,7 @@ class FlatResult(Result):
 
 
 class Generator:
-    """This is the base class for generating pisa samples.
+    """The base class for generating pisa samples.
 
     Lifetime:
 
@@ -238,7 +238,7 @@ class Saver:
         raise NotImplementedError()
 
     def parentFinish(self):
-        """This is called in the parent thread when the saver is done.
+        """Called in the parent thread when the saver is done.
 
         Usually, there's nothing to do, but the parent thread might need
         to close shared memory, so this function is guaranteed to be called
@@ -627,7 +627,7 @@ class FlatH5Saver(Saver):
             # Initialize the progress bar.
             # I would do it earlier, but starting it before the batchers
             # have warmed up skews the stats.
-            self.pbar = tqdm.tqdm(total=self.numSamples)
+            self.pbar = tqdm.tqdm(total=self.numSamples, smoothing=0.03)
         if self.pbar is not None:
             self.pbar.update()
         index = result.index
@@ -719,7 +719,7 @@ class PisaH5Saver(Saver):
                                      compression="gzip")
         self.pbar = None
         if self._useTqdm:
-            self.pbar = tqdm.tqdm(total=self.numSamples)
+            self.pbar = tqdm.tqdm(total=self.numSamples, smoothing=0.03)
         if self.genomeFname is not None:
             self._loadGenome()
         else:
@@ -1067,6 +1067,8 @@ class PisaBedGenerator(Generator):
         startPos = curStart - padding
         stopPos = startPos + self.inputLength
         seq = self.genome.fetch(curChrom, startPos, stopPos)
+        assert len(seq) == self.inputLength, \
+            f"Sequence at {curChrom}, {curStart} has wrong length: {len(seq)}"
         oneHot = utils.oneHotEncode(seq)
         ret = Query(oneHot, (curChrom, curStart), self.readHead)
         self.readHead += 1

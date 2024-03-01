@@ -106,6 +106,7 @@ import argparse
 import json
 import typing
 from multiprocessing import Process, Queue
+import sys
 import pyBigWig
 import numpy as np
 import scipy.stats
@@ -249,7 +250,8 @@ def regionGenThread(regionsFname: str, regionQueue: Queue,
 
 
 def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
-                    header: bool = False, write: bool = True):
+                    header: bool = False, write: bool = True,
+                    outputFp: typing.TextIO = sys.stdout):
     """Given a vector of statistics, calculate percentile values.
 
     :param name: The name of the statistic being calculated. Used for output.
@@ -259,6 +261,7 @@ def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
         the quantile cutoff values.
     :param write: Should the results be written at all? If not, they will
         still be added to the jsonDict.
+    :param outputFp: The (opened) file object where output should be written.
 
     Doesn't return anything, but does put information in jsonDict.
     """
@@ -270,15 +273,16 @@ def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
                       "quantiles": list(quantiles)}
     if header:
         cutoffStr = "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
-        print("{0:10s}".format("metric") + cutoffStr + "\t{0:s}".format("regions"))
+        outputFp.write("{0:10s}".format("metric") + cutoffStr + "\t{0:s}\n".format("regions"))
     if write:
         quantileStr = "".join(["\t{0:15f}".format(x) for x in quantiles])
 
-        print("{0:10s}".format(name) + quantileStr + "\t{0:d}".format(vector.shape[0]))
+        outputFp.write("{0:10s}".format(name) + quantileStr + "\t{0:d}\n".format(vector.shape[0]))
 
 
 def receiveThread(numRegions: int, outputQueue: Queue,
-                  skipZeroes: bool, jsonOutput: bool, jsonDict: dict):
+                  skipZeroes: bool, jsonOutput: bool, jsonDict: dict,
+                  outputFile: str | None):
     """Listen to the output from the calculator threads and process it.
 
     :param numRegions: How many total regions will be calculated?
@@ -293,6 +297,8 @@ def receiveThread(numRegions: int, outputQueue: Queue,
         tabular output will not be printed.
     :param jsonDict: Any additional information you'd like included in
         your json file, like the names of the files that were processed.
+    :param outputFile: The name of the file where the output should be saved.
+        If this is ``None``, then write to stdout.
     """
     mnlls = np.zeros((numRegions,))
     jsds = np.zeros((numRegions,))
@@ -323,29 +329,34 @@ def receiveThread(numRegions: int, outputQueue: Queue,
         predictedCounts = predictedCounts[countsSelection]
 
     # Calculate the percentiles for each of the profile metrics.
+    if outputFile is None:
+        outputFp = sys.stdout
+    else:
+        outputFp = open(outputFile, "w")  # pylint: disable=consider-using-with
     w = not jsonOutput
-    percentileStats("mnll", mnlls, jsonDict, header=w, write=w)
-    percentileStats("jsd", jsds, jsonDict, header=False, write=w)
-    percentileStats("pearsonr", pearsonrs, jsonDict, header=False, write=w)
-    percentileStats("spearmanr", spearmanrs, jsonDict, header=False, write=w)
+    percentileStats("mnll", mnlls, jsonDict, header=w, write=w, outputFp=outputFp)
+    percentileStats("jsd", jsds, jsonDict, header=False, write=w, outputFp=outputFp)
+    percentileStats("pearsonr", pearsonrs, jsonDict, header=False, write=w, outputFp=outputFp)
+    percentileStats("spearmanr", spearmanrs, jsonDict, header=False, write=w, outputFp=outputFp)
     if referenceCounts.shape[0] > 2:
         countsPearson = scipy.stats.pearsonr(referenceCounts, predictedCounts)
         countsSpearman = scipy.stats.spearmanr(referenceCounts, predictedCounts)
     else:
         countsPearson = countsSpearman = [np.nan, np.nan]
     if not jsonOutput:
-        print("Counts pearson \t{0:10f}".format(countsPearson[0]))
-        print("Counts spearman\t{0:10f}".format(countsSpearman[0]))
+        outputFp.write("Counts pearson \t{0:10f}\n".format(countsPearson[0]))
+        outputFp.write("Counts spearman\t{0:10f}\n".format(countsSpearman[0]))
     else:
         jsonDict["counts-pearson"] = countsPearson[0]
         jsonDict["counts-spearman"] = countsSpearman[0]
 
     if jsonOutput:
-        print(json.dumps(jsonDict, indent=4))
+        outputFp.write(json.dumps(jsonDict, indent=4))
+    outputFp.close()
 
 
 def runMetrics(reference: str, predicted: str, regions: str, threads: int, applyAbs: bool,
-               skipZeroes: bool, jsonOutput: bool):
+               skipZeroes: bool, jsonOutput: bool, outputFile: str | None):
     """Run the calculation.
 
     :param reference: The name of the bigwig file with reference data.
@@ -357,6 +368,8 @@ def runMetrics(reference: str, predicted: str, regions: str, threads: int, apply
         should it be ignored (skipZeros = True) or should all the results
         be contaminated with NaN (skipZeros = False)?
     :param jsonOutput: Should json output be written instead of a table?
+    :param outputFile: If not None, gives the name of a file that the output should
+        be saved to.
 
     Doesn't return anything, but will print to stdout.
     """
@@ -384,7 +397,8 @@ def runMetrics(reference: str, predicted: str, regions: str, threads: int, apply
 
     writerThread = Process(target=receiveThread,
         args=(numRegions, resultQueue, skipZeroes, jsonOutput,
-        {"reference": reference, "predicted": predicted, "regions": regions}),
+              {"reference": reference, "predicted": predicted, "regions": regions},
+              outputFile),
         daemon=True)
 
     writerThread.start()
@@ -423,6 +437,9 @@ def getParser() -> argparse.ArgumentParser:
                  "generate a machine-readable json file. Cannot be used with --verbose.",
             action="store_true",
             dest="jsonOutput")
+    parser.add_argument("--output-file",
+            help="Instead of writing to stdout, write to this file.",
+            dest="outputFile")
     parser.add_argument("--apply-abs",
             help="Use the absolute value of the entries in the bigwig. Useful if one bigwig "
                  "contains negative values.",
@@ -441,7 +458,7 @@ def main():
         logUtils.setVerbosity("WARNING")
 
     runMetrics(args.reference, args.predicted, args.regions, args.threads,
-               args.applyAbs, args.skipZeroes, args.jsonOutput)
+               args.applyAbs, args.skipZeroes, args.jsonOutput, args.outputFile)
 
 
 if __name__ == "__main__":

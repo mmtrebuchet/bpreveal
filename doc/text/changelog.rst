@@ -11,7 +11,19 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
+BPReveal 4.1.2, DATE
+''''''''''''''''''''
 
+ENHANCEMENTS:
+    * Added references to the GitHub online documentation.
+    * Added the ability to specify an output file in :py:mod:`metrics<bpreveal.metrics>`.
+
+BUG FIXES:
+    * :py:mod:`tileGenome<bpreveal.tools.tileGenome>` would ignore chromosome edge
+      boundaries if you specified a blacklist. This has been fixed.
+
+CONTRIBUTORS:
+    Charles McAnany
 
 BPReveal 4.1.1, 2024-02-27
 ''''''''''''''''''''''''''

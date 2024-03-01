@@ -61,8 +61,7 @@ def main():
                 pybedtools.Interval(c, chromLen - args.chromEdgeBoundary, chromLen))
     blacklist = pybedtools.BedTool(forbidRegions)
     if args.blacklist is not None:
-        blacklist = pybedtools.BedTool(args.blacklist[0])
-        for remBl in args.blacklist[1:]:
+        for remBl in args.blacklist:
             blacklist = blacklist.cat(pybedtools.BedTool(remBl))
     logUtils.info("Blacklist built.")
     with pysam.FastaFile(args.genome) as genome:

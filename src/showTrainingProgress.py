@@ -386,7 +386,7 @@ class Screen:
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Command line arguments, all optional"""
+    """Command line arguments, all optional."""
     parser = argparse.ArgumentParser(
         description="Takes the logs from training and shows them with a little TUI.")
     parser.add_argument("--no-exit", action="store_true",

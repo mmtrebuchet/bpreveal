@@ -38,11 +38,12 @@ BPReveal follows a traditional Unix-style directory structure:
 
 
 ## Documentation
-The BPReveal project uses Sphinx to generate documentation. If you don't have
-ready access to the documentation, you can see a description of each program in
-doc/text/programs.rst. If you want to build the documentation, make sure that
-INSTALL_DEVTOOLS=true in the install script, then run `make html` or `make
-latexpdf` in the doc directory. Documentation will be in
+
+You can find the documentation [here](https://mmtrebuchet.github.io/bpreveal/index.html).
+The BPReveal project uses Sphinx to generate documentation. If you want to build
+the documentation, make sure that `INSTALL_DEVTOOLS=true` in the install script,
+then run `make html` or `make latexpdf` in the doc directory.
+Documentation will be in
 `doc/_build/html/index.html` or `doc/_build/latex/bpreveal.pdf`.
 
 If you're at Stowers, then the documentation will be included in the

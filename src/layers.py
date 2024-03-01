@@ -1,4 +1,4 @@
-"""This file contains the custom layers that are needed for the various models."""
+"""Custom layers that are needed for the various models."""
 import tensorflow as tf
 from tensorflow import keras
 
