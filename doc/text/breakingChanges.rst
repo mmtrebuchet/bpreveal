@@ -42,6 +42,9 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 4. The first argument to
    :py:func:`models.transformationModel<bpreveal.models.transformationModel>`
    will be renamed to get rid of a name collision that pylint gets upset about.
+5. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
+   introduced in 4.1.2, will switch from being ``false`` by default to being ``true``
+   by default. This fixes an off-by-one bug in how receptive field was calculated.
 
 BPReveal 4.x
 ------------
@@ -124,3 +127,5 @@ BPReveal 3.0.0
 3. The transformation model configuration file calls the input length
    ``input-length`` instead of ``sequence-input-length``.
 
+..
+    Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long

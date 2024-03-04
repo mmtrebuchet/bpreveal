@@ -64,6 +64,12 @@ num-threads
     GPU. Shap is relatively inefficient on the GPU, and by using two or three threads,
     you can get better throughput. If you run into memory issues, use one thread.
 
+correct-receptive-field
+    (Optional) If set to ``true``, then the output array will have the correct width,
+    which is input-length - output-length + 1. By default, use the (incorrect) value
+    of input-length - output-length, for compatibility with old scripts. In version
+    5.0.0, default will switch from ``false`` to ``true``.
+
 
 Output Specification
 --------------------
@@ -153,6 +159,20 @@ def main(config: dict):
     """
     logUtils.setVerbosity(config["verbosity"])
     receptiveField = config["input-length"] - config["output-length"]
+    if "correct-receptive-field" in config:
+        if config["correct-receptive-field"]:
+            receptiveField += 1
+    else:
+        logUtils.warning(
+            "You have not specified correct-receptive-field in your configuration. "
+            "In BPReveal 5.0.0, the default shape of the output will change to fix "
+            "an off-by-one error in the receptive field calculation."
+            "Instructions for updating: "
+            "Add 'correct-receptive-field': false to your config to keep using the "
+            "(incorrect) receptive field calculation. Or add "
+            "'correct-receptive-field': true to your config to use the new (correct) "
+            "behavior.")
+
     kmerSize = 1
     if "kmer-size" in config:
         kmerSize = config["kmer-size"]
@@ -208,3 +228,4 @@ if __name__ == "__main__":
     import bpreveal.schema
     bpreveal.schema.interpretPisa.validate(configJson)
     main(configJson)
+# Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long

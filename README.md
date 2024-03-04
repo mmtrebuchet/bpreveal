@@ -55,3 +55,8 @@ root directory. If you're using the Cerebro cluster at Stowers, run
 `buildCondaCerebro.slurm`. If you're installing BPReveal on a local machine,
 run `buildCondaLocal.zsh`.
 
+## License
+
+BPReveal is released under the GNU GPL, either version 2 of that license or
+(at your option) any later version. A copy of the license can be found in
+the COPYING file.

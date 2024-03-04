@@ -17,10 +17,16 @@ BPReveal 4.1.2, DATE
 ENHANCEMENTS:
     * Added references to the GitHub online documentation.
     * Added the ability to specify an output file in :py:mod:`metrics<bpreveal.metrics>`.
+    * Set the project's license to be GPL2+
 
 BUG FIXES:
     * :py:mod:`tileGenome<bpreveal.tools.tileGenome>` would ignore chromosome edge
       boundaries if you specified a blacklist. This has been fixed.
+    * Fixed an incorrect calculation of the receptive field in
+      :py:mod:`interpretPisa<bpreveal.interpretPisa>`. The default behavior does not
+      implement this fix, so you need to set ``correct-receptive-field`` to ``true``.
+      Not including this flag in your config now triggers a warning, and the default
+      behavior will change to use the correct receptive field in version 5.0.0.
 
 CONTRIBUTORS:
     Charles McAnany
@@ -594,3 +600,5 @@ would not have been completed without help from Julia Zeitlinger, Anshul
 Kundaje, and Melanie Weilert.
 
 
+..
+    Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long

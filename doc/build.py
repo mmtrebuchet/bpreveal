@@ -16,7 +16,8 @@ def makeTitle(text: str, borderChar: str, upperBorder: bool = False):
 filesText = ["workflow", "programs", "setup", "breakingChanges",
              "modelArchitectures", "countsLossReweighting", "pisa", "bnf"]
 
-filesDevelopment = ["philosophy", "changelog", "releaseChecklist"]
+filesDevelopment = ["philosophy", "changelog", "releaseChecklist",
+                    "license"]
 
 # Things that take a json
 filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePredictions.py",
@@ -268,3 +269,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long

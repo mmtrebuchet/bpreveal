@@ -44,7 +44,8 @@ class H5BatchGenerator(keras.utils.Sequence):
         # Similar to the prediction script outputs, the heads are all separate,
         # and are named "head_N", where N is 0,1,2, etc.
         self.fullData = []
-        for i, _ in enumerate(headList):
+        for i, curHead in enumerate(headList):
+            logUtils.debug("Loading data for {0:s}".format(curHead["head-name"]))
             self.fullData.append(np.array(dataH5["head_{0:d}".format(i)],
                                           dtype=PRED_T))
         self.loadData()
@@ -139,3 +140,4 @@ class H5BatchGenerator(keras.utils.Sequence):
     def on_epoch_end(self):  # pylint: disable=invalid-name
         """When the epoch is done, re-jitter the data by calling refreshData."""
         self.refreshData()
+# Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long
