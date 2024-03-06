@@ -4,6 +4,7 @@ import os
 import sys
 import re
 
+
 def makeTitle(text: str, borderChar: str, upperBorder: bool = False):
     border = borderChar * len(text)
     if upperBorder:

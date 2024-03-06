@@ -14,6 +14,18 @@ interface
         integer intent(in) :: depth
     end subroutine slide
 
+    subroutine slideChar(source, dest, numRows, numSourceCols, numDestCols, depth, rowIndexes, colIndexes)
+        intent(c) slideChar
+        intent(c)
+        byte intent(in),dimension(numRows, numSourceCols, depth) :: source
+        real intent(inout),dimension(numRows, numDestCols, depth) :: dest
+        integer intent(in),dimension(numRows) :: rowIndexes
+        integer intent(in),dimension(numRows) :: colIndexes
+        integer intent(in) :: numRows
+        integer intent(in) :: numSourceCols
+        integer intent(in) :: numDestCols
+        integer intent(in) :: depth
+    end subroutine slideChar
 
 end interface
 end python module libslide

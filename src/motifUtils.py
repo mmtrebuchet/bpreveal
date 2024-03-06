@@ -843,6 +843,41 @@ class MiniPattern:
             ret.append((passLoc, strand, contribMagnitude, contribMatchScore, seqMatchScore))
         return ret
 
+    def _scanWithCutoffsOneWay(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T],
+                               cwm: npt.NDArray[MOTIF_FLOAT_T], pssm: npt.NDArray[MOTIF_FLOAT_T]
+                               ) -> tuple[list[npt.NDArray[MOTIF_FLOAT_T]],
+                                          list[npt.NDArray[MOTIF_FLOAT_T]],
+                                          list[npt.NDArray[MOTIF_FLOAT_T]]]:
+        contribMatchScores, contribMagnitudes = self._callJaccard(scores, cwm)
+        seqMatchScores = slidingDotproduct(sequence, pssm)
+        return (contribMatchScores, contribMagnitudes, seqMatchScores)
+
+    def scanWithoutCutoffs(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
+                           ) -> list[npt.NDArray[MOTIF_FLOAT_T]]:
+        """See how this pattern reacts to an importance profile.
+
+        Instead of getting hits and putting them in the output queue, just return
+        the arrays generated during scanning.
+        This is useful to see how the scanner viewed your importance profile.
+
+        :param sequence: The one-hot encoded sequence.
+        :param scores: The importance scores.
+        :return: A list of vectors from scanning this pattern against the sequence.
+
+        The returned vectors will be, in order,
+
+        0. Positive strand contribution match scores
+        1. Positive strand contribution magnitudes
+        2. Positive strand sequence match scores
+        3. Negative strand contribution match scores
+        4. Negative strand contribution magnitudes
+        5. Negative strand sequence match scores
+        """
+        rets = []
+        rets.extend(self._scanWithCutoffsOneWay(sequence, scores, self.cwm, self.pssm))
+        rets.extend(self._scanWithCutoffsOneWay(sequence, scores, self.rcwm, self.rpssm))
+        return rets
+
     def scan(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
              ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Given a sequence and a contribution track, identify places where this pattern matches.
@@ -958,6 +993,63 @@ class Hit:
             "seq_match": self.seqMatchScore,
             "contrib_match": self.contribMatchScore
         }
+        return ret
+
+
+class RegionScanner:
+    """Used to scan one particular region at a time, without cutoffs."""
+
+    def __init__(self, contribFname: str, patternConfig: dict):
+        self.miniPatterns = [MiniPattern(x) for x in patternConfig]
+        self.contribFp = h5py.File(contribFname, "r")
+        self.chromIdxToName = {}
+        for i, name in enumerate(self.contribFp["chrom_names"].asstr()):
+            self.chromIdxToName[i] = name
+
+    def scanIndex(self, idx: int) -> None:
+        """Scan a single locus.
+
+        Given an index into the hdf5 contribution file, extract the sequence
+        and contribution scores there and run a scan.
+        idx is an integer ranging from 0 to the number of entries in the hdf5 file
+        (minus one, of course, since zero-based indexing).
+        Returns a dict, where the keys are (patternName, patternShortName) tuples,
+        and the values are (in order) contribMatch, contribMagnitude, seqMatch,
+        reverseContribMatch, reverseContribMagnitude, reverseSeqMatch
+        """
+        # Get all the data for this index.
+        chromIdx = self.contribFp["coords_chrom"][idx]
+        if isinstance(chromIdx, bytes):
+            chrom = chromIdx.decode("utf-8")
+        else:
+            chrom = self.chromIdxToName[chromIdx]
+            logUtils.logFirstN(logUtils.DEBUG,
+                               "First index, found chrom {0:s}".format(str(chrom)), 1)
+        oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
+        hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")
+        contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order="C")
+        # Now we perform the scanning.
+        ret = {}
+        for pattern in self.miniPatterns:
+
+            patRet = pattern.scanWithoutCutoffs(oneHotSequence, contribScores)
+            ret[pattern.patternName, pattern.shortName] = patRet
+        return ret
+
+    def findRegions(self, chrom, start, end):
+        """I don't know the index, but I know the chromosome and position I want scanned.
+
+        Given a region, find where in the importance hdf5 that region
+        would be found, and then scan it.
+        """
+        ret = []
+        for i, chromIdx in enumerate(self.contribFp["coords_chrom"]):
+            chromName = self.chromIdxToName[chromIdx]
+            if chromName == chrom:
+                startPos = self.contribFp["coords_start"][i]
+                endPos = self.contribFp["coords_end"][i]
+                if start <= startPos and endPos <= end:
+                    ret.append((i, startPos, endPos, (startPos + endPos) // 2))
         return ret
 
 

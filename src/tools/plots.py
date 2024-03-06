@@ -291,6 +291,7 @@ def plotPisaWithFiles(pisaDats, cutMiddle, cutLengthX, cutLengthY,
                                       genomeWindowChrom, motifScanBedFname, nameColors)
     profile = loadPisaProfile(cutMiddle, cutLengthY, genomeWindowStart,
                               genomeWindowChrom, profileDats)
+    profile = np.abs(profile)
 
     return plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
              genomeWindowStart, seq, impScores, annotations, profile,

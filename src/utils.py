@@ -13,7 +13,7 @@ import pysam
 import numpy as np
 from bpreveal import logUtils
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
-from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, PRED_T, \
+from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
     QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
 from bpreveal.internal import constants
 
@@ -30,6 +30,15 @@ def loadModel(modelFname: str):
 
     The returned model does NOT support additional training, since it uses a
     dummy loss.
+
+    **Example:**
+
+    .. code-block:: python
+
+        from bpreveal.utils import loadModel
+        m = loadModel("path/to/model")
+        preds = m.predict(myOneHotSequences)
+
     """
     # pylint: disable=import-outside-toplevel
     import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
@@ -157,6 +166,20 @@ def loadChromSizes(chromSizesFname: str | None = None,
 
     :return: {"chr1": 1234567, "chr2": 43212567, ...}
 
+    **Example:**
+
+    .. code-block:: python
+
+        from bpreveal.utils import loadChromSizes, blankChromosomeArrays, writeBigwig
+        import pysam
+        genome = pysam.FastaFile("path/to/genome.fa")
+        chromSizeDict = loadChromSizes(fasta=genome)
+        chromArs = blankChromosomeArrays(chromSizes=chromSizeDict, numTracks=1)
+        myRegionDats = ...  # Some function that returns tuples of (chrom, start, end, data)
+        for rChrom, rStart, rEnd, rValues in myRegionDats:
+            chromArs[rChrom][rStart:rEnd] = rValues
+        writeBigwig(bwFname="path/to/output.bw", chromArs)
+
     """
     if chromSizesFname is not None:
         ret = {}
@@ -213,6 +236,7 @@ def blankChromosomeArrays(genomeFname: str | None = None,
     The returned dict will have an element for every chromosome in the input.
     The shape of each element of the dictionary will be (chromosome-length, numTracks).
 
+    See :py:func:`loadChromSizes<bpreveal.utils.loadChromSizes>` for an example.
     """
     if chromSizes is None:
         chromSizes = loadChromSizes(genomeFname=genomeFname,
@@ -247,6 +271,8 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
         The ith element of ``regionData`` will be
         written to the ith location in ``regionList``.
     :param chromSizes: A dict mapping chromosome name → chromosome size.
+
+    See :py:func:`loadChromSizes<bpreveal.utils.loadChromSizes>` for an example.
     """
     if chromDict is None:
         logUtils.debug("Got regionList, regionData, chromSizes. "
@@ -299,6 +325,23 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
         T or t → [0, 0, 0, 1]
         Other  → [0, 0, 0, 0]
 
+    **Example:**
+
+    .. code-block:: python
+
+        from bpreveal.utils import oneHotEncode, oneHotDecode
+        seq = "ACGTTT"
+        x = oneHotEncode(seq)
+        print(x)
+        # [[1 0 0 0]
+        #  [0 1 0 0]
+        #  [0 0 1 0]
+        #  [0 0 0 1]
+        #  [0 0 0 1]
+        #  [0 0 0 1]]
+        y = oneHotDecode(x)
+        print(y)
+        # ACGTTT
 
     """
     if allowN:
@@ -334,6 +377,7 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
         [0, 0, 0, 1] → T
         [0, 0, 0, 0] → N
 
+    See :py:func:`oneHotEncode<bpreveal.utils.oneHotEncode>` for an example.
     """
     # Convert to an int8 array, since if we get floating point
     # values, the chr() call will fail.
@@ -360,6 +404,37 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
     :return: An array of shape (output-length * num-tasks), giving the profile
         predictions.
     :rtype: PRED_AR_T
+
+    **Example:**
+
+    .. code-block:: python
+
+        from bpreveal.utils import loadModel, oneHotEncode, logitsToProfile
+        import pysam
+        import numpy as np
+        genome = pysam.FastaFile("/scratch/genomes/sacCer3.fa")
+        seq = genome.fetch("chrII", 429454, 432546)
+        oneHotSeq = oneHotEncode(seq)
+        print(oneHotSeq.shape)
+        model = loadModel("/scratch/mnase.model")
+        preds = model.predict(np.array([oneHotSeq]))
+        print(preds[0].shape)
+        # (1, 1000, 2)
+        # because there was one input sequence, the output-length is 1000 and
+        # there are two tasks in this head.
+        print(preds[1].shape)
+        # (1, 1)
+        # because there is one input sequence and there's just one logcounts value
+        # for each region.
+        # Note that if the model had two heads, preds[1] would be the logits from the
+        # second head and preds[2] and preds[3] would be the logcounts from head 1 and
+        # head 2, respectively.
+        profiles = logitsToProfile(preds[0][0], preds[1][0])
+        print(profiles.shape)
+        # (1000, 2)
+        # Because we have an output length of 1000 and two tasks.
+        # These are now the predicted coverage, in read-space.
+
     """
     # Logits will have shape (output-length x numTasks)
     assert len(logitsAcrossSingleRegion.shape) == 2
@@ -380,7 +455,7 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> PRED_AR_T:
     :param sequences: The DNA sequence(s) that you want to predict on.
     :param modelFname: The name of the Keras model to use.
     :return: An array of profiles or a single profile, depending on ``sequences``
-    :rtype: PRED_AR_T
+    :rtype: list[list[PRED_AR_T]] or list[PRED_AR_T]
 
     Spawns a separate process to make a single batch of predictions,
     then shuts it down. Why make it complicated? Because it frees the
@@ -390,9 +465,40 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> PRED_AR_T:
     to predict. ``sequences`` should be as long as the input length of
     your model.
 
-    The shape of the returned array will be (numSequences x outputLength)
-    if you passed in an iterable of strings (like a list of strings), and
-    it will be (outputLength,) if you passed in a single string.
+    If you passed in an iterable of strings (like a list of strings),
+    the shape of the returned profiles will be
+    (numSequences x numHeads x outputLength x numTasks).
+    Since different heads can have different numbers of tasks, the returned object
+    will be a list (one entry per sequence) of lists (one entry per head)
+    of arrays of shape (outputLength x numTasks).
+    If, instead, you passed in a single string as ``sequences``,
+    it will be (numHeads x outputLength x numTasks). As before, this will be a list
+    (one entry per head) of arrays of shape (outputLength x numTasks)
+
+    **Example:**
+
+    .. code-block:: python
+
+        from bpreveal.utils import easyPredict
+        import pysam
+        genome = pysam.FastaFile("/scratch/genomes/sacCer3.fa")
+        seq = genome.fetch("chrII", 429454, 432546)
+        profile = easyPredict([seq], "/scratch/mnase.model")
+        print(len(profile))
+        # 1
+        # because we ran one sequence.
+        print(len(profile[0]))
+        # 1
+        # because there is one head in this model.
+        print(profile[0][0].shape)
+        # (1000, 2)
+        # Because we have an output length of 1000 and two tasks.
+        # These are now the predicted coverage, in read-space.
+        singleProfile = easyPredict(seq, "/scratch/mnase.model")
+        print(singleProfile[0].shape)
+        # (1000, 2)
+        # Note how I only had to index singleProfile once, (to get the first head)
+        # since I passed in a single string as the sequence.
     """
     singleReturn = False
     assert not constants.getTensorflowLoaded(), \
@@ -413,7 +519,14 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> PRED_AR_T:
             predictor.submitString(s, 1)
             remainingToRead += 1
             while predictor.outputReady():
-                ret.append(predictor.getOutput())
+                outputs = predictor.getOutput()[0]
+                numHeads = len(outputs) // 2
+                headProfiles = []
+                for h in range(numHeads):
+                    logits = outputs[h]
+                    logcounts = outputs[h + numHeads]
+                    headProfiles.append(logitsToProfile(logits, logcounts))  # type: ignore
+                ret.append(headProfiles)
                 remainingToRead -= 1
         for _ in range(remainingToRead):
             outputs = predictor.getOutput()[0]
@@ -426,7 +539,7 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> PRED_AR_T:
             ret.append(headProfiles)
     if singleReturn:
         return ret[0]
-    return np.array(ret, dtype=PRED_T)
+    return ret
 
 
 def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
@@ -876,11 +989,11 @@ class ThreadedBatchPredictor:
             for i in range(self._numThreads):
                 self._inQueues[i].put("shutdown")
                 self._inQueues[i].close()
-                self._batchers[i].join(1)  # Wait one second.
+                self._batchers[i].join(QUEUE_TIMEOUT)  # Wait one second.
                 if self._batchers[i].exitcode is None:
                     # The process failed to die. Kill it more forcefully.
                     self._batchers[i].terminate()
-                self._batchers[i].join(1)  # Wait one second.
+                self._batchers[i].join(QUEUE_TIMEOUT)  # Wait one second.
                 self._batchers[i].close()
                 self._outQueues[i].close()
             del self._inQueues

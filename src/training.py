@@ -87,7 +87,7 @@ def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
         config["settings"]["output-prefix"],
         config["settings"]["learning-rate-plateau-patience"],
         config["heads"])
-    logUtils.info("Training complete. Saving history.")
+    logUtils.info("Saving history.")
     historyName = "{0:s}.history.json".format(config["settings"]["output-prefix"])
     with open(historyName, "w") as fp:
         json.dump(history.history, fp, ensure_ascii=False, indent=4)

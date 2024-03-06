@@ -10,7 +10,7 @@ import numpy as np
 from tensorflow import keras
 from bpreveal import logUtils
 from bpreveal.internal.constants import MODEL_ONEHOT_T, PRED_T
-from bpreveal.internal.libslide import slide
+from bpreveal.internal.libslide import slide, slideChar
 
 
 class H5BatchGenerator(keras.utils.Sequence):
@@ -37,7 +37,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.batchSize = batchSize
         # The shape of the sequence dataset is
         # (numRegions x (inputLength + jitter*2 x 4))
-        self.fullSequences = np.array(dataH5["sequence"], dtype=MODEL_ONEHOT_T)
+        self.fullSequences = np.array(dataH5["sequence"], dtype=np.uint8)
         self.numRegions = self.fullSequences.shape[0]
         # The shape of the profile is
         # (num-heads) x (numRegions x (outputLength + jitter*2) x numTasks)
@@ -125,7 +125,7 @@ class H5BatchGenerator(keras.utils.Sequence):
 
     def _shiftSequence(self, regionIndexes, sliceCols):
         # This is a good target for optimization - it takes multiple seconds!
-        slide(self.fullSequences, self._allBatchSequences,
+        slideChar(self.fullSequences, self._allBatchSequences,
               regionIndexes, sliceCols)
         # self._allBatchSequences = shuffledSeqs[:, sliceCols, :]
 

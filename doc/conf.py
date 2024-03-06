@@ -12,7 +12,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # pylint: disable=invalid-name
 project = 'BPReveal'
 copyright = '2024, Charles McAnany'  # pylint: disable=redefined-builtin # noqa
-authorList = bpreveal.__author__.split(',')
+authorList = bpreveal.__author__.split(';')
 authorList = [x.strip() for x in authorList]
 author = ", ".join(authorList)
 show_authors = True
