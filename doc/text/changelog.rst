@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.1.2, DATE
-''''''''''''''''''''
+BPReveal 4.1.2, 2024-03-07
+''''''''''''''''''''''''''
 
 ENHANCEMENTS:
     * Added references to the GitHub online documentation.
