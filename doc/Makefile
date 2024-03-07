@@ -5,8 +5,8 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = .
-BUILDDIR      = _build
+SOURCEDIR     ?= .
+BUILDDIR      ?= _build
 export COLUMNS = 60
 export LATEXMKOPTS="-interaction=batchmode -halt-on-error "
 CSS_NAMES = custom-styles libertinus
@@ -17,7 +17,7 @@ FONT_NAMES = Keyboard-Regular Math-Regular Mono-Regular \
 			 SerifInitials-Regular \
 			 Serif-SemiboldItalic Serif-Semibold
 
-fonts = $(patsubst %,_build/html/_static/Libertinus%.woff2, ${FONT_NAMES})
+fonts = $(patsubst %,$(BUILDDIR)/html/_static/Libertinus%.woff2, ${FONT_NAMES})
 css_files = $(patsubst %,_generated/static/%.css,${CSS_NAMES})
 
 # Put it first so that "make" without argument is like "make help".
@@ -26,7 +26,7 @@ help:
 
 clean:
 	if [ -d "_generated" ]; then rm -r _generated; fi
-	if [ -d "_build" ]; then rm -r _build; fi
+	if [ -d "$(BUILDDIR)" ]; then rm -r $(BUILDDIR); fi
 
 .PHONY: help Makefile
 
@@ -47,7 +47,7 @@ noregen: Makefile conf.py
 $(css_files): _generated/static/%.css: text/%.css
 	cp $< $@
 
-$(fonts): _build/html/_static/%.woff2: fonts/Libertinus-7.040/static/%.woff2
+$(fonts): $(BUILDDIR)/html/_static/%.woff2: fonts/Libertinus-7.040/static/%.woff2
 	cp $< $@
 
 nofonthtml: Makefile ${allGenerated} conf.py ${css_files}
@@ -62,4 +62,3 @@ html: nofonthtml ${fonts}
 latexpdf: Makefile ${allGenerated} conf.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-# Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long
