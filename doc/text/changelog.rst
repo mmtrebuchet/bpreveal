@@ -18,6 +18,10 @@ ENHANCEMENTS:
     * Added references to the GitHub online documentation.
     * Added the ability to specify an output file in :py:mod:`metrics<bpreveal.metrics>`.
     * Set the project's license to be GPL2+
+    * Made the generator take less memory by storing the one-hot sequences as uint8
+      rather than float32.
+    * Added a feature to :py:class:`MiniPattern<bpreveal.motifUtils.MiniPattern>` that
+      lets you scan a single region and see all of the match scores at each position.
 
 BUG FIXES:
     * :py:mod:`tileGenome<bpreveal.tools.tileGenome>` would ignore chromosome edge

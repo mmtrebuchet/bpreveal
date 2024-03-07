@@ -13,6 +13,7 @@
         "head-id": {"type": "integer"},
         "task-id": {"type": "integer"},
         "output-h5": {"type": "string"},
+        "correct-receptive-field": {"type": "boolean"},
         "num-shuffles": {"type": "integer", "minimum" : 1},
         "kmer-size": {"type": "integer", "minimum" : 1},
         "num-threads": {"type": "integer", "minimum" : 1},

@@ -7,6 +7,7 @@
      "output-h5" : <file-name>,
      "output-length" : <integer>,
      "input-length" : <integer>,
+     <correct-receptive-field-section>
      <kmer-size-section>
      <num-threads-section>
      <verbosity-section>}
@@ -21,3 +22,6 @@
     "kmer-size" : <integer>,
   | <empty>
 
+<correct-receptive-field-section> ::=
+    "correct-receptive-field" : <boolean>,
+  | <empty>

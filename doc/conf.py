@@ -19,7 +19,6 @@ show_authors = True
 release = bpreveal.__version__
 version = release
 # pylint: enable=invalid-name
-import bpreveal.internal.constants
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -59,7 +58,8 @@ def setup(app):
     app.connect('autodoc-process-docstring', fixLambda)
 
 
-autodoc_mock_imports = ["tensorflow", 'keras']
+autodoc_mock_imports = ["tensorflow", 'keras',
+                        "tensorflow_probability"]
 autodoc_typehints = 'description'  # pylint: disable=invalid-name
 autodoc_member_order = 'bysource'  # pylint: disable=invalid-name
 autodoc_type_aliases = {
@@ -72,7 +72,7 @@ autodoc_type_aliases = {
 }
 texAuthors = r" \and ".join(authorList)
 latex_documents = [
-    ("index", 
+    ("index",
     "bpreveal.tex",
     "BPReveal",
     texAuthors,
@@ -80,7 +80,7 @@ latex_documents = [
     False)
 ]
 latex_elements = {
-    "preamble" : r"""\DeclareRobustCommand{\and}{%
+    "preamble": r"""\DeclareRobustCommand{\and}{%
 \end{tabular}\kern-\tabcolsep\\\begin{tabular}[t]{c}%
 }%
 """,
