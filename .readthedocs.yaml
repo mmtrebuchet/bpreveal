@@ -10,4 +10,4 @@ build:
   tools:
     python: "mambaforge-22.9"
   commands:
-    - cd doc; ./buildDocs.sh
+    - cd doc;BUILDDIR=$READTHEDOCS_OUTPUT ./buildCondaDocs.sh
