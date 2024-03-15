@@ -44,12 +44,6 @@ INSTALL_JUPYTER=true
 # Options: true or false
 INSTALL_DEVTOOLS=true
 
-# Do you want to install Snakemake?
-# XXX
-# WARNING: On Cerebro, installing snakemake breaks tensorflow as of 2024-03-01.
-# XXX
-INSTALL_SNAKEMAKE=false
-
 # Do you want to install pydot and graphviz? This is needed to render an image from showModel.
 INSTALL_PYDOT=true
 
@@ -167,11 +161,6 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
     ${CONDA_BIN} install --yes -c conda-forge sphinx-autodoc-typehints
     check
     ${CONDA_BIN} install --yes -c conda-forge coverage
-    check
-fi
-
-if [ "$INSTALL_SNAKEMAKE" = true ] ; then
-    ${CONDA_BIN} install --yes -c bioconda snakemake
     check
 fi
 
