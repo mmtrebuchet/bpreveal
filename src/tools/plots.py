@@ -5,10 +5,13 @@ import pyBigWig
 import pybedtools
 import math
 # You must install bpreveal with conda develop in order to import bpreveal tools.
-from bpreveal.utils import PRED_AR_T
+from bpreveal.internal.constants import IMPORTANCE_AR_T, PRED_AR_T
 import bpreveal.utils as utils
 import bpreveal.motifUtils as motifUtils
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.colors as mplcolors
+
 _seqCmap = {"A": (0, 158, 115), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
 
 
@@ -95,7 +98,8 @@ def massageTickLabels(labelList):
     return labelsThousands
 
 
-def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq') -> None:
+def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq',
+             spaceBetweenLetters: float = 0) -> None:
     """A convenience function to plot an array of sequence data (like a pwm)
     on a matplotlib axes object.
 
@@ -186,8 +190,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq') -> None:
         for nl in negLetters:
             # Note that top < base because nl[1] < 0
             base = top + nl[1]
-            left = predIdx * width / values.shape[0]
-            right = left + width / values.shape[0]
+            left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2
+            right = left + width / values.shape[0] + spaceBetweenLetters
             _drawLetter(nl[0], left=left, right=right, bottom=base, top=top,
                        color=getColor(predIdx, nl[0], nl[1]), ax=ax, flip=True)
             top = base
@@ -196,8 +200,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq') -> None:
         base = 0
         for pl in posLetters:
             top = base + pl[1]
-            left = predIdx * width / values.shape[0]
-            right = left + width / values.shape[0]
+            left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2
+            right = left + width / values.shape[0] - spaceBetweenLetters
             _drawLetter(pl[0], left=left, right=right, bottom=base, top=top,
                        color=getColor(predIdx, pl[0], pl[1]), ax=ax)
             base = top
@@ -277,11 +281,38 @@ def loadPisaProfile(cutMiddle, cutLengthY, genomeWindowStart, genomeWindowChrom,
         return None
 
 
-def plotPisaWithFiles(pisaDats, cutMiddle, cutLengthX, cutLengthY,
-        receptiveField, genomeWindowStart, genomeWindowChrom, genomeFastaFname,
-        importanceBwFname, motifScanBedFname, profileDats, nameColors,
-        fig, bbox, colorSpan=1.0, boxHeight=0.1, fontsize=5):
+def plotPisaWithFiles(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
+                      cutLengthY: int, receptiveField: int, genomeWindowStart: int,
+                      genomeWindowChrom: str, genomeFastaFname: str, importanceBwFname: str,
+                      motifScanBedFname: str, profileDats: str,
+                      nameColors: dict[str, tuple[float, float, float]],
+                      fig: plt.Figure, bbox: tuple[float, float, float, float],
+                      colorSpan: float = 1.0, boxHeight: float = 0.1, fontsize: int = 5):
+    """Given the names of files, make a pisa plot.
 
+    :param pisaDats: Either a string naming an hdf5 file or an array from loadPisa.
+    :param cutMiddle: The midpoint of the pisa plot, relative to the start of the profile.
+    :param cutLengthX: How wide should the X axis be? If 99 or less, a sequence will be plotted.
+    :param cutLengthY: How tall should the plot be?
+    :param receptiveField: What is the model's receptive field?
+    :param genomeWindowStart: Where in the genome does pisaDats start?
+        This is used to generate the x axis.
+    :param genomeWindowChrom: What chromosome is the sequence on?
+    :param genomeFastaFname: Name of the fasta file containing the genome.
+    :param importanceBwFname: The bigwig of importance scores from interpretFlat
+    :param motifScanBedFname: The bed file containing mapped motifs.
+    :param profileDats: The bigwig file containing predicted profile.
+    :param nameColors: A dict containing the color to be used for each motif name.
+        If a motif is encountered that is not in this dict, then it is added with a color
+        taken from the IBM palette.
+    :param fig: The matplotlib figure to put this plot on.
+    :param bbox: The bounding box to use for drawing the figure. Lets you put multiple
+        pisa plots on a single matplotlib Figure.
+    :param colorSpan: What are the maximum and minimum values in the color map.
+    :param boxHeight: How tall should the boxes containing motif names be?
+    :param fontsize: How big should the font be?
+    :return: Same as plotPisa
+    """
     impScores = loadPisaImportance(cutMiddle, cutLengthX, importanceBwFname,
                                    genomeWindowStart, genomeWindowChrom)
 
@@ -299,12 +330,33 @@ def plotPisaWithFiles(pisaDats, cutMiddle, cutLengthX, cutLengthY,
              fontsize=fontsize)
 
 
-def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
-             genomeWindowStart, seq, impScores,
-             annotations, profile, nameColors,
-             fig, bbox, colorSpan=1.0, boxHeight=0.1, fontsize=5):
-    """pisaDats can either be the name of an hdf5 file or an array from loadPisa.
-    profileDats can be the name of a bigwig or an array.
+def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
+             cutLengthY: int, receptiveField: int, genomeWindowStart: int,
+             seq: str, impScores: IMPORTANCE_AR_T,
+             annotations: tuple[tuple[int, int], str, tuple[float, float, float]],
+             profile: PRED_AR_T,
+             nameColors: dict[str, tuple[float, float, float]],
+             fig: plt.Figure, bbox: tuple[float, float, float, float],
+             colorSpan: float = 1.0, boxHeight: float = 0.1, fontsize: int = 5):
+    """Given the actual vectors to show, make a pretty pisa plot.
+
+    :param pisaDats: Either a string naming an hdf5 file, or an array from loadPisa.
+    :param cutMiddle: Where should the midpoint of the plot be, relative to the pisaDats array?
+    :param cutLengthX: How wide should the plot be?
+    :param cutLengthY: How tall should the plot be?
+    :param receptiveField: What is the model's receptive field?
+    :param genomeWindowStart: Where in the genome does this sequence start?
+    :param seq: The sequence of the region.
+    :param impScores: The importance scores.
+    :param annotations: A list of annotations, containing ((start, stop), name, color).
+    :param profile: A vector containing profile information.
+    :param nameColors: A dict mapping motif name to color. This is ignored.
+    :param fig: The matplotlib Figure onto which the plot should be drawn.
+    :param bbox: The bounding box on the figure that will be used.
+    :param colorSpan: The limit of the color scale.
+    :param boxHeight: How tall should the motif name boxes be?
+    :param fontsize: How large should the font be?
+    :return: (axPisa, axSeq, axProfile, nameColors, axCbar)
     """
     fontSizeAxLabel = fontsize * 1.5
     match pisaDats:
@@ -320,7 +372,7 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
             shearMat = shearMat[:, receptiveField // 2:-receptiveField // 2]
         case _:
             # We got an array.
-            shearMat = pisaDats
+            shearMat = np.copy(pisaDats)
     cutStartX = cutMiddle - cutLengthX // 2
     cutStartY = cutMiddle - cutLengthY // 2
     genomeStartX = cutMiddle - cutLengthX // 2 + genomeWindowStart
@@ -353,8 +405,16 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
     axAnnot = fig.add_axes([l, b + seqHeight + 2 * pisaHeight / 3, pisaWidth, pisaHeight / 3])
     axAnnot.set_axis_off()
 
+    oldCmap = mpl.colormaps["RdBu_r"].resampled(256)
+    newColors = oldCmap(np.linspace(0, 1, 256))
+    pink = np.array([248/256, 24/256, 148/256, 1])
+    green = np.array([24/256, 248/256, 148/256, 1])
+    newColors[:5] = green
+    newColors[-5:] = pink
+    cmap = mplcolors.ListedColormap(newColors)
+
     pisaCax = axPisa.imshow(plotMat, vmin=-colorSpan, vmax=colorSpan, extent=extent,
-                            cmap='RdBu_r', aspect='auto', interpolation='nearest')
+                            cmap=cmap, aspect='auto', interpolation='nearest')
     axPisa.plot([0, cutLengthX], [0, cutLengthX], 'k--', lw=0.5)
     axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
                       fontfamily='serif', labelpad=-5)
@@ -399,7 +459,7 @@ def plotPisa(pisaDats, cutMiddle, cutLengthX, cutLengthY, receptiveField,
         axPisa.set_xticks(ticksX)
         axPisa.tick_params(axis='x', which='major', length=0, labelbottom=False)
 
-    axPisa.grid(visible=True, which='major')
+    # axPisa.grid(visible=True, which='major')
 
     # Now it's time to add annotations from the motif scanning step.
     offset = -boxHeight * 1.3

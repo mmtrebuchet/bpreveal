@@ -35,9 +35,8 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads:
         Implement the :doc:`adaptive counts loss algorithm<countsLossReweighting>`.
 
     """
-    logUtils.debug("Creating callbacks based on earlyStop "
-                   "{0:d}, outputPrefix {1:s}, plateauPatience {2:d}".format(
-                       earlyStop, outputPrefix, plateauPatience))
+    logUtils.debug(f"Creating callbacks based on {earlyStop = }, "
+                   f"{outputPrefix = }, {plateauPatience = }")
     if logUtils.getLogger().isEnabledFor(logUtils.INFO):
         verbose = 1
     else:
@@ -48,7 +47,7 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads:
                                       mode="min",
                                       restore_best_weights=True)
 
-    filepath = "{}.checkpoint.model".format(outputPrefix)
+    filepath = f"{outputPrefix}.checkpoint.model"
     checkpointCallback = ModelCheckpoint(filepath,
                                          monitor="val_loss",
                                          verbose=verbose,
@@ -56,11 +55,15 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads:
                                          mode="min")
     plateauCallback = ReduceLROnPlateau(monitor="val_loss", factor=0.5,
                                         patience=plateauPatience, verbose=verbose)
-    adaptiveLossCallback = ApplyAdaptiveCountsLoss(heads, 0.3, plateauCallback,
-                                                   earlyStopCallback, checkpointCallback)
-    displayCallback = DisplayCallback(plateauCallback, earlyStopCallback,
-                                      adaptiveLossCallback,
-                                      trainBatchGen, valBatchGen)
+    adaptiveLossCallback = ApplyAdaptiveCountsLoss(heads=heads, aggression=0.3,
+                                                   lrPlateauCallback=plateauCallback,
+                                                   earlyStopCallback=earlyStopCallback,
+                                                   checkpointCallback=checkpointCallback)
+    displayCallback = DisplayCallback(plateauCallback=plateauCallback,
+                                      earlyStopCallback=earlyStopCallback,
+                                      adaptiveLossCallback=adaptiveLossCallback,
+                                      trainBatchGen=trainBatchGen,
+                                      valBatchGen=valBatchGen)
     return [earlyStopCallback, checkpointCallback, plateauCallback,
             adaptiveLossCallback, displayCallback]
 
@@ -134,8 +137,8 @@ class DisplayCallback(Callback):
             foundInHeads = False
             for head in self.adaptiveLossCallback.heads:
                 headName = head["head-name"]
-                profileRe = r".*profile_{0:s}_loss".format(headName)
-                countsRe = r".*logcounts_{0:s}_loss".format(headName)
+                profileRe = fr".*profile_{headName}_loss"
+                countsRe = fr".*logcounts_{headName}_loss"
                 if re.fullmatch(profileRe, lossName):
                     profileLosses.append(lossName)
                     profileLosses.append("val_" + lossName)
@@ -207,17 +210,17 @@ class DisplayCallback(Callback):
         """
         match val:
             case str():
-                return "{0:>11s}".format(val)
+                return f"{val:>11s}"
             case int():
-                return "{0:>11d}".format(val)
+                return f"{val:>11d}"
             case float():
-                return "{0:>11.3f}".format(val)
+                return f"{val:>11.3f}"
             case int(), int():
-                return "{0:>4d} / {1:>4d}".format(*val)
+                return f"{val[0]:>4d} / {val[1]:>4d}"
             case _, None:
-                return "{0:>11s}".format(str(val))
+                return f"{str(val):>11s}"
             case _:
-                return "{0:11s}".format("FMT_ERR")
+                return "     FMT_ERR"
 
     def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
         """Writes out all the logs for this epoch and the last one at INFO logging level."""
@@ -304,19 +307,19 @@ class DisplayCallback(Callback):
             for _, col, text in line:
                 for i, c in enumerate(text):
                     outChrs[i + col] = c
-            writer("∬{0:d}∬{1:d}∬{2:s}∬{3:s}".format(row, 1, win, "".join(outChrs)))
+            writer(f"∬{row}∬1∬{win}∬{''.join(outChrs)}")
 
     def _getλLines(self) -> list[tuple[int, int, str]]:
         lines = []
         for i, headName in enumerate(self.adaptiveLossCallback.λHistory.keys()):
             λValue = self.adaptiveLossCallback.λHistory[headName][-1]
-            lines.append([((i + 2, 1, headName)), (i + 2, 20, "{0:8.3f}".format(λValue))])
+            lines.append([((i + 2, 1, headName)), (i + 2, 20, f"{λValue:8.3f}")])
         return lines
 
     def _getEpochLines(self, logs) -> list[tuple[int, int, str]]:
         lines = []
         logs["Epoch"] = (self.epochNumber, self.numEpochs)
-        logs["lr"] = "{0:10.7f}".format(logs["lr"])
+        logs["lr"] = f"{logs['lr']:10.7f}"
         for lk in logs.keys():
             lines.append([(self.printLocationsEpoch[lk], 1, lk)])
 
@@ -414,8 +417,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                     λ = head["counts-loss-weight"]
                     logUtils.debug(
                         "An initial counts-loss-weight was provided.")
-                    logUtils.debug("Setting λ = {0:f} for head {1:s}"
-                                   .format(λ, head["head-name"]))
+                    logUtils.debug(f"Setting λ = {λ} for head {head['head-name']}")
                     head["INTERNAL_λ-variable"].assign(λ)
                 else:
                     # Get the desired λ value. INTERNAL_mean-counts is added by the
@@ -424,8 +426,8 @@ class ApplyAdaptiveCountsLoss(Callback):
                         head["counts-loss-frac-target"]
                     # Now for a bit of magic - experimentation has determined this number.
                     λ = λ * 37.0
-                    logUtils.info("Estimated initial λ of {0:f} for head {1:s} based on ĉ of {2:f}"
-                                  .format(λ, head["head-name"], head["INTERNAL_mean-counts"]))
+                    logUtils.info(f"Estimated initial λ of {λ} for head {head['head-name']} "
+                                  f"based on ĉ of {head['INTERNAL_mean-counts']}")
                     head["INTERNAL_λ-variable"].assign(λ)
 
     def getLosses(self, epoch: int, headName: str) -> tuple[float, float, float, float]:
@@ -444,10 +446,10 @@ class ApplyAdaptiveCountsLoss(Callback):
         named "profile_x", then this could get messed up.
         """
         epochLosses = self.logsHistory[epoch]
-        profileRe = r".*profile_{0:s}_loss".format(headName)
-        countsRe = r".*logcounts_{0:s}_loss".format(headName)
-        valProfileRe = r"val.*profile_{0:s}_loss".format(headName)
-        valCountsRe = r"val.*logcounts_{0:s}_loss".format(headName)
+        profileRe = fr".*profile_{headName}_loss"
+        countsRe = fr".*logcounts_{headName}_loss"
+        valProfileRe = fr"val.*profile_{headName}_loss"
+        valCountsRe = fr"val.*logcounts_{headName}_loss"
 
         valProfile = valCounts = profile = counts = None
         for lossName in epochLosses.keys():
@@ -496,8 +498,8 @@ class ApplyAdaptiveCountsLoss(Callback):
             curλ = λVar.read_value()
             oldλ = self.λHistory[head["head-name"]][epoch]
             valTotalLoss += vcl * curλ / oldλ
-        logUtils.debug("Calculated new loss of {0:f} on epoch {1:d}, with original loss {2:f}"
-                       .format(valTotalLoss, epoch, logs["val_loss"]))
+        logUtils.debug(f"Calculated new loss of {valTotalLoss} on epoch {epoch}, "
+                       f"with original loss {logs['val_loss']}")
         return valTotalLoss
 
     def resetCallbacks(self):
@@ -528,8 +530,8 @@ class ApplyAdaptiveCountsLoss(Callback):
         recordEpoch = self.earlyStopCallback.best_epoch
         # Now, set the callbacks to have a corrected loss at the record-setting epoch.
         correctedLoss = self.whatWouldValLossBe(recordEpoch)
-        logUtils.debug("Resetting callbacks from old loss {0:f} to new loss {1:f}"
-                       .format(self.lrPlateauCallback.best, correctedLoss))
+        logUtils.debug(f"Resetting callbacks from old loss {self.lrPlateauCallback.best} "
+                       f"to new loss {correctedLoss}")
         self.lrPlateauCallback.best = correctedLoss
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
@@ -587,8 +589,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                 # If the weight would change by more than a factor of aggression, clamp it down.
                 threshold = 2 if epoch > 1 else 10
                 if (max(newλ, curλ) / min(newλ, curλ)) > threshold:
-                    logUtils.debug("Large λ change detected. Old: {0:f}, new {1:f}"
-                                   .format(curλ, newλ))
+                    logUtils.debug(f"Large λ change detected. Old: {curλ}, new {newλ}")
                     if newλ > curλ:
                         # λ₁ / λ₀ > 2
                         # make λ₁ = λ₀ * 2
@@ -597,25 +598,22 @@ class ApplyAdaptiveCountsLoss(Callback):
                         # λ₀ / λ₁ > 2
                         # make λ₁ = λ₀ / 2
                         newλ = curλ / threshold
-                    logUtils.debug("Clamped new λ to {0:f}".format(newλ))
+                    logUtils.debug(f"Clamped new λ to {newλ}")
                     if threshold == 10:
                         # We jumped and had a large threshold - user should choose
                         # a better counts weight.
                         logUtils.warning("A large λ change was detected in the first epoch. "
                                          "Consider changing the starting counts-loss-weight for "
-                                         "head {0:s} to a value near {1:f}".format(
-                                             head["head-name"], correctedλ))
+                                         f"head {head['head-name']} to a value near {correctedλ}")
                 # With current loss weight, what is the loss fraction due to counts?
                 # (This doesn't enter our calculation, it's for logging.
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
 
-                logUtils.debug(("countsLoss: head {0:s} λ₀ {1:f}, λ₁ {2:f} (A=1: {3:f})."
-                               " frac {4:f}, goal {5:f}. Raw counts loss {6:f} (scaled {7:f})."
-                                " Epoch {8:d}")
-                               .format(head["head-name"], curλ, newλ,
-                                       correctedλ, scaledCurFrac,
-                                       head["counts-loss-frac-target"],
-                                       countsLossRaw, countsLoss, epoch))
+                logUtils.debug(f"countsLoss: head {head['head-name']} λ₀ {curλ}, λ₁ {newλ} "
+                               f"(A=1: {correctedλ}). frac {scaledCurFrac}, "
+                               f"goal {head['counts-loss-frac-target']}. "
+                               f"Raw counts loss {countsLossRaw} (scaled {countsLoss})."
+                               f" Epoch {epoch}")
 
                 λVar.assign(newλ)
         # We've updated the loss. But now we have to go mess with the callbacks so that

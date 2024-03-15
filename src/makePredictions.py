@@ -157,15 +157,17 @@ def getWriter(config, numPredictions):
     if "bed-file" in config:
         bedFname = config["bed-file"]
         genomeFname = config["genome"]
-        writer = predictUtils.H5Writer(outFname, numHeads, numPredictions,
-                                       bedFname, genomeFname)
+        writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
+                                       numPredictions=numPredictions, bedFname=bedFname,
+                                       genomeFname=genomeFname)
         logUtils.debug("Initialized writer from a bed reader.")
     elif "fasta-file" in config:
         bedFname = config["coordinates"]["bed-file"]
         genomeFname = config["coordinates"]["genome"]
         if "coordinates" in config:
-            writer = predictUtils.H5Writer(outFname, numHeads, numPredictions,
-                                           bedFname, genomeFname)
+            writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
+                                           numPredictions=numPredictions, bedFname=bedFname,
+                                           genomeFname=genomeFname)
             logUtils.debug("Initialized writer from a fasta reader with coordinates.")
         else:
             writer = predictUtils.H5Writer(outFname, numHeads, numPredictions)

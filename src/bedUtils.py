@@ -119,9 +119,9 @@ def tileSegments(inputLength: int, outputLength: int,
     Note how the last segment is not 5 bp away from the second-to-last.
 
     """
-    logUtils.debug("Beginning to trim segments. {0:d} segments alive.".format(len(segments)))
+    logUtils.debug(f"Beginning to trim segments. {len(segments)} segments alive.")
     padding = (inputLength - outputLength) // 2
-    logUtils.debug("Calculated padding of {0:d}".format(padding))
+    logUtils.debug(f"Calculated {padding = }")
 
     def shrinkSegment(s: pybedtools.Interval):
         newEnd = s.end - padding
@@ -131,7 +131,7 @@ def tileSegments(inputLength: int, outputLength: int,
         return pybedtools.Interval(s.chrom, newStart, newEnd)
 
     shrunkSegments = pybedtools.BedTool(segments).each(shrinkSegment).saveas()
-    logUtils.debug("Filtered segments. {0:d} survive.".format(shrunkSegments.count()))
+    logUtils.debug(f"Filtered segments. {shrunkSegments.count()} survive.")
 
     # Phase 3. Generate tiling regions.
     logUtils.debug("Creating regions.")
@@ -149,7 +149,7 @@ def tileSegments(inputLength: int, outputLength: int,
             endPos = s.end
             startPos = endPos - outputLength
             regions.append(pybedtools.Interval(s.chrom, startPos, endPos))
-    logUtils.debug("Regions created, {0:d} across genome.".format(len(regions)))
+    logUtils.debug(f"Regions created, {len(regions)} across genome.")
 
     return pybedtools.BedTool(regions)
 
@@ -211,8 +211,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
     match mode:
         case "none":
             if end - start != width:
-                assert False, \
-                       "An input region is not the expected width: {0:s}".format(str(interval))
+                assert False, f"An input region is not the expected width: {interval}"
         case "center":
             center = (end + start) // 2
             start = center - width // 2
@@ -221,7 +220,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
             start = start - width // 2
             end = start + width
         case _:
-            assert False, "Unsupported resize mode: {0:s}".format(mode)
+            assert False, f"Unsupported resize mode: {mode}"
     if start <= 0 or end >= genome.get_reference_length(interval.chrom):
         return False  # We're off the edge of the chromosome.
     return pybedtools.Interval(interval.chrom, start, end, name=interval.name,

@@ -9,6 +9,7 @@
                 "seqlets-tsv": {"type": "string"},
                 "modisco-h5": {"type": "string"},
                 "modisco-contrib-h5": {"type": "string"},
+                "modisco-window": {"type": "integer"},
                 "seq-match-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
                 "contrib-match-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
                 "contrib-magnitude-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},

@@ -24,7 +24,7 @@ def flipAndSave(inpAr: np.ndarray[IMPORTANCE_T] | np.ndarray[ONEHOT_T],
     """
     ar = np.array(inpAr, dtype=dtype)
     transAr = np.transpose(ar, [0, 2, 1])
-    logUtils.info("Saving {0:s}".format(fname))
+    logUtils.info(f"Saving {fname}")
     if fname[-3:] == "npz":
         np.savez(fname, transAr)
     else:
@@ -56,7 +56,7 @@ def main():
     """Runs the program"""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)
-    logUtils.info("Loading input file {0:s}.".format(args.h5))
+    logUtils.info(f"Loading input file {args.h5}.")
     inFile = h5py.File(args.h5, "r")
     if args.seqs is not None:
         flipAndSave(inFile["input_seqs"], args.seqs, ONEHOT_T)

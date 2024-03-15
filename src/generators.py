@@ -45,8 +45,8 @@ class H5BatchGenerator(keras.utils.Sequence):
         # and are named "head_N", where N is 0,1,2, etc.
         self.fullData = []
         for i, curHead in enumerate(headList):
-            logUtils.debug("Loading data for {0:s}".format(curHead["head-name"]))
-            self.fullData.append(np.array(dataH5["head_{0:d}".format(i)],
+            logUtils.debug(f"Loading data for {curHead['head-name']}")
+            self.fullData.append(np.array(dataH5[f"head_{i}"],
                                           dtype=PRED_T))
         self.loadData()
         self.addMeanCounts()
@@ -67,9 +67,9 @@ class H5BatchGenerator(keras.utils.Sequence):
         """
         for i, head in enumerate(self.headList):
             sumCounts = np.sum(self.fullData[i][:, self.maxJitter:-self.maxJitter, :])
-            head["INTERNAL_mean-counts"] = sumCounts / self.numRegions
-            logUtils.debug("For head {0:s}, mean counts is {1:f}"
-                          .format(head["head-name"], sumCounts / self.numRegions))
+            mean = sumCounts / self.numRegions
+            head["INTERNAL_mean-counts"] = mean
+            logUtils.debug(f"For head {head['head-name']}, mean counts is {mean}")
 
     def __len__(self) -> int:
         """How many *batches* of data are there in this Generator?"""
@@ -121,7 +121,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         self._shiftData(self.regionIndexes, sliceCols)
         stopTime = time.perf_counter()
         Δt = stopTime - startTime
-        logUtils.debug("Loaded new batch in {0:5f} seconds.".format(Δt))
+        logUtils.debug(f"Loaded new batch in {Δt:5f} seconds.")
 
     def _shiftSequence(self, regionIndexes, sliceCols):
         # This is a good target for optimization - it takes multiple seconds!

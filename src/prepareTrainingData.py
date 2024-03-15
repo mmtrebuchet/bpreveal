@@ -221,10 +221,10 @@ def writeH5(config: dict):
         else:
             revcomp = False  # pylint: disable=redefined-variable-type
         headVals = getHead(regions, head["bigwig-files"], outputLength, jitter, revcomp)
-        outFile.create_dataset("head_{0:d}".format(i), data=headVals, dtype=PRED_T,
+        outFile.create_dataset(f"head_{i}", data=headVals, dtype=PRED_T,
                                chunks=(H5_CHUNK_SIZE, headVals.shape[1], headVals.shape[2]),
                                compression="gzip")
-        logUtils.debug("Added data for head {0:d}".format(i))
+        logUtils.debug(f"Added data for head {i}")
     outFile.close()
     logUtils.info("File created; closing.")
 

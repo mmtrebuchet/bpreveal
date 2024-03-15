@@ -198,21 +198,28 @@ def main(config: dict):
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
         genome = None
     else:
-        generator = interpretUtils.PisaBedGenerator(config["bed-file"], config["genome"],
-                                                    config["input-length"],
-                                                    config["output-length"])
+        generator = interpretUtils.PisaBedGenerator(bedFname=config["bed-file"],
+                                                    genomeFname=config["genome"],
+                                                    inputLength=config["input-length"],
+                                                    outputLength=config["output-length"])
         genome = config["genome"]
 
-    writer = interpretUtils.PisaH5Saver(config["output-h5"], generator.numRegions,
-                                        config["num-shuffles"],
-                                        receptiveField, genome=genome,
+    writer = interpretUtils.PisaH5Saver(outputFname=config["output-h5"],
+                                        numSamples=generator.numRegions,
+                                        numShuffles=config["num-shuffles"],
+                                        receptiveField=receptiveField,
+                                        genome=genome,
                                         useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
-    batcher = interpretUtils.PisaRunner(config["model-file"],
-                                        config["head-id"], config["task-id"],
-                                        10, generator, writer,
-                                        config["num-shuffles"], receptiveField,
-                                        kmerSize,
-                                        numThreads)
+    batcher = interpretUtils.PisaRunner(modelFname=config["model-file"],
+                                        headID=config["head-id"],
+                                        taskID=config["task-id"],
+                                        batchSize=10,
+                                        generator=generator,
+                                        saver=writer,
+                                        numShuffles=config["num-shuffles"],
+                                        receptiveField=receptiveField,
+                                        kmerSize=kmerSize,
+                                        numBatchers=numThreads)
     batcher.run()
 
 

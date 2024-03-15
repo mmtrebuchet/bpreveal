@@ -61,8 +61,8 @@ def reweightCountsLosses(history: dict, lossTypes: list[str]):
         history["cw_" + countsKey] = countsLossWeight[countsKey]
         weightLossTypes.append("cw_" + countsKey)
         # countsKey will be the head-name, we need to decorate it.
-        countsRe = re.compile(".*logcounts_{0:s}_loss".format(countsKey))
-        profileRe = re.compile(".*profile_{0:s}_loss".format(countsKey))
+        countsRe = re.compile(f".*logcounts_{countsKey}_loss")
+        profileRe = re.compile(f".*profile_{countsKey}_loss")
         for lossPair in lossTypes:
             typesToAdd = []
             for lossType in lossPair:

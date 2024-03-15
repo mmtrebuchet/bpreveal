@@ -50,8 +50,7 @@ def buildLosses(heads: dict) -> tuple[list, list]:
         # will be done inside the loss function proper.
         countsWeights.append(1)
         countsLosses.append(losses.weightedMse(λ))
-        logUtils.debug("Initialized head {0:s} with λinit = {1:f}".format(
-                       head["head-name"], λInit))
+        logUtils.debug(f"Initialized head {head['head-name']} with λinit = {λInit}")
     allLosses = profileLosses + countsLosses  # + is concatenation, not addition!
     allWeights = profileWeights + countsWeights  # + is still concatenation.
     return (allLosses, allWeights)
@@ -88,7 +87,7 @@ def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
         config["settings"]["learning-rate-plateau-patience"],
         config["heads"])
     logUtils.info("Saving history.")
-    historyName = "{0:s}.history.json".format(config["settings"]["output-prefix"])
+    historyName = f"{config['settings']['output-prefix']}.history.json"
     with open(historyName, "w") as fp:
         json.dump(history.history, fp, ensure_ascii=False, indent=4)
     return history

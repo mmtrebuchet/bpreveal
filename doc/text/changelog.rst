@@ -11,6 +11,13 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
+BPReveal 4.1.3, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+ENHANCEMENTS:
+    * :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>` will now include
+      correct coordinate information as long as the modisco example indexes are correct.
+
 BPReveal 4.1.2, 2024-03-07
 ''''''''''''''''''''''''''
 

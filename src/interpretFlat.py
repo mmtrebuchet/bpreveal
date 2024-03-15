@@ -175,26 +175,29 @@ def main(config: dict):
     if "bed-file" in config:
         logUtils.debug("Configuration specifies a bed file.")
         genomeFname = config["genome"]
-        generator = interpretUtils.FlatBedGenerator(config["bed-file"], genomeFname,
-                                                    config["input-length"],
-                                                    config["output-length"])
+        generator = interpretUtils.FlatBedGenerator(bedFname=config["bed-file"],
+                                                    genomeFname=genomeFname,
+                                                    inputLength=config["input-length"],
+                                                    outputLength=config["output-length"])
     else:
         logUtils.debug("Configuration specifies a fasta file.")
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
 
     profileWriter = interpretUtils.FlatH5Saver(
-        config["profile-h5"], generator.numRegions,
-        config["input-length"], genome=genomeFname,
+        outputFname=config["profile-h5"], numSamples=generator.numRegions,
+        inputLength=config["input-length"], genome=genomeFname,
         useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
     countsWriter = interpretUtils.FlatH5Saver(
-        config["counts-h5"], generator.numRegions,
-        config["input-length"], genome=genomeFname,
+        outputFname=config["counts-h5"], numSamples=generator.numRegions,
+        inputLength=config["input-length"], genome=genomeFname,
         useTqdm=False)
 
     batcher = interpretUtils.FlatRunner(
-        config["model-file"], config["head-id"], config["heads"],
-        config["profile-task-ids"], 10, generator, profileWriter,
-        countsWriter, config["num-shuffles"], kmerSize)
+        modelFname=config["model-file"], headID=config["head-id"],
+        numHeads=config["heads"], taskIDs=config["profile-task-ids"],
+        batchSize=10, generator=generator, profileSaver=profileWriter,
+        countsSaver=countsWriter, numShuffles=config["num-shuffles"],
+        kmerSize=kmerSize)
     batcher.run()
 
     # Finishing touch - if someone gave coordinate information, load that.
@@ -203,7 +206,8 @@ def main(config: dict):
             with h5py.File(config[ftype], "r+") as h5fp, \
                  pysam.FastaFile(config["coordinates"]["genome"]) as genome:
                 bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
-                predictUtils.addCoordsInfo(bedFp, h5fp, genome, stopName="coords_end")
+                predictUtils.addCoordsInfo(regions=bedFp, outFile=h5fp,
+                                           genome=genome, stopName="coords_end")
 
 
 if __name__ == "__main__":

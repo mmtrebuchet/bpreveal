@@ -83,7 +83,7 @@ def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
     else:
         newSamples = samples
 
-    return np.interp(samples, standard, standardQuantiles).astype(MOTIF_FLOAT_T)
+    return np.interp(x=samples, xp=standard, fp=standardQuantiles).astype(MOTIF_FLOAT_T)
 
 
 def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
@@ -264,19 +264,18 @@ class Pattern:
     """How many seqlets are in this pattern?"""
 
     seqletStarts: npt.NDArray[np.int32]
-    """Relative to the cwm window (given by seqletIndexes), where does this seqlet start?
+    """Relative to the modisco window, where does each seqlet start?
 
     Shape (numSeqlets,)
     """
     seqletEnds: npt.NDArray[np.int32]
-    """Relative to the cwm window (given by seqletIndexes), where does this seqlet end?
+    """Relative to the modisco window, where does each seqlet end?
 
     Shape (numSeqlets,)
     """
     seqletIndexes: npt.NDArray[np.int32]
-    """This is the index from the modisco output file, which is currently meaningless.
-
-    TODO When tfmodisco-lite carries through the seqlet indexes correctly, modify this.
+    """This is example_idx in the modisco output file.
+    It is used to index into the contribution hdf5 to get coordinate information.
     Shape (numSeqlets,)
     """
     seqletRevcomps: npt.NDArray[np.bool_]
@@ -505,8 +504,6 @@ class Pattern:
             }
         """
         for i in range(self.numSeqlets):
-            # TODO Once we have the ability to map back the seqlet positions, make
-            # chrom, start, and end meaningful!
             ret = {
                 "chrom": self.seqletChroms[i],
                 "start": self.seqletGenomicStarts[i],
@@ -523,20 +520,68 @@ class Pattern:
             }
             yield ret
 
-    def loadSeqletCoordinates(self, contribH5fp: h5py.File) -> None:
-        """Break stuff.
+    def loadSeqletCoordinates(self, contribH5fp: h5py.File, modiscoWindow: int) -> None:
+        """Read in seqlet coordinates saved in the contribution hdf5.
 
-        This method is incomplete because we haven't fixed a bug in tfmodisco-lite that allows
-        us to recover the genomic coordinates of the seqlets identified by modisco.
-        When it is done, it will use the seqlet indexes from the modisco output to look
-        up the genomic coordinates of each seqlet and create three new fields in this object:
-        seqletChroms, seqletGenomicStarts, seqletGenomicEnds.
+        If modiscoWindow is 0, store invalid data. In BPReveal 6.0.0, a modiscoWindow
+        value of 0 will trigger an assertion failure. For now, it issues an error log.
 
+        There is a reported bug in tfmodisco-lite that resets the indexes of the seqlets.
+        CHECK your outputs and make sure that the reported coordinates make sense!
+
+        This method creates three new fields in this Pattern object:
+
+        seqletChroms
+            A list of strings containing the chromosome name for each seqlet.
+            Each chromosome will be ``UNDEFINED`` if modiscoWindow is 0.
+        seqletGenomicStarts
+            The coordinates in the genome where the seqlet starts, or -10000
+            if modiscoWindow is 0.
+        seqletGenomicEnds
+            The coordinates in the genome where the seqlet ends, or -10000
+            if modiscoWindow is 0.
         """
-        del contribH5fp
         self.seqletChroms = ["UNDEFINED" for _ in range(self.numSeqlets)]
         self.seqletGenomicStarts = np.array([-10000 for _ in range(self.numSeqlets)])
         self.seqletGenomicEnds = np.array([-10000 for _ in range(self.numSeqlets)])
+
+        if modiscoWindow == 0:
+            logUtils.error("modiscoWindow not provided. Cannot load coordinates! "
+                           "This will be a fatal error in BPReveal 6.0.0.")
+            return
+
+        logUtils.debug("Loading coordinate information from contribution score file.")
+        for i in range(self.numSeqlets):
+            seqIdx = self.seqletIndexes[i]
+            seqWindowStart = self.seqletStarts[i]
+            seqWindowEnd = self.seqletEnds[i]
+            contribChrom = contribH5fp["coords_chrom"][seqIdx]
+            contribChromName = contribH5fp["chrom_names"].asstr()[contribChrom]
+            contribStart = contribH5fp["coords_start"][seqIdx]
+            contribEnd = contribH5fp["coords_end"][seqIdx]
+            # This next block checks to make sure that the sequence from
+            # the modisco h5 matches the one in the contrib score file.
+            seqletSeq = self.seqletOneHots[i]
+            contribFullSeq = np.array(contribH5fp["input_seqs"][seqIdx])
+            offset = (contribFullSeq.shape[0] - modiscoWindow) // 2
+            contribSeqStart = offset + min(seqWindowStart, seqWindowEnd)
+            contribSeqEnd = offset + max(seqWindowStart, seqWindowEnd)
+            contribSeq = contribFullSeq[contribSeqStart: contribSeqEnd]
+            if self.seqletRevcomps[i]:
+                contribSeq = np.flip(contribSeq)
+            if np.sum(np.abs(seqletSeq - (1.0 * contribSeq))) != 0:
+                logUtils.error("Found sequence mismatch. Coordinates are invalid.")
+                logUtils.error(utils.oneHotDecode(seqletSeq))
+                logUtils.error(utils.oneHotDecode(contribSeq))
+                logUtils.error(f"Data for index example_idx {seqIdx} mismatched.")
+            # Okay, the sequences matched. Proceed!
+            contribMiddle = (contribStart + contribEnd) // 2
+            windowStart = contribMiddle - modiscoWindow // 2
+            genomeStart = windowStart + min(seqWindowStart, seqWindowEnd)
+            genomeEnd = windowStart + max(seqWindowStart, seqWindowEnd)
+            self.seqletChroms[i] = contribChromName
+            self.seqletGenomicStarts[i] = genomeStart
+            self.seqletGenomicEnds[i] = genomeEnd
 
     def getScanningInfo(self) -> dict:
         """Get what you need to know to scan CWMs.
@@ -584,6 +629,7 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
                   quantileContribMatch: float, quantileContribMagnitude: float,
                   trimThreshold: float, trimPadding: int,
                   backgroundProbs: npt.NDArray[MOTIF_FLOAT_T],
+                  modiscoWindow: int,
                   outputSeqletsFname: str | None = None) -> list[dict]:
     """Given a modisco hdf5 file, go over the seqlets and establish the quantile boundaries.
 
@@ -594,14 +640,11 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
 
     :param contribH5Fname: The name of the hdf5 file that was generated by interpretFlat.py.
         This file contains genomic coordinates of the seqlets, and is used to determine the
-        location of each seqlet identified by modisco.
-        FIXME TODO FIXME:
-        Since modisco doesn't preserve seqlet indexes right now, this parameter is ignored.
-        All seqlets will be reported as being on chromosome chr1 and will have a meaningless
-        position.
+        location of each seqlet identified by modisco. If outputSeqletsFname is None, this
+        parameter is ignored.
 
-    :param patternSpec: Either a list of dicts, or the string "all". See makePatternObjects for how
-        this parameter is interpreted.
+    :param patternSpec: Either a list of dicts, or the string ``all``. See makePatternObjects
+        for how this parameter is interpreted.
 
     :param quantileSeqMatch: The information content shared between the PSSM (which is based on
         nucleotide frequency, NOT contribution scores. A lower value means allow sequences
@@ -621,6 +664,12 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
         distribution for each base in the genome. See :func:`ppmToPwm` and
         :func:`pwmToPssm` for details on this argument.
 
+    :param modiscoWindow: The size of the window that was used by Modisco during scanning.
+        (That's the ``-w`` argument to ``modisco motifs``.) Until BPReveal 6.0.0, passing
+        in a modiscoWindow value of 0 will disable seqlet coordinate extraction and raise
+        a warning. After 6.0.0, this will cause an assertion error.
+        if outputSeqletsFname is None, this parameter is ignored.
+
     :param outputSeqletsFname: (Optional) Gives a name for a file where the all of the
         seqlets in the Modisco output should be saved as a tsv file.
 
@@ -639,12 +688,10 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
 
     This dictionary can be saved as a json for use with the motif scanning tool, or passed
     directly to the motif scanning Python functions.
-
     """
     if isinstance(backgroundProbs, str):
         backgroundProbsVec = GENOME_NUCLEOTIDE_FREQUENCY[backgroundProbs]
-        logUtils.debug("Loaded background {0:s} for genome {1:s}"
-                       .format(str(backgroundProbsVec), backgroundProbs))
+        logUtils.debug(f"Loaded background {backgroundProbsVec} for genome {backgroundProbs}")
     else:
         backgroundProbsVec = np.array(backgroundProbs)
     patterns = makePatternObjects(patternSpec, modiscoH5Fname)
@@ -660,7 +707,7 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
         logUtils.info("Writing tsv of seqlet information.")
         with h5py.File(contribH5Fname, "r") as contribH5fp:
             for pattern in patterns:
-                pattern.loadSeqletCoordinates(contribH5fp)
+                pattern.loadSeqletCoordinates(contribH5fp, modiscoWindow)
         # Now, write the output.
         with open(outputSeqletsFname, "w", newline="") as outFp:
             # Write the header.
@@ -728,7 +775,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str) -> li
     else:
         patternSpecList: list[dict] = patternSpec  # type: ignore
         for metaclusterSpec in patternSpecList:
-            logUtils.debug("Initializing patterns {0:s}".format(str(metaclusterSpec)))
+            logUtils.debug(f"Initializing patterns {metaclusterSpec}")
             if "pattern-names" in metaclusterSpec:
                 for i, patternName in enumerate(metaclusterSpec["pattern-names"]):
                     if "short-names" in metaclusterSpec:
@@ -745,7 +792,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str) -> li
                 patterns.append(Pattern(metaclusterSpec["metacluster-name"],
                                         metaclusterSpec["pattern-name"],
                                         shortName))
-    logUtils.info("Initialized {0:d} patterns.".format(len(patterns)))
+    logUtils.info(f"Initialized {len(patterns)} patterns.")
     return patterns
 
 
@@ -843,11 +890,12 @@ class MiniPattern:
             ret.append((passLoc, strand, contribMagnitude, contribMatchScore, seqMatchScore))
         return ret
 
-    def _scanWithCutoffsOneWay(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T],
-                               cwm: npt.NDArray[MOTIF_FLOAT_T], pssm: npt.NDArray[MOTIF_FLOAT_T]
-                               ) -> tuple[list[npt.NDArray[MOTIF_FLOAT_T]],
-                                          list[npt.NDArray[MOTIF_FLOAT_T]],
-                                          list[npt.NDArray[MOTIF_FLOAT_T]]]:
+    def _scanWithoutCutoffsOneWay(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T],
+                                  cwm: npt.NDArray[MOTIF_FLOAT_T],
+                                  pssm: npt.NDArray[MOTIF_FLOAT_T])\
+            -> tuple[list[npt.NDArray[MOTIF_FLOAT_T]],
+                     list[npt.NDArray[MOTIF_FLOAT_T]],
+                     list[npt.NDArray[MOTIF_FLOAT_T]]]:
         contribMatchScores, contribMagnitudes = self._callJaccard(scores, cwm)
         seqMatchScores = slidingDotproduct(sequence, pssm)
         return (contribMatchScores, contribMagnitudes, seqMatchScores)
@@ -874,8 +922,8 @@ class MiniPattern:
         5. Negative strand sequence match scores
         """
         rets = []
-        rets.extend(self._scanWithCutoffsOneWay(sequence, scores, self.cwm, self.pssm))
-        rets.extend(self._scanWithCutoffsOneWay(sequence, scores, self.rcwm, self.rpssm))
+        rets.extend(self._scanWithoutCutoffsOneWay(sequence, scores, self.cwm, self.pssm))
+        rets.extend(self._scanWithoutCutoffsOneWay(sequence, scores, self.rcwm, self.rpssm))
         return rets
 
     def scan(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
@@ -1018,13 +1066,6 @@ class RegionScanner:
         reverseContribMatch, reverseContribMagnitude, reverseSeqMatch
         """
         # Get all the data for this index.
-        chromIdx = self.contribFp["coords_chrom"][idx]
-        if isinstance(chromIdx, bytes):
-            chrom = chromIdx.decode("utf-8")
-        else:
-            chrom = self.chromIdxToName[chromIdx]
-            logUtils.logFirstN(logUtils.DEBUG,
-                               "First index, found chrom {0:s}".format(str(chrom)), 1)
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")
         contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order="C")
@@ -1097,11 +1138,6 @@ class PatternScanner:
         This function will look for hits in this region and then stuff any hits it finds
         into hitQueue for saving by the writer thread.
         """
-        logUtils.logFirstN(logUtils.DEBUG,
-            "Got first index for thread {0:d}".format(
-                multiprocessing.current_process().pid),
-            1)
-
         # Get all the data for this index.
         chromIdx = self.contribFp["coords_chrom"][idx]
         if isinstance(chromIdx, bytes):
@@ -1113,20 +1149,13 @@ class PatternScanner:
             chrom = chromIdx.decode("utf-8")
         else:
             chrom = self.chromIdxToName[chromIdx]
-            logUtils.logFirstN(logUtils.DEBUG,
-                               "First index, found chrom {0:s}".format(str(chrom)), 1)
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")
         contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order="C")
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
-            logUtils.logFirstN(logUtils.DEBUG,
-                               "Scanning pattern {0:s}".format(pattern.shortName), 1)
-
             hits = pattern.scan(oneHotSequence, contribScores)
-            logUtils.logFirstN(logUtils.DEBUG,
-                               "Completed scanning {0:s}".format(pattern.shortName), 1)
             if len(hits) > 0:
                 # Hey, we found something!
                 for hit in hits:
@@ -1148,10 +1177,6 @@ class PatternScanner:
                                   hit[2],
                                   hit[3], hit[4])
                     self.hitQueue.put(madeHit, timeout=QUEUE_TIMEOUT)
-                    logUtils.logFirstN(logUtils.DEBUG,
-                                       "First hit from thread {0:d}".format(
-                                           multiprocessing.current_process().pid),
-                                       1)
         logUtils.logFirstN(logUtils.DEBUG, "First pattern complete.", 1)
 
     def done(self) -> None:
@@ -1178,12 +1203,13 @@ def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Q
 
     """
     scanner = PatternScanner(hitQueue, contribFname, patternConfig)
-    logUtils.debug("Started scanner {0:d}".format(multiprocessing.current_process().pid))
+    myPid = multiprocessing.current_process().pid
+    logUtils.debug(f"Started scanner {myPid}")
     while True:
         curQuery = queryQueue.get(timeout=QUEUE_TIMEOUT)
         if curQuery == -1:
             # End of the line, finish up!
-            logUtils.debug("Done with scanner {0:d}".format(multiprocessing.current_process().pid))
+            logUtils.debug(f"Done with scanner {myPid}")
             scanner.done()
             break
         scanner.scanIndex(curQuery)
@@ -1215,9 +1241,7 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
         while True:
             try:
                 ret = hitQueue.get(timeout=QUEUE_TIMEOUT)
-                logUtils.logFirstN(logUtils.DEBUG,
-                                   "Writer got first hit, {0:s}".format(str(ret)),
-                                   1)
+                logUtils.logFirstN(logUtils.DEBUG, f"Writer got first hit, {str(ret)}", 1)
             except queue.Empty:
                 logUtils.warning("Exceeded timeout waiting to see a hit. Either your motif is very"
                                 " rare, or there is a bug in the code. If you see this message"
@@ -1229,8 +1253,7 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
                 continue  # Go back to the top of the loop - we don't have a ret to process.
             if ret == -1:
                 threadsRemaining -= 1
-                logUtils.debug("Writer got thread done message, "
-                              "{0:d} remain.".format(threadsRemaining))
+                logUtils.debug(f"Writer got thread done message, {threadsRemaining = }.")
                 if threadsRemaining <= 0:
                     break
                 continue

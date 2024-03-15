@@ -37,8 +37,8 @@ class Region:
         :param taskID: Which task do you want the data for?
         :return: A vector containing the requested data.
         """
-        headLogits = h5fp["head_{0:d}".format(head)]["logits"]
-        headLogcounts = h5fp["head_{0:d}".format(head)]["logcounts"]
+        headLogits = h5fp[f"head_{head}"]["logits"]
+        headLogcounts = h5fp[f"head_{head}"]["logcounts"]
 
         match mode:
             case "profile":
@@ -72,7 +72,7 @@ def getChromInserts(arg: tuple[list[Region], str, int, int, str]) -> \
     with h5py.File(h5Fname, "r") as h5fp:
         vec = getChromVector(regionList, h5fp, headID, taskID, mode)
         inserts = vectorToListOfInserts(vec)
-    logUtils.info("Finished region {0:s}".format(str(regionList[0].chromIdx)))
+    logUtils.info(f"Finished region {str(regionList[0].chromIdx)}")
     return inserts
 
 
@@ -186,11 +186,10 @@ def writeBigWig(inH5Fname: str, outFname: str, headID: int, taskID: int, mode: s
     :param numThreads: How many threads should be used?
     """
     inH5 = h5py.File(inH5Fname, "r")
-    logUtils.info("Starting to write {0:s}, head {1:d} task {2:d}"
-                  .format(outFname, headID, taskID))
+    logUtils.info(f"Starting to write {outFname}, head {headID} task {taskID}")
     bwHeader = []
     for i, name in enumerate(inH5["chrom_names"].asstr()):
-        bwHeader.append(("{0:s}".format(name), int(inH5["chrom_sizes"][i])))
+        bwHeader.append((str(name), int(inH5["chrom_sizes"][i])))
     outBw = pyBigWig.open(outFname, "w")
 
     outBw.addHeader(bwHeader)

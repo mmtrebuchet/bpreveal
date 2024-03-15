@@ -20,10 +20,14 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
    in the bin/ directory, and using them has emitted a warning since 4.0.0.
    In BPReveal 6.0.0, the symlinks will be removed.
 3. ``makePredictionsFasta`` and ``makePredictionsBed`` are old names for makePredictions.
-   They exist only as symlinks in the bin/ directory, and using them has emitted a warning
-   since 4.1.1. The old names will be removed.
+   They exist only as symlinks in the bin/ directory, and using them has emitted a
+   warning since 4.1.1. The old names will be removed.
 4. Not including a ``correct-receptive-field`` field in your config to interpretPisa will
    no longer issue a warning - the correct receptive field will be applied by default.
+5. If you want to get a tsv of seqlets from
+   :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>`, you will need to provide a
+   ``modisco-window`` parameter in the configuration json. Omitting this has issued
+   a warning and generated invalid coordinate data since 4.1.3.
 
 
 BPReveal 5.x

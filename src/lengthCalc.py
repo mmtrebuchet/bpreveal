@@ -96,8 +96,7 @@ def getLengthDifference(numDilLayers: int, initialConvolutionWidths: list[int],
         # We remove convWidth // 2 bases on each side, for a total of convWidth-1.
         overhang += (convWidth - 1)
         if verbose:
-            print("Convolutional layer, width {0:d}, receptive field {1:d}"
-                  .format(convWidth, overhang + 1))
+            print(f"Convolutional layer, width {convWidth}, receptive field {overhang + 1}")
 
     # Now we iterate through the dilated convolutions. The dilation rate starts at 2, then doubles
     # at each layer in the network.
@@ -114,12 +113,12 @@ def getLengthDifference(numDilLayers: int, initialConvolutionWidths: list[int],
     # i=1
     overhang += 2 ** (numDilLayers + 2) - 4
     if verbose:
-        print("After dilated convolutions, receptive field {0:d}".format(overhang + 1))
+        print(f"After dilated convolutions, receptive field {overhang + 1}")
     # Now, at the bottom, we have the output filter. It's the same math as the first filter.
     assert profileKernelSize % 2 == 1
     overhang += (profileKernelSize - 1)
     if verbose:
-        print("After final convolution, receptive field {0:d}".format(overhang + 1))
+        print(f"After final convolution, receptive field {overhang + 1}")
     return overhang
 
 
@@ -190,7 +189,7 @@ def lengthCalcMain():
                 profileKernelSize=args.profileKernelSize,
                 verbose=args.verbose)
         print(outLen)
-        assert outLen > 0, "Predicted output length {0:d} is empty.".format(outLen)
+        assert outLen > 0, f"Predicted output length {outLen} is empty."
     else:
         assert False, "Must provide one of --input-len or --output-len"
 

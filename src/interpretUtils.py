@@ -905,7 +905,7 @@ class FastaGenerator(Generator):
         # Iterate through the input file real quick and find out how many regions I'll have.
         self.numRegions = numRegions
         self.index = 0
-        logUtils.info("Fasta generator initialized with {0:d} regions.".format(self.numRegions))
+        logUtils.info(f"Fasta generator initialized with {self.numRegions} regions.")
 
     def construct(self):
         """Open the file and start reading."""
@@ -913,7 +913,7 @@ class FastaGenerator(Generator):
         self.fastaFile = open(self.fastaFname, "r")  # pylint: disable=consider-using-with
         self.nextSequenceID = self.fastaFile.readline()[1:].strip()
         # [1:] to get rid of the '>'.
-        logUtils.debug("Initial sequence to read: {0:s}".format(self.nextSequenceID))
+        logUtils.debug(f"Initial sequence to read: {self.nextSequenceID}")
 
     def done(self):
         """Close the Fasta file."""
@@ -972,7 +972,7 @@ class FlatBedGenerator(Generator):
         for _ in fp:
             numRegions += 1
         self.numRegions = numRegions
-        logUtils.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
+        logUtils.info(f"Bed generator initialized with {self.numRegions} regions")
 
     def construct(self):
         """Open the bed file and fasta genome."""
@@ -1007,7 +1007,7 @@ class FlatBedGenerator(Generator):
 
     def done(self):
         """Close the fasta file."""
-        logUtils.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
+        logUtils.debug(f"Closing bed generator, read {self.readHead} entries")
         self.genome.close()
 
 
@@ -1038,7 +1038,7 @@ class PisaBedGenerator(Generator):
         for line in fp:
             numRegions += line.end - line.start
         self.numRegions = numRegions
-        logUtils.info("Bed generator initialized with {0:d} regions".format(self.numRegions))
+        logUtils.info(f"Bed generator initialized with {self.numRegions} regions")
 
     def construct(self):
         """Run in the child thread, opens up the files and reads the bed."""
@@ -1076,7 +1076,7 @@ class PisaBedGenerator(Generator):
 
     def done(self):
         """Close the fasta."""
-        logUtils.debug("Closing bed generator, read {0:d} entries".format(self.readHead))
+        logUtils.debug(f"Closing bed generator, read {self.readHead} entries")
         self.genome.close()
 
 

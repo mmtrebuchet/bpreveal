@@ -200,7 +200,7 @@ class Screen:
                     win = self._debugWin
                 width = self._width - 2 * self._border
             case _:
-                assert False, "No window for {0:s}".format(winName)
+                assert False, f"No window for {winName}"
         return win, width, title
 
     def printString(self, row: int, col: int, winName: str, text: str,
@@ -309,7 +309,7 @@ class Screen:
         if self.exitWhenDone:
             for i in range(100):  # Tenths of a second, so 10 s.
                 msg = msgHeader + " This window will close " \
-                    "in {0:d}, or exit with <C-c>.".format((100 - i) // 10)
+                    f"in {(100 - i) // 10}, or exit with <C-c>."
                 self.printString(1, 1, "S", msg, color)
                 try:
                     curses.napms(100)

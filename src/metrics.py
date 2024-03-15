@@ -138,7 +138,6 @@ class MetricsCalculator:
 
     def __init__(self, referenceBwFname, predictedBwFname, applyAbs, inQueue,
                  outQueue, tid):
-        logUtils.debug("Starting thread {0:d} for metrics calculation.".format(tid))
         self.referenceBw = pyBigWig.open(referenceBwFname, "r")
         self.predictedBw = pyBigWig.open(predictedBwFname, "r")
         self.applyAbs = applyAbs
@@ -193,7 +192,6 @@ class MetricsCalculator:
         while True:
             match self.inQueue.get(timeout=QUEUE_TIMEOUT):
                 case None:
-                    logUtils.debug("Finishing calculator thread {0:d}.".format(self.tid))
                     self.finish()
                     return
                 case (regionRef, regionPred, regionID):
@@ -240,7 +238,7 @@ def regionGenThread(regionsFname: str, regionQueue: Queue,
     logUtils.debug("Initializing generator.")
     with open(regionsFname, "r") as fp:
         regions = [Region(x) for x in fp]
-    logUtils.info("Number of regions: {0:d}".format(len(regions)))
+    logUtils.info(f"Number of regions: {len(regions)}")
     numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
     for i, r in enumerate(regions):
         regionQueue.put((r, r, i), timeout=QUEUE_TIMEOUT)
@@ -272,12 +270,12 @@ def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
     jsonDict[name] = {"quantile-cutoffs": list(quantileCutoffs),
                       "quantiles": list(quantiles)}
     if header:
-        cutoffStr = "".join(["\t{0:14f}%".format(x * 100) for x in quantileCutoffs])
-        outputFp.write("{0:10s}".format("metric") + cutoffStr + "\t{0:s}\n".format("regions"))
+        cutoffStr = "".join([f"\t{x * 100:14f}%" for x in quantileCutoffs])
+        outputFp.write(f"metric    {cutoffStr}\tregions\n")
     if write:
-        quantileStr = "".join(["\t{0:15f}".format(x) for x in quantiles])
+        quantileStr = "".join([f"\t{x:15f}" for x in quantiles])
 
-        outputFp.write("{0:10s}".format(name) + quantileStr + "\t{0:d}\n".format(vector.shape[0]))
+        outputFp.write(f"{name:10s}{quantileStr}\t{vector.shape[0]:d}\n")
 
 
 def receiveThread(numRegions: int, outputQueue: Queue,
@@ -344,8 +342,8 @@ def receiveThread(numRegions: int, outputQueue: Queue,
     else:
         countsPearson = countsSpearman = [np.nan, np.nan]
     if not jsonOutput:
-        outputFp.write("Counts pearson \t{0:10f}\n".format(countsPearson[0]))
-        outputFp.write("Counts spearman\t{0:10f}\n".format(countsSpearman[0]))
+        outputFp.write(f"Counts pearson \t{countsPearson[0]:10f}\n")
+        outputFp.write(f"Counts spearman\t{countsSpearman[0]:10f}\n")
     else:
         jsonDict["counts-pearson"] = countsPearson[0]
         jsonDict["counts-spearman"] = countsSpearman[0]
@@ -377,13 +375,13 @@ def runMetrics(reference: str, predicted: str, regions: str, threads: int, apply
     resultQueue = Queue()
     numberQueue = Queue()
     if not jsonOutput:
-        print("reference {0:s} predicted {1:s} regions {2:s}".format(reference, predicted, regions))
+        print(f"reference {reference} predicted {predicted} regions {regions}")
     regionThread = Process(target=regionGenThread,
                            args=(regions, regionQueue, threads, numberQueue),
                            daemon=True)
     processorThreads = []
     for i in range(threads):
-        logUtils.debug("Creating thread {0:d}".format(i))
+        logUtils.debug(f"Creating thread {i}")
         newThread = Process(target=calculatorThread,
                             args=(reference, predicted, applyAbs, regionQueue, resultQueue, i),
                             daemon=True)

@@ -65,7 +65,7 @@ def writeBigWig(inH5: h5py.File, outFname: str):  # pylint: disable=too-many-sta
     h5Reader = BatchedH5Reader(inH5, H5_CHUNK_SIZE)
     chromIdxToName = {}
     for i, name in enumerate(inH5["chrom_names"].asstr()):
-        bwHeader.append(("{0:s}".format(name), int(inH5["chrom_sizes"][i])))
+        bwHeader.append((str(name), int(inH5["chrom_sizes"][i])))
         chromIdxToName[i] = name
     outBw = pyBigWig.open(outFname, "w")
     outBw.addHeader(sorted(bwHeader))

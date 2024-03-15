@@ -28,7 +28,7 @@ Parameter Notes
 
 seqlets-tsv
     (Optional) The name of the file that should be written containing the
-    scanned seqlets. See :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles`
+    scanned seqlets. See :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles>`
     for the structure of this file.
 
 modisco-h5
@@ -41,6 +41,12 @@ modisco-contrib-h5
     doesn't contain that info. The contribution scores are *not* extracted from
     this file, just coordinates. *THIS DOES NOT CURRENTLY WORK, SINCE SEQLET
     INDEXES ARE RESET BY MODISCO*
+
+modisco-window
+    (Optional, will become mandatory in 6.0.0)
+    The window size used when running modiscolite. This is needed because the
+    coordinates reported by modisco are relative to the scanned window.
+    If not provided, coordinate data will not be loaded.
 
 There are two ways of specifying patterns, either by giving each pattern and
 metacluster pair individually, or by listing multiple patterns under a single
@@ -133,6 +139,11 @@ def main(config: dict):
     tsvFname = None
     if "seqlets-tsv" in config:
         tsvFname = config["seqlets-tsv"]
+    if "modisco-window" not in config:
+        logUtils.warning("You have not given a modisco window size. "
+                         "Coordinate information for seqlets will not be saved. "
+                         "This will be an error in BPReveal 6.0.0")
+        config["modisco-window"] = 0
     scanPatternDict = motifUtils.seqletCutoffs(config["modisco-h5"],
                                                config["modisco-contrib-h5"],
                                                config["patterns"],
@@ -142,8 +153,8 @@ def main(config: dict):
                                                config["trim-threshold"],
                                                config["trim-padding"],
                                                config["background-probs"],
-                                               tsvFname
-                                               )
+                                               config["modisco-window"],
+                                               tsvFname)
     logUtils.info("Analysis complete.")
     if "quantile-json" in config:
         logUtils.info("Saving pattern json.")

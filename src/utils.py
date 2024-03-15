@@ -45,7 +45,7 @@ def loadModel(modelFname: str):
     from keras.models import load_model
     from bpreveal.losses import multinomialNll, dummyMse
     # pylint: enable=import-outside-toplevel
-    model = load_model(modelFname,
+    model = load_model(filepath=modelFname,
                        custom_objects={"multinomialNll": multinomialNll,
                                        "reweightableMse": dummyMse})
     constants.setTensorflowLoaded()
@@ -67,7 +67,7 @@ def setMemoryGrowth() -> None:
     # pylint: enable=import-outside-toplevel, unused-import
     gpus = tf.config.list_physical_devices("GPU")
     try:
-        tf.config.experimental.set_memory_growth(gpus[0], True)
+        tf.config.experimental.set_memory_growth(device=gpus[0], enable=True)
         logUtils.debug("GPU memory growth enabled.")
     except Exception as inst:  # pylint: disable=broad-exception-caught
         logUtils.warning("Not using GPU")
@@ -116,19 +116,26 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
                 cmd = ["nvidia-smi", "-L"]
                 ret = sp.run(cmd, capture_output=True, check=True)
                 lines = ret.stdout.decode("utf-8").split("\n")
-                matchRe = re.compile(r".*MIG.* ([0-9]+)g\.([0-9]+)gb.*{0:s}.*".format(
-                                     os.environ["CUDA_VISIBLE_DEVICES"]))
+                devices = os.environ["CUDA_VISIBLE_DEVICES"]
+                matchRe = re.compile(fr".*MIG.* ([0-9]+)g\.([0-9]+)gb.*{devices}.*")
                 if (smiOut := re.match(matchRe, lines[1])):
                     total = free = float(smiOut[2]) * 1024  # Convert to MiB
-                    logUtils.debug("Found {0:f} GB of memory.".format(total))
+                    logUtils.debug(f"Found {total} GB of memory.")
                 else:
                     assert False, "Could not parse nvidia-smi line: " + lines[1]
     if total == 0.0:
         # We didn't find memory in CUDA_VISIBLE_DEVICES.
         cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
-        ret = sp.run(cmd, capture_output=True, check=True)
+        try:
+            ret = sp.run(cmd, capture_output=True, check=True)
+        except sp.CalledProcessError as e:
+            logUtils.error("Problem parsing nvidia-smi output.")
+            logUtils.error(e.stdout.decode("utf-8"))
+            logUtils.error(e.stderr.decode("utf-8"))
+            logUtils.error(e.returncode)
+            raise
         line = ret.stdout.decode("utf-8").split("\n")[1]
-        logUtils.debug("Memory usage limited based on {0:s}".format(line))
+        logUtils.debug(f"Memory usage limited based on {line}")
         lsp = line.split(" ")
         total = float(lsp[0])
         free = float(lsp[2])
@@ -141,9 +148,9 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     gpus = tf.config.list_physical_devices("GPU")
     useMem = int(total * fraction - offset)
     tf.config.set_logical_device_configuration(
-        gpus[0],
-        [tf.config.LogicalDeviceConfiguration(memory_limit=useMem)])
-    logUtils.debug("Configured gpu with {0:d} MiB of memory.".format(useMem))
+        device=gpus[0],
+        logical_devices=[tf.config.LogicalDeviceConfiguration(memory_limit=useMem)])
+    logUtils.debug(f"Configured gpu with {useMem} MiB of memory.")
     constants.setTensorflowLoaded()
     return useMem
 
@@ -620,8 +627,10 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
     generator = ListGenerator(sequences)
     profileSaver = FlatListSaver(generator.numSamples, generator.inputLength)
     countsSaver = FlatListSaver(generator.numSamples, generator.inputLength)
-    batcher = FlatRunner(modelFname, headID, heads, taskIDs, 1, generator,
-                         profileSaver, countsSaver, numShuffles, kmerSize)
+    batcher = FlatRunner(modelFname=modelFname, headID=headID, numHeads=heads,
+                         taskIDs=taskIDs, batchSize=1, generator=generator,
+                         profileSaver=profileSaver, countsSaver=countsSaver,
+                         numShuffles=numShuffles, kmerSize=kmerSize)
     batcher.run()
     logUtils.debug("Interpretation complete. Organizing outputs.")
     if keepHypotheticals:
