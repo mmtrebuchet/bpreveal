@@ -55,6 +55,14 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 BPReveal 4.x
 ------------
 
+BPReveal 4.1.3
+^^^^^^^^^^^^^^
+1. With the creation of the new :py:class:`Seqlet<bpreveal.motifUtils.Seqlet>` class,
+   several arrays that used to be in the :py:class:`Pattern<bpreveal.motifUtils.Pattern>`
+   class have been removed. If you were creating Patterns in your own code, you will need
+   to instead refer to the seqlet arrays. No file formats are changed by this.
+
+
 BPReveal 4.1.1
 ^^^^^^^^^^^^^^
 1. The name of the counts head in a transformation model that uses bias counts changed from

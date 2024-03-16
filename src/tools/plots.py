@@ -407,8 +407,8 @@ def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
 
     oldCmap = mpl.colormaps["RdBu_r"].resampled(256)
     newColors = oldCmap(np.linspace(0, 1, 256))
-    pink = np.array([248/256, 24/256, 148/256, 1])
-    green = np.array([24/256, 248/256, 148/256, 1])
+    pink = np.array([248 / 256, 24 / 256, 148 / 256, 1])
+    green = np.array([24 / 256, 248 / 256, 148 / 256, 1])
     newColors[:5] = green
     newColors[-5:] = pink
     cmap = mplcolors.ListedColormap(newColors)
@@ -521,10 +521,10 @@ def plotModiscoPattern(pattern: motifUtils.Pattern, fig, sortKey=None):
     axHmap = fig.add_axes([0.1, 0.1 + HIST_HEIGHT + PAD,
                            0.2 - PAD, 0.8 - HIST_HEIGHT])
     hmapAr = np.zeros((pattern.numSeqlets,
-                       len(pattern.seqletSequences[0]),
+                       len(pattern.seqlets[0].sequence),
                        3), dtype=np.uint8)
     for outIdx, seqletIdx in enumerate(sortOrder):
-        for charIdx, char in enumerate(pattern.seqletSequences[seqletIdx]):
+        for charIdx, char in enumerate(pattern.seqlets[seqletIdx].sequence):
             hmapAr[outIdx, charIdx, :] = _seqCmap[char]
     axHmap.imshow(hmapAr, aspect='auto', interpolation='nearest')
     axHmap.set_xticks([])
@@ -546,6 +546,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern, fig, sortKey=None):
     yvals = np.arange(pattern.numSeqlets, 0, -1)
 
     def plotStat(stat, axPos, name, rightTicks):
+        stat = np.array(stat)
         axCurStat = fig.add_axes([0.3 + axPos * 0.2, 0.1 + HIST_HEIGHT + PAD,
                                   0.2 - PAD, 0.8 - HIST_HEIGHT])
         statSort = stat[sortOrder]
@@ -575,7 +576,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern, fig, sortKey=None):
         axCurHist.set_yticks([])
         axCurHist.set_xlim(min(stat), max(stat))
         return axCurStat
-    plotStat(pattern.seqletSeqMatches, 0, "seqMatch", False)
-    plotStat(pattern.seqletContribMatches, 1, "contribMatch", False)
-    plotStat(pattern.seqletContribMagnitudes, 2, "contribMag", True)
+    plotStat([x.seqMatch for x in pattern.seqlets], 0, "seqMatch", False)
+    plotStat([x.contribMatch for x in pattern.seqlets], 1, "contribMatch", False)
+    plotStat([x.contribMagnitude for x in pattern.seqlets], 2, "contribMag", True)
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
