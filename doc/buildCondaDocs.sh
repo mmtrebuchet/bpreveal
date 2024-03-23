@@ -49,6 +49,8 @@ runAndCheck pip install pybedtools pysam pyBigWig
 
 runAndCheck cd ${BPREVEAL_DIR}/src \&\& make schemas
 
+runAndCheck cd ${BPREVEAL_DIR}/src \&\& make
+
 runAndCheck conda develop ${BPREVEAL_DIR}/pkg
 
 runAndCheck cd ${BPREVEAL_DIR}/doc \&\& make html
