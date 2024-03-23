@@ -41,8 +41,7 @@ runAndCheck conda activate ${ENV_NAME}
 #Make sure we have activated an environment with the right python.
 runAndCheck python3 --version \| grep -q "${PYTHON_VERSION}"
 
-runAndCheck ${CONDA_BIN} install --experimental-solver libmamba \
-    --yes -c conda-forge \
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge \
     jsonschema sphinx sphinx_rtd_theme sphinx-autodoc-typehints \
     sphinx-argparse conda-build numpy matplotlib h5py scipy \
     gfortran gxx_linux-64
