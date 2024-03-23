@@ -17,13 +17,19 @@ BPReveal 4.1.3, DATEDATEDATE
 NEW FEATURES:
     * You can now specify different quantile cutoffs for different patterns with the
       motif scanner. This can be useful when you have some motifs that have very low
-      sequence complexity.
+      sequence complexity. (Charles McAnany)
+    * The documentation is now auto-deployed to readthedocs. (Patrick Moeller)
 
 ENHANCEMENTS:
     * :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>` will now include
       correct coordinate information as long as the modisco example indexes are correct.
+      (Charles McAnany)
     * The new :py:class:`motifUtils.Seqlet<bpreveal.motifUtils.Seqlet>` class
       consolidates a bunch of random arrays that had been part of the Pattern class.
+      (Charles McAnany)
+
+CONTRIBUTORS:
+    Charles McAnany, Patrick Moeller.
 
 BPReveal 4.1.2, 2024-03-07
 ''''''''''''''''''''''''''
