@@ -1,14 +1,12 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 # This installs a minimal environment, just enough to build the documentation.
-
-source "${HOME}/.zshrc"
+# It then builds the documentation
 
 ENV_FLAG=-n
 ENV_NAME=bpreveal-docbuild
 
 CONDA_BIN=conda
-
 
 ######################
 # DON'T CHANGE BELOW #
@@ -21,37 +19,36 @@ echo "Installing from directory ${BPREVEAL_DIR}"
 
 PYTHON_VERSION=3.11
 
-check() {
+runAndCheck() {
+    currentCommand=$@
+    echo "EXECUTING COMMAND: [[$currentCommand]]"
+    eval "$currentCommand"
     errorVal=$?
     if [ $errorVal -eq 0 ]; then
-        echo "Command completed successfully"
+        echo "SUCCESSFULLY EXECUTED: [[$currentCommand]]"
     else
-        echo "ERROR DETECTED: Last command exited with status $errorVal"
-        exit
+        echo "ERROR DETECTED: Command [[$currentCommand]] on line $BASH_LINENO exited with status $errorVal"
+        exit 1
     fi
 }
 
+eval "$(conda shell.bash hook)"
 
-${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=${PYTHON_VERSION}
-check
+runAndCheck ${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=${PYTHON_VERSION}
 
-conda activate ${ENV_NAME}
-check
+runAndCheck conda activate ${ENV_NAME}
 
 #Make sure we have activated an environment with the right python.
-python3 --version | grep -q "${PYTHON_VERSION}"
-check
+runAndCheck python3 --version \| grep -q "${PYTHON_VERSION}"
 
-${CONDA_BIN} install --yes -c conda-forge \
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge \
     jsonschema sphinx sphinx_rtd_theme sphinx-autodoc-typehints \
     sphinx-argparse conda-build numpy matplotlib h5py scipy
-check
 
-pip install pybedtools pysam pyBigWig
-check
+runAndCheck pip install pybedtools pysam pyBigWig
 
-cd ${BPREVEAL_DIR}/src && make schemas
-check
+runAndCheck cd ${BPREVEAL_DIR}/src \&\& make schemas
 
-conda develop ${BPREVEAL_DIR}/pkg
-check
+runAndCheck conda develop ${BPREVEAL_DIR}/pkg
+
+runAndCheck cd ${BPREVEAL_DIR}/doc \&\& make html
