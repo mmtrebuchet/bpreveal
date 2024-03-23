@@ -1,55 +1,46 @@
-html[data-theme="dark"] .rst-content code.literal:not(code.xref) {
-    color: #90B090;
-    background-color: #232323;
+html[data-theme='dark'] .rst-content code.literal:not(code.xref) {
+  color: #90b090;
+  background-color: #232323;
 }
+
 .rst-content code.literal:not(code.xref) {
-    color: #207020;
-    background-color: #fbfbfb;
+  color: #207020;
+  background-color: #fbfbfb;
 }
-p {
-    font-family:"Libertinus Serif",serif;
-    font-feature-settings: "zero" on;
-    font-variant-ligatures: discretionary-ligatures;
+
+p,
+h1,
+h2,
+h3,
+h4,
+body
+  > :not(
+    :is(
+        readthedocs-flyout,
+        readthedocs-notification,
+        readthedocs-search,
+        readthedocs-hotkeys
+      )
+  ) {
+  font-family: 'Libertinus Serif', serif;
+  font-feature-settings: 'zero' on;
+  font-variant-ligatures: discretionary-ligatures;
 }
-h1 {
-    font-family:"Libertinus Serif",serif;
-    font-feature-settings: "zero" on;
-    font-variant-ligatures: discretionary-ligatures;
-}
-h2 {
-    font-family:"Libertinus Serif",serif;
-    font-feature-settings: "zero" on;
-    font-variant-ligatures: discretionary-ligatures;
-}
-h3 {
-    font-family:"Libertinus Serif",serif;
-    font-feature-settings: "zero" on;
-    font-variant-ligatures: discretionary-ligatures;
-}
-h4 {
-    font-family:"Libertinus Serif",serif;
-    font-feature-settings: "zero" on;
-    font-variant-ligatures: discretionary-ligatures;
-}
-body {
-    font-family:"Libertinus Serif",serif;
-    font-feature-settings: "zero" on;
-    font-variant-ligatures: discretionary-ligatures;
-}
+
 a:visited .pre {
-    color: #9B59B6;
-    background-color: #fbfbfb;
+  color: #9b59b6;
+  background-color: #fbfbfb;
 }
+
 .rst-content a code.xref {
-    color: #2980B9;
-    font-family:"Libertinus Mono",monospace;
-    font-feature-settings: "zero" on;
-    background-color: #fbfbfb;
+  color: #2980b9;
+  font-family: 'Libertinus Mono', monospace;
+  font-feature-settings: 'zero' on;
+  background-color: #fbfbfb;
 }
-html[data-theme="dark"] .rst-content code.xref {
-    color: #2980B9;
-    font-family:"Libertinus Mono",monospace;
-    font-feature-settings: "zero" on;
-    background-color: #2d2d2d;
+
+html[data-theme='dark'] .rst-content a code.xref {
+  background-color: #2d2d2d;
 }
+
 /*Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.*/
