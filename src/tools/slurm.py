@@ -283,12 +283,16 @@ def writeDependencyScript(config: dict, jobspecs: list[list[str, list[str]]],
         if cancelScript is not None:
             fp.write(
                 "echo '#!/usr/bin/env zsh' > {0:s}\n".format(cancelScript))
+        i = 0
         for jobSpec in jobOrder:
             job, deps = jobSpec
             if local:
-                fp.write("echo 'Satisfied {0:s}'\n".format(str(deps)))
-                fp.write("{0:s}\n".format(job))
+                fp.write("echo 'Satisfied {0:s}'\n".format(", ".join(deps)))
+                logFile = f'{config["workDir"]}/logs/step_{i:03d}.log'
+                fp.write(f"echo 'log for job {job}' > {logFile}\n")
+                fp.write(f"{job} |& tee {logFile}\n")
                 fp.write("echo 'Completed {0:s}'\n".format(job))
+                i += 1
                 continue
             # First, create the dependency string.
             if baseJobId is not None:

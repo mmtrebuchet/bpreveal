@@ -262,8 +262,10 @@ class DisplayCallback(Callback):
         if len(list(self.printLocationsEpoch.keys())) == 0:
             # We haven't calculated any print locations yet.
             self._calcPositions(logs)
-        if (time.perf_counter() - self.lastBatchEndTime > 0.1)\
+        if (time.perf_counter() - self.lastBatchEndTime > 1)\
                 or batch in [self.numBatches - 1, 0]:
+            # Only print once per second, or if we're on the first
+            # or last batch.
             self.lastBatchEndTime = time.perf_counter()
 
             logs = {k: logs[k] for k in logs.keys()}

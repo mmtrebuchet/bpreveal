@@ -1,22 +1,22 @@
-"""Provides a set of classes and functions to perform CWM-scanning.
+"""Provides a set of classes and functions to perform CWM-scanning."""
 
-In brief, a summary of these classes and functions are below:
+# In brief, a summary of these classes and functions are below:
 
-def arrayQuantileMap: maps quantiles of a value from a standard distribution
-def slidingDotproduct: scanning mechanism for scoring hits
-def ppmToPwm: converts PPM to PWM (log2)
-def ppmToPssm: converts PPM to PSSM (log)
-def cwmTrimPoints: determines TF-MoDISco trimmed pattern boundaries
-class Pattern: holds TF-MoDISco pattern metadata and associated functions
-def seqletCutoffs: defines quantile thresholds from seqlets of a pattern
-def makePatternObjects: create a consolidated set of desired patterns to scan
-class MiniPattern: compressed reimplementation of class Pattern
-class Hit: holds mapped coordinate and quality information of each hit
-class PatternScanner: constructs scanner
-def scannerThread: thread involved with scanning a contribution window
-def writerThread: thread involved with writing hits
-def scanPatterns: implements other utilities to scan TF-MoDISco patterns
-"""
+# def arrayQuantileMap: maps quantiles of a value from a standard distribution
+# def slidingDotproduct: scanning mechanism for scoring hits
+# def ppmToPwm: converts PPM to PWM (log2)
+# def ppmToPssm: converts PPM to PSSM (log)
+# def cwmTrimPoints: determines TF-MoDISco trimmed pattern boundaries
+# class Pattern: holds TF-MoDISco pattern metadata and associated functions
+# def seqletCutoffs: defines quantile thresholds from seqlets of a pattern
+# def makePatternObjects: create a consolidated set of desired patterns to scan
+# class MiniPattern: compressed reimplementation of class Pattern
+# class Hit: holds mapped coordinate and quality information of each hit
+# class PatternScanner: constructs scanner
+# def scannerThread: thread involved with scanning a contribution window
+# def writerThread: thread involved with writing hits
+# def scanPatterns: implements other utilities to scan TF-MoDISco patterns
+
 import csv
 import multiprocessing
 import queue

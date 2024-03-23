@@ -326,7 +326,8 @@ def removeOverlaps(config: dict, regions: pybedtools.BedTool | list,
             if i == selectedIdx:
                 ret.append(elem)
             else:
-                logUtils.debug(f"        Rejected region {elem.strip()} because it overlaps.")
+                printStr = str(elem).strip()
+                logUtils.debug(f"        Rejected region {printStr} because it overlaps.")
                 rejects.append(elem)
     return (pybedtools.BedTool(ret), pybedtools.BedTool(rejects))
 

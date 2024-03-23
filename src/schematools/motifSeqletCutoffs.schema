@@ -47,7 +47,10 @@
                 "pattern-name": {"type": "string"},
                 "pattern-names": {"type": "array", "items": {"type": "string"}},
                 "short-name": {"type": "string"},
-                "short-names": {"type": "array", "items": {"type": "string"}}
+                "short-names": {"type": "array", "items": {"type": "string"}},
+                "seq-match-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
+                "contrib-match-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"},
+                "contrib-magnitude-quantile": {"$ref": "/schema/base#/definitions/fraction-or-null"}
             },
             "required": ["metacluster-name"],
             "oneOf":[

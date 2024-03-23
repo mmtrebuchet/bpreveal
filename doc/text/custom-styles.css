@@ -9,26 +9,32 @@ html[data-theme="dark"] .rst-content code.literal:not(code.xref) {
 p {
     font-family:"Libertinus Serif",serif;
     font-feature-settings: "zero" on;
+    font-variant-ligatures: discretionary-ligatures;
 }
 h1 {
     font-family:"Libertinus Serif",serif;
     font-feature-settings: "zero" on;
+    font-variant-ligatures: discretionary-ligatures;
 }
 h2 {
     font-family:"Libertinus Serif",serif;
     font-feature-settings: "zero" on;
+    font-variant-ligatures: discretionary-ligatures;
 }
 h3 {
     font-family:"Libertinus Serif",serif;
     font-feature-settings: "zero" on;
+    font-variant-ligatures: discretionary-ligatures;
 }
 h4 {
     font-family:"Libertinus Serif",serif;
     font-feature-settings: "zero" on;
+    font-variant-ligatures: discretionary-ligatures;
 }
 body {
     font-family:"Libertinus Serif",serif;
     font-feature-settings: "zero" on;
+    font-variant-ligatures: discretionary-ligatures;
 }
 a:visited .pre {
     color: #9B59B6;

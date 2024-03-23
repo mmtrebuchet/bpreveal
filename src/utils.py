@@ -12,6 +12,8 @@ import pyBigWig
 import pysam
 import numpy as np
 from bpreveal import logUtils
+# Public import so that old code that expects these functions to be here can still
+# find them.
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
     QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
