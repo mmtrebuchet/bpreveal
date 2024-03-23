@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.1.3, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 4.1.3, 2024-03-24
+''''''''''''''''''''''''''
 
 NEW FEATURES:
     * You can now specify different quantile cutoffs for different patterns with the
