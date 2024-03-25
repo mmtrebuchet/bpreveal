@@ -150,12 +150,12 @@ API
 """
 import json
 import h5py
+import pybedtools
+import pysam
 from bpreveal import interpretUtils
 from bpreveal import logUtils
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal.internal import predictUtils
-import pybedtools
-import pysam
 
 
 def main(config: dict):

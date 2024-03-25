@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""A simple tool to generate a bed file that tiles a genome."""
 import argparse
 import pybedtools
 import pysam
@@ -7,6 +8,7 @@ from bpreveal import bedUtils
 
 
 def getParser():
+    """Generate the parser."""
     ap = argparse.ArgumentParser(
         description="Little tool to generate regions that tile the genome, "
                     "excluding a set of regions that you specify.")
@@ -14,31 +16,32 @@ def getParser():
     ap.add_argument("--allow-chrom",
         help="A chromosome to allow in your tiled set. "
              "May be given multiple times.",
-        action='append',
-        dest='allowChrom')
+        action="append",
+        dest="allowChrom")
     ap.add_argument("--all-chroms", help="Instead of listing the chromosomes "
                     "to use, use all of the chromosomes in the genome. "
                     "Cannot be used with --allow-chrom.",
-                    action='store_true', dest='allChroms')
+                    action="store_true", dest="allChroms")
     ap.add_argument("--output-length", help="The width of the output regions.",
-                    type=int, dest='outputLength')
+                    type=int, dest="outputLength")
     ap.add_argument("--input-length", help="The width of the model input.",
-                    type=int, dest='inputLength')
+                    type=int, dest="inputLength")
 
     ap.add_argument("--chrom-edge-boundary",
         help="How far from the chromosome edges should the tiled regions start?",
         type=int,
-        dest='chromEdgeBoundary')
+        dest="chromEdgeBoundary")
     ap.add_argument("--spacing", help="The space between regions.", type=int)
-    ap.add_argument("--output-bed", help="The bed file that will be written.", dest='outputBed')
+    ap.add_argument("--output-bed", help="The bed file that will be written.", dest="outputBed")
     ap.add_argument("--blacklist",
         help="A bed file of regions to exclude. May be given multiple times.",
-        action='append')
-    ap.add_argument("--verbose", help="Display progress messages", action='store_true')
+        action="append")
+    ap.add_argument("--verbose", help="Display progress messages", action="store_true")
     return ap
 
 
 def main():
+    """Actually run the tiling step."""
     args = getParser().parse_args()
     if args.verbose:
         logUtils.setVerbosity("DEBUG")

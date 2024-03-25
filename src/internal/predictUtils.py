@@ -28,18 +28,18 @@ class FastaReader:
         # First, scan over the file and count how many sequences are in it.
         logUtils.info("Counting number of samples.")
         with open(fastaFname, "r") as fp:
-            for line in wrapTqdm(fp):
-                line = line.strip()  # Get rid of newlines.
+            for inLine in wrapTqdm(fp):
+                line = inLine.strip()  # Get rid of newlines.
                 if len(line) == 0:
                     continue  # There is a blank line. Ignore it.
                 if line[0] == ">":
                     self.numPredictions += 1
             fp.close()
         self._idx = -1  # We're about to pop to get index zero.
-        logUtils.info("Found {0:d} entries in input fasta".format(self.numPredictions))
+        logUtils.info(f"Found {self.numPredictions} entries in input fasta")
         # Note that we close the file after that with block, so this re-opens it
         # at position zero.
-        self._fp = open(fastaFname, "r")
+        self._fp = open(fastaFname, "r")  # pylint: disable=consider-using-with
         # We know a fasta starts with >, so read in the first label.
         self._nextLabel = self._fp.readline().strip()[1:]
         self.pop()  # Read in the first sequence.
@@ -94,7 +94,7 @@ class BedReader:
         logUtils.debug("Counting number of samples.")
         self._bt = list(pybedtools.BedTool(bedFname))
         self.numPredictions = len(self._bt)
-        logUtils.info("Found {0:d} entries in input bed file".format(self.numPredictions))
+        logUtils.info(f"Found {self.numPredictions} entries in input bed file")
         self._idx = 0
         self.genome = pysam.FastaFile(genomeFname)
         self.padding = padding
@@ -144,7 +144,7 @@ class H5Writer:
         # We don't know the output length yet, since the model hasn't run any batches.
         # We'll construct the datasets on the fly once we get our first output.
 
-    def buildDatasets(self, sampleOutputs):
+    def buildDatasets(self, sampleOutputs: list):
         """Actually construct the output hdf5 file.
 
         You must give this function the first prediction from the model so that
@@ -164,7 +164,7 @@ class H5Writer:
         # This optimization means that the program is now GPU-limited and not
         # h5py-limited, which is how things should be.
         for headID in range(self.numHeads):
-            headGroup = self._fp.create_group("head_{0:d}".format(headID))
+            headGroup = self._fp.create_group(f"head_{headID}")
             # These are the storage buffers for incoming data.
             headBuffer = [np.empty((self.writeChunkSize, ), dtype=LOGCOUNT_T),  # counts
                           np.empty((self.writeChunkSize, ) + sampleOutputs[headID].shape,
@@ -180,7 +180,7 @@ class H5Writer:
                                             + sampleOutputs[headID].shape)  # noqa
         logUtils.debug("Initialized datasets.")
 
-    def addEntry(self, batcherOut):
+    def addEntry(self, batcherOut: list):
         """Add a single output from the Batcher."""
         # Give this exactly the output from the batcher, and it will queue the data
         # to be written to the hdf5 on the next commit.
@@ -208,7 +208,7 @@ class H5Writer:
         start = self.writeHead
         stop = start + self.batchWriteHead
         for headID in range(self.numHeads):
-            headGroup = self._fp["head_{0:d}".format(headID)]
+            headGroup = self._fp[f"head_{headID}"]
             headBuffer = self.headBuffers[headID]
             headGroup["logits"][start:stop] = headBuffer[1][:self.batchWriteHead]
             headGroup["logcounts"][start:stop] = headBuffer[0][:self.batchWriteHead]
@@ -271,7 +271,8 @@ def addGenomeInfo(outFile: h5py.File, genome: pysam.FastaFile) -> \
     return chromDtype, chromPosDtype, chromNameToIndex
 
 
-def addCoordsInfo(regions, outFile, genome, stopName="coords_stop"):
+def addCoordsInfo(regions: pybedtools.BedTool, outFile: h5py.File,
+                  genome: pysam.FastaFile, stopName: str = "coords_stop"):
     """Initialize an hdf5 with coordinate information.
 
     Creates the chrom_names, chrom_sizes, coords_chrom, coords_start,

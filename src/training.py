@@ -1,12 +1,12 @@
 """A simple set of functions that train with a curses display."""
 import json
 import h5py
+import tensorflow as tf
+import keras
 from bpreveal.callbacks import getCallbacks
 from bpreveal import logUtils
 from bpreveal import generators
 from bpreveal import losses
-import tensorflow as tf
-import keras
 
 
 def buildLosses(heads: dict) -> tuple[list, list]:

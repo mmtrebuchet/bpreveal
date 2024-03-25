@@ -23,8 +23,8 @@ with open(sys.argv[1], "w") as fp:
                  "schema/" + schemaFname + "'\n")
     fp.write("_schemaStore = {")
     for schemaFname in sys.argv[2:]:
-        fp.write("_{0:s}Schema['$id']: _{0:s}Schema,".format(schemaFname))
-    fp.write('}\n')
+        fp.write(f"_{schemaFname}Schema['$id']: _{schemaFname}Schema,")
+    fp.write("}\n")
     fp.write("_storeList = [(x, DRAFT7.create_resource(_schemaStore[x])) "
              "for x in _schemaStore.keys()]\n")
     fp.write("_registry = Registry().with_resources(_storeList)\n")
@@ -34,18 +34,17 @@ with open(sys.argv[1], "w") as fp:
     fp.write("\n\n")
     for schemaFname in sys.argv[2:]:
         fp.write(
-            "{0:s}: Draft7Validator = Draft7Validator(_{0:s}Schema, registry=_registry)\n".
-            format(schemaFname))
+            f"{schemaFname}: Draft7Validator = "
+            f"Draft7Validator(_{schemaFname}Schema, registry=_registry)\n")
         docName = schemaFname
-        if schemaFname in ["addNoise"]:
+        if schemaFname in {"addNoise"}:
             docName = "tools." + docName
-        fp.write('"""Validator for :py:mod:`{0:s}<bpreveal.{1:s}>`"""\n'.
-                 format(schemaFname, docName))
+        fp.write(f'"""Validator for :py:mod:`{schemaFname}<bpreveal.{docName}>`"""\n')
     fp.write("schemaMap = {")
     for schemaFname in sys.argv[2:]:
-        fp.write('"{0:s}": {0:s},'.format(schemaFname))
-    fp.write('}\n')
+        fp.write('"{schemaFname}": {schemaFname},')
+    fp.write("}\n")
     fp.write('"""A mapping from a string naming a BPReveal program to '
-        'the corresponding schema.\n\n'
+        "the corresponding schema.\n\n"
         'Usage::\n\n    schemaMap["prepareBed"](configJson)\n"""\n')
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

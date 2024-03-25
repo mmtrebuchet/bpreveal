@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Make sure that all of the schemas are correct by testing them on known good and bad inputs."""
-import jsonschema
 import json
-import bpreveal.schema as schemas
 import os
-
 import argparse
+import jsonschema
+import bpreveal.schema as schemas
+
 p = argparse.ArgumentParser(description="Check the test cases for schemas.")
 p.add_argument("--show-correct", help="Show a note when a test is successful.",
-               action='store_true', dest='showCorrect')
+               action="store_true", dest="showCorrect")
 args = p.parse_args()
 
 
@@ -27,22 +27,20 @@ def runTest(schema, jsonFname, good):
         schemas.schemaMap[schema].validate(dats)
         if good:
             if args.showCorrect:
-                print("    \u2713 Good, pass {0:s}, {1:s}".format(jsonFname, schema))
+                print(f"    \u2713 Good, pass {jsonFname}, {schema}")
         else:
-            print("\u2612 Bad, pass {0:s}, {1:s}".format(jsonFname, schema))
-
+            print(f"\u2612 Bad, pass {jsonFname}, {schema}")
     except jsonschema.ValidationError:
         if good:
-            print("\u2717 Good, fail {0:s}, {1:s}".format(jsonFname, schema))
-        else:
-            if args.showCorrect:
-                print("    \u2611 Bad, fail {0:s}, {1:s}".format(jsonFname, schema))
-    for otherSchema in schemas.schemaMap.keys():
-        if otherSchema == schema:
+            print(f"\u2717 Good, fail {jsonFname}, {schema}")
+        elif args.showCorrect:
+            print(f"    \u2611 Bad, fail {jsonFname}, {schema}")
+    for otherSchemaName, otherSchema in schemas.schemaMap.items():
+        if otherSchemaName == schema:
             continue
         try:
-            schemas.schemaMap[otherSchema].validate(dats)
-            print("\u29B8 {0:s}, {1:s}".format(jsonFname, otherSchema))
+            otherSchema.validate(dats)
+            print(f"\u29B8 {jsonFname}, {otherSchemaName}")
         except jsonschema.ValidationError:
             pass
 
@@ -55,6 +53,6 @@ print("\u2717 = good json, failed schema.")
 print("\u29B8 = passed wrong schema.")
 
 for f in os.listdir("testcases"):
-    s, goodBad, _ = f.split('_')
+    s, goodBad, _ = f.split("_")
     runTest(s, f, goodBad == "good")
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

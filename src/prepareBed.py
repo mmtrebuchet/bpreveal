@@ -124,9 +124,9 @@ import random
 import re
 import jsonschema
 import pysam
-from bpreveal import logUtils
 import numpy as np
 import pybedtools
+from bpreveal import logUtils
 from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter
 random.seed(735014)
 

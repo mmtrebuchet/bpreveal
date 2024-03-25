@@ -6,13 +6,13 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 import random
 from typing import TypeAlias, Literal
 from collections.abc import Callable
+import numpy as np
+import matplotlib.axes
 import matplotlib.colors
 import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 from bpreveal.internal.constants import LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
-import numpy as np
-import matplotlib.axes
 
 # Types
 CorruptorLetter: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \

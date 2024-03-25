@@ -55,7 +55,7 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
     while len(innerTickPoses) and innerTickPoses[-1] > end - tickWidth / 2:
         innerTickPoses = innerTickPoses[:-1]
     tickPoses = [float(x) for x in [start] + list(innerTickPoses) + [end]]
-    tickLabelStrs = ['{0:,}'.format(int(x)) for x in tickPoses]
+    tickLabelStrs = ["{0:,}".format(int(x)) for x in tickPoses]
     if zeroOrigin:
         tickPoses = [x - start for x in tickPoses]
     tickLabels = massageTickLabels(tickLabelStrs)
@@ -68,7 +68,7 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
 def massageTickLabels(labelList):
     allThousands = True
     for lbl in labelList[1:-1]:
-        if lbl[-4:] != ',000':
+        if lbl[-4:] != ",000":
             allThousands = False
     labelsThousands = []
     if allThousands:
@@ -86,19 +86,19 @@ def massageTickLabels(labelList):
         apostrophePos = 0
         for lpos in range(min(len(curLabel), len(prevLabel))):
             if curLabel[lpos] == prevLabel[lpos]:
-                if curLabel[lpos] == ',':
+                if curLabel[lpos] == ",":
                     apostrophePos = lpos
             else:
                 break
         if apostrophePos > 1:
-            curLabel = "´" + ''.join(curLabel[apostrophePos + 1:])
+            curLabel = "´" + "".join(curLabel[apostrophePos + 1:])
         else:
-            curLabel = ''.join(curLabel)
+            curLabel = "".join(curLabel)
         labelsThousands[pos] = curLabel
     return labelsThousands
 
 
-def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq',
+def plotLogo(values: PRED_AR_T, width: float, ax, colors="seq",
              spaceBetweenLetters: float = 0) -> None:
     """A convenience function to plot an array of sequence data (like a pwm)
     on a matplotlib axes object.
@@ -139,7 +139,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq',
         height = top - bottom
         width = right - left
         bbox = Bbox.from_bounds(left, bottom, width, height)
-        fontProperties = FontProperties(family='sans', weight='bold')
+        fontProperties = FontProperties(family="sans", weight="bold")
         tmpPath = TextPath((0, 0), text, size=1, prop=fontProperties)
         if flip:
             flipTransformation = Affine2D().scale(sx=1, sy=-1)
@@ -161,7 +161,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq',
                 # Colors is an array. Just index it.
                 getBase = {"A": 0, "C": 1, "G": 2, "T": 3}
                 return colors[pos, getBase[base]]
-            case 'seq':
+            case "seq":
                 rgb = _seqCmap[base]
             case (name, vmin, vmax):
                 cmap = mcolor.Colormap(name)
@@ -208,7 +208,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax, colors='seq',
 
 
 def loadPisa(fname, offset, buffer):
-    with h5py.File(fname, 'r') as fp:
+    with h5py.File(fname, "r") as fp:
         dats = np.sum(fp["shap"], axis=2)
     skewMat = np.zeros((dats.shape[0], dats.shape[1] + dats.shape[0]))
     for i in range(0, dats.shape[0]):
@@ -420,10 +420,10 @@ def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
     cmap = mplcolors.ListedColormap(newColors)
 
     pisaCax = axPisa.imshow(plotMat, vmin=-colorSpan, vmax=colorSpan, extent=extent,
-                            cmap=cmap, aspect='auto', interpolation='nearest')
-    axPisa.plot([0, cutLengthX], [0, cutLengthX], 'k--', lw=0.5)
+                            cmap=cmap, aspect="auto", interpolation="nearest")
+    axPisa.plot([0, cutLengthX], [0, cutLengthX], "k--", lw=0.5)
     axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
-                      fontfamily='serif', labelpad=-5)
+                      fontfamily="serif", labelpad=-5)
     ticksX, tickLabelsX = getCoordinateTicks(genomeStartX, genomeEndX, 10, True)
 
     ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart + cutStartY,
@@ -441,31 +441,31 @@ def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
         for i in range(len(seq)):
             seqOhe[i, :] *= impScores[i]
         # Draw the letters.
-        plotLogo(seqOhe, len(seq), axSeq, colors='seq')
+        plotLogo(seqOhe, len(seq), axSeq, colors="seq")
         axSeq.set_ylim(np.min(seqOhe), np.max(seqOhe))
     else:
-        axSeq.bar(range(len(impScores)), impScores, linewidth=1, edgecolor='tab:blue')
-        axSeq.plot([0, impScores.shape[0]], [0, 0], 'k--', lw=0.5)
+        axSeq.bar(range(len(impScores)), impScores, linewidth=1, edgecolor="tab:blue")
+        axSeq.plot([0, impScores.shape[0]], [0, 0], "k--", lw=0.5)
 
     axSeq.set_xticks(ticksX, tickLabelsX, fontsize=fontsize)
 
-    axSeq.xaxis.set_tick_params(labelbottom=True, which='major')
+    axSeq.xaxis.set_tick_params(labelbottom=True, which="major")
     axSeq.set_ylabel("Contrib.\nscore", fontsize=fontSizeAxLabel,
-                     fontfamily='serif', rotation=0, loc='bottom', labelpad=40)
-    axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel, fontfamily='serif')
+                     fontfamily="serif", rotation=0, loc="bottom", labelpad=40)
+    axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel, fontfamily="serif")
 
     if seq is None and np.sum(profile) == len(profile):
         # We got neither profile data nor sequence information.
         axSeq.set_axis_off()
-        axPisa.set_ylabel("Input base coordinate", fontsize=fontSizeAxLabel, fontfamily='serif')
+        axPisa.set_ylabel("Input base coordinate", fontsize=fontSizeAxLabel, fontfamily="serif")
         axPisa.set_xticks(ticksX, tickLabelsX, fontsize=fontsize)
     else:
         # First of all, turn off the pisa axis x ticks and labels.
         # (But don't set_xticks([]), because the grid is based on the ticks.)
         axPisa.set_xticks(ticksX)
-        axPisa.tick_params(axis='x', which='major', length=0, labelbottom=False)
+        axPisa.tick_params(axis="x", which="major", length=0, labelbottom=False)
 
-    # axPisa.grid(visible=True, which='major')
+    # axPisa.grid(visible=True, which="major")
 
     # Now it's time to add annotations from the motif scanning step.
     offset = -boxHeight * 1.3
@@ -485,8 +485,8 @@ def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
                      [offset, boxHeight + offset, boxHeight + offset, offset],
                      label=annot[1], color=annot[2])
         axAnnot.text((aleft + aright) / 2, offset + boxHeight / 2, annot[1],
-                     fontstyle='italic', fontsize=fontsize, fontfamily='serif',
-                     ha='center', va='center')
+                     fontstyle="italic", fontsize=fontsize, fontfamily="serif",
+                     ha="center", va="center")
         offset -= boxHeight * 1.5
     axAnnot.set_xlim(genomeStartX, genomeEndX)
     axAnnot.set_ylim(-1, 0)
@@ -494,7 +494,7 @@ def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
 
     # Now, add the profiles.
     if profile is not None:
-        axProfile.fill_betweenx(range(cutLengthY, 0, -1), profile, step='mid')
+        axProfile.fill_betweenx(range(cutLengthY, 0, -1), profile, step="mid")
         axProfile.set_ylim(0, cutLengthY)
         axProfile.set_xlim(0, np.max(profile))
         axProfile.set_yticks([])
@@ -504,16 +504,16 @@ def plotPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: int,
         axProfile.set_xticks(profileXticks, profileXticks, fontsize=fontsize)
         axProfile.set_frame_on(False)
         axProfile.yaxis.set_visible(False)
-        axProfile.set_xlabel("Profile", fontsize=fontSizeAxLabel, fontfamily='serif')
+        axProfile.set_xlabel("Profile", fontsize=fontSizeAxLabel, fontfamily="serif")
     else:
         axProfile.set_axis_off()
 
     cbar = plt.colorbar(mappable=pisaCax, cax=axCbar)
     bottom, top = axCbar.get_ylim()
-    axCbar.set_yticks(cbar.get_ticks(), ['{0:0.1f}'.format(x)
+    axCbar.set_yticks(cbar.get_ticks(), ["{0:0.1f}".format(x)
                       for x in cbar.get_ticks()], fontsize=fontsize)
     axCbar.set_ylim(bottom, top)
-    axCbar.set_xlabel("PISA effect\n(dBr)", fontsize=fontsize, fontfamily='serif')
+    axCbar.set_xlabel("PISA effect\n(dBr)", fontsize=fontsize, fontfamily="serif")
 
     return (axPisa, axSeq, axProfile, nameColors, axCbar)
 
@@ -606,14 +606,14 @@ def plotMiniPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: in
     cmap = mplcolors.ListedColormap(newColors)
 
     pisaCax = axPisa.imshow(plotMat, vmin=-colorSpan, vmax=colorSpan, extent=extent,
-                            cmap=cmap, aspect='auto', interpolation='nearest')
-    axPisa.plot([0, cutLengthX], [0, cutLengthX], 'k--', lw=0.5)
+                            cmap=cmap, aspect="auto", interpolation="nearest")
+    axPisa.plot([0, cutLengthX], [0, cutLengthX], "k--", lw=0.5)
     ticksX, tickLabelsX = getCoordinateTicks(genomeStartX, genomeEndX, 4, True)
 
     ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart + cutStartY,
                       genomeWindowStart + cutStartY + cutLengthY, 4, True)
     ticksY = [x + axStartY for x in ticksY]
-    axPisa.set_yticks(ticksY, tickLabelsY, fontsize=fontsize, fontfamily='serif')
+    axPisa.set_yticks(ticksY, tickLabelsY, fontsize=fontsize, fontfamily="serif")
 
     # Now set up the sequence/importance axis.
     axSeq.set_frame_on(False)
@@ -626,15 +626,15 @@ def plotMiniPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: in
         for i in range(len(seq)):
             seqOhe[i, :] *= impScores[i]
         # Draw the letters.
-        plotLogo(seqOhe, len(seq), axSeq, colors='seq')
+        plotLogo(seqOhe, len(seq), axSeq, colors="seq")
         axSeq.set_ylim(np.min(seqOhe), np.max(seqOhe))
     else:
-        axSeq.bar(range(len(impScores)), impScores, linewidth=1, edgecolor='tab:blue')
-        axSeq.plot([0, impScores.shape[0]], [0, 0], 'k--', lw=0.5)
+        axSeq.bar(range(len(impScores)), impScores, linewidth=1, edgecolor="tab:blue")
+        axSeq.plot([0, impScores.shape[0]], [0, 0], "k--", lw=0.5)
 
-    axSeq.set_xticks(ticksX, tickLabelsX, fontsize=fontsize, fontfamily='serif')
+    axSeq.set_xticks(ticksX, tickLabelsX, fontsize=fontsize, fontfamily="serif")
 
-    axSeq.xaxis.set_tick_params(labelbottom=True, which='major')
+    axSeq.xaxis.set_tick_params(labelbottom=True, which="major")
 
     if seq is None and np.sum(profile) == len(profile):
         # We got neither profile data nor sequence information.
@@ -644,7 +644,7 @@ def plotMiniPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: in
         # First of all, turn off the pisa axis x ticks and labels.
         # (But don't set_xticks([]), because the grid is based on the ticks.)
         axPisa.set_xticks(ticksX)
-        axPisa.tick_params(axis='x', which='major', length=0, labelbottom=False)
+        axPisa.tick_params(axis="x", which="major", length=0, labelbottom=False)
 
     # axPisa.grid(visible=True, which='major')
 
@@ -677,16 +677,16 @@ def plotMiniPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: in
             axLegend.fill([0, 0, 1, 1],
                           [offset, offset + 1, offset + 1, offset],
                           color=color)
-            axLegend.text(0.5, offset + 0.5, name, fontstyle='italic',
-                          fontsize=fontsize, fontfamily='serif',
-                          ha='center', va='center')
+            axLegend.text(0.5, offset + 0.5, name, fontstyle="italic",
+                          fontsize=fontsize, fontfamily="serif",
+                          ha="center", va="center")
             offset += 2
     axLegend.set_xlim(0, 1)
     axLegend.set_ylim(0, max(5, offset - 1))
 
     # Now, add the profiles.
     if profile is not None:
-        axProfile.fill_betweenx(range(cutLengthY, 0, -1), profile, step='mid')
+        axProfile.fill_betweenx(range(cutLengthY, 0, -1), profile, step="mid")
         axProfile.set_ylim(0, cutLengthY)
         axProfile.set_xlim(0, np.max(profile))
         axProfile.set_yticks([])
@@ -699,10 +699,10 @@ def plotMiniPisa(pisaDats: str | IMPORTANCE_AR_T, cutMiddle: int, cutLengthX: in
 
     cbar = plt.colorbar(mappable=pisaCax, cax=axCbar)
     bottom, top = axCbar.get_ylim()
-    axCbar.set_yticks(cbar.get_ticks(), ['{0:0.1f}'.format(x)
-                      for x in cbar.get_ticks()], fontsize=fontsize, fontfamily='serif')
+    axCbar.set_yticks(cbar.get_ticks(), ["{0:0.1f}".format(x)
+                      for x in cbar.get_ticks()], fontsize=fontsize, fontfamily="serif")
     axCbar.set_ylim(bottom, top)
-    axCbar.set_xlabel("PISA\neffect\n(dBr)", fontsize=fontsize, fontfamily='serif')
+    axCbar.set_xlabel("PISA\neffect\n(dBr)", fontsize=fontsize, fontfamily="serif")
 
     return (axPisa, axSeq, axProfile, nameColors, axCbar)
 
@@ -721,7 +721,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern, fig, sortKey=None):
     for outIdx, seqletIdx in enumerate(sortOrder):
         for charIdx, char in enumerate(pattern.seqlets[seqletIdx].sequence):
             hmapAr[outIdx, charIdx, :] = _seqCmap[char]
-    axHmap.imshow(hmapAr, aspect='auto', interpolation='nearest')
+    axHmap.imshow(hmapAr, aspect="auto", interpolation="nearest")
     axHmap.set_xticks([])
     axLogo = fig.add_axes([0.1, 0.1, 0.2 - PAD, HIST_HEIGHT])
     cwm = pattern.cwm
@@ -746,18 +746,18 @@ def plotModiscoPattern(pattern: motifUtils.Pattern, fig, sortKey=None):
                                   0.2 - PAD, 0.8 - HIST_HEIGHT])
         statSort = stat[sortOrder]
         colorFix = [c / 255.0 for c in cmapIbm[0]]
-        axCurStat.plot(statSort, yvals, '.', color=colorFix, alpha=0.5)
+        axCurStat.plot(statSort, yvals, ".", color=colorFix, alpha=0.5)
         statFilt = np.sort(statSort)
         colorFix = [c / 255.0 for c in cmapIbm[2]]
-        axCurStat.plot(statFilt, yvals, '-', color=colorFix)
+        axCurStat.plot(statFilt, yvals, "-", color=colorFix)
         axCurStat.set_ylim(0, len(pattern.seqlets))
         axCurStat.set_yticks([])
-        axCurStat.set_title(name, fontdict={'fontsize': 10})
+        axCurStat.set_title(name, fontdict={"fontsize": 10})
         axCurStat.set_xticks([])
         axCurStat.set_xlim(min(stat), max(stat))
         tickPoses = np.linspace(0, len(pattern.seqlets), 11, endpoint=True)
         tickLabels = np.arange(0, 110, 10)[::-1]
-        axCurStat.tick_params(axis='y', labelleft=False, labelright=rightTicks,
+        axCurStat.tick_params(axis="y", labelleft=False, labelright=rightTicks,
                             left=False, right=rightTicks)
         axCurStat.set_yticks(tickPoses, tickLabels)
         axCurStat.grid()
