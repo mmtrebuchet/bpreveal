@@ -11,6 +11,20 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
+BPReveal 4.1.4, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+ENHANCEMENTS:
+    * :py:mod:`bestMotifsOnly<bpreveal.tools.bestMotifsOnly>` now lets you keep
+      differently-named motifs that map to one locus.
+BUG FIXES:
+    * Fixed a CSS bug that made weird ligatures appear on the readthedocs page.
+      (Patrick Moeller)
+
+CONTRIBUTORS:
+    Patrick Moeller, Charles McAnany
+
+
 BPReveal 4.1.3, 2024-03-24
 ''''''''''''''''''''''''''
 

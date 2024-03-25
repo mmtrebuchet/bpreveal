@@ -11,6 +11,7 @@ from bpreveal.motifAddQuantiles import readTsv, writeTsv
 
 
 def getParser() -> argparse.ArgumentParser:
+    """Generates the parser, but does not call parse_args()."""
     p = argparse.ArgumentParser(
         description="Read in a tsv file from the motif scanner and limit each position to "
                     "only have one motif.")
@@ -31,13 +32,29 @@ def getParser() -> argparse.ArgumentParser:
         help="(Optional) The name of the output file, in tsv format. "
              "Cannot be used with --in-bed.",
         dest="outTsv")
+    p.add_argument("--match-names",
+        help="If provided, then only compare motifs with the same name. "
+             "Overlapping motifs will only be removed if there is a better "
+             "instance of a motif with the same name at that locus.",
+        dest="matchNames",
+        action="store_true")
     p.add_argument("--verbose",
         help="Show progress.",
         action="store_true")
     return p
 
 
-def removeOverlaps(entries, colName):
+def removeOverlaps(entries: list[dict], colName: str, nameCol: str | None) -> list[dict]:
+    """Scan over the (sorted) motif hits and keep the best ones.
+
+    :param entries: A list of motif tsv (or bed) entries. This is a dict keyed
+        by column name.
+    :param colName: The name of the column used to make comparisons, like ``score``.
+    :param nameCol: The name of the column used to check to see if motifs have the
+        same name, for example ``short_name``. If ``None``, then don't compare
+        motifs by name, and only return the single best hit at each locus.
+    :return: A list of entries, of the same type as the input entries.
+    """
     outEntries = []
     for i, e in logUtils.wrapTqdm(enumerate(entries), total=len(entries)):
         scanStart = i
@@ -54,6 +71,10 @@ def removeOverlaps(entries, colName):
         for j in range(scanStart, scanEnd + 1):
             if i != j:
                 other = entries[j]
+                if nameCol is not None:
+                    # Only compare to records with the same name.
+                    if other[nameCol] != e[nameCol]:
+                        continue
                 if e[colName] < other[colName]:
                     recordEntry = False
                     break
@@ -65,9 +86,12 @@ def removeOverlaps(entries, colName):
 def main():
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)
+    nameCol = None
     if args.inTsv is not None:
         inFname = args.inTsv
         colNames, entries, _ = readTsv(inFname)
+        if args.matchNames:
+            nameCol = "short_name"
     elif args.inBed is not None:
         inFname = args.inBed
         colNames = ["chrom", "start", "end", "name", "score", "strand"]
@@ -80,12 +104,15 @@ def main():
                 for i, elem in enumerate(lsp):
                     curEntry[colNames[i]] = convFns[i](elem)
                 entries.append(curEntry)
+        if args.matchNames:
+            nameCol = "name"
 
     def sortKey(e):
         return (e["chrom"], e["start"])
     logUtils.info("Loaded input file")
     sortEntries = sorted(entries, key=sortKey)
-    outs = removeOverlaps(sortEntries, args.column)
+
+    outs = removeOverlaps(sortEntries, args.column, nameCol)
     if args.outTsv is not None:
         writeTsv(outs, colNames, args.outTsv)
     if args.outBed is not None:

@@ -10,7 +10,7 @@ import keras
 
 
 def buildLosses(heads: dict) -> tuple[list, list]:
-    """Given the output head specification (from the configuration JSON), build losses.
+    r"""Given the output head specification (from the configuration JSON), build losses.
 
     :param heads: The heads section from a configuration file.
     :return: A tuple. The first element contains the losses, and the second contains the
@@ -18,9 +18,9 @@ def buildLosses(heads: dict) -> tuple[list, list]:
 
     This method injects the λ parameter used for the adaptive loss algorithm into the
     heads data structure. After this function is done, each head in heads will contain
-    a member called INTERNAL_λ-variable. This in actual TensorFlow variable, and it is
-    hooked in to the counts loss so that the adaptive loss callback (which also gets
-    a copy of ``heads``) can adjust it during training.
+    a member called :math:`\tt INTERNAL\_\lambda{}\text{-}variable`. This in actual TensorFlow
+    variable, and it is hooked in to the counts loss so that the adaptive loss callback
+    (which also gets a copy of ``heads``) can adjust it during training.
 
     Returns a 2-tuple, structured so:
 
