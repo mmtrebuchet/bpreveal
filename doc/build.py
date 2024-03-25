@@ -33,13 +33,13 @@ filesMinor = ["checkJson.py", "lengthCalc.py", "makeLossPlots.py", "metrics.py",
 # Libraries that can't be executed on their own
 filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
             "interpretUtils.py", "jaccard.py", "layers.py", "logUtils.py",
-            "losses.py", "models.py", "motifUtils.py", "schema.py",
+            "losses.py", "models.py", "motifUtils.py", "schema.py", "training.py",
             "ushuffle.py", "utils.py"]
 
 filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "predictUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
-                   "tileGenome.py"]
+                   "tileGenome.py", "bestMotifsOnly.py"]
 
 filesToolsMajor = ["addNoise.py"]
 
@@ -49,6 +49,7 @@ nameModifiers = {
     "tools.": filesToolsApi + filesToolsMajor + filesToolsMinor,
     "internal.": filesInternalApi
 }
+
 
 def formatModuleName(fileName):
     moduleBase = fileName
