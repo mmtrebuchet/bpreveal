@@ -13,15 +13,18 @@ python >= 3.11
     This project uses features that were introduced in Python 3.11 heavily, so
     earlier Python versions will not work.
 tfmodisco-lite
-    Used to identify motifs.
+    Used to identify motifs. (You may need to install cmake to build the wheel for
+    modiscolite.)
 pyBigWig
     Used to read in data files.
 pysam
     used to read in fasta files.
 pyBedTools
-    Used to read in region files.
-tensorflow
-    Does the heavy work of machine learning.
+    Used to read in region files. You will also need to make sure you have
+    BedTools installed to use pyBedTools.
+tensorflow < 2.16
+    Does the heavy work of machine learning. Tensorflow 2.16 added a bunch of crummy
+    backwards-incompatible behavior and it will be supported with BPReveal 5.0.
 tensorflow-probability
     Used to create the multinomial loss function.
 matplotlib
@@ -39,8 +42,6 @@ gcc, gfortran
 
 While not strictly necessary, the following packages are very useful:
 
-snakemake
-    For automatic processing workflows
 jupyterlab
     For interactive data wrangling.
 pandoc

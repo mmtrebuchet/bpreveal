@@ -75,7 +75,7 @@ python3 --version | grep -q "${PYTHON_VERSION}"
 check
 # Tensorflow expressly advises against installing with conda.
 
-${PIP_BIN} install 'tensorflow[and-cuda]'
+${PIP_BIN} install 'tensorflow[and-cuda]<2.16'
 check
 ${PIP_BIN} install tensorflow-probability
 check

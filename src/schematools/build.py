@@ -42,7 +42,7 @@ with open(sys.argv[1], "w") as fp:
         fp.write(f'"""Validator for :py:mod:`{schemaFname}<bpreveal.{docName}>`"""\n')
     fp.write("schemaMap = {")
     for schemaFname in sys.argv[2:]:
-        fp.write('"{schemaFname}": {schemaFname},')
+        fp.write(f'"{schemaFname}": {schemaFname},')
     fp.write("}\n")
     fp.write('"""A mapping from a string naming a BPReveal program to '
         "the corresponding schema.\n\n"
