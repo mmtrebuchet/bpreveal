@@ -65,10 +65,10 @@ BPReveal 4.1.3
 
 BPReveal 4.1.1
 ^^^^^^^^^^^^^^
-1. The name of the counts head in a transformation model that uses bias counts changed from
-   ``combined_log_counts`` to ``combined_logcounts``, which might possibly break some very
-   obscure use case. This change was necessary to fix a couple bugs with
-   :doc:`adaptive counts loss<countsLossReweighting>` and
+1. The name of the counts head in a transformation model that uses bias counts
+   changed from ``combined_log_counts`` to ``combined_logcounts``, which might
+   possibly break some very obscure use case. This change was necessary to fix
+   a couple bugs with :doc:`adaptive counts loss<countsLossReweighting>` and
    :py:mod:`showTrainingProgress<bpreveal.showTrainingProgress>`.
 
 2. To allow the prediction script to work with very large bed files, some refactoring was
