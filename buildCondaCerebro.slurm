@@ -88,7 +88,7 @@ check
 
 ${PIP_BIN} install 'tensorflow[and-cuda]<2.16'
 check
-${PIP_BIN} install tensorflow-probability
+${PIP_BIN} install 'tensorflow-probability<0.24'
 check
 checkPackage tensorflow
 checkPackage tensorflow_probability
