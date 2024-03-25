@@ -51,6 +51,9 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 5. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
    introduced in 4.1.2, will switch from being ``false`` by default to being ``true``
    by default. This fixes an off-by-one bug in how receptive field was calculated.
+6. The tensorflow version will bump from 2.15 to whatever is available. This will
+   introduce multiple breaking changes, including requiring models to have a ``.keras``
+   extension.
 
 BPReveal 4.x
 ------------
