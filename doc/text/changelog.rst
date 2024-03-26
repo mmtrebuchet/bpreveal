@@ -17,9 +17,14 @@ BPReveal 4.1.4, DATEDATEDATE
 ENHANCEMENTS:
     * :py:mod:`bestMotifsOnly<bpreveal.tools.bestMotifsOnly>` now lets you keep
       differently-named motifs that map to one locus.
+    * Updated the shap code to use the latest from upstream. This is in preparation
+      for eventually making it compatible with TensorFlow 2.16.
 BUG FIXES:
     * Fixed a CSS bug that made weird ligatures appear on the readthedocs page.
       (Patrick Moeller)
+    * Set a specific version for TensorFlow and tensorflow-probability because
+      TF 2.16 is MEGA BUSTED right now. I'll stick with 2.15 until there's a reason
+      to upgrade.
 
 CONTRIBUTORS:
     Patrick Moeller, Charles McAnany
