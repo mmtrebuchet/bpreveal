@@ -1316,7 +1316,7 @@ class _FlatBatcher:
         import bpreveal.internal.disableTensorflowLogging # noqa
         import tensorflow as tf
         tf.compat.v1.disable_eager_execution()
-        from bpreveal import shap
+        import bpreveal.shap as shap
         # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
