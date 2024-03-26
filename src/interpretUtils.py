@@ -1180,7 +1180,7 @@ class _PisaBatcher:
         # pylint: disable=import-outside-toplevel
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         import tensorflow as tf
-        tf.compat.v1.disable_eager_execution()
+        # tf.compat.v1.disable_eager_execution()
         from bpreveal import shap
         # pylint: enable=import-outside-toplevel
         utils.limitMemoryUsage(memFrac, 1024)
@@ -1272,7 +1272,7 @@ class _PisaBatcher:
             oneHotBuf[shuffleInsertHead:shuffleInsertHead + self.numShuffles, :, :] = shuffles
             shuffleInsertHead += self.numShuffles
         # Okay, now the data structures are set up.
-        fullPred = self.model.predict(oneHotBuf)
+        fullPred = self.model.predict(oneHotBuf, verbose=0)
         outBasePreds = fullPred[self.headID][:, 0, self.taskID]
         # (We'll deconvolve that in a minute...)
         shapScores = self.profileExplainer.shap_values([oneHotBuf[:numQueries, :, :]])
@@ -1315,8 +1315,8 @@ class _FlatBatcher:
         # pylint: disable=import-outside-toplevel, unused-import
         import bpreveal.internal.disableTensorflowLogging # noqa
         import tensorflow as tf
-        tf.compat.v1.disable_eager_execution()
-        import bpreveal.shap as shap
+        # tf.compat.v1.disable_eager_execution()
+        from bpreveal import shap
         # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
