@@ -39,7 +39,7 @@ filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
 filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "predictUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
-                   "tileGenome.py", "bestMotifsOnly.py"]
+                   "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py"]
 
 filesToolsMajor = ["addNoise.py"]
 

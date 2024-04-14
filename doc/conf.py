@@ -31,6 +31,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "text", "bnf",
                     "makeHeader"]
 reSubs = [
     ["λ", r":math:`{\\lambda}`"],
+    ["Δ", r":math:`{\\Delta}`"],
     ["½", r":math:`{1/2}`"],
     ["∬", r":math:`{\\iint}`"],
     [r".. literalinclude:: ../../doc/bnf/(.*).bnf",

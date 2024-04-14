@@ -14,17 +14,27 @@ BPReveal 4.1.x
 BPReveal 4.1.4, DATEDATEDATE
 ''''''''''''''''''''''''''''
 
+NEW FEATURES:
+    * Added a new tool, :py:mod:`shiftPisa<bpreveal.tools.shiftPisa>` that can
+      shift PISA data forward and backward. This is very handy for MNase, since
+      you can use it to align the 3' and 5' PISA data around the dyad.
 ENHANCEMENTS:
     * :py:mod:`bestMotifsOnly<bpreveal.tools.bestMotifsOnly>` now lets you keep
       differently-named motifs that map to one locus.
     * Updated the shap code to use the latest from upstream. This is in preparation
       for eventually making it compatible with TensorFlow 2.16.
+    * The :py:mod:`plots<bpreveal.tools.plots>` module is being re-worked and polished
+      and it will eventually be moved to the main BPReveal repository.
 BUG FIXES:
     * Fixed a CSS bug that made weird ligatures appear on the readthedocs page.
       (Patrick Moeller)
     * Set a specific version for TensorFlow and tensorflow-probability because
       TF 2.16 is MEGA BUSTED right now. I'll stick with 2.15 until there's a reason
       to upgrade.
+    * Fixed a lot of little type errors in the documentation that were caught by pyright.
+    * The documentation incorrectly said that there would be attributes called
+      ``head-id`` and ``task-id`` in PISA hdf5 files. This has never been true, and the
+      documentation now makes no mention of these fields.
 
 CONTRIBUTORS:
     Patrick Moeller, Charles McAnany

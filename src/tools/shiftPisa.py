@@ -7,30 +7,30 @@ import h5py
 from bpreveal.internal.constants import IMPORTANCE_T, IMPORTANCE_AR_T, PRED_AR_T
 
 
-def shiftPisa(dats: IMPORTANCE_AR_T, Δ: int):
+def shiftPisa(dats: IMPORTANCE_AR_T, offset: int):
     newDats = np.zeros(dats.shape)
-    if Δ >= 0:
-        newDats[:-Δ, Δ:] = dats[Δ:, :-Δ]
+    if offset >= 0:
+        newDats[:-offset, offset:] = dats[offset:, :-offset]
     else:
-        newDats[-Δ:, :Δ] = dats[:Δ, -Δ:]
+        newDats[-offset:, :offset] = dats[:offset, -offset:]
     return newDats
 
 
-def shiftPredictions(preds: PRED_AR_T, Δ: int):
+def shiftPredictions(preds: PRED_AR_T, offset: int):
     ret = np.zeros(preds.shape)
-    if Δ >= 0:
-        ret[:-Δ] = preds[Δ:]
+    if offset >= 0:
+        ret[:-offset] = preds[offset:]
     else:
-        ret[-Δ:] = preds[:Δ]
+        ret[-offset:] = preds[:offset]
     return ret
 
 
-def getMask(dats: IMPORTANCE_AR_T, Δ: int,
+def getMask(dats: IMPORTANCE_AR_T, offset: int,
             coords: npt.NDArray | None, chroms: npt.NDArray | None) -> npt.NDArray:
     """After the data are shifted, which spaces in the output will still be valid?
 
     :param dats: The pisa data. These are just used to load the shape.
-    :param Δ: The offset being applied
+    :param offset: The offset being applied.
     :param coords: The genomic coordinates of each row in dats.
         If a coordinate discontinuity is detected, then values near that discontinuity
         are masked out.
@@ -38,7 +38,9 @@ def getMask(dats: IMPORTANCE_AR_T, Δ: int,
         If the chromosome changes, then values near that discontinuity are masked out.
     :return: An array of ones and zeroes. Areas that are one are valid to use for more
         and areas with zeros are not valid pisa data after shifting.
+
     """
+    Δ = offset
     mask = np.ones(dats.shape)
     # Zero out the edges.
     if Δ >= 0:

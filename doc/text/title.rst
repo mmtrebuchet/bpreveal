@@ -8,7 +8,7 @@ It also incorporates a new interpretation tool, called :doc:`PISA<_generated/pis
 (Pairwise Interaction Shap Analysis) that lets you view a two-dimensional map of cause
 and effect over a region.
 
-For a summary of the components of BPReveal, see :doc:`<Programs<_generated/programs>`.
+For a summary of the components of BPReveal, see :doc:`Programs<_generated/programs>`.
 
 Authors
 '''''''

@@ -6,6 +6,8 @@ Coding philosophy
 
 *   Make each program do one thing well. To do a new job, build afresh rather
     than complicate old programs by adding new features.
+*   Trust the user. Don't add validity checks except for instances where you
+    are certain that the user is making a mistake that will pass undetected.
 *   Expect the output of every program to become the input to another,
     as yet unknown, program.
 *   Don't insist on interactive input.
