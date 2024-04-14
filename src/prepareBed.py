@@ -289,7 +289,7 @@ def loadRegions(config: dict):
             pybedtools.BedTool(rejectRegions))
 
 
-def removeOverlaps(config: dict, regions: pybedtools.BedTool | list,
+def removeOverlaps(config: dict, regions: pybedtools.BedTool,
                    genome: pysam.FastaFile) -> tuple[pybedtools.BedTool, pybedtools.BedTool]:
     """Remove overlaps among the given regions.
 
@@ -333,7 +333,7 @@ def removeOverlaps(config: dict, regions: pybedtools.BedTool | list,
 
 
 def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
-                      bigwigLists: list[str], validRegions: np.ndarray,
+                      bigwigLists: list[list[str]], validRegions: np.ndarray,
                       numThreads: int) -> pybedtools.BedTool:
     """Filters the regions in bigRegionList based on the max-quantile or max-counts in the config.
 
@@ -386,7 +386,7 @@ def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
 
 def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
                       bigRegionsList: list[pybedtools.Interval],
-                      bigwigLists: list[str], validRegions: np.ndarray,
+                      bigwigLists: list[list[str]], validRegions: np.ndarray,
                       numThreads: int):
     """Filters the regions in smallRegionList based on the min-quantile or min-counts in the config.
 
@@ -433,7 +433,7 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
     pbar.close()
 
 
-def validateRegions(config: dict, regions: pybedtools.BedTool | list[pybedtools.Interval],
+def validateRegions(config: dict, regions: pybedtools.BedTool,
                     genome: pysam.FastaFile, bigwigLists: list[list[str]], numThreads: int):
     """The workhorse of this program.
 
@@ -506,7 +506,8 @@ def validateRegions(config: dict, regions: pybedtools.BedTool | list[pybedtools.
             rejectedRegions.append(r)
     logUtils.info(f"    Total surviving regions: {len(filteredRegions)}")
     if config["remove-overlaps"]:
-        rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions), postmerge=False)
+        rejects = initialRejects.cat(pybedtools.BedTool(rejectedRegions),  # type: ignore
+                                     postmerge=False)
     else:
         rejects = pybedtools.BedTool(rejectedRegions)
     return (pybedtools.BedTool(filteredRegions), rejects)

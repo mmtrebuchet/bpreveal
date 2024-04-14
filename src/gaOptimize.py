@@ -270,7 +270,7 @@ class Organism:
             "Attempting to score organism with no profile."
         self.score = scoreFn(self.profile, self.corruptors)
 
-    def __eq__(self, other: "Organism") -> bool:
+    def __eq__(self, other: "Organism") -> bool:  # type: ignore
         """Return True if this organism has the same corruptors as the other.
 
         :param other: The organism to check against

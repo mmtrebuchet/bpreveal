@@ -57,13 +57,13 @@ def _getCaller(offset=3):
     return None, None
 
 
-def _loggerFindCaller(stackInfo=False, stacklevel=1):
+def _loggerFindCaller(stack_info=False, stacklevel=1):  # pylint: disable=invalid-name
     del stacklevel
     code, frame = _getCaller(4)
     sinfo = None
-    if stackInfo:
+    if stack_info:
         sinfo = "\n".join(_traceback.format_stack())
-    if code:
+    if code and frame:
         return (code.co_filename, frame.f_lineno, code.co_name, sinfo)
     return "(unknown file)", 0, "(unknown function)", sinfo
 
@@ -153,36 +153,36 @@ def getLogger() -> _logging.Logger:
         return _BPREVEAL_LOGGER
 
 
-def log(level: int | str, msg: str, *args, **kwargs):
+def log(level: int | str, msg, *args, **kwargs):
     """Log message at the given level."""
     if isinstance(level, str):
         level = _LEVEL_MAP[level]
     getLogger().log(level, msg, *args, **kwargs)
 
 
-def debug(msg: str, *args, **kwargs):
+def debug(msg, *args, **kwargs):
     """For nitty-gritty details."""
     logger = getLogger()
     logger.debug(msg, *args, **kwargs)
 
 
-def error(msg: str, *args, **kwargs):
+def error(msg, *args, **kwargs):
     """Something went horribly wrong."""
     getLogger().error(msg, *args, **kwargs)
 
 
-def critical(msg: str, *args, **kwargs):
+def critical(msg, *args, **kwargs):
     """The world is ending. This is not used by BPReveal."""
     getLogger().critical(msg, *args, **kwargs)
 
 
-def info(msg: str, *args, **kwargs):
+def info(msg, *args, **kwargs):
     """Normal progress messages."""
     logger = getLogger()
     logger.info(msg, *args, **kwargs)
 
 
-def warning(msg: str, *args, **kwargs):
+def warning(msg, *args, **kwargs):
     """Something the user should pay attention to."""
     getLogger().warning(msg, *args, **kwargs)
 
@@ -237,7 +237,7 @@ def _getFileAndLine():
     code, f = _getCaller()
     if not code:
         return ("<unknown>", 0)
-    return (code.co_filename, f.f_lineno)
+    return (code.co_filename, f.f_lineno)  # type: ignore
 
 
 def getVerbosity() -> int:

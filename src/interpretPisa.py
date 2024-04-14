@@ -76,13 +76,6 @@ Output Specification
 
 It produces an hdf5 format which is organized as follows:
 
-head-id
-    An integer representing which head of the model was
-    used to generate the data.
-
-task-id
-    An integer giving the task number within the specified head.
-
 input_predictions
     A ``(numSamples,)`` array of the logit value
     of the target base when that sequence is run through the network.

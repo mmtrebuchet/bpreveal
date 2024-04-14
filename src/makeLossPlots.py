@@ -44,7 +44,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def reweightCountsLosses(history: dict, lossTypes: list[str]):
+def reweightCountsLosses(history: dict, lossTypes: list[list[str]]):
     """Add corrections for the adaptive counts loss algorithm.
 
     :param history: The loss history, straight from the json.

@@ -458,7 +458,8 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
 # Easy functions
 
 
-def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> PRED_AR_T:
+def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> \
+        list[list[PRED_AR_T]] | list[PRED_AR_T]:
     """Make predictions with your model.
 
     :param sequences: The DNA sequence(s) that you want to predict on.

@@ -4,6 +4,7 @@ import h5py
 import tensorflow as tf
 import keras
 from bpreveal.callbacks import getCallbacks
+from tensorflow.keras.callbacks import History
 from bpreveal import logUtils
 from bpreveal import generators
 from bpreveal import losses
@@ -57,7 +58,7 @@ def buildLosses(heads: dict) -> tuple[list, list]:
 
 
 def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
-                        outputLength: int) -> dict:
+                        outputLength: int) -> History:
     """Load up the generators from your config file and train the model!
 
     :param model: A compiled Keras model.
@@ -96,7 +97,7 @@ def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
 def trainModel(model: keras.Model, trainBatchGen: generators.H5BatchGenerator,
                valBatchGen: generators.H5BatchGenerator, epochs: int,
                earlyStop: int, outputPrefix: str,
-               plateauPatience: int, heads: dict) -> dict:
+               plateauPatience: int, heads: list[dict]) -> History:
     """Constructs callbacks and actually runs the training loop.
 
     :param model: The compiled model to train.

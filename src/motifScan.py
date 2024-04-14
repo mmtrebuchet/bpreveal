@@ -131,6 +131,10 @@ def main(config: dict):
             "specify seqlet-cutoff-settings."
 
         cutoffConfig = config["seqlet-cutoff-settings"]
+        if "modisco-window" not in cutoffConfig:
+            logUtils.warning("Did not find a modisco window size. Reported"
+                             "seqlet positions will be invalid.")
+            cutoffConfig["modisco-window"] = 0
         logUtils.info("Modisco seqlet analysis requested. "
                       f"Starting with {cutoffConfig['modisco-h5']}")
         # First, make the pattern objects.
@@ -147,6 +151,7 @@ def main(config: dict):
             cutoffConfig["trim-threshold"],
             cutoffConfig["trim-padding"],
             cutoffConfig["background-probs"],
+            cutoffConfig["modisco-window"],
             tsvFname
         )
         logUtils.info("Analysis complete.")

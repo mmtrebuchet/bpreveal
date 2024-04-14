@@ -259,7 +259,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
                   numLayers: int, inputFilterWidth: int,
                   outputFilterWidth: int, headList: list[dict],
                   biasModel: keras.models.Model) -> \
-        tuple[keras.models.Model, keras.models.Model]:
+        tuple[keras.models.Model, keras.models.Model, keras.models.Model]:
     """Build a combined model.
 
     This builds a standard BPNet model, but then adds in the bias at the very end::
@@ -297,7 +297,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
         This is the file that is saved when you generate the transformation model,
         and internally comprises both the solo model and a transformation.
 
-    :return: Two Keras models.
+    :return: Three Keras models.
 
         * The first is the combined output, i.e., the COMBINED node in the
           graph above. Input to this model is a (batch x inputLength x 4) tensor
@@ -310,6 +310,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
 
         * The second is the bias-free model, RESIDUAL MODEL in the graph above.
           It has the same input and output shapes as the COMBINED model.
+        * The final model is the solo model, just in case you need it.
 
     It is an error to call this function with an inconsistent network structure,
     such as an input that is too long.

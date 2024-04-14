@@ -4,13 +4,16 @@ from bpreveal.internal import constants
 
 
 def slidingJaccard(importanceScores: constants.IMPORTANCE_AR_T,
-                   cwm: constants.MOTIF_FLOAT_AR_T) -> constants.MOTIF_FLOAT_AR_T:
+                   cwm: constants.MOTIF_FLOAT_AR_T) -> \
+        tuple[constants.MOTIF_FLOAT_AR_T, constants.MOTIF_FLOAT_AR_T]:
     """Calculate the sliding Jaccard similarity.
 
     :param importanceScores: An array of shape (M, 4) giving hypothetical importance
         scores.
     :param cwm: An array of shape (N, 4), giving a motif's CWM.
-    :return: An array of shape (M - N + 1), giving the sliding Jaccard similarities.
+    :return: A tuple of arrays, both with shape (M - N + 1).
+        The first one gives the sliding Jaccard similarities
+        and the second gives the contribution magnitudes.
 
     The returned array is defined by::
         slidingJaccard(A,B)[i] = jaccardRegion(A[i:i+N],B)

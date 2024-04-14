@@ -201,6 +201,7 @@ class Screen:
                 width = self._width - 2 * self._border
             case _:
                 assert False, f"No window for {winName}"
+        assert win is not None, "No window initialized."
         return win, width, title
 
     def printString(self, row: int, col: int, winName: str, text: str,
@@ -240,6 +241,7 @@ class Screen:
 
             if windowName == highlightWin:
                 win.border()
+                assert _COLOR_HIGHLIGHT is not None, "Colors are not supported by this terminal."
                 win.addstr(0, (width - (len(title) + 2)) // 2, " " + title + " ",
                            _COLOR_HIGHLIGHT)
             else:
@@ -254,6 +256,7 @@ class Screen:
                 self.printString(i + 1, 1, "M", msg)
             else:
                 self.printString(i + 1, 1, "M", msg, _COLOR_ALARM)
+        assert self._mesgWin is not None, "No message window to write to."
         self._mesgWin.refresh()
         if not self.joinMessages:
             for i, msg in enumerate(self._debugBuffer[:-1]):

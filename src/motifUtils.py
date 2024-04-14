@@ -26,7 +26,8 @@ import numpy as np
 import numpy.typing as npt
 import scipy.signal
 from bpreveal import utils
-from bpreveal.internal.constants import ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, \
+from bpreveal.internal.constants import IMPORTANCE_AR_T, IMPORTANCE_T, \
+    MOTIF_FLOAT_AR_T, ONEHOT_AR_T, ONEHOT_T, MOTIF_FLOAT_T, \
     QUEUE_TIMEOUT, GENOME_NUCLEOTIDE_FREQUENCY
 from bpreveal.logUtils import wrapTqdm
 from bpreveal import logUtils
@@ -39,7 +40,7 @@ except ModuleNotFoundError:
 
 
 def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
-                     standardSorted: bool = False) -> npt.NDArray[MOTIF_FLOAT_T]:
+                     standardSorted: bool = False) -> MOTIF_FLOAT_AR_T:
     """Get each sample's quantile in standard array.
 
     :param standard: The reference array.
@@ -86,7 +87,7 @@ def arrayQuantileMap(standard: npt.NDArray, samples: npt.NDArray,
     return np.interp(x=samples, xp=standard, fp=standardQuantiles).astype(MOTIF_FLOAT_T)
 
 
-def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
+def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> MOTIF_FLOAT_AR_T:
     """Run the sliding dotproduct algorithm used in the original BPNet.
 
     Simply put, it's just a convolution.
@@ -103,7 +104,7 @@ def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> npt.NDArr
     return scipy.signal.correlate(seqletValues, pssm, mode="valid")[:, 0]
 
 
-def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
+def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> MOTIF_FLOAT_AR_T:
     """Turn a position probability matrix into a position weight matrix.
 
     Given a position probability matrix, which gives the probability of each
@@ -129,7 +130,7 @@ def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTI
     return np.log2((ppm / backgroundProbs) + 1e-30, dtype=MOTIF_FLOAT_T)
 
 
-def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> npt.NDArray[MOTIF_FLOAT_T]:
+def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> MOTIF_FLOAT_AR_T:
     """Turn a position probability matrix into an information content matrix.
 
     Given a position probability matrix, convert that to a pssm array,
@@ -248,7 +249,7 @@ class Seqlet:
     revcomp: bool
     """Is this seqlet reverse-complemented?"""
 
-    sequence: list[str]
+    sequence: str
     """The sequence of this seqlet, as a string"""
 
     # The following arrays are of shape (numSeqlets, seqletLength, 4):
@@ -257,7 +258,7 @@ class Seqlet:
 
     Shape (seqletLength, 4)
     """
-    contribs: npt.NDArray[MOTIF_FLOAT_T]
+    contribs: IMPORTANCE_AR_T
     """The contribution scores for each base.
 
     Shape (seqletLength, 4)
@@ -288,7 +289,7 @@ class Seqlet:
     Populated when you load in coordinates from the contribution hdf5.
     """
     def __init__(self, start: int, end: int, index: int, revcomp: bool,
-                 oneHot: ONEHOT_AR_T, contribs: npt.NDArray[MOTIF_FLOAT_T]):
+                 oneHot: ONEHOT_AR_T, contribs: IMPORTANCE_AR_T):
         self.start = start
         self.end = end
         self.index = index
@@ -297,8 +298,8 @@ class Seqlet:
         self.contribs = contribs
         self.sequence = utils.oneHotDecode(oneHot)
 
-    def calcMatches(self, trimLeft: int, trimRight: int, cwm: npt.NDArray[MOTIF_FLOAT_T],
-                    pssm: npt.NDArray[MOTIF_FLOAT_T]):
+    def calcMatches(self, trimLeft: int, trimRight: int, cwm: MOTIF_FLOAT_AR_T,
+                    pssm: MOTIF_FLOAT_AR_T):
         """See how this seqlet measures up against its pattern.
 
         :param trimLeft: How many bases should be trimmed from the left of the seqlet
@@ -327,19 +328,20 @@ class Seqlet:
         contribEnd = contribFp["coords_end"][self.index]
         # This next block checks to make sure that the sequence from
         # the modisco h5 matches the one in the contrib score file.
-        contribFullSeq = np.array(contribFp["input_seqs"][self.index])
-        offset = (contribFullSeq.shape[0] - modiscoWindow) // 2
-        contribSeqStart = offset + min(self.start, self.end)
-        contribSeqEnd = offset + max(self.start, self.end)
-        contribSeq = contribFullSeq[contribSeqStart: contribSeqEnd]
+        # contribFullSeq = np.array(contribFp["input_seqs"][self.index])
+        # offset = (contribFullSeq.shape[0] - modiscoWindow) // 2
+        # contribSeqStart = offset + min(self.start, self.end)
+        # contribSeqEnd = offset + max(self.start, self.end)
+        # contribSeq = contribFullSeq[contribSeqStart: contribSeqEnd]
+        contribSeq = self.oneHot
         if self.revcomp:
             contribSeq = np.flip(contribSeq)
-        if np.sum(np.abs(self.oneHot - (1.0 * contribSeq))) != 0:
-            logUtils.error("Found sequence mismatch. Coordinates are invalid.")
-            logUtils.error(utils.oneHotDecode(self.oneHot))
-            logUtils.error(utils.oneHotDecode(contribSeq))
-            logUtils.error(f"Data for index example_idx {self.index} mismatched.")
-            return
+        # if np.sum(np.abs(self.oneHot - (1.0 * contribSeq))) != 0:
+        #     logUtils.error("Found sequence mismatch. Coordinates are invalid.")
+        #     logUtils.error(utils.oneHotDecode(self.oneHot))
+        #     logUtils.error(utils.oneHotDecode(contribSeq))
+        #     logUtils.error(f"Data for index example_idx {self.index} mismatched.")
+        #     return
         # Okay, the sequences matched. Proceed!
         contribMiddle = (contribStart + contribEnd) // 2
         windowStart = contribMiddle - modiscoWindow // 2
@@ -364,24 +366,24 @@ class Pattern:
     """The name of the pattern (i.e., motif), like "pattern_0" """
     shortName: str
     """The human-readable name of this pattern."""
-    cwm: npt.NDArray[MOTIF_FLOAT_T]
+    cwm: MOTIF_FLOAT_AR_T
     """A (length, 4) array of the contribution weight matrix."""
-    ppm: npt.NDArray[MOTIF_FLOAT_T]
+    ppm: MOTIF_FLOAT_AR_T
     """A (length, 4) array of the probability of each base at each position in the pattern."""
-    pwm: npt.NDArray[MOTIF_FLOAT_T]
+    pwm: MOTIF_FLOAT_AR_T
     """The position weight matrix for this motif, the usual motif representation in logos.
 
     (if you want the trimmed pwm, it's pwm[cwmTrimLeftPoint:cwmTrimRightPoint].)
     """
-    pssm: npt.NDArray[MOTIF_FLOAT_T]
+    pssm: MOTIF_FLOAT_AR_T
     """The information content at each base in the motif."""
     cwmTrimLeftPoint: int
     """When trimming the motif using cwmTrimPoints, where should you start and stop?"""
     cwmTrimRightPoint: int
     """When trimming the motif using cwmTrimPoints, where should you start and stop?"""
-    cwmTrim: npt.NDArray[MOTIF_FLOAT_T]
+    cwmTrim: MOTIF_FLOAT_AR_T
     """For quick reference, I store the trimmed cwm and pssm."""
-    pssmTrim: npt.NDArray[MOTIF_FLOAT_T]
+    pssmTrim: MOTIF_FLOAT_AR_T
     """For quick reference, I store the trimmed cwm and pssm.
 
     (if you want the trimmed pwm, it's pwm[cwmTrimLeftPoint:cwmTrimRightPoint].)
@@ -392,25 +394,25 @@ class Pattern:
     seqlets: list[Seqlet]
     """All of the seqlets that comprise this pattern."""
 
-    quantileSeqMatch: float
+    quantileSeqMatch: float | None
     """The quantile cutoff for sequence similarity. None means the cutoff is not used."""
-    quantileContribMatch: float
+    quantileContribMatch: float | None
     """The quantile cutoff for contribution similarity. None means the cutoff is not used."""
-    quantileContribMagnitude: float
+    quantileContribMagnitude: float | None
     """The quantile cutoff for contribution magnitude. None means the cutoff is not used."""
 
     # When you give the quantile bounds to getCutoffs, these get stored:
-    cutoffSeqMatch: float
+    cutoffSeqMatch: float | None
     """What is the minimal information content (i.e., pssm) match score for a hit?
 
     Stored when you give quantile bounds to getCutoffs
     """
-    cutoffContribMatch: float
+    cutoffContribMatch: float | None
     """What is the minimal Jaccard similarity between a seqlet and the cwm for a hit?
 
     Stored when you give quantile bounds to getCutoffs
     """
-    cutoffContribMagnitude: float
+    cutoffContribMagnitude: float | None
     """What is the minimum total contribution a seqlet must have to be a hit?
 
     Stored when you give quantile bounds to getCutoffs
@@ -427,8 +429,9 @@ class Pattern:
         else:
             self.shortName = shortName
 
-    def setQuantiles(self, quantileSeqMatch: float, quantileContribMatch: float,
-                     quantileContribMagnitude: float) -> None:
+    def setQuantiles(self, quantileSeqMatch: float | None,
+                     quantileContribMatch: float | None,
+                     quantileContribMagnitude: float | None) -> None:
         """Set up the quantile values that will be used to calculate cutoffs.
 
         :param quantileSeqMatch: is a float designating the minimum PSSM match quantile
@@ -447,7 +450,7 @@ class Pattern:
         self.quantileContribMagnitude = quantileContribMagnitude
 
     def loadCwm(self, modiscoFp: h5py.File, trimThreshold: float,
-                padding: int, backgroundProbs: npt.NDArray[MOTIF_FLOAT_T]) -> None:
+                padding: int, backgroundProbs: MOTIF_FLOAT_AR_T) -> None:
         """Given an opened hdf5 file object, load up the contribution scores for this pattern.
 
         :param modiscoFp: is a filepath referencing the modisco.h5 file
@@ -485,8 +488,9 @@ class Pattern:
         self.cwmTrim = self.cwm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
         self.pssmTrim = self.pssm[self.cwmTrimLeftPoint:self.cwmTrimRightPoint]
 
-    def _callJaccard(self, seqlet: npt.NDArray[MOTIF_FLOAT_T],
-                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[MOTIF_FLOAT_T]:
+    def _callJaccard(self, seqlet: IMPORTANCE_AR_T,
+                     cwm: MOTIF_FLOAT_AR_T) ->\
+            tuple[MOTIF_FLOAT_AR_T, MOTIF_FLOAT_AR_T]:
         return jaccard.slidingJaccard(seqlet, cwm)
 
     def loadSeqlets(self, modiscoFp: h5py.File) -> None:
@@ -650,12 +654,48 @@ class Pattern:
                 "contrib-match-cutoff": self.cutoffContribMatch,
                 "contrib-magnitude-cutoff": self.cutoffContribMagnitude}
 
+    @property
+    def seqletSeqMatches(self) -> list[MOTIF_FLOAT_T]:
+        """Returns the contribution match for each seqlet.
+
+        This is only present for backwards compatibility and returns a warning.
+        """
+        logUtils.warning("You are calling seqletSeqMatches on a Pattern object. "
+            "These have been moved into the Seqlet class. "
+            "Instructions for updating: change myPattern.seqletSeqMatches to "
+            "[x.seqMatch for x in pattern.seqlets]")
+        return [x.seqMatch for x in self.seqlets]
+
+    @property
+    def seqletContribMatches(self) -> list[MOTIF_FLOAT_T]:
+        """Returns the contribution match for each seqlet.
+
+        This is only present for backwards compatibility and returns a warning.
+        """
+        logUtils.warning("You are calling seqletContribMatches on a Pattern object. "
+            "These have been moved into the Seqlet class. "
+            "Instructions for updating: change myPattern.seqletContribMatches to "
+            "[x.contribMatch for x in pattern.seqlets]")
+        return [x.contribMatch for x in self.seqlets]
+
+    @property
+    def seqletContribMagnitudes(self) -> list[MOTIF_FLOAT_T]:
+        """Returns the contribution magnitude for each seqlet.
+
+        This is only present for backwards compatibility and returns a warning.
+        """
+        logUtils.warning("You are calling seqletContribMagnitudes on a Pattern object. "
+            "These have been moved into the Seqlet class. "
+            "Instructions for updating: change myPattern.seqletContribMagnitudes to "
+            "[x.contribMagnitude for x in pattern.seqlets]")
+        return [x.contribMagnitude for x in self.seqlets]
+
 
 def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
                   patternSpec: list[dict] | Literal["all"], quantileSeqMatch: float,
                   quantileContribMatch: float, quantileContribMagnitude: float,
                   trimThreshold: float, trimPadding: int,
-                  backgroundProbs: npt.NDArray[MOTIF_FLOAT_T],
+                  backgroundProbs: MOTIF_FLOAT_AR_T,
                   modiscoWindow: int,
                   outputSeqletsFname: str | None = None) -> list[dict]:
     """Given a modisco hdf5 file, go over the seqlets and establish the quantile boundaries.
@@ -717,7 +757,7 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
     directly to the motif scanning Python functions.
     """
     if isinstance(backgroundProbs, str):
-        backgroundProbsVec = GENOME_NUCLEOTIDE_FREQUENCY[backgroundProbs]
+        backgroundProbsVec = np.array(GENOME_NUCLEOTIDE_FREQUENCY[backgroundProbs])
         logUtils.debug(f"Loaded background {backgroundProbsVec} for genome {backgroundProbs}")
     else:
         backgroundProbsVec = np.array(backgroundProbs)
@@ -911,14 +951,15 @@ class MiniPattern:
         self.contribMatchCutoff = config["contrib-match-cutoff"]
         self.contribMagnitudeCutoff = config["contrib-magnitude-cutoff"]
 
-    def _callJaccard(self, scores: npt.NDArray[MOTIF_FLOAT_T],
-                     cwm: npt.NDArray[MOTIF_FLOAT_T]) -> npt.NDArray[MOTIF_FLOAT_T]:
+    def _callJaccard(self, scores: IMPORTANCE_AR_T,
+                     cwm: MOTIF_FLOAT_AR_T) -> \
+            tuple[MOTIF_FLOAT_AR_T, MOTIF_FLOAT_AR_T]:
         # This is just a separate function so the profiler can see the call to Jaccard.
         return jaccard.slidingJaccard(scores, cwm)
 
     def _scanOneWay(self, sequence: ONEHOT_AR_T,
-                    scores: npt.NDArray[MOTIF_FLOAT_T], cwm: npt.NDArray[MOTIF_FLOAT_T],
-                    pssm: npt.NDArray[MOTIF_FLOAT_T], strand: Literal["+", "-"]
+                    scores: IMPORTANCE_AR_T, cwm: MOTIF_FLOAT_AR_T,
+                    pssm: MOTIF_FLOAT_AR_T, strand: Literal["+", "-"]
                     ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Don't do revcomp - let scan take care of that.
 
@@ -954,18 +995,18 @@ class MiniPattern:
             ret.append((passLoc, strand, contribMagnitude, contribMatchScore, seqMatchScore))
         return ret
 
-    def _scanWithoutCutoffsOneWay(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T],
-                                  cwm: npt.NDArray[MOTIF_FLOAT_T],
-                                  pssm: npt.NDArray[MOTIF_FLOAT_T])\
-            -> tuple[list[npt.NDArray[MOTIF_FLOAT_T]],
-                     list[npt.NDArray[MOTIF_FLOAT_T]],
-                     list[npt.NDArray[MOTIF_FLOAT_T]]]:
+    def _scanWithoutCutoffsOneWay(self, sequence: ONEHOT_AR_T, scores: IMPORTANCE_AR_T,
+                                  cwm: MOTIF_FLOAT_AR_T,
+                                  pssm: MOTIF_FLOAT_AR_T)\
+            -> tuple[MOTIF_FLOAT_AR_T,
+                     MOTIF_FLOAT_AR_T,
+                     MOTIF_FLOAT_AR_T]:
         contribMatchScores, contribMagnitudes = self._callJaccard(scores, cwm)
         seqMatchScores = slidingDotproduct(sequence, pssm)
         return (contribMatchScores, contribMagnitudes, seqMatchScores)
 
-    def scanWithoutCutoffs(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
-                           ) -> list[npt.NDArray[MOTIF_FLOAT_T]]:
+    def scanWithoutCutoffs(self, sequence: ONEHOT_AR_T, scores: IMPORTANCE_AR_T
+                           ) -> list[MOTIF_FLOAT_AR_T]:
         """See how this pattern reacts to an importance profile.
 
         Instead of getting hits and putting them in the output queue, just return
@@ -990,7 +1031,7 @@ class MiniPattern:
         rets.extend(self._scanWithoutCutoffsOneWay(sequence, scores, self.rcwm, self.rpssm))
         return rets
 
-    def scan(self, sequence: ONEHOT_AR_T, scores: npt.NDArray[MOTIF_FLOAT_T]
+    def scan(self, sequence: ONEHOT_AR_T, scores: IMPORTANCE_AR_T
              ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Given a sequence and a contribution track, identify places where this pattern matches.
 
@@ -1118,7 +1159,7 @@ class RegionScanner:
         for i, name in enumerate(self.contribFp["chrom_names"].asstr()):
             self.chromIdxToName[i] = name
 
-    def scanIndex(self, idx: int) -> None:
+    def scanIndex(self, idx: int) -> dict[tuple[str, str], list[MOTIF_FLOAT_AR_T]]:
         """Scan a single locus.
 
         Given an index into the hdf5 contribution file, extract the sequence
@@ -1132,7 +1173,7 @@ class RegionScanner:
         # Get all the data for this index.
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")
-        contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order="C")
+        contribScores = np.array(hypScores * oneHotSequence, dtype=IMPORTANCE_T, order="C")
         # Now we perform the scanning.
         ret = {}
         for pattern in self.miniPatterns:
@@ -1167,7 +1208,7 @@ class PatternScanner:
     """
 
     def __init__(self, hitQueue: multiprocessing.Queue, contribFname: str,
-                 patternConfig: dict) -> None:
+                 patternConfig: list[dict]) -> None:
         """A tool to run the actual scans.
 
         hitQueue is a Multiprocessing Queue where found hits should be put().
@@ -1216,7 +1257,7 @@ class PatternScanner:
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")
-        contribScores = np.array(hypScores * oneHotSequence, dtype=MOTIF_FLOAT_T, order="C")
+        contribScores = np.array(hypScores * oneHotSequence, dtype=IMPORTANCE_T, order="C")
         # Now we perform the scanning.
         for pattern in self.miniPatterns:
             hits = pattern.scan(oneHotSequence, contribScores)
@@ -1250,7 +1291,7 @@ class PatternScanner:
 
 
 def scannerThread(queryQueue: multiprocessing.Queue, hitQueue: multiprocessing.Queue,
-                  contribFname: str, patternConfig: dict) -> None:
+                  contribFname: str, patternConfig: list[dict]) -> None:
     """The thread for one scanner.
 
     Each scanner is looking for every pattern,
@@ -1318,7 +1359,8 @@ def writerThread(hitQueue: multiprocessing.Queue, scannerThreads: int, tsvFname:
             writer.writerow(ret.toDict())
 
 
-def scanPatterns(contribH5Fname: str, patternConfig: dict, tsvFname: str, numThreads: int) -> None:
+def scanPatterns(contribH5Fname: str, patternConfig: list[dict],
+                 tsvFname: str, numThreads: int) -> None:
     """ContribH5Fname is the name of a contribution score file generated by interpretFlat.py.
 
     :param contribH5Fname: a string naming the hdf5-format file generated by

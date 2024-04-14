@@ -1,6 +1,7 @@
 """A set of callbacks useful for training a model."""
 import re
 import time
+from typing import Sequence
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 from bpreveal import logUtils
@@ -225,6 +226,9 @@ class DisplayCallback(Callback):
     def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
         """Writes out all the logs for this epoch and the last one at INFO logging level."""
         del epoch
+        if logs is None:
+            logUtils.warning("Received empty logs at epoch end.")
+            logs = {}
         logs = {k: logs[k] for k in logs.keys()}
         recordEpoch = self.earlyStopCallback.best_epoch
         correctedLoss = self.earlyStopCallback.best
@@ -256,6 +260,7 @@ class DisplayCallback(Callback):
                            logs: dict | None = None):
         """Write the loss info for the current batch at DEBUG level."""
         # pylint: disable=attribute-defined-outside-init
+        logs = logs or {}
         self.firstBatchTime = min(time.perf_counter(), self.firstBatchTime)
         self.lastBatchTime = time.perf_counter()
         # pylint: enable=attribute-defined-outside-init
@@ -290,7 +295,8 @@ class DisplayCallback(Callback):
                        self.formatStr((batch, self.numValBatches - 1))))]
             self._writeLogLines(lines, logUtils.debug, "V")
 
-    def _writeLogLines(self, lines: list[tuple[int, int, str]], writer, win: str):
+    def _writeLogLines(self, lines: Sequence[Sequence[tuple[int, int, str]]],
+                       writer, win: str):
         """Actually write the lines to the logger.
 
         :param writer: The logger to use
@@ -311,14 +317,14 @@ class DisplayCallback(Callback):
                     outChrs[i + col] = c
             writer(f"∬{row}∬1∬{win}∬{''.join(outChrs)}")
 
-    def _getλLines(self) -> list[tuple[int, int, str]]:
+    def _getλLines(self) -> list[list[tuple[int, int, str]]]:
         lines = []
         for i, headName in enumerate(self.adaptiveLossCallback.λHistory.keys()):
             λValue = self.adaptiveLossCallback.λHistory[headName][-1]
             lines.append([((i + 2, 1, headName)), (i + 2, 20, f"{λValue:8.3f}")])
         return lines
 
-    def _getEpochLines(self, logs) -> list[tuple[int, int, str]]:
+    def _getEpochLines(self, logs) -> list[list[tuple[int, int, str]]]:
         lines = []
         logs["Epoch"] = (self.epochNumber, self.numEpochs)
         logs["lr"] = f"{logs['lr']:10.7f}"
@@ -335,7 +341,7 @@ class DisplayCallback(Callback):
 
         return lines
 
-    def _getBatchLines(self, logs) -> list[tuple[int, int, str]]:
+    def _getBatchLines(self, logs) -> list[list[tuple[int, int, str]]]:
 
         logs["batch"] = (self.batchNumber, self.numBatches - 1)
 
@@ -380,7 +386,7 @@ class ApplyAdaptiveCountsLoss(Callback):
     """
 
     # Straight from the json, with "INTERNAL_counts-loss-weight-variable".
-    heads: dict
+    heads: list[dict]
     # 0 = don't change weights, 1 = ignore history, change weights very fast.
     aggression: float
     # The logs at each epoch.
@@ -388,12 +394,12 @@ class ApplyAdaptiveCountsLoss(Callback):
     # The history of the counts loss weights for each head. (key is head-name)
     λHistory: dict[str, list]
 
-    def __init__(self, heads: dict, aggression: float,
+    def __init__(self, heads: list[dict], aggression: float,
                  lrPlateauCallback, earlyStopCallback, checkpointCallback):
         """Build the callback."""
         super().__init__()
         self.heads = heads
-        logUtils.debug(heads)
+        logUtils.debug(heads)  # type: ignore
         self.aggression = aggression
         self.lrPlateauCallback = lrPlateauCallback
         self.earlyStopCallback = earlyStopCallback

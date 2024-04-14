@@ -6,6 +6,7 @@ import tqdm
 import h5py
 import pyBigWig
 import numpy as np
+import numpy.typing as npt
 from bpreveal import logUtils
 from bpreveal import utils
 
@@ -58,6 +59,8 @@ class Region:
             case "counts":
                 profile = np.zeros((self.end - self.start)) \
                     + np.exp(headLogcounts[self.h5Idx])
+            case _:
+                raise ValueError(f"{mode} is not a valid mode.")
         return profile
 
 
@@ -77,7 +80,7 @@ def getChromInserts(arg: tuple[list[Region], str, int, int, str]) -> \
 
 
 def getChromVector(regionList: list[Region], h5fp: h5py.File, headID: int,
-                   taskID: int, mode: str) -> np.array:
+                   taskID: int, mode: str) -> npt.NDArray:
     """Map the values at each Region onto a vector representing the chromosome.
 
     regionList should only contain regions from one chromosome, as regionList[0].chromIdx
@@ -103,7 +106,7 @@ def getChromVector(regionList: list[Region], h5fp: h5py.File, headID: int,
     return regionValues / regionCounts
 
 
-def vectorToListOfInserts(dataVector: np.array) -> list[tuple[np.ndarray, int]]:
+def vectorToListOfInserts(dataVector: npt.NDArray) -> list[tuple[np.ndarray, int]]:
     """Convert a chromosome vector to a list of regions that actually have data.
 
     Given a vector of data from getChromVector, remove all the zeros and give you

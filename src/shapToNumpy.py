@@ -7,11 +7,11 @@ import argparse
 import numpy as np
 import h5py
 from bpreveal import logUtils
-from bpreveal.internal.constants import IMPORTANCE_T, ONEHOT_T
+from bpreveal.internal.constants import IMPORTANCE_T, ONEHOT_T, IMPORTANCE_AR_T, ONEHOT_AR_T
 
 
-def flipAndSave(inpAr: np.ndarray[IMPORTANCE_T] | np.ndarray[ONEHOT_T],
-                fname: str, dtype: np.dtype):
+def flipAndSave(inpAr: IMPORTANCE_AR_T | ONEHOT_AR_T,
+                fname: str, dtype: type):
     """Save the datasets in the format expected by modiscolite.
 
     The hdf5 file contains scores in the format

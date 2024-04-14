@@ -180,7 +180,7 @@ class H5Writer:
                                             + sampleOutputs[headID].shape)  # noqa
         logUtils.debug("Initialized datasets.")
 
-    def addEntry(self, batcherOut: list):
+    def addEntry(self, batcherOut: tuple):
         """Add a single output from the Batcher."""
         # Give this exactly the output from the batcher, and it will queue the data
         # to be written to the hdf5 on the next commit.
