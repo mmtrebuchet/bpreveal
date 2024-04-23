@@ -3,7 +3,7 @@ from typing import Literal, Any
 import multiprocessing
 from collections import deque
 import os
-from pkg.bpreveal.internal.constants import QUEUE_TIMEOUT
+from bpreveal.internal.constants import QUEUE_TIMEOUT
 import pybedtools
 import pysam
 import numpy as np
