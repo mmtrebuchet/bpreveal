@@ -1,7 +1,7 @@
 """A set of callbacks useful for training a model."""
 import re
 import time
-from typing import Sequence
+from collections.abc import Sequence
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 from bpreveal import logUtils

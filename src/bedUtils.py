@@ -2,6 +2,8 @@
 from typing import Literal, Any
 import multiprocessing
 from collections import deque
+import os
+from pkg.bpreveal.internal.constants import QUEUE_TIMEOUT
 import pybedtools
 import pysam
 import numpy as np
@@ -225,6 +227,94 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
         return False  # We're off the edge of the chromosome.
     return pybedtools.Interval(interval.chrom, start, end, name=interval.name,
                                score=interval.score, strand=interval.strand)
+
+
+def _metapeakThread(bwFname: str,
+                    inQueue: multiprocessing.Queue,
+                    outQueue: multiprocessing.Queue):
+    bigwigFp = pyBigWig.open(bwFname)
+    totalProfile = None
+    numQueries = 0
+    try:
+        while (query := inQueue.get(timeout=QUEUE_TIMEOUT)) is not None:
+            numQueries += 1
+            chrom, start, end, strand = query
+            profile = np.nan_to_num(bigwigFp.values(chrom, start, end))
+            if strand == "-":
+                profile = np.flip(profile)
+            if totalProfile is None:
+                totalProfile = profile
+            else:
+                totalProfile = totalProfile + profile
+        outQueue.put((totalProfile, numQueries), timeout=QUEUE_TIMEOUT)
+    finally:
+        bigwigFp.close()
+
+
+def metapeak(intervals: pybedtools.BedTool,
+             bigwigFname: str, numThreads: int | None = None) -> constants.PRED_AR_T:
+    """Go over the given intervals and build a metapeak.
+
+    :param intervals: A pyBigWig file containing the regions to use.
+        This can also be a list of Interval objects. Each interval
+        must be of the same size.
+    :param bigwigFname: The name of the bigwig file to read in.
+    :param numThreads: If provided, the number of parallel workers to use.
+        If not specified, use all of the CPUs on the machine.
+    :return: A numpy array of shape (interval-length,) containing the average
+        profile over all of the intervals.
+
+    This produces a stranded metapeak. If an interval is on the negative
+    strand, then the values extracted from the bigwig will be reversed before
+    being added to the metapeak.
+
+    The parallel implementation is memory-efficient and can easily scale to metapeaks
+    with millions of underlying regions. However, this means that interrupting the
+    calculation can leave the program in a really ugly state. I recommend checking
+    your inputs before you call this.
+
+    NaN entries in the bigwig are treated as zero.
+    """
+    # I don't usually do error checking, but getting a crash in this function
+    # could leave the interpreter in a tizzy, and it will likely be used
+    # interactively from jupyter, so a weird interpreter state could persist.
+    intervalList = list(intervals)  # Copy the BedTool in case it's a streaming one.
+    width = intervalList[0].end - intervalList[0].start
+    for i in intervalList:
+        assert i.end - i.start == width, \
+            f"Detected an interval with wrong width: {str(i)}, expected {width}"
+    # Make sure we can open the bigwig (then close it).
+    pyBigWig.open(bigwigFname).close()
+
+    # Okay, sanity checks passed. Time to actually run the calculation.
+    if numThreads is None:
+        numThreads = len(os.sched_getaffinity(0))
+    pids = []
+    inQueue = multiprocessing.Queue()
+    outQueue = multiprocessing.Queue()
+    for i in range(numThreads):
+        pids.append(multiprocessing.Process(
+            target=_metapeakThread,
+            args=(bigwigFname, inQueue, outQueue),
+            daemon=True))
+        pids[i].start()
+    for interval in intervalList:
+        inQueue.put((interval.chrom, interval.start, interval.end, interval.strand),
+                    timeout=QUEUE_TIMEOUT)
+    for i in range(numThreads):
+        inQueue.put(None, timeout=QUEUE_TIMEOUT)  # We're done, send the termination signal.
+    rets = []
+    for i in range(numThreads):
+        rets.append(outQueue.get(timeout=QUEUE_TIMEOUT))
+    for i in range(numThreads):
+        pids[i].join(timeout=QUEUE_TIMEOUT)
+    totalProfile = rets[0][0]
+    totalCounts = rets[0][1]
+    for p, c in rets[1:]:
+        totalProfile += p
+        totalCounts += c
+    totalProfile /= totalCounts
+    return totalProfile
 
 
 def getCounts(interval: pybedtools.Interval, bigwigs: list) -> float:

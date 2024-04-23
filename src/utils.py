@@ -987,14 +987,16 @@ class ThreadedBatchPredictor:
 
     def __del__(self):
         """General cleanup - kill the child process when this object leaves scope."""
-        logUtils.debug("Destructor called.")
+        if logUtils is not None:
+            logUtils.debug("Destructor called.")
         if self.running:
             self.stop()
 
     def stop(self):
         """Shut down the processor thread."""
         if self.running:
-            logUtils.debug("Shutting down threaded batcher.")
+            if logUtils is not None:
+                logUtils.debug("Shutting down threaded batcher.")
             if self._batchers is None:
                 assert False, "Attempting to shut down a running ThreadedBatchPredictor" \
                     "When its _batchers is None"
@@ -1015,7 +1017,8 @@ class ThreadedBatchPredictor:
             self._batchers = None
             self.running = False
         else:
-            logUtils.warning("Attempting to stop a batcher that is already stopped.")
+            if logUtils is not None:  # pylint: disable=else-if-used
+                logUtils.warning("Attempting to stop a batcher that is already stopped.")
 
     def clear(self):
         """Reset the batcher, emptying any queues and reloading the model."""

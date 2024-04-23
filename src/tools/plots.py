@@ -269,7 +269,7 @@ def _loadPisaAnnotations(cutMiddle, cutLengthX, genomeWindowStart, genomeWindowC
             if line.chrom == genomeWindowChrom and line.end > genomeStartX\
                     and line.start < genomeEndX:
                 if line.name not in nameColors:
-                    nameColors[line.name] = np.array(cmapIbm[readHead % len(cmapIbm)]) / 256
+                    nameColors[line.name] = np.array(cmapIbm[len(nameColors) % len(cmapIbm)]) / 256
                     readHead += 1
                 if line.start < genomeStartX:
                     line.start = genomeStartX

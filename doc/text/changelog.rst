@@ -18,6 +18,8 @@ NEW FEATURES:
     * Added a new tool, :py:mod:`shiftPisa<bpreveal.tools.shiftPisa>` that can
       shift PISA data forward and backward. This is very handy for MNase, since
       you can use it to align the 3' and 5' PISA data around the dyad.
+    * Added a high-performance metapeak calculator,
+      :py:func:`metapeak<bpreveal.bedUtils.metapeak>`.
 ENHANCEMENTS:
     * :py:mod:`bestMotifsOnly<bpreveal.tools.bestMotifsOnly>` now lets you keep
       differently-named motifs that map to one locus.
@@ -35,6 +37,11 @@ BUG FIXES:
     * The documentation incorrectly said that there would be attributes called
       ``head-id`` and ``task-id`` in PISA hdf5 files. This has never been true, and the
       documentation now makes no mention of these fields.
+    * The logic for assigning colors to motifs in plotPisa re-used colors even when there
+      were unused ones in the palette. This has been fixed.
+    * The destructor for ThreadedBatchPredictor could cause an error if logUtils had been
+      destroyed before the object's destructor was called. It now checks for this
+      situation.
 
 CONTRIBUTORS:
     Patrick Moeller, Charles McAnany
