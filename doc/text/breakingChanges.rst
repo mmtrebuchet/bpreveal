@@ -57,6 +57,11 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 BPReveal 4.x
 ------------
 
+BPReveal 4.1.4
+^^^^^^^^^^^^^^
+1. The shap code was replaced with the current release from upstream.
+   This should not break anything unless you were doing something *really* weird.
+
 BPReveal 4.1.3
 ^^^^^^^^^^^^^^
 1. With the creation of the new :py:class:`Seqlet<bpreveal.motifUtils.Seqlet>` class,

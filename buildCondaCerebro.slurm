@@ -6,7 +6,7 @@
 #SBATCH --time=1:00:00
 #SBATCH --output=log%j.log
 #SBATCH --partition=gpu
-#SBATCH --gres gpu:a100_3g.20gb:0
+#SBATCH --gres gpu:a100:0
 
 # This is a script that you can run on Cerebro (the cluster at Stowers)
 # to install bpreveal. If you're not on a cluster, see the buildCondaLocal.zsh

@@ -32,7 +32,7 @@ Coding philosophy
 *   Errors should never pass silently.
 *   One line of code is ten lines of documentation.
     The documentation consists of in-code comments, clear specifications
-    (this document), tutorials, and the reference publication.
+    (this documentation), tutorials, and the reference publication.
 *   If the implementation is hard to explain, it's a bad idea.
 *   Use only well-established and stable dependencies.
     Don't require specific versions of libraries, and only require packages

@@ -25,7 +25,7 @@ pyBedTools
 tensorflow < 2.16
     Does the heavy work of machine learning. Tensorflow 2.16 added a bunch of crummy
     backwards-incompatible behavior and it will be supported with BPReveal 5.0.
-tensorflow-probability
+tensorflow-probability < 0.24
     Used to create the multinomial loss function.
 matplotlib
     Used to make pretty plots.

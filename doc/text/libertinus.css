@@ -15,7 +15,7 @@
 	font-family: Libertinus Serif/*, Libertinus*/;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Serif), local(Libertinus Serif Regular), local(Libertinus), 
+	src: local(Libertinus Serif), local(Libertinus Serif Regular), local(Libertinus),
 		/* local(Linux Libertine), */
 		url("LibertinusSerif-Regular.woff2") format("woff2");
 }
@@ -24,7 +24,7 @@
 	font-family: Libertinus Serif/*, Libertinus*/;
 	font-style:  italic;
 	font-weight: 400;
-	src: local(Libertinus Serif Italic), 
+	src: local(Libertinus Serif Italic),
 		url("LibertinusSerif-Italic.woff2") format("woff2");
 }
 @font-face /* Libertinus Serif Semibold Upright */
@@ -32,7 +32,7 @@
 	font-family: Libertinus Serif/*, Libertinus*/;
 	font-style:  normal;
 	font-weight: 600;
-	src: local(Libertinus Serif), local(Libertinus Serif Semibold), 
+	src: local(Libertinus Serif), local(Libertinus Serif Semibold),
 		url("LibertinusSerif-Semibold.woff2") format("woff2");
 }
 @font-face /* Libertinus Serif Semibold Italic */
@@ -40,7 +40,7 @@
 	font-family: Libertinus Serif/*, Libertinus*/;
 	font-style:  italic;
 	font-weight: 600;
-	src: local(Libertinus Serif Semibold Italic), 
+	src: local(Libertinus Serif Semibold Italic),
 		url("LibertinusSerif-SemiboldItalic.woff2") format("woff2");
 }
 @font-face /* Libertinus Serif Bold Upright */
@@ -48,7 +48,7 @@
 	font-family: Libertinus Serif/*, Libertinus*/;
 	font-style:  normal;
 	font-weight: 700;
-	src: local(Libertinus Serif Bold), 
+	src: local(Libertinus Serif Bold),
 		url("LibertinusSerif-Bold.woff2") format("woff2");
 }
 @font-face /* Libertinus Serif Bold Italic */
@@ -56,7 +56,7 @@
 	font-family: Libertinus Serif/*, Libertinus*/;
 	font-style:  italic;
 	font-weight: 700;
-	src: local(Libertinus Serif Bold Italic), 
+	src: local(Libertinus Serif Bold Italic),
 		url("LibertinusSerif-BoldItalic.woff2") format("woff2");
 }
 /**
@@ -67,7 +67,7 @@
 	font-family: Libertinus /*Serif*/ Display/*, Libertinus*/;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Serif Display), 
+	src: local(Libertinus Serif Display),
 		url("LibertinusSerifDisplay-Regular.woff2") format("woff2");
 }
 /**
@@ -78,7 +78,7 @@
 	font-family: Libertinus /*Serif*/ Initials/*, Libertinus*/;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Serif Initials), 
+	src: local(Libertinus Serif Initials),
 		url("LibertinusSerifInitials-Regular.woff2") format("woff2");
 }
 /**
@@ -90,7 +90,7 @@
 	font-family: Libertinus Sans/*, Biolinum*/;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Sans), 
+	src: local(Libertinus Sans),
 		url("LibertinusSans-Regular.woff2") format("woff2");
 }
 @font-face /* Libertinus Sans Regular Italic */
@@ -98,7 +98,7 @@
 	font-family: Libertinus Sans/*, Biolinum*/;
 	font-style:  italic;
 	font-weight: 400;
-	src: local(Libertinus Sans Italic), 
+	src: local(Libertinus Sans Italic),
 		url("LibertinusSans-Italic.woff2") format("woff2");
 }
 @font-face /* Libertinus Sans Bold Upright */
@@ -106,7 +106,7 @@
 	font-family: Libertinus Sans/*, Biolinum*/;
 	font-style:  normal;
 	font-weight: 700;
-	src: local(Libertinus Sans Bold), 
+	src: local(Libertinus Sans Bold),
 		url("LibertinusSans-Bold.woff2") format("woff2");
 }
 /**
@@ -117,7 +117,7 @@
 	font-family: Libertinus /*Serif*/ Math;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Math), 
+	src: local(Libertinus Math),
 		url("LibertinusMath-Regular.woff2") format("woff2");
 }
 /**
@@ -128,7 +128,7 @@
 	font-family: Libertinus /*Serif*/ Mono;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Mono), 
+	src: local(Libertinus Mono),
 		url("LibertinusMono-Regular.woff2") format("woff2");
 }
 /**
@@ -139,7 +139,7 @@
 	font-family: Libertinus Keyboard;
 	font-style:  normal;
 	font-weight: 400;
-	src: local(Libertinus Keyboard), 
+	src: local(Libertinus Keyboard),
 		url("LibertinusKeyboard-Regular.woff2") format("woff2");
 }
 
@@ -147,18 +147,18 @@
  * Standard OpenType Features
  * ==========================
  *
- * Libertinus supports several OpenType features, 
- * some are enabled by default (`-`) others have to be opted in (`+`), 
+ * Libertinus supports several OpenType features,
+ * some are enabled by default (`-`) others have to be opted in (`+`),
  * most can be accessed by high-level CSS properties and values:
  *
- * * Small Caps: features `font-variant` and `font-variant-caps` with values `small-caps` (`+smcp`) and `all-small-caps` (`+c2sc`) 
+ * * Small Caps: features `font-variant` and `font-variant-caps` with values `small-caps` (`+smcp`) and `all-small-caps` (`+c2sc`)
  * * Ligatures and Contextual Alternates: `-liga`, `+hlig`, `+dlig`; `-calt`
  * * Kerning: `-kern`
  * * Capital Spacing: `+cpsp`, `case`
  * * Slashed zero: `+zero`
  * * Numerals: `-tnum`, `+pnum`, `-lnum`, `+onum`, `+pnum+onum`
  * * Vulgar fractions: `+frac`
- * * Subscripts and Superscripts: `+sinf`, `+sups` 
+ * * Subscripts and Superscripts: `+sinf`, `+sups`
  * * Diacritic marks: `-mark`, `-mkmk`
  * * Stylistic alternates: `+salt`
  */
@@ -173,9 +173,9 @@
 /**
  * Standard ligatures: `-liga`
  * ---------------------------
- * 
+ *
  * In serif faces, the Latin lowercase letter sequences
- *   _ſſ_,        _ſſi_, _ſſj_, _ſſk_, _ſſl_, _ſh_, _ſi_, _ſj_,       _ſl_, _ſs_, _ſt_, 
+ *   _ſſ_,        _ſſi_, _ſſj_, _ſſk_, _ſſl_, _ſh_, _ſi_, _ſj_,       _ſl_, _ſs_, _ſt_,
  *   _ff_, _ffh_, _ffi_, _ffj_, _ffk_, _ffl_, _fh_, _fi_, _fj_, _fk_, _fl_,       _ft_
  * form default ligatures.
  * In sans-serif faces, only the Latin lowercase letter sequences
@@ -193,18 +193,18 @@
  * The only historical ligatures supported are Latin lowercase _ st_ and _ct_ in all faces.
  *
  * In all faces, Latin lowercase letter sequences _tt_ and _tz_,
- * in serif faces (i.e. non-sans-serif), also _Th_, _ck_ and _ch_, 
+ * in serif faces (i.e. non-sans-serif), also _Th_, _ck_ and _ch_,
  * form discretionary ligatures.
  *
  * These can all be manually forced by using ZWJ (U+200D) between letters and just the default feature `liga`, too.
  *
  * The respective CSS property is `font-variant-ligatures` with the values `discretionary-ligatures` and `historical-ligatures`.
- */ 
+ */
 /**
  * Contextual alternates: `-calt`
  * ------------------------------
  *
- * In all faces, 
+ * In all faces,
  *   the Latin capital and small-capital letter *Q* gains a long tail if followed by either lowercase or small-capital letter *u* or *v*, and
  *   the Latin lowercase letter *f*, even when part of the ligature *ff*, has a shortened head if followed by closing parentheses, top quotation mark, lowercase letter with ascending left leg, lowercase letter with diacritic mark above or uppercase letter not starting with a leg or them on the left.
  *
@@ -216,7 +216,7 @@
  * Localized alternates: `locl`
  * ----------------------------
  *
- * For Serbian and Macedonian, 
+ * For Serbian and Macedonian,
  *   in all faces, the Cyrillic lowercase letter be *б* and
  *   in italic faces, the Cyrillic llowercase letters ghe *г*, gje *ѓ*, de *д*, pe *п* and te *т*
  * are replaced by alternate glyphs.
@@ -231,7 +231,7 @@
  *
  * Except for Libertinus Math, the standard digits can be forced
  * to _old-style_ forms (with ascenders and descenders) with `onum` (`.taboldstyle`),
- * to default _lining_ forms with `lnum`, 
+ * to default _lining_ forms with `lnum`,
  * to _proportional_ forms with `pnum` (`.fitted`),
  * to _tabular_ (fixed-width) forms with `tnum`.
  * The latter two also apply to euro *€* and yen *¥* currency symbols and trump the other features.
@@ -239,12 +239,12 @@
  * The respective CSS property is `font-variant-numeric` with the values `oldstyle-nums`, `lining-nums`, `proportional-nums` and `tabular-nums`.
  */
 /**
- * Vulgar fractions: `+frac`; `subs`, `sups`; `sinf` 
+ * Vulgar fractions: `+frac`; `subs`, `sups`; `sinf`
  * -------------------------
  *
  * The same sets of inferior/subscript and superior/superscript glyphs are used for various features.
  *
- * The respective CSS property for `frac` is `font-variant-numeric` with the value `diagonal-fractions`. 
+ * The respective CSS property for `frac` is `font-variant-numeric` with the value `diagonal-fractions`.
  * The value `stacked-fraction` is not supported.
  */
 
@@ -254,12 +254,12 @@
  */
 
 @font-feature-values
-	Libertinus, 
-	Libertinus Serif, 
-	Libertinus Sans, 
-	Libertinus Math, 
-	Libertinus Mono, 
-	Libertinus Keyboard 
+	Libertinus,
+	Libertinus Serif,
+	Libertinus Sans,
+	Libertinus Math,
+	Libertinus Mono,
+	Libertinus Keyboard
 {
 	/**
 	 * Stylistic alternates: `+salt`
@@ -267,9 +267,9 @@
 	 *
 	 * For non-sans-serif faces, uppercase letters J, K, R and W use alternate glyphs (`.alt`).
 	 * For small-caps faces, lowercase letters a, q, ŋ and ß use alternate glyphs (`.scalt` etc.).
-	 * In all faces, 
-	 *   Latin uppercase letters *Q*, eng *Ŋ* and eszet *ẞ*, 
-	 *   Latin lowercase letters *h*, *y* and eszet *ß*, 
+	 * In all faces,
+	 *   Latin uppercase letters *Q*, eng *Ŋ* and eszet *ẞ*,
+	 *   Latin lowercase letters *h*, *y* and eszet *ß*,
 	 *   Greek lowercase letters beta *β*, theta *θ*, kappa *κ* and phi *φ*,
 	 *   Cyrillic letter be *б* and
 	 *   the ampersand *&*
@@ -282,14 +282,14 @@
 	/**
 	 * Stylistic Set 1 `ss01` _Low diaeresis on 'A', 'E', 'O'_
 	 * -------------------------------------------------------
-	 * 
+	 *
 	 * In German, the umlaut dots above the Latin capital letters *A* and *O* (*Ä*, *Ö*) are sometimes moved further apart while the ones above *U* (*Ü*) are put closer together.
 	 */
 	@styleset {low-diaeresis: 1;}
 	/**
 	 * Stylistic Set 2 `ss02` _Swashy 'J' 'K' 'R'_
 	 * -------------------------------------------
-	 * 
+	 *
 	 * A bit more swashy, cursive look with elongated tails for Latin uppercase letter *K* and *R* and a left-hand horizontal top for *J*.
 	 * This does not apply to sans-serif faces.
 	 */
@@ -297,21 +297,21 @@
 	/**
 	 * Stylistic Set 3 `ss03` _'double s' to two 's'_
 	 * ----------------------------------------------
-	 * 
+	 *
 	 * All variants of German eszett (lowercase *ß*, uppercase *ẞ* and small-capital) are rendered as round-s digraphs instead, very applicable to Swiss German texts.
 	 */
 	@styleset {double-s: 3;}
 	/**
-	 * Stylistic Set 4 `ss04` _Upper case 'double s' to two 'S'_ 
+	 * Stylistic Set 4 `ss04` _Upper case 'double s' to two 'S'_
 	 * ---------------------------------------------------------
-	 * 
+	 *
 	 * Only the uppercase German eszett *ẞ* is rendered as a round-s digraph, subset of `ss03`.
 	 */
 	@styleset {uppercase-double-s: 4;}
 	/**
 	 * Stylistic Set 5 `ss05` _Crossed 'W'";_
 	 * --------------------------------------
-	 * 
+	 *
 	 * Latin uppercase letter *W* is rendered as a ligature of two V, i.e. the middle verticals are longer, as used in the Wikipedia logo.
 	 * This does not apply to sans-serif faces.
 	 */
@@ -319,14 +319,14 @@
 	/**
 	 * Stylistic Set 6 `ss06` _Swash '&'_
 	 * ----------------------------------
-	 * 
+	 *
 	 * The ampersand *&* is rendered as an _et_ ligature.
 	 */
 	@styleset {swash-ampersand: 6;}
 	/**
 	 * Stylistic Set 7 `ss07` _Swap 'Eng' forms_
 	 * -----------------------------------------
-	 * 
+	 *
 	 * The uppercase letter Eng *Ŋ*, i.e. an N with a descending tail on the right leg, uses the capital N glyph as its base instead of the default enlarged lowercase n glyph. The localized `locl` UC Style for Sami is changed the other way around.
 	 */
 	@styleset {swap-eng: 7;}
