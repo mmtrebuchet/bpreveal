@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.1.4, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 4.1.4, 2024-04-24
+''''''''''''''''''''''''''
 
 NEW FEATURES:
     * Added a new tool, :py:mod:`shiftPisa<bpreveal.tools.shiftPisa>` that can
