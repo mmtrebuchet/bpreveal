@@ -67,7 +67,7 @@ class Query:
 class Result:
     """The base class for results.
 
-    Subclassed by :py:class:`~PisaResult` and :py:class:`flatResult`.
+    Subclassed by :py:class:`~PisaResult` and :py:class:`~FlatResult`.
 
     Lifetime:
 

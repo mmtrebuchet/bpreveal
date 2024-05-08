@@ -12,6 +12,10 @@
     <integer>
   | <integer>, <list-of-integer>
 
+<list-of-number> ::=
+    <number>
+  | <number>, <list-of-number>
+
 <integer> ::=
     -<nonzero-digit><list-of-digits>
   | <nonzero-digit><list-of-digits>

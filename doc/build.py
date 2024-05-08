@@ -33,8 +33,8 @@ filesMinor = ["checkJson.py", "lengthCalc.py", "makeLossPlots.py", "metrics.py",
 # Libraries that can't be executed on their own
 filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
             "interpretUtils.py", "jaccard.py", "layers.py", "logUtils.py",
-            "losses.py", "models.py", "motifUtils.py", "schema.py", "training.py",
-            "ushuffle.py", "utils.py"]
+            "losses.py", "models.py", "motifUtils.py", "plotting.py", "schema.py",
+            "training.py", "ushuffle.py", "utils.py"]
 
 filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "predictUtils.py"]
 
@@ -43,7 +43,7 @@ filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
 
 filesToolsMajor = ["addNoise.py"]
 
-filesToolsApi = ["plots.py", "slurm.py", "addNoiseUtils.py"]
+filesToolsApi = ["slurm.py", "addNoiseUtils.py"]
 
 nameModifiers = {
     "tools.": filesToolsApi + filesToolsMajor + filesToolsMinor,
@@ -82,7 +82,8 @@ def makeHeader():
             fp.write("_generated/{0:s}.rst: text/{0:s}.rst build.py\n\t./build.py {0:s}\n\n".
                      format(fname))
             allTargets.append("_generated/{0:s}.rst".format(fname))
-        for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx"]:
+        for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
+                                                     "plotting.xx"]:
             fp.write(
                 "_generated/bnf/{0:s}.rst: build.py\n\t./build.py bnf/{0:s}.rst\n\n"
                 .format(fname[:-3]))
@@ -143,7 +144,8 @@ def makeBase():
 
 def makeBnf(request):
     modRequested = request[4:][:-4]  # strip bnf/ and .rst.
-    for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx"]:
+    for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
+                                                 "plotting.xx"]:
         modName = fname[:-3]
         if modRequested == modName:
             inFname = "bnf/{0:s}.bnf".format(modName)

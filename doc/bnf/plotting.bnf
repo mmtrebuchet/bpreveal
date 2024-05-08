@@ -1,0 +1,144 @@
+<pisa-graph-configuration> ::= {
+    "pisa": <pisa-section>,
+    "coordinates": <coordinates-section>,
+    "importance": <profile-section>,
+    "predictions": <profile-section>,
+    "annotations": <annotation-section>,
+    "figure": <graph-figure-section>,
+    "min-value": <number>,
+    "max-value": <number>,
+    "use-annotation-colors": <boolean>
+}
+
+<pisa-section> ::= {
+    <pisa-h5-section>
+  | "values": [<list-of-list-of-number>]
+}
+
+<list-of-list-of-number> ::=
+    <list-of-number>, <list-of-number>
+  | <list-of-number>
+
+<pisa-h5-section> ::=
+    "h5-name": <string>,
+    "receptive-field": <integer>
+
+<coordinates-section> ::= {
+    <sequence-source-section>
+    "midpoint-offset": <integer>,
+    "input-slice-width": <integer>,
+    "output-slice-width": <integer>,
+    "genome-window-start": <integer>,
+    "genome-window-chrom": <integer>,
+}
+
+<sequence-source-section> ::=
+    <empty>
+  | "genome-fasta": <file-name>,
+  | "sequence": <string>,
+
+<profile-section> ::= {
+    <profile-source>,
+    "show-sequence": <boolean>,
+    <profile-color-section>
+}
+
+<profile-source> ::=
+    "bigwig-name": <string>
+  | "values": [<list-of-number>]
+
+<profile-color-section> ::=
+    "color": <color-spec>
+  | "color": <sequence-color-spec>
+
+<sequence-color-spec> ::= {
+    "A": <color-spec>,
+    "C": <color-spec>,
+    "G": <color-spec>,
+    "T": <color-spec>
+}
+
+<annotation-section> ::= {
+    <scan-bed-section>
+    <name-colors-section>
+    "custom": [list-of-annotation]
+}
+
+<scan-bed-section> ::=
+    <empty>
+  | "bed-name": <file-name>,
+
+<name-colors-section> ::=
+    <empty>
+  | "name-colors": [<list-of-name-color>],
+
+<list-of-name-color> ::=
+    <empty>
+  | <name-color>
+  | <name-color>, <list-of-name-color>
+
+<name-color> ::= {
+    "name": <string>,
+    "color": <color-spec>
+}
+
+<list-of-annotation> ::=
+    <empty>
+  | <annotation>
+  | <annotation>, <list-of-annotation>
+
+<annotation> ::= {
+    "start": <integer>,
+    "end": <integer>,
+    "name": <string>,
+    "color": <color-spec>
+}
+
+<color-spec> ::=
+    {"rgb": [<number>, <number>, <number>]}
+  | {"rgba": [<number>, <number>, <number>, <number>]}
+  | {"tol": <integer>}
+  | {"tol-light": <integer>}
+  | {"ibm": <integer>}
+  | {"wong": <integer>}
+
+<graph-figure-section> ::= {
+    <figure-base>
+}
+
+<figure-base> ::=
+    "bottom": <number>,
+    "left": <number>,
+    "width": <number>,
+    "height": <number>,
+    "annotation-height": <number>,
+    "tick-font-size": <integer>,
+    "label-font-size": <integer>,
+
+<plot-figure-section> ::= {
+    <figure-base>
+    "grid-mode": <grid-mode>,
+    "diagonal-mode": <diagonal-mode>
+}
+
+<grid-mode> ::=
+    "on"
+  | "off"
+
+<diagonal-mode> ::=
+    "on"
+  | "off"
+  | "edge"
+
+<pisa-plot-configuration> ::= {
+    "pisa": <pisa-section>,
+    "coordinates": <coordinates-section>,
+    "importance": <profile-section>,
+    "predictions": <profile-section>,
+    "annotations": <annotation-section>,
+    "figure": <plot-figure-section>,
+    "color-span": <number>,
+    "miniature": <boolean>
+}
+
+

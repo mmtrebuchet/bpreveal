@@ -1,8 +1,8 @@
 [MAIN]
 
-# Analyse import fallback blocks. This can be used to support both Python 2 and
+# Analyze import fallback blocks. This can be used to support both Python 2 and
 # 3 compatible code, which means that the block might have code that exists
-# only in one or another interpreter, leading to false positives when analysed.
+# only in one or another interpreter, leading to false positives when analyzed.
 analyse-fallback-blocks=no
 
 # Clear in-memory caches upon conclusion of linting. Useful if running pylint
@@ -443,6 +443,7 @@ confidence=HIGH,
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=consider-using-max-builtin,
+        consider-using-min-builtin,
         consider-using-assignment-expr,
         consider-using-namedtuple-or-dataclass,
         global-statement,

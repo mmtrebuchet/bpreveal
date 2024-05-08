@@ -22,6 +22,133 @@
         },
         "verbosity": {
             "type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]
+        },
+        "pisa-section": {
+            "type": "object",
+            "properties": {
+                "h5-name" : {"type": "string"},
+                "receptive-field": {"type": "integer"},
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {"type": "number"}
+                    }
+                }
+            },
+            "oneOf": [
+                {
+                    "required": ["h5-name", "receptive-field"],
+                     "not": {"required": ["pisa-data"]}
+                },
+                {
+                    "required": ["pisa-data"],
+                    "not": {
+                        "anyOf": [
+                            {"required": ["h5-name"]},
+                            {"required": ["receptive-field"]}]
+                    }
+                }
+            ]
+        },
+        "coordinates-section":{
+            "type": "object",
+            "properties": {
+                "midpoint-offset": {"type": "integer"},
+                "input-slice-width": {"type": "integer"},
+                "output-slice-width": {"type": "integer"},
+                "genome-window-start": {"type": "integer"},
+                "genome-window-chrom": {"type": "string"},
+                "genome-fasta": {"type": "string"},
+                "sequence": {"type": "string"}
+            },
+            "required": ["midpoint-offset", "input-slice-width",
+                         "output-slice-width", "genome-window-start",
+                         "genome-window-chrom"],
+            "oneOf": [
+                {"required": ["genome-fasta"]},
+                {"required": ["sequence"]}]
+        },
+        "profile-section": {
+            "type": "object",
+            "properties": {
+                "bigwig-name": {"type": "string"},
+                "values": {"type": "array",
+                           "items": {"type": "number"}},
+                "color": {"oneOf": [
+                    {"$ref": "#/definitions/color-spec"},
+                    {"$ref": "#/definitions/sequence-color-spec"}]
+                }
+            },
+            "required": ["color"],
+            "oneOf": [
+                {"required": ["bigwig-name"]},
+                {"required": ["values"]}]
+        },
+
+        "color-spec": {
+            "type": "object",
+            "properties": {
+                "rgb": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {"type": "number"}
+                },
+                "rgba": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": {"type": "number"}
+                },
+                "tol": {"type": "integer"},
+                "tol-light": {"type": "integer"},
+                "ibm": {"type": "integer"},
+                "wong": {"type": "integer"}
+            },
+            "oneOf": [
+                {"required": ["rgb"]},
+                {"required": ["rgba"]},
+                {"required": ["tol"]},
+                {"required": ["tol-light"]},
+                {"required": ["ibm"]},
+                {"required": ["wong"]}
+            ]
+        },
+        "sequence-color-spec": {
+            "type": "object",
+            "properties": {
+                "A": {"$ref": "#/definitions/color-spec"},
+                "C": {"$ref": "#/definitions/color-spec"},
+                "G": {"$ref": "#/definitions/color-spec"},
+                "T": {"$ref": "#/definitions/color-spec"}
+            },
+            "required": ["A", "C", "G", "T"]
+        },
+        "annotation-section": {
+            "type": "object",
+            "properties": {
+                "bed-name": {"type": "string"},
+                "name-colors": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^.*$": {"$ref": "#/definitions/color-spec"}
+                    }
+                },
+                "custom": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "start": {"type": "integer"},
+                            "end": {"type": "integer"},
+                            "name": {"type": "string"},
+                            "color": {"$ref": "#/definitions/color-spec"}
+                        },
+                        "required": ["start", "end", "name", "color"]
+                    }
+                }
+            }
         }
     },
     "not": {}
