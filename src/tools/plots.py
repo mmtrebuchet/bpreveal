@@ -17,7 +17,10 @@ from matplotlib.path import Path
 from matplotlib.axes import Axes as AXES_T
 import matplotlib.colors as mplcolors
 from bpreveal import logUtils
-
+logUtils.warning("The tools/plots.py module is deprecated and will be retired in "
+        "BPReveal 6.0.0. The new plotting module in main BPReveal maintained and "
+        "much better-organized. This module will not be maintained and will "
+        "likely break as new features are added.")
 _seqCmap = {"A": (0, 158, 115), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
 # _seqCmap = {"A": (50, 173, 188), "C": (0, 79, 201), "G": (240, 193, 89), "T": (213, 59, 23)}
 # avgColors = [0,0,0]

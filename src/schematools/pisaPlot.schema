@@ -19,6 +19,7 @@
                 "annotation-height": {"type": "number"},
                 "tick-font-size": {"type": "integer"},
                 "label-font-size": {"type": "integer"},
+                "color-span": {"type": "number"},
                 "grid-mode": {
                     "type": "string",
                     "enum": ["on", "off"]
@@ -28,14 +29,12 @@
                     "enum": ["on", "off", "edge"]
                 }
             },
-            "required": ["bottom", "left", "width", "height",
-                "annotation-height", "tick-font-size",
-                "label-font-size", "grid-mode", "diagonal-mode"]
+            "required": ["bottom", "left", "width", "height", "color-span"]
         },
         "color-span": {"type": "number"},
         "miniature": {"type": "boolean"}
     },
 
     "required": ["pisa", "coordinates", "importance", "predictions",
-        "annotations", "figure", "color-span", "miniature"]
+        "annotations", "figure"]
 }

@@ -7,6 +7,7 @@ import re
 import subprocess as sp
 import typing
 from collections.abc import Iterable
+import h5py
 import scipy
 import pyBigWig
 import pysam
@@ -16,7 +17,7 @@ from bpreveal import logUtils
 # find them.
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
-    QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T
+    QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T
 from bpreveal.internal import constants
 
 
@@ -75,6 +76,91 @@ def setMemoryGrowth() -> None:
         logUtils.warning("Not using GPU")
         logUtils.debug("Because: " + str(inst))
     constants.setTensorflowLoaded()
+
+
+def loadPisa(fname: str) -> IMPORTANCE_AR_T:
+    """Loads up a PISA file, shears it, and crops it to a standard array.
+
+    :param fname: The name of the hdf5-format file on disk, containing your PISA data.
+    :return: An array of shape (num-samples, num-samples) containing the sheared PISA data.
+
+    This is probably best demonstrated with an image or two. Here's how PISA data are
+    stored in the hdf5 file:
+
+    .. image:: ../../doc/presentations/pisaRaw.png
+        :width: 400
+        :alt: Unsheared pisa data straight from an hdf5.
+
+    This function first shears the PISA data into a more normal form:
+
+    .. image:: ../../doc/presentations/pisaShear.png
+        :width: 400
+        :alt: The PISA data has been sheared, where each row is "indented" one pixel more
+              than the one above it.
+
+    (In this figure, I've colored pixels where we didn't have any starting data
+    dark blue so that they stand out.) There is a lot of wasted space in this
+    image. So we crop it by deleting ``receptiveField // 2`` pixels from each
+    side:
+
+    .. image:: ../../doc/presentations/pisaLoad.png
+        :width: 400
+        :alt: The PISA matrix has been cropped on the left and right by half of the
+              receptive field.
+
+    This is the output of this function. (except that I have added in the dark
+    blue patches where there was no data before shearing - the actual return
+    from this function just contains zeros in those regions.) Now, in preparing
+    your regions to run PISA, you need to be pretty careful so that the
+    coordinate you think you are explaining is actually the one that the PISA
+    starts with! Here's a representation of where each base in the sheared
+    image comes from, relative to the actual model input:
+
+    .. image:: ../../doc/presentations/pisaDiagram.png
+        :width: 400
+        :alt: An illustration of where the model input is relative to the PISA output.
+
+    In this figure, the input to the model is shown in black, the model's output is
+    shown in red, and output being explained is shown as a blue dot. The green line
+    shows the receptive field of the model centered around the output base (This is
+    where we have data in the PISA plot).
+    I've put some helpful marks on the x-axis that line up with the topmost PISA row.
+    If you supply a bed file to the PISA interpretation script, then it will provide
+    PISA values where each base in the window is an *output* from the model.
+    In other words, the bed file for these data would have started at position '3752.
+    This keeps life easy, and it also means that when you use this function, the
+    array that gets loaded corresponds exactly to the bed region you used.
+
+    If, however, you use a fasta-format input, things get hairy. The
+    fasta-format input must contain enough bases to fill the entire model's
+    input (i.e., the black lines in this figure), and so it will include bases
+    to the *left* of the output being explained. The number of padding bases
+    will be ``receptiveField // 2``. In this case, my receptive field is 2057,
+    and so there are 1028 extra bases on the left of the blue output being
+    explained.
+
+    Each entry in a fasta file could in principle be a completely different sequence.
+    However, to make a comprehensible PISA plot, the sequences will typically
+    all be drawn from the same region but offset by one each time.
+    In other words, the lines in the fasta file would be the black lines
+    in this figure.
+
+    This line diagram represents the uncropped data. The matrix returned
+    from this function would start at position '3752 and end at 3752 + numEntries.
+
+    """
+    with h5py.File(fname, "r") as fp:
+        pisaShap = np.array(fp["shap"])
+    pisaVals = np.sum(pisaShap, axis=2)
+    numRegions = pisaVals.shape[0]
+    receptiveField = pisaVals.shape[1]
+    shearMat = np.zeros((numRegions, pisaVals.shape[1] + numRegions),
+                        dtype=IMPORTANCE_T)
+    for i in range(0, numRegions):
+        offset = i
+        shearMat[i, offset:offset + pisaVals.shape[1]] = pisaVals[i]
+    shearMat = shearMat[:, receptiveField // 2:-receptiveField // 2]
+    return shearMat
 
 
 def limitMemoryUsage(fraction: float, offset: float) -> float:

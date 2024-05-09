@@ -6,22 +6,17 @@
     "annotations": <annotation-section>,
     "figure": <graph-figure-section>,
     "min-value": <number>,
-    "max-value": <number>,
-    "use-annotation-colors": <boolean>
+  ? "use-annotation-colors": <boolean>
 }
 
 <pisa-section> ::= {
-    <pisa-h5-section>
+    "h5-name": <string>,
   | "values": [<list-of-list-of-number>]
 }
 
 <list-of-list-of-number> ::=
     <list-of-number>, <list-of-number>
   | <list-of-number>
-
-<pisa-h5-section> ::=
-    "h5-name": <string>,
-    "receptive-field": <integer>
 
 <coordinates-section> ::= {
     <sequence-source-section>
@@ -39,7 +34,7 @@
 
 <profile-section> ::= {
     <profile-source>,
-    "show-sequence": <boolean>,
+  ? "show-sequence": <boolean>,
     <profile-color-section>
 }
 
@@ -48,8 +43,19 @@
   | "values": [<list-of-number>]
 
 <profile-color-section> ::=
-    "color": <color-spec>
+    <empty>
+  | "color": <color-spec>
   | "color": <sequence-color-spec>
+  | "color": [<list-of-sequence-color-spec>]
+  | "color": [<list-of-color-spec>]
+
+<list-of-sequence-color-spec> ::=
+    <sequence-color-spec>
+  | <sequence-color-spec>, <list-of-sequence-color-spec>
+
+<list-of-color-spec> ::=
+    <color-spec>
+  | <color-spec>, <list-of-color-spec>
 
 <sequence-color-spec> ::= {
     "A": <color-spec>,
@@ -59,28 +65,19 @@
 }
 
 <annotation-section> ::= {
-    <scan-bed-section>
-    <name-colors-section>
-    "custom": [list-of-annotation]
+  ? "bed-name": <file-name>,
+  ? "name-colors": {<dict-of-name-color>},
+  ? "custom": [list-of-annotation]
 }
 
-<scan-bed-section> ::=
-    <empty>
-  | "bed-name": <file-name>,
-
-<name-colors-section> ::=
-    <empty>
-  | "name-colors": [<list-of-name-color>],
-
-<list-of-name-color> ::=
+<dict-of-name-color> ::=
     <empty>
   | <name-color>
-  | <name-color>, <list-of-name-color>
+  | <name-color>, <dict-of-name-color>
 
-<name-color> ::= {
-    "name": <string>,
-    "color": <color-spec>
-}
+<name-color> ::=
+    <string>: <color-spec>
+
 
 <list-of-annotation> ::=
     <empty>
@@ -111,14 +108,15 @@
     "left": <number>,
     "width": <number>,
     "height": <number>,
-    "annotation-height": <number>,
-    "tick-font-size": <integer>,
-    "label-font-size": <integer>,
+  ? "annotation-height": <number>,
+  ? "tick-font-size": <integer>,
+  ? "label-font-size": <integer>,
+    "color-span": <number>,
 
 <plot-figure-section> ::= {
     <figure-base>
-    "grid-mode": <grid-mode>,
-    "diagonal-mode": <diagonal-mode>
+  ? "grid-mode": <grid-mode>,
+  ? "diagonal-mode": <diagonal-mode>
 }
 
 <grid-mode> ::=
@@ -137,8 +135,7 @@
     "predictions": <profile-section>,
     "annotations": <annotation-section>,
     "figure": <plot-figure-section>,
-    "color-span": <number>,
-    "miniature": <boolean>
+  ? "miniature": <boolean>
 }
 
 

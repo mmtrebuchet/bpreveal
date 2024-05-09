@@ -24,6 +24,8 @@ the steps:
 8. Use the motif mapping tools :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>`,
    :py:mod:`motifScan<bpreveal.motifScan>` and :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles>` to map the
    discovered motifs back to the genome.
+9. Use the plotting utilities in :py:mod:`plotting<bpreveal.plotting>` to make impressive
+   graphics with your results.
 
 With bias removal
 -----------------
@@ -56,6 +58,8 @@ In that case, the workflow is the following:
     :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>`,
     :py:mod:`motifScan<bpreveal.motifScan>` and
     :py:mod:`motifAddQuantiles<bpreveal.motifAddQuantiles>`.
+11. Use the plotting utilities in :py:mod:`plotting<bpreveal.plotting>` to make impressive
+    graphics with your results.
 
 ..
     Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa  # pylint: disable=line-too-long

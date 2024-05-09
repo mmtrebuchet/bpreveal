@@ -128,6 +128,9 @@ to do useful things in your code.
     Functions for getting interpretation scores. Contains a streaming system
     for calculating pisa and flat importance scores.
 
+:py:mod:`plotting<bpreveal.plotting>`
+    Utilities for making high-quality plots of your results.
+
 :py:mod:`schema<bpreveal.schema>`
     A set of JSON schemas that validate the inputs to the BPReveal programs.
     These are used to make sure that incorrect inputs trigger errors early, and

@@ -18,18 +18,15 @@
                 "height": {"type": "number"},
                 "annotation-height": {"type": "number"},
                 "tick-font-size": {"type": "integer"},
-                "label-font-size": {"type": "integer"}
+                "label-font-size": {"type": "integer"},
+                "color-span": {"type": "number"}
             },
-            "required": ["bottom", "left", "width", "height",
-                "annotation-height", "tick-font-size",
-                "label-font-size"]
+            "required": ["bottom", "left", "width", "height"]
         },
         "min-value": {"type": "number"},
-        "max-value": {"type": "number"},
         "use-annotation-colors": {"type": "boolean"}
     },
 
     "required": ["pisa", "coordinates", "importance", "predictions",
-        "annotations", "figure", "min-value", "max-value",
-        "use-annotation-colors"]
+        "annotations", "figure", "min-value"]
 }

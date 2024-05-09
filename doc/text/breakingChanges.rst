@@ -28,6 +28,8 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
    :py:mod:`motifSeqletCutoffs<bpreveal.motifSeqletCutoffs>`, you will need to provide a
    ``modisco-window`` parameter in the configuration json. Omitting this has issued
    a warning and generated invalid coordinate data since 4.1.3.
+6. The ``plots.py`` module in the tools directory will be removed. Its replacement,
+   ``plotting.py``, was introduced in 4.2.0 and is part of the main repository.
 
 
 BPReveal 5.x

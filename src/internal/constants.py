@@ -89,6 +89,11 @@ GENOME_NUCLEOTIDE_FREQUENCY: dict[str, list[float]] = {
 """The frequency of A, C, G, and T (in that order) in common reference genomes."""
 
 
+FONT_FAMILY = "serif"
+FONT_SIZE_TICKS = 6
+FONT_SIZE_LABELS = 8
+
+
 def setTensorflowLoaded():
     """Call this when you first load tensorflow."""
     global GLOBAL_TENSORFLOW_LOADED

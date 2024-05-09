@@ -27,7 +27,6 @@
             "type": "object",
             "properties": {
                 "h5-name" : {"type": "string"},
-                "receptive-field": {"type": "integer"},
                 "values": {
                     "type": "array",
                     "items": {
@@ -38,15 +37,14 @@
             },
             "oneOf": [
                 {
-                    "required": ["h5-name", "receptive-field"],
+                    "required": ["h5-name"],
                      "not": {"required": ["pisa-data"]}
                 },
                 {
                     "required": ["pisa-data"],
                     "not": {
                         "anyOf": [
-                            {"required": ["h5-name"]},
-                            {"required": ["receptive-field"]}]
+                            {"required": ["h5-name"]}]
                     }
                 }
             ]
@@ -64,10 +62,7 @@
             },
             "required": ["midpoint-offset", "input-slice-width",
                          "output-slice-width", "genome-window-start",
-                         "genome-window-chrom"],
-            "oneOf": [
-                {"required": ["genome-fasta"]},
-                {"required": ["sequence"]}]
+                         "genome-window-chrom"]
         },
         "profile-section": {
             "type": "object",
@@ -77,10 +72,11 @@
                            "items": {"type": "number"}},
                 "color": {"oneOf": [
                     {"$ref": "#/definitions/color-spec"},
-                    {"$ref": "#/definitions/sequence-color-spec"}]
+                    {"$ref": "#/definitions/sequence-color-spec"},
+                    {"type": "array", "items": {"$ref": "#/definitions/color-spec"}},
+                    {"type": "array", "items": {"$ref": "#/definitions/color-spec"}}]
                 }
             },
-            "required": ["color"],
             "oneOf": [
                 {"required": ["bigwig-name"]},
                 {"required": ["values"]}]

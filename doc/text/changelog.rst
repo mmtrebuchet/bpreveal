@@ -8,6 +8,20 @@ see :doc:`breakingChanges`.
 BPReveal 4.x
 ------------
 
+BPReveal 4.2.x
+^^^^^^^^^^^^^^
+
+BPReveal 4.2.0, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+NEW FEATURES:
+    * The old ``plots.py`` package in the tools directory has been re-worked and is
+      now part of the main repo, under the name ``plotting.py``.
+      A new type of plot, a PISA Graph Plot, has been added and the configuration
+      for plotting is now based on a config dictionary instead of a sea of arguments.
+      The old ``tools/plots.py`` file will remain until 6.0.0, but will not be
+      maintained.
+
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 

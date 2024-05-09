@@ -79,6 +79,13 @@ Modisco pattern objects. Typically, you create a
 relevant data.
 Just about the only time you'd need to create a Pattern object is to plot it.
 
+Showing off your results
+------------------------
+
+There are a bunch of nifty tools for making high-quality plots in the
+:py:mod:`plotting<bpreveal.plotting>` package. You can make PISA plots, PISA
+graph plots, and motif summary plots.
+
 Module list
 -----------
 
