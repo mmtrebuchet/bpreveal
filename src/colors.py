@@ -9,11 +9,11 @@ BNF
 
 
 """
+from __future__ import annotations
 from typing import TypeAlias, Literal, TypedDict
 import numpy as np
 import matplotlib as mpl
 import matplotlib.colors as mplcolors
-
 
 COLOR_SPEC_T: TypeAlias = \
     dict[Literal["rgb"], tuple[float, float, float]] | \
@@ -48,6 +48,8 @@ It may be one of the following things:
     giving an rgb triple.
 8. ``(0.1, 0.2, 0.3)``
     giving an rgb triple with an alpha value.
+
+:meta hide-value:
 """
 
 
@@ -59,6 +61,12 @@ class DNA_COLOR_SPEC_T(TypedDict):
 
         {"A": {"wong": 3}, "C": {"wong": 5},
          "G": {"wong": 4}, "T": {"wong": 6}}
+
+    :type: {Literal["A"]: :py:data:`~COLOR_SPEC_T`,
+            Literal["C"]: :py:data:`~COLOR_SPEC_T`,
+            Literal["G"]: :py:data:`~COLOR_SPEC_T`,
+            Literal["T"]: :py:data:`~COLOR_SPEC_T`}
+
     """
 
     A: COLOR_SPEC_T
@@ -121,6 +129,9 @@ tol: tuple[RGB_T, ...] = _toFractions(tolRgb)
 
 .. image:: ../../doc/presentations/tol.png
 
+:type: tuple[:py:class:`~RGB_T`, ...]
+
+:meta hide-value:
 """
 
 ibm: tuple[RGB_T, ...] = _toFractions(ibmRgb)
@@ -128,6 +139,9 @@ ibm: tuple[RGB_T, ...] = _toFractions(ibmRgb)
 
 .. image:: ../../doc/presentations/ibm.png
 
+:type: tuple[:py:class:`~RGB_T`, ...]
+
+:meta hide-value:
 """
 
 wong: tuple[RGB_T, ...] = _toFractions(wongRgb)
@@ -135,6 +149,9 @@ wong: tuple[RGB_T, ...] = _toFractions(wongRgb)
 
 .. image:: ../../doc/presentations/wong.png
 
+:type: tuple[:py:class:`~RGB_T`, ...]
+
+:meta hide-value:
 """
 
 tolLight: tuple[RGB_T, ...] = _toFractions(tolLightRgb)
@@ -142,6 +159,9 @@ tolLight: tuple[RGB_T, ...] = _toFractions(tolLightRgb)
 
 .. image:: ../../doc/presentations/tolLight.png
 
+:type: tuple[:py:class:`~RGB_T`, ...]
+
+:meta hide-value:
 """
 
 dnaWong: DNA_COLOR_SPEC_T = {"A": {"wong": 3}, "C": {"wong": 5},
@@ -152,7 +172,12 @@ A is green, C is blue, G is yellow, and T is red.
 """
 
 defaultProfile: COLOR_SPEC_T = {"tol": 0}
-"""The default color for profile plots. It's tol[0]."""
+"""The default color for profile plots. It's tol[0].
+
+:type: :py:class:`~COLOR_SPEC_T`
+
+:meta hide-value:
+"""
 
 
 _oldPisaCmap = mpl.colormaps["RdBu_r"].resampled(256)
@@ -182,6 +207,8 @@ def parseSpec(  # pylint: disable=too-many-return-statements
     """Given a color-spec (See the BNF), convert it into an rgb or rgba tuple.
 
     :param colorSpec: The color specification.
+    :type colorSpec: :py:data:`~COLOR_SPEC_T`
+    :return: An rgb triple (or rgba quadruple).
 
     If colorSpec is a 3-tuple, it is interpreted as an rgb color. If it is a
     4-tuple, it is interpreted as rgba. If it is a dictionary containing

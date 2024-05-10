@@ -352,9 +352,11 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
 
     You must specify either:
 
-    * ``chromDict``, in which case ``regionList``, ``chromSizes``
+    * ``chromDict``,
+        in which case ``regionList``, ``chromSizes``
         and ``regionData`` must be ``None``, or
-    * ``regionList``, ``chromSizes``, and ``regionData``, in which
+    * ``regionList``,
+        ``chromSizes``, and ``regionData``, in which
         case ``chromDict`` must be ``None``.
 
     :param bwFname: The name of the bigwig file to write.
@@ -460,6 +462,9 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
 
 def oneHotDecode(oneHotSequence: np.ndarray) -> str:
     """Take a one-hot encoded sequence and turn it back into a string.
+
+    :param oneHotSequence: An array of shape (n, 4). It may have any type that can be
+        converted into a uint8.
 
     Given an array representing a one-hot encoded sequence, convert it back
     to a string. The input shall have shape (sequenceLength, 4), and the output

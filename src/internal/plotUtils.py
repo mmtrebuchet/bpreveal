@@ -323,7 +323,19 @@ def loadFromBigwig(bwFname: str, start: int, chrom: str, length: int) -> PRED_AR
 def normalizeProfileColor(colorSpec: DNA_COLOR_SPEC_T | COLOR_SPEC_T |  # noqa
                                      list[DNA_COLOR_SPEC_T | COLOR_SPEC_T],  # noqa
                           numItems: int) -> list[DNA_COLOR_SPEC_T]:
-    """Take the config color spec and expand it to a list of DNA_COLOR_SPEC_T."""
+    """Take the config color spec and expand it to a list of DNA_COLOR_SPEC_T.
+
+    :param colorSpec: The colors to be used to color the bases.
+    :type colorSpec: :py:class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>`
+                     | :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`
+                     | list[:py:class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>`]
+                     | list[:py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
+    :param numItems: How many total bases are we going to plot?
+
+    :return: A list of a DNA_COLOR_SPEC_T for each position in the profile. If only
+        one colorSpec was provided, then it will be replicated ``numItems`` times.
+
+    """
     match colorSpec:
         case {"A": aColor, "C": cColor, "G": gColor, "T": tColor}:
             a = aColor
@@ -362,6 +374,7 @@ def loadPisaAnnotations(bedFname: str, nameColors: dict[str, COLOR_SPEC_T],
         the colors that will be drawn for the annotations. If a name already exists
         in nameColors, use it. If a new name is found in the bed, add it to nameColors,
         drawing from the tolLight palette.
+    :type nameColors: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
     :param start: Genomic start coordinate.
     :param chrom: Chromosome that the region is on.
     :param length: The length of the region being plotted.
@@ -405,7 +418,7 @@ def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
     """
     plotProfile = list(profile)
     for pos, val in enumerate(plotProfile):
-        y = len(plotProfile) - pos
+        y = len(plotProfile) - pos - 1
         axProfile.fill_betweenx([y, y + 1], val, step="post",
                                 color=parseSpec(colors[pos][sequence[pos]]))
     axProfile.set_ylim(0, len(profile))
@@ -438,6 +451,7 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
     :param mini: If True, then don't write the names of the annotations in the boxes.
     :return: A dict of the names that were actually plotted, mapping each name to its
         colorSpec.
+    :rtype: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
     """
     offset = -boxHeight * 1.3
     lastR = 0
@@ -454,6 +468,10 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
         if offset < -1:
             # We're off the page - reset offset and deal with the overlap.
             offset = -boxHeight * 1.3
+        if aleft <= genomeStartX:
+            aleft = genomeStartX + 0.1
+        if aright >= genomeEndX:
+            aright = genomeEndX - 0.1
         axAnnot.fill([aleft, aleft, aright, aright],
                      [offset, boxHeight + offset, boxHeight + offset, offset],
                      label=annot["name"], color=parseSpec(annot["color"]))
@@ -524,11 +542,12 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
         axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
                       fontfamily=FONT_FAMILY, labelpad=-5)
     numYTicks = 4 if mini else 10
-    ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart,
+    ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart + 1,
                       genomeWindowStart + shearMat.shape[0], numYTicks, True)
-    ticksY = [x + axStartY for x in ticksY]
+    ticksY = [x + axStartY + 0.5 for x in ticksY]
     axPisa.set_yticks(ticksY, tickLabelsY, fontsize=fontsize, fontfamily=FONT_FAMILY)
-    axPisa.set_ylim(axStopY, axStartY)
+    axPisa.set_ylim(axStopY - 0.5, axStartY + 0.5)
+    axPisa.set_xlim(0.5, xlen - 0.5)
     match gridMode:
         case "on":
             axPisa.grid()
@@ -565,6 +584,7 @@ def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontsize: in
 
     :param usedNames: The names that are present in this view. Comes from
         :py:func:`~addAnnotations`.
+    :type usedNames: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
     :param axLegend: The axes to draw the legend on.
     :param fontsize: How big do you want the text, in points?
     """
@@ -686,7 +706,7 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     space = δ * spacingλ
     graphBase = seqBase + seqHeight + space
     graphHeight = δ * graphλ
-    profileBase = graphBase + graphHeight + space
+    profileBase = graphBase + graphHeight
     profileHeight = δ * profileλ
     annotBase = graphBase + graphHeight * offsetFracAnnot
     annotHeight = graphHeight * heightFracAnnot
@@ -709,11 +729,12 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     axImportance.set_frame_on(False)
     axImportance.set_yticks([])
     axAnnot.set_ylim(0, -1)
+    axGraph.set_axis_off()
 
     return axGraph, axImportance, axPredictions, axAnnot, axCbar
 
 
-def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], seq: str,
+def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], sequence: str,
                              genomeStartX: int, genomeEndX: int, axSeq: AXES_T,
                              axGraph: AXES_T | None, fontSizeTicks: int, fontSizeAxLabel: int,
                              showSequence: bool, labelAxis: bool, mini: bool):
@@ -721,7 +742,7 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
 
     :param values: The values to plot.
     :param colors: A list of DNA_COLOR_SPEC_T, one for each base.
-    :param seq: The sequence of the region. Used to determine the color for each base,
+    :param sequence: The sequence of the region. Used to determine the color for each base,
         and of course to set the sequence if ``showSequence`` is ``True``.
     :param genomeStartX: Where, in genomic coordinates, does the x-axis start?
     :param genomeEndX: Where, in genomic coordinates, does the x-axis end?
@@ -737,24 +758,28 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
     :param mini: If True, use fewer x-ticks.
     """
     numXTicks = 4 if mini else 10
-    ticksX, tickLabelsX = getCoordinateTicks(genomeStartX, genomeEndX, numXTicks, True)
-
-    axSeq.set_xlim(0, values.shape[0])
+    ticksX, tickLabelsX = getCoordinateTicks(genomeStartX + 1, genomeEndX, numXTicks, True)
+    ticksX = [tick + 0.5 for tick in ticksX]
+    axSeq.set_xlim(0.5, values.shape[0] - 0.5)
     if showSequence:
         # We have a short enough window to draw individual letters.
-        seqOhe = utils.oneHotEncode(seq) * 1.0
-        for i in range(len(seq)):
+        seqOhe = utils.oneHotEncode(sequence) * 1.0
+        for i in range(len(sequence)):
             seqOhe[i, :] *= values[i]
         # Draw the letters.
-        plotLogo(seqOhe, len(seq), axSeq, colors=colors)
+        plotLogo(seqOhe, len(sequence), axSeq, colors=colors)
         axSeq.set_ylim(float(np.min(seqOhe)), float(np.max(seqOhe)))
     else:
         # Window span too big - just show a profile.
         for pos, score in enumerate(values):
-            axSeq.bar([pos], [score],
-                      linewidth=1, facecolor=parseSpec(colors[pos][seq[pos]]),
-                      edgecolor=parseSpec(colors[pos][seq[pos]]))
-        axSeq.plot([0, values.shape[0]], [0, 0], "k--", lw=0.5)
+            x = pos
+            axSeq.fill_between([x, x + 1], score, step="post",
+                               color=parseSpec(colors[pos][sequence[pos]]),
+                               lw=0)
+        if min(values) < 0:
+            # Only draw the zero line if there are negative values.
+            axSeq.plot([0, values.shape[0]], [0, 0], "k--", lw=0.5)
+        axSeq.set_ylim(min(values), max(values))
     if labelAxis:
         axSeq.set_xticks(ticksX, tickLabelsX, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
 
@@ -769,7 +794,7 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
 
 
 def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
-                 colorBlocks: list[tuple[int, int, tuple[float, float, float]]],
+                 colorBlocks: list[tuple[int, int, COLOR_SPEC_T]],
                  lineWidth: float, ax: AXES_T) -> ScalarMappable:
     """Draw a graph representation of a PISA matrix.
 
@@ -780,6 +805,8 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         These are tuples of (start, end, (r, g, b)).
         If the origin of a line overlaps with a ColorBlock, then its color is set
         to the rgb color in the block.
+    :type colorBlocks: list[tuple[int, int,
+        :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]]
     :param lineWidth: The thickness of the drawn lines. For large figures,
         thicker lines avoid Moiré patterns.
     :param ax: The axes to draw on. The xlim and ylim will be clobbered by this function.
@@ -839,7 +866,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     psSorted = sorted(patchList, key=lambda x: x[0])
     for p in logUtils.wrapTqdm(psSorted, "DEBUG"):
         ax.add_patch(p[1])
-    ax.set_xlim(0, np.max(plotMat.shape))
+    ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5)
     ax.set_ylim(0, 1)
 
     # Last quick thing to do - generate a color map.

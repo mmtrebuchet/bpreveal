@@ -482,7 +482,7 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
     usedNames = pu.addAnnotations(axAnnot, cfg["annotations"]["custom"],
                                   cfg["figure"]["annotation-height"],
                                   genomeStartX, genomeEndX,
-                                  cfg["figure"]["label-font-size"], False)
+                                  cfg["figure"]["label-font-size"], cfg["miniature"])
     # Now, add the profiles.
     pu.addVerticalProfilePlot(cfg["predictions"]["values"][sliceStartY:sliceEndY],
                               axProfile,
@@ -652,6 +652,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
     :param width: The width of the total logo, useful for aligning axis labels.
     :param ax: A matplotlib axes object on which the logo will be drawn.
     :param colors: The colors to use for shading the sequence. See below for details.
+    :type colors: :class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>` |
+        list[:class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>`]
     :param spaceBetweenLetters: How much should the letters be squished? This is
         given as a fraction of the total letter width. For example, to have
         a gap of 2 pixels between letters that are 10 pixels wide, set
