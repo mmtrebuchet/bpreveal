@@ -41,7 +41,7 @@ genome, bed-file
 fasta-file
     You can also supply the sequences directly with a fasta file. Since PISA
     calculates shap scores for a single base, this tool always calculates the
-    pisa scores for the *leftmost* base in the output window. Suppose the input
+    PISA scores for the *leftmost* base in the output window. Suppose the input
     length is 3090 bp, and the output is 1000 bp. In this case, the receptive
     field is 2091 bp, and there are 1045 bp of overhang on each end of the
     input sequence. So, for each input sequence, this program will assign shap
@@ -184,7 +184,7 @@ def main(config: dict):
         # We're doing a fasta run.
         if "sequence-fasta" in config:
             logUtils.warning("DEPRECATION: You are referring to the fasta file in your "
-                             "pisa JSON as sequence-fasta. This is deprecated, please "
+                             "PISA JSON as sequence-fasta. This is deprecated, please "
                              "change the parameter name to fasta-file. This will be an "
                              "error in BPReveal 6.0.0.")
             config["fasta-file"] = config["sequence-fasta"]

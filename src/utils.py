@@ -89,7 +89,7 @@ def loadPisa(fname: str) -> IMPORTANCE_AR_T:
 
     .. image:: ../../doc/presentations/pisaRaw.png
         :width: 400
-        :alt: Unsheared pisa data straight from an hdf5.
+        :alt: Unsheared PISA data straight from an hdf5.
 
     This function first shears the PISA data into a more normal form:
 

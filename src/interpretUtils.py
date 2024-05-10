@@ -158,7 +158,7 @@ class FlatResult(Result):
 
 
 class Generator:
-    """The base class for generating pisa samples.
+    """The base class for generating PISA samples.
 
     Lifetime:
 
@@ -333,11 +333,11 @@ class FlatRunner:
 
 
 class PisaRunner:
-    """Tool to run pisa batches.
+    """Tool to run PISA batches.
 
     I try to avoid class-based wrappers around simple things, but this is not simple.
-    This class creates threads to read in data, and then creates a thread that runs pisa
-    samples in batches. Finally, it takes the results from the pisa thread and saves
+    This class creates threads to read in data, and then creates a thread that runs PISA
+    samples in batches. Finally, it takes the results from the PISA thread and saves
     those out to an hdf5-format file.
 
     :param modelFname: is the name of the model on disk
@@ -362,7 +362,7 @@ class PisaRunner:
     def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
                  generator: Generator, saver: Saver, numShuffles: int,
                  receptiveField: int, kmerSize: int, numBatchers: int):
-        logUtils.info("Initializing pisa runner.")
+        logUtils.info("Initializing PISA runner.")
         self.numBatchers = numBatchers
         self._inQueue = multiprocessing.Queue(100)
         self._outQueue = multiprocessing.Queue(100)
@@ -395,7 +395,7 @@ class PisaRunner:
 
     def run(self):
         """Start up the threads and waits for them to finish."""
-        logUtils.info("Beginning pisa run.")
+        logUtils.info("Beginning PISA run.")
         self._genThread.start()
         logUtils.debug("Started generator.")
         for bt in self._batchThreads:
@@ -507,7 +507,7 @@ class FlatH5Saver(Saver):
 
     :param outputFname: is the name of the hdf5-format file that the shap scores will
         be deposited in.
-    :param numSamples: is the number of regions (i.e., bases) that pisa will be run on.
+    :param numSamples: is the number of regions (i.e., bases) that PISA will be run on.
         This is needed because we store reference predictions.
     :param inputLength: The input length of the model.
     :param genome: (Optional) Gives the name of a fasta-format file that contains
@@ -677,7 +677,7 @@ class PisaH5Saver(Saver):
 
     :param outputFname: is the name of the hdf5-format file that the shap scores
         will be deposited in.
-    :param numSamples: is the number of regions (i.e., bases) that pisa will be run on.
+    :param numSamples: is the number of regions (i.e., bases) that PISA will be run on.
     :param numShuffles: is the number of shuffles that are used to generate the reference.
         This is needed because we store reference predictions.
     :param receptiveField: How wide is the model's receptive field?
