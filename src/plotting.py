@@ -11,7 +11,7 @@ Parameter notes
 ---------------
 
 ``pisa-section``
-''''''''''''
+''''''''''''''''
 
 You can specify either a file of PISA data or a custom array.
 If you give a file, you need to be very careful about coordinates!
@@ -33,7 +33,7 @@ to make PISA plots.
     functions will crop in appropriately.
 
 ``coordinates-section``
-'''''''''''''''''''
+'''''''''''''''''''''''
 
 ``genome-fasta``
     The name of a fasta-format file containing the genome of the organism. The
@@ -67,7 +67,7 @@ to make PISA plots.
     ``genome-fasta``.
 
 ``profile-section``
-'''''''''''''''
+'''''''''''''''''''
 
 The profile section gives the data that should be plotted in the importance score
 or prediction tracks. The format for both tracks is identical.
@@ -98,7 +98,7 @@ or prediction tracks. The format for both tracks is identical.
     for bases. If ``show-sequence`` is ``false``, then Tol color 0.
 
 ``annotation-section``
-''''''''''''''''''
+''''''''''''''''''''''
 
 Annotations are used to label specific areas of the plot, typically with
 things like motifs and genes.
@@ -126,7 +126,7 @@ things like motifs and genes.
     Default: No custom annotations.
 
 ``figure-section``
-''''''''''''''
+''''''''''''''''''
 
 ``bottom``, ``left``, ``width``, ``height``
     Where on the given figure should the plot be placed? Note that axis labels
@@ -296,11 +296,10 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
     del config  # Don't accidentally use the old one.
     logUtils.debug("Starting to draw PISA graph.")
 
-    axGraph, axSeq, axProfile, axAnnot, axCbar = pu.getPisaGraphAxes(fig,
-                                                                   cfg["figure"]["left"],
-                                                                   cfg["figure"]["bottom"],
-                                                                   cfg["figure"]["width"],
-                                                                   cfg["figure"]["height"])
+    axGraph, axSeq, axProfile, axAnnot, axCbar = pu.getPisaGraphAxes(
+        fig, cfg["figure"]["left"], cfg["figure"]["bottom"],
+        cfg["figure"]["width"], cfg["figure"]["height"])
+
     coords = cfg["coordinates"]
     sliceStart = coords["midpoint-offset"] - coords["input-slice-width"] // 2
     sliceEnd = sliceStart + coords["input-slice-width"]
@@ -315,42 +314,43 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
                                 annot["end"] - genomeStart,
                                 annot["color"]))
     logUtils.debug("Axes set. Drawing graph.")
-    pisaCax = pu.addPisaGraph(similarityMat=shearMat, minValue=cfg["min-value"],
-                  colorSpan=cfg["figure"]["color-span"], colorBlocks=colorBlocks,
-                  lineWidth=cfg["figure"]["line-width"],
-                  ax=axGraph)
+    pisaCax = pu.addPisaGraph(similarityMat=shearMat,
+                              minValue=cfg["min-value"],
+                              colorSpan=cfg["figure"]["color-span"],
+                              colorBlocks=colorBlocks,
+                              lineWidth=cfg["figure"]["line-width"],
+                              ax=axGraph)
 
     # Now set up the sequence/importance axis.
     logUtils.debug("Graph complete. Finishing plot.")
     pu.addHorizontalProfilePlot(cfg["importance"]["values"][sliceStart:sliceEnd],
-                              cfg["importance"]["color"][sliceStart:sliceEnd],
-                              coords["sequence"][sliceStart:sliceEnd],
-                              genomeStart,
-                              genomeEnd,
-                              axSeq, axGraph,
-                              cfg["figure"]["tick-font-size"],
-                              cfg["figure"]["label-font-size"],
-                              cfg["importance"]["show-sequence"],
-                              True, False)
+                                cfg["importance"]["color"][sliceStart:sliceEnd],
+                                coords["sequence"][sliceStart:sliceEnd],
+                                genomeStart, genomeEnd, axSeq, axGraph,
+                                cfg["figure"]["tick-font-size"],
+                                cfg["figure"]["label-font-size"],
+                                cfg["importance"]["show-sequence"], True,
+                                False)
 
     pu.addAnnotations(axAnnot, cfg["annotations"]["custom"],
-                    cfg["figure"]["annotation-height"], genomeStart, genomeEnd,
-                    cfg["figure"]["label-font-size"], False)
+                      cfg["figure"]["annotation-height"], genomeStart,
+                      genomeEnd, cfg["figure"]["label-font-size"], False)
 
     # Now, add the profiles.
     pu.addHorizontalProfilePlot(cfg["predictions"]["values"][sliceStart:sliceEnd],
-                              cfg["predictions"]["color"][sliceStart:sliceEnd],
-                              coords["sequence"][sliceStart:sliceEnd],
-                              genomeStart,
-                              genomeEnd,
-                              axProfile, None,
-                              cfg["figure"]["tick-font-size"],
-                              cfg["figure"]["label-font-size"],
-                              cfg["predictions"]["show-sequence"],
-                              False, False)
+                                cfg["predictions"]["color"][sliceStart:sliceEnd],
+                                coords["sequence"][sliceStart:sliceEnd],
+                                genomeStart,
+                                genomeEnd,
+                                axProfile, None,
+                                cfg["figure"]["tick-font-size"],
+                                cfg["figure"]["label-font-size"],
+                                cfg["predictions"]["show-sequence"],
+                                False, False)
 
     pu.addCbar(pisaCax, axCbar, cfg["figure"]["tick-font-size"],
                cfg["figure"]["label-font-size"], False)
+
     logUtils.debug("PISA graph complete.")
     return {"axes": {"graph": axGraph, "importance": axSeq, "predictions": axProfile,
                      "annotations": axAnnot},
@@ -463,33 +463,34 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
                             annot["color"]))
     logUtils.debug("Axes set. Drawing graph.")
     pisaCax = pu.addPisaPlot(shearMat, cfg["figure"]["color-span"], axPisa,
-                           cfg["figure"]["diagonal-mode"], cfg["figure"]["grid-mode"],
-                           cfg["figure"]["tick-font-size"], cfg["figure"]["label-font-size"],
-                           genomeStartX, cfg["miniature"])
+                             cfg["figure"]["diagonal-mode"],
+                             cfg["figure"]["grid-mode"],
+                             cfg["figure"]["tick-font-size"],
+                             cfg["figure"]["label-font-size"], genomeStartX,
+                             cfg["miniature"])
     # Now set up the sequence/importance axis.
     logUtils.debug("Graph complete. Finishing plot.")
     pu.addHorizontalProfilePlot(cfg["importance"]["values"][sliceStartX:sliceEndX],
-                              cfg["importance"]["color"][sliceStartX:sliceEndX],
-                              coords["sequence"][sliceStartX:sliceEndX],
-                              genomeStartX,
-                              genomeEndX,
-                              axSeq, axPisa,
-                              cfg["figure"]["tick-font-size"],
-                              cfg["figure"]["label-font-size"],
-                              cfg["importance"]["show-sequence"],
-                              True, cfg["miniature"])
+                                cfg["importance"]["color"][sliceStartX:sliceEndX],
+                                coords["sequence"][sliceStartX:sliceEndX],
+                                genomeStartX, genomeEndX, axSeq, axPisa,
+                                cfg["figure"]["tick-font-size"],
+                                cfg["figure"]["label-font-size"],
+                                cfg["importance"]["show-sequence"], True,
+                                cfg["miniature"])
 
     usedNames = pu.addAnnotations(axAnnot, cfg["annotations"]["custom"],
-                                cfg["figure"]["annotation-height"], genomeStartX,
-                                genomeEndX, cfg["figure"]["label-font-size"], False)
+                                  cfg["figure"]["annotation-height"],
+                                  genomeStartX, genomeEndX,
+                                  cfg["figure"]["label-font-size"], False)
     # Now, add the profiles.
     pu.addVerticalProfilePlot(cfg["predictions"]["values"][sliceStartY:sliceEndY],
-                            axProfile,
-                            cfg["predictions"]["color"][sliceStartY:sliceEndY],
-                            coords["sequence"][sliceStartY:sliceEndY],
-                            cfg["figure"]["tick-font-size"],
-                            cfg["predictions"]["show-sequence"],
-                            cfg["miniature"])
+                              axProfile,
+                              cfg["predictions"]["color"][sliceStartY:sliceEndY],
+                              coords["sequence"][sliceStartY:sliceEndY],
+                              cfg["figure"]["tick-font-size"],
+                              cfg["predictions"]["show-sequence"],
+                              cfg["miniature"])
     if axLegend is not None:
         pu.addLegend(usedNames, axLegend, cfg["figure"]["label-font-size"])
     pu.addCbar(pisaCax, axCbar, cfg["figure"]["tick-font-size"],
@@ -696,6 +697,7 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
     3. Try to fall on easy multiples 1, 2, and 5 times powers of ten.
     4. Are formatted to reduce redundant label noise by omitting repeated initial digits.
     """
+    # This is just a wrapper to avoid circular imports.
     return pu.getCoordinateTicks(start, end, numTicks, zeroOrigin)
 
 
