@@ -31,7 +31,6 @@
             },
             "required": ["bottom", "left", "width", "height", "color-span"]
         },
-        "color-span": {"type": "number"},
         "miniature": {"type": "boolean"}
     },
 

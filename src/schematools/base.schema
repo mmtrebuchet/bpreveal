@@ -42,10 +42,7 @@
                 },
                 {
                     "required": ["pisa-data"],
-                    "not": {
-                        "anyOf": [
-                            {"required": ["h5-name"]}]
-                    }
+                    "not": {"required": ["h5-name"]}
                 }
             ]
         },
@@ -74,7 +71,7 @@
                     {"$ref": "#/definitions/color-spec"},
                     {"$ref": "#/definitions/sequence-color-spec"},
                     {"type": "array", "items": {"$ref": "#/definitions/color-spec"}},
-                    {"type": "array", "items": {"$ref": "#/definitions/color-spec"}}]
+                    {"type": "array", "items": {"$ref": "#/definitions/sequence-color-spec"}}]
                 }
             },
             "oneOf": [
