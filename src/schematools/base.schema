@@ -4,6 +4,7 @@
     "description": "Useful definitions",
     "definitions": {
         "fraction": {
+            "$comment": "A number between zero and one.",
             "type": "number",
             "maximum" : 1,
             "minimum" : 0
@@ -21,7 +22,8 @@
                 ]
         },
         "verbosity": {
-            "type": "string", "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]
+            "type": "string",
+            "enum": ["DEBUG", "WARNING", "INFO", "ERROR", "CRITICAL"]
         },
         "pisa-section": {
             "type": "object",
@@ -47,6 +49,7 @@
             ]
         },
         "coordinates-section":{
+            "$comment": "The coordinates to be used in a plot or graph.",
             "type": "object",
             "properties": {
                 "midpoint-offset": {"type": "integer"},
@@ -62,6 +65,7 @@
                          "genome-window-chrom"]
         },
         "profile-section": {
+            "$comment": "A profile (importance or predictions) to be used in a plot or graph.",
             "type": "object",
             "properties": {
                 "bigwig-name": {"type": "string"},
@@ -133,8 +137,10 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "start": {"type": "integer"},
-                            "end": {"type": "integer"},
+                            "start": {"type": "integer",
+                                      "$comment": "The start position in genomic coordinates."},
+                            "end": {"type": "integer",
+                                    "$comment": "The end position in genomic coordinates."},
                             "name": {"type": "string"},
                             "color": {"$ref": "#/definitions/color-spec"}
                         },

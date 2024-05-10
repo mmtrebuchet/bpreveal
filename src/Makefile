@@ -25,7 +25,7 @@ defined_schemas = prepareBed prepareBed_old prepareTrainingData trainSoloModel\
 				  trainTransformationModel trainCombinedModel makePredictions\
 				  interpretFlat interpretPisa\
 				  motifSeqletCutoffs motifScan addNoise\
-				  pisaPlot pisaGraph base
+				  pisaPlot pisaGraph makePisaFigure base
 
 schema_files = $(addprefix schematools/,$(addsuffix .schema,${defined_schemas}))
 

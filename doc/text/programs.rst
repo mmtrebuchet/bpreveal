@@ -14,6 +14,9 @@ These are the core programs of BPReveal. Each one takes a JSON configuration fil
     Runs an all-to-all shap analysis on the given bed regions or fasta
     sequences.
 
+:py:mod:`makePisaFigure<bpreveal.makePisaFigure>`
+    Generates a handsome-looking PISA graph or plot.
+
 :py:mod:`makePredictions<bpreveal.makePredictions>`
     Takes a trained model (solo, combined, residual, or even transformation
     models work) and predicts over the given regions.

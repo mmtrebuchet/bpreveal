@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "makePisaFigure",
+    "description": "Schema for making PISA figures",
+    "type": "object",
+    "properties": {
+        "graph-configs": {
+            "type": "array",
+            "items": {"$ref": "/schema/pisaGraph#/definitions/graph-config"}
+        },
+        "plot-configs": {
+            "type": "array",
+            "items": {"$ref": "/schema/pisaPlot#/definitions/plot-config"}
+        },
+        "width": {"type": "integer"},
+        "height": {"type": "integer"},
+        "dpi": {"type": "integer"},
+        "transparent": {"type": "boolean"},
+        "output-png": {"type": "string"},
+        "output-pdf": {"type": "string"},
+        "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
+    },
+    "allOf": [
+        {"anyOf": [
+            {"required": ["graph-configs"]},
+            {"required": ["plot-configs"]}
+        ]},
+        {"anyOf": [
+            {"required": ["output-png"]},
+            {"required": ["output-pdf"]}
+        ]}
+    ]
+}

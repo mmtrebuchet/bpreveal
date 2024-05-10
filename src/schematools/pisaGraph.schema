@@ -2,31 +2,37 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "pisaGraph",
     "description": "Schema for pisa graphs",
-    "type": "object",
-    "properties": {
-        "pisa": {"$ref": "/schema/base#/definitions/pisa-section"},
-        "coordinates": {"$ref": "/schema/base#/definitions/coordinates-section"},
-        "importance": {"$ref": "/schema/base#/definitions/profile-section"},
-        "predictions": {"$ref": "/schema/base#/definitions/profile-section"},
-        "annotations": {"$ref": "/schema/base#/definitions/annotation-section"},
-        "figure": {
+    "definitions": {
+        "graph-config": {
             "type": "object",
             "properties": {
-                "bottom": {"type": "number"},
-                "left": {"type": "number"},
-                "width": {"type": "number"},
-                "height": {"type": "number"},
-                "annotation-height": {"type": "number"},
-                "tick-font-size": {"type": "integer"},
-                "label-font-size": {"type": "integer"},
-                "color-span": {"type": "number"}
+                "pisa": {"$ref": "/schema/base#/definitions/pisa-section"},
+                "coordinates": {"$ref": "/schema/base#/definitions/coordinates-section"},
+                "importance": {"$ref": "/schema/base#/definitions/profile-section"},
+                "predictions": {"$ref": "/schema/base#/definitions/profile-section"},
+                "annotations": {"$ref": "/schema/base#/definitions/annotation-section"},
+                "figure": {
+                    "type": "object",
+                    "properties": {
+                        "bottom": {"type": "number"},
+                        "left": {"type": "number"},
+                        "width": {"type": "number"},
+                        "height": {"type": "number"},
+                        "annotation-height": {"type": "number"},
+                        "tick-font-size": {"type": "integer"},
+                        "label-font-size": {"type": "integer"},
+                        "color-span": {"type": "number"}
+                    },
+                    "required": ["bottom", "left", "width", "height"]
+                },
+                "min-value": {"type": "number"},
+                "use-annotation-colors": {"type": "boolean"}
             },
-            "required": ["bottom", "left", "width", "height"]
-        },
-        "min-value": {"type": "number"},
-        "use-annotation-colors": {"type": "boolean"}
-    },
 
-    "required": ["pisa", "coordinates", "importance", "predictions",
-        "annotations", "figure", "min-value"]
+            "required": ["pisa", "coordinates", "importance", "predictions",
+                "annotations", "figure", "min-value"]
+        }
+    },
+    "type": "object",
+    "allOf":[{"$ref": "#/definitions/graph-config"}]
 }

@@ -21,10 +21,12 @@ filesDevelopment = ["philosophy", "changelog", "releaseChecklist",
                     "license"]
 
 # Things that take a json
-filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePredictions.py",
-              "motifScan.py", "motifSeqletCutoffs.py", "prepareBed.py",
-              "prepareTrainingData.py", "trainCombinedModel.py",
-              "trainSoloModel.py", "trainTransformationModel.py"]
+filesMajor = ["interpretFlat.py", "interpretPisa.py", "makePisaFigure.py",
+              "makePredictions.py", "motifScan.py", "motifSeqletCutoffs.py",
+              "prepareBed.py", "prepareTrainingData.py",
+              "trainCombinedModel.py", "trainSoloModel.py",
+              "trainTransformationModel.py"]
+
 # Things that take command-line arguments
 filesMinor = ["checkJson.py", "lengthCalc.py", "makeLossPlots.py", "metrics.py",
               "motifAddQuantiles.py", "predictToBigwig.py", "shapToBigwig.py",
