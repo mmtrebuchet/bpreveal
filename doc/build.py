@@ -31,12 +31,14 @@ filesMinor = ["checkJson.py", "lengthCalc.py", "makeLossPlots.py", "metrics.py",
               "shapToNumpy.py", "showModel.py", "showTrainingProgress.py"]
 
 # Libraries that can't be executed on their own
-filesApi = ["bedUtils.py", "callbacks.py", "gaOptimize.py", "generators.py",
-            "interpretUtils.py", "jaccard.py", "layers.py", "logUtils.py",
-            "losses.py", "models.py", "motifUtils.py", "plotting.py", "schema.py",
-            "training.py", "ushuffle.py", "utils.py"]
+filesApi = ["bedUtils.py", "callbacks.py", "colors.py", "gaOptimize.py",
+            "generators.py", "interpretUtils.py", "jaccard.py", "layers.py",
+            "logUtils.py", "losses.py", "models.py", "motifUtils.py",
+            "plotting.py", "schema.py", "training.py", "ushuffle.py",
+            "utils.py"]
 
-filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "predictUtils.py"]
+filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "predictUtils.py",
+                    "plotUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py"]
@@ -83,7 +85,7 @@ def makeHeader():
                      format(fname))
             allTargets.append("_generated/{0:s}.rst".format(fname))
         for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
-                                                     "plotting.xx"]:
+                                                     "plotting.xx", "colors.xx"]:
             fp.write(
                 "_generated/bnf/{0:s}.rst: build.py\n\t./build.py bnf/{0:s}.rst\n\n"
                 .format(fname[:-3]))
@@ -145,7 +147,7 @@ def makeBase():
 def makeBnf(request):
     modRequested = request[4:][:-4]  # strip bnf/ and .rst.
     for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
-                                                 "plotting.xx"]:
+                                                 "plotting.xx", "colors.xx"]:
         modName = fname[:-3]
         if modRequested == modName:
             inFname = "bnf/{0:s}.bnf".format(modName)

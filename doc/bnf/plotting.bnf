@@ -5,9 +5,13 @@
     "predictions": <profile-section>,
     "annotations": <annotation-section>,
     "figure": <graph-figure-section>,
-    "min-value": <number>,
-  ? "use-annotation-colors": <boolean>
+    <use-annotation-section>
+    "min-value": <number>
 }
+
+<use-annotation-section> ::=
+    <empty>
+  | "use-annotation-colors": <boolean>,
 
 <pisa-section> ::= {
     "h5-name": <string>,
@@ -34,9 +38,13 @@
 
 <profile-section> ::= {
     <profile-source>,
-  ? "show-sequence": <boolean>,
+    <show-sequence-section>
     <profile-color-section>
 }
+
+<show-sequence-section> ::=
+    <empty>
+  | "show-sequence": <boolean>,
 
 <profile-source> ::=
     "bigwig-name": <string>
@@ -49,26 +57,23 @@
   | "color": [<list-of-sequence-color-spec>]
   | "color": [<list-of-color-spec>]
 
-<list-of-sequence-color-spec> ::=
-    <sequence-color-spec>
-  | <sequence-color-spec>, <list-of-sequence-color-spec>
-
-<list-of-color-spec> ::=
-    <color-spec>
-  | <color-spec>, <list-of-color-spec>
-
-<sequence-color-spec> ::= {
-    "A": <color-spec>,
-    "C": <color-spec>,
-    "G": <color-spec>,
-    "T": <color-spec>
-}
-
 <annotation-section> ::= {
-  ? "bed-name": <file-name>,
-  ? "name-colors": {<dict-of-name-color>},
-  ? "custom": [list-of-annotation]
+    <annotation-bed-section>
+    <annotation-name-colors-section>
+    <annotation-custom-section>
 }
+
+<annotation-bed-section> ::=
+    <empty>
+  | "bed-name": <file-name>,
+
+<annotation-name-colors-section> ::=
+    <empty>
+  | "name-colors": {<dict-of-name-color>},
+
+<annotation-custom-section> ::=
+    <empty>
+  | "custom": [list-of-annotation]
 
 <dict-of-name-color> ::=
     <empty>
@@ -91,14 +96,6 @@
     "color": <color-spec>
 }
 
-<color-spec> ::=
-    {"rgb": [<number>, <number>, <number>]}
-  | {"rgba": [<number>, <number>, <number>, <number>]}
-  | {"tol": <integer>}
-  | {"tol-light": <integer>}
-  | {"ibm": <integer>}
-  | {"wong": <integer>}
-
 <graph-figure-section> ::= {
     <figure-base>
 }
@@ -108,34 +105,51 @@
     "left": <number>,
     "width": <number>,
     "height": <number>,
-  ? "annotation-height": <number>,
-  ? "tick-font-size": <integer>,
-  ? "label-font-size": <integer>,
+    <annotation-height-section>
+    <tick-font-size-section>
+    <label-font-size-section>
     "color-span": <number>,
 
+<annotation-height-section> ::=
+    <empty>
+  | "annotation-height": <number>,
+
+<tick-font-size-section> ::=
+    <empty>
+  | "tick-font-size": <integer>,
+
+<label-font-size-section> ::=
+    <empty>
+  | "label-font-size": <integer>,
+
 <plot-figure-section> ::= {
+    <grid-mode-section>
+    <diagonal-mode-section>
     <figure-base>
-  ? "grid-mode": <grid-mode>,
-  ? "diagonal-mode": <diagonal-mode>
 }
+<grid-mode-section> ::=
+    <empty>
+  | "grid-mode": "on",
+  | "grid-mode": "off",
 
-<grid-mode> ::=
-    "on"
-  | "off"
+<diagonal-mode-section> ::=
+    <empty>
+  | "diagonal-mode": "on"
+  | "diagonal-mode": "off"
+  | "diagonal-mode": "edge"
 
-<diagonal-mode> ::=
-    "on"
-  | "off"
-  | "edge"
 
 <pisa-plot-configuration> ::= {
+    <miniature-section>
     "pisa": <pisa-section>,
     "coordinates": <coordinates-section>,
     "importance": <profile-section>,
     "predictions": <profile-section>,
     "annotations": <annotation-section>,
-    "figure": <plot-figure-section>,
-  ? "miniature": <boolean>
+    "figure": <plot-figure-section>
 }
 
+<miniature-section> ::=
+    <empty>
+  | "miniature": <boolean>
 

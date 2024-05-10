@@ -1,0 +1,26 @@
+<sequence-color-spec> ::= {
+    "A": <color-spec>,
+    "C": <color-spec>,
+    "G": <color-spec>,
+    "T": <color-spec>
+}
+
+<color-spec> ::=
+    {"rgb": [<number>, <number>, <number>]}
+  | {"rgba": [<number>, <number>, <number>, <number>]}
+  | {"tol": <integer>}
+  | {"tol-light": <integer>}
+  | {"ibm": <integer>}
+  | {"wong": <integer>}
+  | [<number>, <number>, <number>]
+  | [<number>, <number>, <number>, <number>]
+
+<list-of-sequence-color-spec> ::=
+    <sequence-color-spec>
+  | <sequence-color-spec>, <list-of-sequence-color-spec>
+
+<list-of-color-spec> ::=
+    <color-spec>
+  | <color-spec>, <list-of-color-spec>
+
+
