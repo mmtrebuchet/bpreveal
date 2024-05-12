@@ -22,6 +22,15 @@ NEW FEATURES:
       The old ``tools/plots.py`` file will remain until 6.0.0, but will not be
       maintained.
 
+ENHANCEMENTS:
+    * Upgraded to Python 3.12 and Tensorflow 2.16. This required a bit of messing about
+      with keras (BPReveal is still using the old Keras and won't switch until a major
+      version goes by.)
+
+BREAKING CHANGES:
+    * The upgrade to Tensorflow 2.16 has not been seamless. If you want to import
+      anything from Keras, you have to instead import tf_keras.
+
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
 

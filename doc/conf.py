@@ -59,7 +59,7 @@ def setup(app):
     app.connect('autodoc-process-docstring', fixLambda)
 
 
-autodoc_mock_imports = ["tensorflow", 'keras',
+autodoc_mock_imports = ["tensorflow", 'keras', "tf_keras",
                         "tensorflow_probability"]
 autodoc_typehints = 'description'  # pylint: disable=invalid-name
 autodoc_member_order = 'bysource'  # pylint: disable=invalid-name

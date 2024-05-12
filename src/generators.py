@@ -7,7 +7,7 @@ import math
 import time
 import h5py
 import numpy as np
-from tensorflow import keras
+import tf_keras as keras
 from bpreveal import logUtils
 from bpreveal.internal.constants import MODEL_ONEHOT_T, PRED_T
 from bpreveal.internal.libslide import slide, slideChar

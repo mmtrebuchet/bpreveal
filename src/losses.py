@@ -1,7 +1,7 @@
 """Defines the Multinomial NLL loss and the adaptive counts loss."""
 import tensorflow as tf
 import tensorflow_probability as tfp
-from keras import backend
+from tf_keras import backend
 from bpreveal import logUtils
 
 

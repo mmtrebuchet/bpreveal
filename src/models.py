@@ -1,16 +1,17 @@
 """Functions to build BPNet-style models."""
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.backend import int_shape
-import keras.layers
-import keras.models
+import tf_keras as keras
+from tf_keras.backend import int_shape
+# from tensorflow.keras.backend import int_shape
+import tf_keras.layers as klayers
+import tf_keras.models as kmodels
 from bpreveal import layers
 from bpreveal import logUtils
 
 
-def _soloModelHead(dilateOutput: keras.layers.Layer, individualHead: keras.layers.Layer,
+def _soloModelHead(dilateOutput: klayers.Layer, individualHead: klayers.Layer,
                    outputFilterWidth: int) -> \
-        tuple[keras.layers.Layer, keras.layers.Layer]:
+        tuple[klayers.Layer, klayers.Layer]:
     """A single output head for a solo model.
 
     :param dilateOutput: The last dilated convolutional layer of the model.
@@ -27,14 +28,14 @@ def _soloModelHead(dilateOutput: keras.layers.Layer, individualHead: keras.layer
     headName = individualHead["head-name"]
     logUtils.debug(f"Initializing head {headName}")
     numOutputs = individualHead["num-tasks"]
-    profile = keras.layers.Conv1D(
+    profile = klayers.Conv1D(
             filters=numOutputs, kernel_size=outputFilterWidth, padding="valid",  # noqa
             name=f"solo_profile_{headName}")\
         (dilateOutput)  # noqa
-    countsGap = keras.layers.GlobalAveragePooling1D(
+    countsGap = klayers.GlobalAveragePooling1D(
             name=f"solo_counts_gap_{headName}")\
         (dilateOutput)  # noqa
-    counts = keras.layers.Dense(
+    counts = klayers.Dense(
             units=1,  # noqa
             name=f"solo_logcounts_{headName}")\
         (countsGap)  # noqa
@@ -44,7 +45,7 @@ def _soloModelHead(dilateOutput: keras.layers.Layer, individualHead: keras.layer
 def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-argument
               numFilters: int, numLayers: int, inputFilterWidth: int,
               outputFilterWidth: int, headList: list[dict],
-              modelName: str) -> keras.models.Model:
+              modelName: str) -> kmodels.Model:
     """Generate a model using the classic BPNet architecture.
 
     :param inputLength: is the length of the one-hot encoded DNA sequence.
@@ -74,23 +75,23 @@ def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-arg
     logUtils.debug("Building solo model")
     inputLayer = keras.Input((inputLength, 4), name=f"{modelName}_input")
 
-    initialConv = keras.layers.Conv1D(
+    initialConv = klayers.Conv1D(
             filters=numFilters, kernel_size=inputFilterWidth, padding="valid",  # noqa
             activation="relu", name=f"{modelName}_initial_conv")\
         (inputLayer)  # noqa
     prevLayer = initialConv
     for i in range(numLayers):
-        newConv = keras.layers.Conv1D(
+        newConv = klayers.Conv1D(
                 filters=numFilters, kernel_size=3, padding="valid", activation="relu",  # noqa
                 dilation_rate=2 ** (i + 1), name=f"{modelName}_conv_{i}")\
             (prevLayer)  # noqa
         prevLength = int_shape(prevLayer)[1]
         newLength = int_shape(newConv)[1]
-        newCrop = keras.layers.Cropping1D(
+        newCrop = klayers.Cropping1D(
                 cropping=(prevLength - newLength) // 2,  # noqa
                 name=f"{modelName}_crop{i}")\
             (prevLayer)  # noqa
-        prevLayer = keras.layers.add(
+        prevLayer = klayers.add(
             inputs=[newConv, newCrop], name=f"{modelName}_add{i}")
     countsOutputs = []
     profileOutputs = []
@@ -106,8 +107,8 @@ def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-arg
 
 
 def _buildSimpleTransformationModel(architectureSpecification: dict,
-                                    headName: str, inputLayer: keras.layers.Layer) -> \
-        keras.models.Model:
+                                    headName: str, inputLayer: klayers.Layer) -> \
+        kmodels.Model:
     """Actually make the transformation model.
 
     Builds the model that will transform the tracks produced by the solo model
@@ -134,7 +135,7 @@ def _buildSimpleTransformationModel(architectureSpecification: dict,
                 inputLinear = layers.LinearRegression(
                         name=f"sigmoid_in_linear_{headName}")\
                     (inputLayer)  # noqa
-                sigmoided = keras.layers.Activation(
+                sigmoided = klayers.Activation(
                         activation=keras.activations.sigmoid,  # noqa
                         name=f"sigmoid_activation_{headName}")\
                     (inputLinear)  # noqa
@@ -146,7 +147,7 @@ def _buildSimpleTransformationModel(architectureSpecification: dict,
                 inputLinear = layers.LinearRegression(
                         name=f"relu_in_linear_{headName}")\
                     (inputLayer)  # noqa
-                sigmoided = keras.layers.Activation(
+                sigmoided = klayers.Activation(
                         activation=keras.activations.relu,  # noqa
                         name=f"relu_activation_{headName}")\
                     (inputLinear)  # noqa
@@ -157,7 +158,7 @@ def _buildSimpleTransformationModel(architectureSpecification: dict,
             case _:
                 raise ValueError(f"The simple layer type you gave ({layerType}) is not supported")
     if len(activationLayers) > 1:
-        sumLayer = keras.layers.Add(
+        sumLayer = klayers.Add(
                 name=f"regress_sum_{headName}")\
             (activationLayers)  # noqa
     else:
@@ -165,11 +166,11 @@ def _buildSimpleTransformationModel(architectureSpecification: dict,
     return sumLayer
 
 
-def _transformationHead(soloProfile: keras.layers.Layer, soloCounts: keras.layers.Layer,
+def _transformationHead(soloProfile: klayers.Layer, soloCounts: klayers.Layer,
                         individualHead: dict,
                         profileArchitectureSpecification: dict,
                         countsArchitectureSpecification: dict) -> \
-        tuple[keras.layers.Layer, keras.layers.Layer]:
+        tuple[klayers.Layer, klayers.Layer]:
     """Make a head for the transformation model.
 
     Takes the predicted profile and counts Layers from the solo model, and generates a
@@ -213,10 +214,10 @@ def _transformationHead(soloProfile: keras.layers.Layer, soloCounts: keras.layer
     return (profileTransformation, countsTransformation)
 
 
-def transformationModel(soloModelIn: keras.models.Model,
+def transformationModel(soloModelIn: kmodels.Model,
                         profileArchitectureSpecification: dict,
                         countsArchitectureSpecification: dict,
-                        headList: list[dict]) -> keras.models.Model:
+                        headList: list[dict]) -> kmodels.Model:
     """Construct a simple model used to regress out the solo model from experimental data.
 
     Given a solo model (typically representing bias), generate a simple network that
@@ -258,8 +259,8 @@ def transformationModel(soloModelIn: keras.models.Model,
 def combinedModel(inputLength: int, outputLength: int, numFilters: int,
                   numLayers: int, inputFilterWidth: int,
                   outputFilterWidth: int, headList: list[dict],
-                  biasModel: keras.models.Model) -> \
-        tuple[keras.models.Model, keras.models.Model, keras.models.Model]:
+                  biasModel: kmodels.Model) -> \
+        tuple[kmodels.Model, kmodels.Model, kmodels.Model]:
     """Build a combined model.
 
     This builds a standard BPNet model, but then adds in the bias at the very end::
@@ -297,7 +298,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
         This is the file that is saved when you generate the transformation model,
         and internally comprises both the solo model and a transformation.
 
-    :return: Three Keras models.
+    :return: Three kmodels.
 
         * The first is the combined output, i.e., the COMBINED node in the
           graph above. Input to this model is a (batch x inputLength x 4) tensor
@@ -332,7 +333,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
     cropFlankSize = int(cropDiff / 2)
     logUtils.info(f"Auto cropdown will trim {cropFlankSize} bases from the bias model input.")
     assert cropFlankSize >= 0, "Bias model inputs are larger than residual inputs"
-    croppedInputLayer = tf.keras.layers.Cropping1D(cropFlankSize,
+    croppedInputLayer = klayers.Cropping1D(cropFlankSize,
                                                    name="auto_crop_input_tensor")\
                                                 (inputLayer[0])  # noqa
     readyBiasHeads = biasModel([croppedInputLayer])
@@ -350,7 +351,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
     for i, head in enumerate(headList):
         # Just straight-up add the logit tensors.
         headName = head["head-name"]
-        addProfile = keras.layers.Add(
+        addProfile = klayers.Add(
                 name=f"combined_add_profile_{headName}")\
             ([readyBiasHeads[i], residualModel.outputs[i]])  # noqa
         if head["use-bias-counts"]:
@@ -360,18 +361,18 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
             # but the counts in BPNet are log-counts.
             # TODO: Rewrite this using tf.math.reduce_logsumexp, since it would avoid
             # some numerical stability problems.
-            absBiasCounts = keras.layers.Activation(
+            absBiasCounts = klayers.Activation(
                     tf.math.exp,  # noqa
                     name=f"combined_exponentiate_bias_{headName}")\
                 (readyBiasHeads[i + numHeads])  # noqa
-            absResidualCounts = keras.layers.Activation(
+            absResidualCounts = klayers.Activation(
                     tf.math.exp,  # noqa
                     name=f"combined_exp_residual_{headName}") \
                 (residualModel.outputs[i + numHeads])  # noqa
-            absCombinedCounts = keras.layers.Add(
+            absCombinedCounts = klayers.Add(
                     name=f"combined_add_counts_{headName}") \
                 ([absBiasCounts, absResidualCounts])  # noqa
-            addCounts = keras.layers.Activation(
+            addCounts = klayers.Activation(
                     tf.math.log,  # noqa
                     name=f"combined_logcounts_{headName}")\
                 (absCombinedCounts)  # noqa

@@ -1,23 +1,23 @@
 .DEFAULT_GOAL := all
-internal/libushuffle.cpython-311-x86_64-linux-gnu.so: libushuffle.cpython-311-x86_64-linux-gnu.so
+internal/libushuffle.cpython-312-x86_64-linux-gnu.so: libushuffle.cpython-312-x86_64-linux-gnu.so
 	mv $^ $@
-internal/libjaccard.cpython-311-x86_64-linux-gnu.so: libjaccard.cpython-311-x86_64-linux-gnu.so
+internal/libjaccard.cpython-312-x86_64-linux-gnu.so: libjaccard.cpython-312-x86_64-linux-gnu.so
 	mv $^ $@
-internal/libslide.cpython-311-x86_64-linux-gnu.so: libslide.cpython-311-x86_64-linux-gnu.so
+internal/libslide.cpython-312-x86_64-linux-gnu.so: libslide.cpython-312-x86_64-linux-gnu.so
 	mv $^ $@
 
-libushuffle.cpython-311-x86_64-linux-gnu.so: internal/libushuffle.c internal/libushuffle.pyf
+libushuffle.cpython-312-x86_64-linux-gnu.so: internal/libushuffle.c internal/libushuffle.pyf
 	CFLAGS="-Ofast -fexpensive-optimizations -ffast-math" f2py -c $^
 
-libjaccard.cpython-311-x86_64-linux-gnu.so: internal/libjaccard.c internal/libjaccard.pyf
+libjaccard.cpython-312-x86_64-linux-gnu.so: internal/libjaccard.c internal/libjaccard.pyf
 	CFLAGS="-Ofast -fexpensive-optimizations -ffast-math" f2py -c $^
 
-libslide.cpython-311-x86_64-linux-gnu.so: internal/libslide.c internal/libslide.pyf
+libslide.cpython-312-x86_64-linux-gnu.so: internal/libslide.c internal/libslide.pyf
 	CFLAGS="-Ofast -fexpensive-optimizations -ffast-math -fopenmp" f2py -c -lgomp $^
 
-clean: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
-	internal/libushuffle.cpython-311-x86_64-linux-gnu.so \
-	internal/libslide.cpython-311-x86_64-linux-gnu.so \
+clean: internal/libjaccard.cpython-312-x86_64-linux-gnu.so \
+	internal/libushuffle.cpython-312-x86_64-linux-gnu.so \
+	internal/libslide.cpython-312-x86_64-linux-gnu.so \
 	schema.py
 	rm $^
 
@@ -34,8 +34,8 @@ schema.py: schematools/build.py ${schema_files}
 
 schemas: schema.py schematools/build.py ${schema_files}
 
-all: internal/libjaccard.cpython-311-x86_64-linux-gnu.so \
-	internal/libushuffle.cpython-311-x86_64-linux-gnu.so \
-	internal/libslide.cpython-311-x86_64-linux-gnu.so \
+all: internal/libjaccard.cpython-312-x86_64-linux-gnu.so \
+	internal/libushuffle.cpython-312-x86_64-linux-gnu.so \
+	internal/libslide.cpython-312-x86_64-linux-gnu.so \
 	schemas
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.

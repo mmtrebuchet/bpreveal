@@ -123,7 +123,7 @@ def tileSegments(inputLength: int, outputLength: int,
     """
     logUtils.debug(f"Beginning to trim segments. {len(segments)} segments alive.")
     padding = (inputLength - outputLength) // 2
-    logUtils.debug(f"Calculated {padding = }")
+    logUtils.debug(f"Calculated {padding=}")
 
     def shrinkSegment(s: pybedtools.Interval):
         newEnd = s.end - padding

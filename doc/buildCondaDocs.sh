@@ -17,7 +17,7 @@ DOC_DIR_NAME=$(dirname -- "${SCRIPT_NAME}" )
 BPREVEAL_DIR=$(dirname -- "${DOC_DIR_NAME}" )
 echo "Installing from directory ${BPREVEAL_DIR}"
 
-PYTHON_VERSION=3.11
+PYTHON_VERSION=3.12
 
 runAndCheck() {
     currentCommand=$@

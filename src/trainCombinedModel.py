@@ -49,7 +49,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-from tensorflow import keras  # pylint: disable=wrong-import-order
+import tf_keras as keras  # pylint: disable=wrong-import-order
 import bpreveal.training
 from bpreveal import models
 from bpreveal import logUtils

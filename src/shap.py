@@ -1,14 +1,20 @@
 import warnings
 
 import numpy as np
-from packaging import version
 # pylint: disable=invalid-name
 
-tf = None
-tf_ops = None
-tf_backprop = None
-tf_execute = None
-tf_gradients_impl = None
+from tensorflow.python.eager import backprop as tf_backprop
+from tensorflow.python.eager import execute as tf_execute
+from tensorflow.python.framework import (
+    ops as tf_ops,
+)
+from tensorflow.python.ops import (
+    gradients_impl as tf_gradients_impl,
+)
+import tf_keras as keras
+if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
+    from tensorflow.python.ops import gradients_util as tf_gradients_impl
+import tensorflow as tf
 
 
 def standard_combine_mult_and_diffref(mult, orig_inp, bg_data):
@@ -34,10 +40,10 @@ def custom_record_gradient(op_name, inputs, attrs, results):
         reset_input = True
     try:
         out = tf_backprop._record_gradient(
-            "shap_"+op_name, inputs, attrs, results)
+            "shap_" + op_name, inputs, attrs, results)
     except AttributeError:
         out = tf_backprop.record_gradient(
-            "shap_"+op_name, inputs, attrs, results)
+            "shap_" + op_name, inputs, attrs, results)
 
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
@@ -93,29 +99,9 @@ class TFDeepExplainer:
 
         """
         self.combine_mult_and_diffref = combine_mult_and_diffref
-        # try to import tensorflow
-        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
-        if tf is None:
-            from tensorflow.python.eager import backprop as tf_backprop
-            from tensorflow.python.eager import execute as tf_execute
-            from tensorflow.python.framework import (
-                ops as tf_ops,
-            )
-            from tensorflow.python.ops import (
-                gradients_impl as tf_gradients_impl,
-            )
-            if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
-                from tensorflow.python.ops import gradients_util as tf_gradients_impl
-            import tensorflow as tf
-            if version.parse(tf.__version__) < version.parse("1.4.0"):
-                warnings.warn(
-                    "Your TensorFlow version is older than 1.4.0 and not supported.")
-
-        if version.parse(tf.__version__) >= version.parse("2.4.0"):
-            warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph "
-                          "support has been removed in eager mode and some static graphs "
-                          "may not be supported. See PR #1483 for discussion.")
-
+        self.used_types = None
+        self.between_tensors = None
+        self.between_ops = None
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
@@ -123,25 +109,19 @@ class TFDeepExplainer:
             self.model_output, list), "The model output to be explained must be a single tensor!"
         assert len(
             self.model_output.shape) < 3, "The model output must be a vector or a single value!"
-        self.multi_output = True
-        if len(self.model_output.shape) == 1:
-            self.multi_output = False
+        self.multi_output = False
 
-        if tf.executing_eagerly():
-            if isinstance(model, (tuple, list)):
-                assert len(
-                    model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
-                from tensorflow.keras import Model
-                self.model = Model(model[0], model[1])
-            else:
-                self.model = model
+        if isinstance(model, (tuple, list)):
+            assert len(
+                model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
+            from tf_keras import Model
+            self.model = Model(model[0], model[1])
+        else:
+            self.model = model
 
         # check if we have multiple inputs
-        self.multi_input = True
-        if not isinstance(self.model_inputs, list) or len(self.model_inputs) == 1:
-            self.multi_input = False
-            if not isinstance(self.model_inputs, list):
-                self.model_inputs = [self.model_inputs]
+        self.multi_input = False
+        self.model_inputs = [self.model_inputs]
         if not isinstance(data, list) and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
@@ -149,26 +129,7 @@ class TFDeepExplainer:
         self._vinputs = {}  # used to track what op inputs depends on the model inputs
         self.orig_grads = {}
 
-        if not tf.executing_eagerly():
-            self.session = _get_session(session)
-
-        self.graph = _get_graph(self)
-
-        # if no learning phase flags were given we go looking for them
-        # ...this will catch the one that keras uses
-        # we need to find them since we want to make sure learning phase flags are set to False
-        if learning_phase_flags is None:
-            self.learning_phase_ops = []
-            for op in self.graph.get_operations():
-                if 'learning_phase' in op.name \
-                        and op.type == "Const" \
-                        and len(op.outputs[0].shape) == 0:
-                    if op.outputs[0].dtype == tf.bool:
-                        self.learning_phase_ops.append(op)
-            self.learning_phase_flags = [op.outputs[0]
-                                         for op in self.learning_phase_ops]
-        else:
-            self.learning_phase_ops = [t.op for t in learning_phase_flags]
+        self.learning_phase_ops = []
 
         # save the expected output of the model
         # if self.data is a function, set self.expected_value to None
@@ -179,16 +140,7 @@ class TFDeepExplainer:
                 warnings.warn(
                     "You have provided over 5k background samples! For better performance "
                     "consider using smaller random sample.")
-            if not tf.executing_eagerly():
-                self.expected_value = self.run(
-                    self.model_output, self.model_inputs, self.data).mean(0)
-            else:
-                # if type(self.model)is tuple:
-                #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
-                self.expected_value = tf.reduce_mean(self.model(self.data), 0)
-
-        if not tf.executing_eagerly():
-            self._init_between_tensors(self.model_output.op, self.model_inputs)
+            self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
@@ -202,14 +154,6 @@ class TFDeepExplainer:
             else:
                 raise IndexError("The model output tensor to be explained cannot have a "
                                  "static shape in dim 1 of None!")
-
-    def _get_model_output(self, model):
-        if len(model.layers[-1]._inbound_nodes) == 0:
-            if len(model.outputs) > 1:
-                warnings.warn("Only one model output supported.")
-            return model.outputs[0]
-        else:
-            return model.layers[-1].output
 
     def _init_between_tensors(self, out_op, model_inputs):
         # find all the operations in the graph between our inputs and outputs
@@ -258,33 +202,23 @@ class TFDeepExplainer:
     def phi_symbolic(self, i):
         """Get the SHAP value computation graph for a given model output."""
         if self.phi_symbolics[i] is None:
+            @tf.function
+            def grad_graph(shap_rAnD):
+                phase = keras.backend.learning_phase()
+                keras.backend.set_learning_phase(0)
 
-            if not tf.executing_eagerly():
-                def anon():
-                    out = self.model_output[:,
-                                            i] if self.multi_output else self.model_output
-                    return tf.gradients(out, self.model_inputs)
+                with tf.GradientTape(watch_accessed_variables=False) as tape:
+                    tape.watch(shap_rAnD)
+                    out = self.model(shap_rAnD)
+                    if self.multi_output:
+                        out = out[:, i]
 
-                self.phi_symbolics[i] = self.execute_with_overridden_gradients(
-                    anon)
-            else:
-                @tf.function
-                def grad_graph(shap_rAnD):
-                    phase = tf.keras.backend.learning_phase()
-                    tf.keras.backend.set_learning_phase(0)
+                self._init_between_tensors(out.op, shap_rAnD)
+                x_grad = tape.gradient(out, shap_rAnD)
+                keras.backend.set_learning_phase(phase)
+                return x_grad
 
-                    with tf.GradientTape(watch_accessed_variables=False) as tape:
-                        tape.watch(shap_rAnD)
-                        out = self.model(shap_rAnD)
-                        if self.multi_output:
-                            out = out[:, i]
-
-                    self._init_between_tensors(out.op, shap_rAnD)
-                    x_grad = tape.gradient(out, shap_rAnD)
-                    tf.keras.backend.set_learning_phase(phase)
-                    return x_grad
-
-                self.phi_symbolics[i] = grad_graph
+            self.phi_symbolics[i] = grad_graph  # type: ignore
 
         return self.phi_symbolics[i]
 
@@ -303,11 +237,11 @@ class TFDeepExplainer:
 
         # rank and determine the model outputs that we will explain
         if ranked_outputs is not None and self.multi_output:
-            if not tf.executing_eagerly():
-                model_output_values = self.run(
-                    self.model_output, self.model_inputs, X)
-            else:
-                model_output_values = self.model(X)
+            # if not tf.executing_eagerly():
+            #     model_output_values = self.run(
+            #         self.model_output, self.model_inputs, X)
+            # else:
+            model_output_values = self.model(X)
 
             if output_rank_order == "max":
                 model_output_ranks = np.argsort(-model_output_values)
@@ -331,7 +265,7 @@ class TFDeepExplainer:
                 phis.append(np.zeros(xv.shape))
             for j in range(X[0].shape[0]):
                 if hasattr(self.data, '__call__'):
-                    bg_data = self.data([X[idx][j] for idx in range(len(X))])
+                    bg_data = self.data([X[idx][j] for idx in range(len(X))])  # type: ignore
                     if not isinstance(bg_data, list):
                         bg_data = [bg_data]
                 else:
@@ -375,35 +309,29 @@ class TFDeepExplainer:
         if ranked_outputs is not None:
             return output_phis, model_output_ranks
         else:
-            return output_phis[:, :, :, 0]
+            return output_phis[:, :, :, 0]  # type: ignore
 
     def run(self, out, model_inputs, X):
         """Runs the model while also setting the learning phase flags to False."""
-        if not tf.executing_eagerly():
-            feed_dict = dict(zip(model_inputs, X))
-            for t in self.learning_phase_flags:
-                feed_dict[t] = False
-            return self.session.run(out, feed_dict)
-        else:
-            def anon():
-                tf_execute.record_gradient = custom_record_gradient
+        def anon():
+            tf_execute.record_gradient = custom_record_gradient
 
-                # build inputs that are correctly shaped, typed, and tf-wrapped
-                inputs = []
-                for i, xv in enumerate(X):
-                    shape = list(self.model_inputs[i].shape)
-                    shape[0] = -1
-                    data = xv.reshape(shape)
-                    v = tf.constant(data, dtype=self.model_inputs[i].dtype)
-                    inputs.append(v)
-                final_out = out(inputs)
-                try:
-                    tf_execute.record_gradient = tf_backprop._record_gradient
-                except AttributeError:
-                    tf_execute.record_gradient = tf_backprop.record_gradient
+            # build inputs that are correctly shaped, typed, and tf-wrapped
+            inputs = []
+            for i, xv in enumerate(X):
+                shape = list(self.model_inputs[i].shape)
+                shape[0] = -1
+                data = xv.reshape(shape)
+                v = tf.constant(data, dtype=self.model_inputs[i].dtype)
+                inputs.append(v)
+            final_out = out(inputs)
+            try:
+                tf_execute.record_gradient = tf_backprop._record_gradient
+            except AttributeError:
+                tf_execute.record_gradient = tf_backprop.record_gradient
 
-                return final_out
-            return self.execute_with_overridden_gradients(anon)
+            return final_out
+        return self.execute_with_overridden_gradients(anon)
 
     def custom_grad(self, op, *grads):
         """Passes a gradient op creation request to the correct handler."""
@@ -454,10 +382,10 @@ class TFDeepExplainer:
                     reg[n]["type"] = self.orig_grads[n]
             for non_reg_ops in ops_not_in_registry:
                 del reg[non_reg_ops]
-        if not tf.executing_eagerly():
-            return out
-        else:
-            return [v.numpy() for v in out]
+        # if not tf.executing_eagerly():
+        #     return out
+        # else:
+        return [v.numpy() for v in out]
 
 
 def tensors_blocked_by_false(ops):
@@ -692,8 +620,10 @@ def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *gra
     out1 = grads[0] * tf.tile(out1 / delta_in1, dup0)
 
     # Avoid divide by zero nans
-    out0 = tf.where(tf.abs(tf.tile(delta_in0, dup0)) < 1e-7, tf.zeros_like(out0), out0)
-    out1 = tf.where(tf.abs(tf.tile(delta_in1, dup0)) < 1e-7, tf.zeros_like(out1), out1)
+    out0 = tf.where(tf.abs(tf.tile(delta_in0, dup0))
+                    < 1e-7, tf.zeros_like(out0), out0)
+    out1 = tf.where(tf.abs(tf.tile(delta_in1, dup0))
+                    < 1e-7, tf.zeros_like(out1), out1)
 
     # see if due to broadcasting our gradient shapes don't match our input shapes
     if np.any(np.array(out1.shape) != np.array(in1.shape)):
@@ -840,63 +770,6 @@ op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
 
 
-# TODO items
-# TensorArrayGatherV3
-# Max
-# TensorArraySizeV3
-# Range
-
-
-def _import_tf():
-    """Tries to import tensorflow."""
-    global tf
-    if tf is None:
-        import tensorflow as tf
-
-
-def _get_session(session):
-    """Common utility to get the session for the tensorflow-based explainer.
-
-    Parameters
-    ----------
-    explainer : Explainer
-
-        One of the tensorflow-based explainers.
-
-    session : tf.compat.v1.Session
-
-        An optional existing session.
-
-    """
-    _import_tf()
-    # if we are not given a session find a default session
-    if session is None:
-        try:
-            session = tf.compat.v1.keras.backend.get_session()
-        except Exception:
-            session = tf.keras.backend.get_session()
-    return tf.get_default_session() if session is None else session
-
-
-def _get_graph(explainer):
-    """Common utility to get the graph for the tensorflow-based explainer.
-
-    Parameters
-    ----------
-    explainer : Explainer
-
-        One of the tensorflow-based explainers.
-
-    """
-    _import_tf()
-    if not tf.executing_eagerly():
-        return explainer.session.graph
-    else:
-        from tensorflow.python.keras import backend
-        graph = backend.get_graph()
-        return graph
-
-
 def _get_model_inputs(model):
     """Common utility to determine the model inputs.
 
@@ -907,11 +780,10 @@ def _get_model_inputs(model):
         The tensorflow model or tuple.
 
     """
-    _import_tf()
     if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
             str(type(model)).endswith("keras.models.Sequential'>") or \
             str(type(model)).endswith("keras.engine.training.Model'>") or \
-            isinstance(model, tf.keras.Model):
+            isinstance(model, keras.Model):
         return model.inputs
     if str(type(model)).endswith("tuple'>"):
         return model[0]
@@ -930,11 +802,10 @@ def _get_model_output(model):
         The tensorflow model or tuple.
 
     """
-    _import_tf()
     if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
             str(type(model)).endswith("keras.models.Sequential'>") or \
             str(type(model)).endswith("keras.engine.training.Model'>") or \
-            isinstance(model, tf.keras.Model):
+            isinstance(model, keras.Model):
         if len(model.layers[-1]._inbound_nodes) == 0:
             if len(model.outputs) > 1:
                 warnings.warn("Only one model output supported.")

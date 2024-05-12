@@ -6,7 +6,7 @@
 #SBATCH --time=1:00:00
 #SBATCH --output=log%j.log
 #SBATCH --partition=gpu
-#SBATCH --gres gpu:a100:0
+#SBATCH --gres gpu:0
 
 # This is a script that you can run on Cerebro (the cluster at Stowers)
 # to install bpreveal. If you're not on a cluster, see the buildCondaLocal.zsh
@@ -28,7 +28,7 @@ BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 ENV_FLAG=-n
-ENV_NAME=bpreveal-cerebro
+ENV_NAME=bpreveal-420-test
 
 # CHANGE this to conda if you don't have mamba installed.
 # (I recommend using mamba; it's way faster.)
@@ -45,20 +45,35 @@ INSTALL_JUPYTER=true
 INSTALL_DEVTOOLS=true
 
 # Do you want to install pydot and graphviz? This is needed to render an image from showModel.
-INSTALL_PYDOT=true
+INSTALL_PYDOT=false
 
 ######################
 # DON'T CHANGE BELOW #
 ######################
 
-PYTHON_VERSION=3.11
+conda deactivate # In case the user forgot.
+
+PYTHON_VERSION=3.12
+
+runAndCheck() {
+    currentCommand=$@
+    echo "EXECUTING COMMAND: [[$currentCommand]]"
+    eval "$currentCommand"
+    errorVal=$?
+    if [ $errorVal -eq 0 ]; then
+        echo "SUCCESSFULLY EXECUTED: [[$currentCommand]]"
+    else
+        echo "ERROR DETECTED: Command [[$currentCommand]] on line $BASH_LINENO exited with status $errorVal"
+        exit 1
+    fi
+}
 
 check() {
     errorVal=$?
     if [ $errorVal -eq 0 ]; then
         echo "Command completed successfully"
     else
-        echo "ERROR DETECTED: Last command exited with status $errorVal"
+        echo "ERROR DETECTED: Command $@ exited with status $errorVal"
         exit
     fi
 }
@@ -75,114 +90,82 @@ checkPackage() {
 }
 
 
-${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=${PYTHON_VERSION}
-check
+runAndCheck ${CONDA_BIN} create --yes ${ENV_FLAG} ${ENV_NAME} python=${PYTHON_VERSION}
 
-conda activate ${ENV_NAME}
-check
+runAndCheck conda activate ${ENV_NAME}
 
 #Make sure we have activated an environment with the right python.
-python3 --version | grep -q "${PYTHON_VERSION}"
-check
+runAndCheck python3 --version \| grep -q "${PYTHON_VERSION}"
 # Tensorflow expressly advises against installing with conda.
 
-${PIP_BIN} install 'tensorflow[and-cuda]<2.16'
-check
-${PIP_BIN} install 'tensorflow-probability<0.24'
-check
+${PIP_BIN} install 'tensorflow[and-cuda]'
+check install tensorflow
+
+runAndCheck ${PIP_BIN} install 'tensorflow-probability'
 checkPackage tensorflow
 checkPackage tensorflow_probability
 
-${CONDA_BIN} install --yes -c conda-forge matplotlib
-check
+runAndCheck ${PIP_BIN} install 'tf-keras~=2.16'
+
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge matplotlib
 checkPackage matplotlib
 
 #jsonschema is used to validate input jsons.
-${CONDA_BIN} install --yes -c conda-forge jsonschema
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge jsonschema
 checkPackage jsonschema
 
 # cmake is necessary to build the wheels for modiscolite.
-${CONDA_BIN} install --yes -c conda-forge cmake
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge cmake
 
 # These will have been installed by previous code, but doesn't hurt to explicitly list them.
-${CONDA_BIN} install --yes -c conda-forge h5py
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge h5py
 checkPackage h5py
 
-${CONDA_BIN} install --yes -c conda-forge tqdm
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge tqdm
 checkPackage tqdm
 
 # Before building stuff with pip, we need to make sure we have a compiler installed.
-${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge gxx_linux-64
 
-${CONDA_BIN} install --yes -c bioconda bedtools
-check
+runAndCheck ${CONDA_BIN} install --yes -c bioconda bedtools
 
 # pysam, pybigwig, and pybedtools don't have (as of 2024-02-01) Python 3.11
 # versions in the conda repositories. So install them through pip.
-${PIP_BIN} install --no-input pysam pybedtools pybigwig
-check
+runAndCheck ${PIP_BIN} install --no-input pysam pybedtools pybigwig
 checkPackage pybedtools
 checkPackage pyBigWig
 checkPackage pysam
 
 # Modisco-lite isn't in conda as of 2024-02-01.
-${PIP_BIN} install --no-input modisco-lite
-check
+runAndCheck ${PIP_BIN} install --no-input modisco-lite
 
 # 1. Install jupyter lab.
 if [ "$INSTALL_JUPYTER" = true ] ; then
-    ${CONDA_BIN} install --yes -c conda-forge jupyterlab
-    check
-    ${CONDA_BIN} install --yes -c conda-forge pandoc
-    check
+    runAndCheck ${CONDA_BIN} install --yes -c conda-forge jupyterlab pandoc
 fi
 
 
 # 2. Install things for development (used in development to check code style,
 # never needed to run bpreveal.)
 if [ "$INSTALL_DEVTOOLS" = true ] ; then
-    ${CONDA_BIN} install --yes -c conda-forge flake8
-    check
-    ${CONDA_BIN} install --yes -c conda-forge pydocstyle
-    check
-    ${CONDA_BIN} install --yes -c conda-forge pylint
-    check
-    ${CONDA_BIN} install --yes -c conda-forge sphinx
-    check
-    ${CONDA_BIN} install --yes -c conda-forge sphinx_rtd_theme
-    check
-    ${CONDA_BIN} install --yes -c conda-forge sphinx-argparse
-    check
-    ${CONDA_BIN} install --yes -c conda-forge sphinx-autodoc-typehints
-    check
-    ${CONDA_BIN} install --yes -c conda-forge coverage
-    check
+    runAndCheck ${CONDA_BIN} install --yes -c conda-forge flake8 pydocstyle \
+        pylint sphinx sphinx_rtd_theme sphinx-argparse sphinx-autodoc-typehints coverage
 fi
 
 if [ "$INSTALL_PYDOT" = true ] ; then
-    ${CONDA_BIN} install --yes -c conda-forge graphviz
-    check
-    ${CONDA_BIN} install --yes -c conda-forge pydot
-    check
+    runAndCheck ${CONDA_BIN} install --yes -c conda-forge graphviz pydot
 fi
 
 # 4. Try to build libjaccard.
-${CONDA_BIN} install --yes -c conda-forge gfortran
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge gfortran meson
+
 cd ${BPREVEAL_DIR}/src && make clean && make
 check
 
 # 5. Set up bpreveal on your python path.
-${CONDA_BIN} install --yes -c conda-forge conda-build
-check
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge conda-build
 
-conda develop ${BPREVEAL_DIR}/pkg
-check
+runAndCheck conda develop ${BPREVEAL_DIR}/pkg
 
 
 #Add binaries to your path. If you skip this, you can
@@ -197,6 +180,28 @@ echo "export PATH=\$BPREVEAL_KILL_PATH:\$PATH"\
 echo "export XLA_FLAGS=\"--xla_gpu_cuda_data_dir=${CONDA_PREFIX}\"" \
     > ${CONDA_PREFIX}/etc/conda/activate.d/cuda_xla_activate.sh
 
+cat >>  ${CONDA_PREFIX}/etc/conda/activate.d/cuda_xla_activate.sh << EOF
+
+
+NVIDIA_DIR=\$(dirname \$(dirname \$(python -c "import nvidia.cudnn; print(nvidia.cudnn.__file__)")))
+
+pathAccum=""
+
+for dir in \$NVIDIA_DIR/*; do
+    if [ -d "\$dir/lib" ]; then
+        pathAccum="\$dir/lib:\$pathAccum"
+    fi
+done
+
+export BPREVEAL_KILL_LD_LIB_PATH=\$pathAccum
+export LD_LIBRARY_PATH="\${pathAccum}\${LD_LIBRARY_PATH}"
+
+EOF
+
+
+echo "export TF_USE_LEGACY_KERAS=1" \
+    > ${CONDA_PREFIX}/etc/conda/activate.d/legacy_keras_activate.sh
+
 #And add a (very hacky) deactivation command that removes bpreveal from
 #your path when you deactivate the environment.
 echo "export PATH=\$(echo \$PATH | tr ':' '\n' | grep -v \$BPREVEAL_KILL_PATH | tr '\n' ':')"\
@@ -205,6 +210,10 @@ echo "unset BPREVEAL_KILL_PATH"\
     >> ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
 echo "unset XLA_FLAGS" \
     > ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
+echo '\nexport LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH | sed "s|$BPREVEAL_KILL_LD_LIB_PATH||" )'\
+    >> ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
+echo "unset TF_USE_LEGACY_KERAS" \
+    > ${CONDA_PREFIX}/etc/conda/deactivate.d/legacy_keras_deactivate.sh
 
 
 echo "*-----------------------------------*"

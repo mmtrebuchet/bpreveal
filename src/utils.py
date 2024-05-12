@@ -45,7 +45,7 @@ def loadModel(modelFname: str):
     """
     # pylint: disable=import-outside-toplevel
     import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-    from keras.models import load_model
+    from tf_keras.models import load_model
     from bpreveal.losses import multinomialNll, dummyMse
     # pylint: enable=import-outside-toplevel
     model = load_model(filepath=modelFname,
@@ -73,6 +73,7 @@ def setMemoryGrowth() -> None:
         tf.config.experimental.set_memory_growth(device=gpus[0], enable=True)
         logUtils.debug("GPU memory growth enabled.")
     except Exception as inst:  # pylint: disable=broad-exception-caught
+        print(inst)
         logUtils.warning("Not using GPU")
         logUtils.debug("Because: " + str(inst))
     constants.setTensorflowLoaded()
@@ -1108,7 +1109,7 @@ class ThreadedBatchPredictor:
             self._batchers = None
             self.running = False
         else:
-            if logUtils is not None:  # pylint: disable=else-if-used
+            if logUtils is not None:
                 logUtils.warning("Attempting to stop a batcher that is already stopped.")
 
     def clear(self):

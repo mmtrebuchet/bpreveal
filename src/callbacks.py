@@ -2,7 +2,7 @@
 import re
 import time
 from collections.abc import Sequence
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, \
+from tf_keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 from bpreveal import logUtils
 from bpreveal import generators
@@ -36,8 +36,8 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads:
         Implement the :doc:`adaptive counts loss algorithm<countsLossReweighting>`.
 
     """
-    logUtils.debug(f"Creating callbacks based on {earlyStop = }, "
-                   f"{outputPrefix = }, {plateauPatience = }")
+    logUtils.debug(f"Creating callbacks based on {earlyStop=}, "
+                   f"{outputPrefix=}, {plateauPatience=}")
     if logUtils.getLogger().isEnabledFor(logUtils.INFO):
         verbose = 1
     else:
@@ -119,6 +119,7 @@ class DisplayCallback(Callback):
 
     def __init__(self, plateauCallback, earlyStopCallback,
                  adaptiveLossCallback, trainBatchGen, valBatchGen):
+        super().__init__()
         self.plateauCallback = plateauCallback
         self.earlyStopCallback = earlyStopCallback
         self.adaptiveLossCallback = adaptiveLossCallback

@@ -2,9 +2,9 @@
 import json
 import h5py
 import tensorflow as tf
-import keras
+import tf_keras as keras
 from bpreveal.callbacks import getCallbacks
-from tensorflow.keras.callbacks import History
+from tf_keras.callbacks import History
 from bpreveal import logUtils
 from bpreveal import generators
 from bpreveal import losses
