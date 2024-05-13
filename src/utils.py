@@ -1108,9 +1108,8 @@ class ThreadedBatchPredictor:
             # Explicitly set None so that start won't panic.
             self._batchers = None
             self.running = False
-        else:
-            if logUtils is not None:
-                logUtils.warning("Attempting to stop a batcher that is already stopped.")
+        elif logUtils is not None:
+            logUtils.warning("Attempting to stop a batcher that is already stopped.")
 
     def clear(self):
         """Reset the batcher, emptying any queues and reloading the model."""

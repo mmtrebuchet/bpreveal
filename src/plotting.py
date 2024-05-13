@@ -239,7 +239,8 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
         {"axes": {"pisa": matplotlib.axes,
                   "importance": matplotlib.axes,
                   "predictions": matplotlib.axes,
-                  "annotations": matplotlib.axes}
+                  "annotations": matplotlib.axes,
+                  "cbar": matplotlib.axes}
             "name-colors": Same structure as the config dict, but with missing entries added.
             "genome-start": int,
             "genome-end": int,
@@ -377,8 +378,8 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
     if axLegend is not None:
         pu.addLegend(usedNames, axLegend, cfg["figure"]["label-font-size"])
     logUtils.debug("PISA graph complete.")
-    return {"axes": {"graph": axGraph, "importance": axSeq, "predictions": axProfile,
-                     "annotations": axAnnot},
+    return {"axes": {"pisa": axGraph, "importance": axSeq, "predictions": axProfile,
+                     "annotations": axAnnot, "cbar": axCbar},
             "name-colors": cfg["annotations"].get("name-colors", {}),
             "genome-start": genomeStart,
             "genome-end": genomeEnd,
@@ -404,7 +405,8 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
         {"axes": {"pisa": matplotlib.axes,
                   "importance": matplotlib.axes,
                   "predictions": matplotlib.axes,
-                  "annotations": matplotlib.axes}
+                  "annotations": matplotlib.axes,
+                  "cbar": matplotlib.axes}
             "name-colors": Same structure as the config dict, but with missing entries added.
             "genome-start": int,
             "genome-end": int,

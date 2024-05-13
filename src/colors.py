@@ -1,5 +1,8 @@
 """Utilities for manipulating colors.
 
+Importing this module also configures fonts for plotting.
+
+
 BNF
 ---
 
@@ -10,10 +13,14 @@ BNF
 
 """
 from __future__ import annotations
+import pathlib
 from typing import TypeAlias, Literal, TypedDict
 import numpy as np
 import matplotlib as mpl
 import matplotlib.colors as mplcolors
+import matplotlib.font_manager
+import matplotlib.pyplot as plt
+from bpreveal import logUtils
 
 COLOR_SPEC_T: TypeAlias = \
     dict[Literal["rgb"], tuple[float, float, float]] | \
@@ -237,5 +244,32 @@ def parseSpec(  # pylint: disable=too-many-return-statements
             return wong[num]
         case _:
             assert False, f"Invalid color spec: {colorSpec}"
+
+
+def loadFonts():
+    """Configures the matplotlib default fonts to be in the Libertinus family.
+
+    This places Libertinus fonts at the top of the order for serif and sans-serif
+    fontfamily, but does not overwrite the monospace family."""
+    # Loads up the Libertinus fonts so they can be used on plots.
+    try:
+        cwd = pathlib.Path(__file__).parent.parent.parent.resolve()
+        fontdir = str(cwd / "doc" / "fonts" / "Libertinus-7.040" / "static/") + "/"
+        fontFiles = matplotlib.font_manager.findSystemFonts(fontpaths=[fontdir])
+        for ff in fontFiles:
+            try:
+                matplotlib.font_manager.fontManager.addfont(ff)
+            except:  # pylint: disable=bare-except  # noqa
+                # Whatever happened, it's just going to alter fonts a bit.
+                pass
+        oldFaces = plt.rcParams["font.serif"]
+        plt.rcParams["font.serif"] = ["Libertinus Serif"] + oldFaces
+        oldFaces = plt.rcParams["font.sans-serif"]
+        plt.rcParams["font.sans-serif"] = ["Libertinus Sans"] + oldFaces
+        logUtils.debug("Configured matplotlib default fonts.")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # If it didn't work, that's okay. User will still get good enough fonts.
+        logUtils.warning(f"Failed to set font family because {e}")
+
 
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

@@ -65,7 +65,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
         height = top - bottom
         width = right - left
         bbox = Bbox.from_bounds(left, bottom, width, height)
-        fontProperties = FontProperties(family="sans", weight="bold")
+        fontProperties = FontProperties(family="monospace", weight="bold")
         tmpPath = TextPath((0, 0), text, size=1, prop=fontProperties)
         if flip:
             flipTransformation = Affine2D().scale(sx=1, sy=-1)
@@ -420,7 +420,8 @@ def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
     for pos, val in enumerate(plotProfile):
         y = len(plotProfile) - pos - 1
         axProfile.fill_betweenx([y, y + 1], val, step="post",
-                                color=parseSpec(colors[pos][sequence[pos]]))
+                                color=parseSpec(colors[pos][sequence[pos]]),
+                                linewidth=0.1)
     axProfile.set_ylim(0, len(profile))
     axProfile.set_xlim(0, float(np.max(profile)))
     if mini:
@@ -520,7 +521,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
     colorSpan *= math.log10(math.e) * 10
     extent = (0, xlen, axStopY, axStartY)
     axPisa.imshow(plotMat, vmin=-colorSpan, vmax=colorSpan, extent=extent,
-                  cmap=cmap, aspect="auto", interpolation="nearest")
+                  cmap=cmap, aspect="auto", interpolation="nearest", zorder=-10)
 
     match diagMode:
         case "off":
@@ -555,6 +556,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
             pass
     norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
     smap = ScalarMappable(norm=norm, cmap=cmap)
+    axPisa.set_rasterization_zorder(0)
     return smap
 
 
@@ -765,7 +767,7 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
     :param fontSizeTicks: How big should the tick text be, in points?
     :param fontSizeAxLabel: How big should the labels be, in points?
     :param showSequence: Should the DNA sequence be drawn, or just a bar plot?
-    :param labelAxis: If True, then put ticks and tick labels on the x-axis, and also
+    :param labelXAxis: If True, then put ticks and tick labels on the x-axis, and also
         remove any labels from axGraph, if axGraph is not None.
     :param yAxisLabel: Text to display on the left side of the axis.
     :param mini: If True, use fewer x-ticks.
@@ -874,7 +876,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
                 break
 
         curPatch = patches.PathPatch(path, facecolor="none", lw=lineWidth,
-                                     edgecolor=color)
+                                     edgecolor=color, zorder=-10)
         return (abs(value), curPatch)
     patchList = []
 
@@ -888,7 +890,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         ax.add_patch(p[1])
     ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5 - 2 * trim)
     ax.set_ylim(0, 1)
-
+    ax.set_rasterization_zorder(0)
     # Last quick thing to do - generate a color map.
     norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
     smap = ScalarMappable(norm=norm, cmap=cmap)
