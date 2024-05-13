@@ -261,6 +261,7 @@ def buildConfig(oldConfig: dict) -> dict:
     newFig["tick-font-size"] = oldFig.get("tick-font-size", FONT_SIZE_TICKS)
     newFig["label-font-size"] = oldFig.get("label-font-size", FONT_SIZE_LABELS)
     newFig["line-width"] = oldFig.get("line-width", 1)
+    newFig["miniature"] = oldFig.get("miniature", False)
 
     newConfig = {
         "pisa": {},
@@ -276,7 +277,6 @@ def buildConfig(oldConfig: dict) -> dict:
         newConfig["use-annotation-colors"] = oldConfig.get("use-annotation-colors", False)
     else:
         # We have a plot-style config.
-        newConfig["miniature"] = oldConfig.get("miniature", False)
         newFig["grid-mode"] = oldFig.get("grid-mode", "on")
         newFig["diagonal-mode"] = oldFig.get("diagonal-mode", "edge")
 
@@ -618,12 +618,14 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
     """
     xweightPisa = 40
     xweightProfile = 6
+    xweightCbarSpace = 2 if mini else 1
     xweightCbar = 3 if mini else 1
     widthScale = 1
-    totalWeight = xweightPisa + xweightProfile + xweightCbar
+    totalWeight = xweightPisa + xweightProfile + xweightCbar + xweightCbarSpace
     pisaWidth = width * xweightPisa / totalWeight * widthScale
     profileWidth = width * xweightProfile / totalWeight * widthScale
     cbarWidth = width * xweightCbar / totalWeight * widthScale
+    cbarSpaceWidth = width * xweightCbarSpace / totalWeight * widthScale
     pisaHeight = height * 7 / 8
     seqHeight = height / 8
 
@@ -631,12 +633,12 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
     axSeq = fig.add_axes((left, bottom, pisaWidth, seqHeight))
     axProfile = fig.add_axes((left + pisaWidth + profileWidth * 0.02,
                               bottom + seqHeight, profileWidth * 0.9, pisaHeight))
-    axCbar = fig.add_axes((left + pisaWidth + profileWidth,
+    axCbar = fig.add_axes((left + pisaWidth + profileWidth + cbarSpaceWidth,
                            bottom + seqHeight + pisaHeight / (8 if mini else 4),
                            cbarWidth, pisaHeight / (3 if mini else 2)))
     axLegend = None
     if mini:
-        axLegend = fig.add_axes((left + pisaWidth + profileWidth,
+        axLegend = fig.add_axes((left + pisaWidth + profileWidth + cbarSpaceWidth,
                             bottom + seqHeight + pisaHeight * (1 / 3 + 1 / 7),
                             cbarWidth * 3, pisaHeight * (1 - 1 / 3 - 1 / 7)))
         axLegend.set_axis_off()
@@ -657,7 +659,8 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
 
 
 def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, width: float,
-                     height: float) -> tuple[AXES_T, AXES_T, AXES_T, AXES_T, AXES_T]:
+                     height: float, mini: bool) -> \
+        tuple[AXES_T, AXES_T, AXES_T, AXES_T, AXES_T, AXES_T | None]:
     """Get axes appropriate for drawing a PISA graph.
 
     :param fig: The figure to draw the axes on.
@@ -665,6 +668,7 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     :param bottom: The bottom, as a fraction of figure height, of the plots.
     :param width: The width, as a fraction of the figure width, for the plots.
     :param height: The height, as a fraction of the figure height, for the plots.
+    :param mini: Should the axes be arranged for small display spaces?
     :return: A tuple of axes, in order Graph, importance, predictions,
         annotations, colorbar.
     """
@@ -687,8 +691,9 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     # These numbers should match _getPisaAxes.
     graphXWeight = 40
     profileXWeight = 6
-    cbarXWeight = 1
-    totalXWeight = graphXWeight + profileXWeight + cbarXWeight
+    cbarSpaceXWeight = 2 if mini else 1
+    cbarXWeight = 3 if mini else 1
+    totalXWeight = graphXWeight + profileXWeight + cbarXWeight + cbarSpaceXWeight
     graphWidth = width * graphXWeight / totalXWeight
     cbarWidth = width * cbarXWeight / totalXWeight
     graphλ = 8
@@ -717,9 +722,15 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
                               graphWidth, profileHeight))
 
     axCbar = fig.add_axes((left + width - cbarWidth,
-                           bottom + graphBase + graphHeight / 4,
-                           cbarWidth, graphHeight / 2))
+                           bottom + graphBase + graphHeight / (8 if mini else 4),
+                           cbarWidth, graphHeight / (3 if mini else 2)))
 
+    axLegend = None
+    if mini:
+        axLegend = fig.add_axes((left + width - cbarWidth,
+                            bottom + graphBase + graphHeight * (1 / 3 + 1 / 7),
+                            cbarWidth * 3, graphHeight * (1 - 1 / 3 - 1 / 7)))
+        axLegend.set_axis_off()
     axAnnot = fig.add_axes((left, bottom + annotBase, graphWidth, annotHeight))
     axAnnot.set_axis_off()
     axGraph.set_yticks([])
@@ -731,13 +742,14 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     axAnnot.set_ylim(0, -1)
     axGraph.set_axis_off()
 
-    return axGraph, axImportance, axPredictions, axAnnot, axCbar
+    return axGraph, axImportance, axPredictions, axAnnot, axCbar, axLegend
 
 
 def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], sequence: str,
                              genomeStartX: int, genomeEndX: int, axSeq: AXES_T,
                              axGraph: AXES_T | None, fontSizeTicks: int, fontSizeAxLabel: int,
-                             showSequence: bool, labelAxis: bool, mini: bool):
+                             showSequence: bool, labelXAxis: bool,
+                             yAxisLabel: str, mini: bool):
     """Draw a profile on a horizontal axes.
 
     :param values: The values to plot.
@@ -755,6 +767,7 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
     :param showSequence: Should the DNA sequence be drawn, or just a bar plot?
     :param labelAxis: If True, then put ticks and tick labels on the x-axis, and also
         remove any labels from axGraph, if axGraph is not None.
+    :param yAxisLabel: Text to display on the left side of the axis.
     :param mini: If True, use fewer x-ticks.
     """
     numXTicks = 4 if mini else 10
@@ -780,22 +793,22 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
             # Only draw the zero line if there are negative values.
             axSeq.plot([0, values.shape[0]], [0, 0], "k--", lw=0.5)
         axSeq.set_ylim(min(values), max(values))
-    if labelAxis:
+    if labelXAxis:
         axSeq.set_xticks(ticksX, tickLabelsX, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
 
         axSeq.xaxis.set_tick_params(labelbottom=True, which="major")
-        axSeq.set_ylabel("Contrib.\nscore", fontsize=fontSizeAxLabel,
-                        fontfamily=FONT_FAMILY, rotation=0, loc="bottom", labelpad=40)
         axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel,
                          fontfamily=FONT_FAMILY)
         if axGraph is not None:
             axGraph.set_xticks(ticksX)
             axGraph.tick_params(axis="x", which="major", length=0, labelbottom=False)
+    axSeq.set_ylabel(yAxisLabel, fontsize=fontSizeAxLabel,
+                     fontfamily=FONT_FAMILY, rotation=0, loc="bottom", labelpad=40)
 
 
 def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
                  colorBlocks: list[tuple[int, int, COLOR_SPEC_T]],
-                 lineWidth: float, ax: AXES_T) -> ScalarMappable:
+                 lineWidth: float, trim: int, ax: AXES_T) -> ScalarMappable:
     """Draw a graph representation of a PISA matrix.
 
     :param similarityMat: The PISA array, already sheared. It should be square.
@@ -809,6 +822,12 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]]
     :param lineWidth: The thickness of the drawn lines. For large figures,
         thicker lines avoid Moiré patterns.
+    :param trim: The similarity matrix may be bigger than the area you want to
+        show on the plot. This allows lines to go off the edge of the page
+        and makes it clear that a motif's effect extends to bases in the output
+        that are not seen in the figure. ``trim`` bases on each side will not
+        be shown on the x-axis, but the information about them contained in
+        ``similarityMat`` will be used to draw lines that go off the edge.
     :param ax: The axes to draw on. The xlim and ylim will be clobbered by this function.
     """
     cmap = bprcolors.pisaClip
@@ -861,12 +880,13 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
 
     for row in logUtils.wrapTqdm(range(plotMat.shape[0]), "DEBUG"):
         for col in range(plotMat.shape[1]):
-            if curPatch := addLine(col, row, plotMat[row, col]):
+            if curPatch := addLine(col - trim, row - trim,
+                                   plotMat[row, col]):
                 patchList.append(curPatch)
     psSorted = sorted(patchList, key=lambda x: x[0])
     for p in logUtils.wrapTqdm(psSorted, "DEBUG"):
         ax.add_patch(p[1])
-    ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5)
+    ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5 - 2 * trim)
     ax.set_ylim(0, 1)
 
     # Last quick thing to do - generate a color map.

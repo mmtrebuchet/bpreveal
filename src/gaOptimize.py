@@ -107,7 +107,7 @@ for _k in "ACGT":
     _seqCmap[_k] = tuple((x / 255 for x in _seqCmap[_k]))
 corruptorColors = {
     "A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "T": _seqCmap["T"],
-    "d": "black",
+    "d": (0, 0, 0),
     "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
 """BPreveal's coloring for bases. A is green, C is blue, G is yellow, and T is red.
 

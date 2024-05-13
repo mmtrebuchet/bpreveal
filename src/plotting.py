@@ -60,6 +60,16 @@ to make PISA plots.
     determines the width of the x-axis. Use a smaller value to see the effect
     of fewer and fewer bases. ``output-slice-width`` determines the height of
     the y-axis. Use smaller values to zoom in on local effects.
+    For PISA graphs, these parameters have a slightly different meaning.
+    ``input-slice-width`` determines how wide of a window you want plotted.
+    Both the top and bottom of the graph will be this wide.
+    ``output-slice-width`` determines how much you want to allow for lines
+    that go past the end of the figure. If ``output-slice-width > input-slice-width``
+    then any lines that would go from an input on the page to an output off the page
+    (or vice-versa) will still be drawn, they'll just stop when they get to the
+    edge of the plot.
+    I recommend keeping ``output-slice-width`` about 200 or so larger than
+    ``input-slice-width`` for PISA graphs.
 
 ``genome-window-start``, ``genome-window-chrom``
     These are used to set the values for the tick labels on the plots,
@@ -148,6 +158,10 @@ things like motifs and genes.
     This sets the color limit for PISA values. If a clipping color map
     is used, then any values above this will show as clipped colors.
 
+``miniature``
+    Alters the layout of the graph to be a better fit to single-column display.
+    Default: ``false``.
+
 ``grid-mode``, ``diagonal-mode``
     For PISA plots only (not PISA graphs), these parameters determine whether
     or not the grid lines and diagonal line should be drawn. ``grid-mode`` can
@@ -185,17 +199,11 @@ Specific parameters
     based on the PISA value between the bases they connect.
     Default: ``false``.
 
-``miniature``
-    Only applicable to PISA plots, not graphs. If ``true``, then the format of
-    the graph is changed to make it better-suited to one-column figures. The
-    text for annotations is moved to a legend, and the axis labels are
-    simplified.
-    Default: ``false``.
-
 Module contents
 ---------------
 
 """
+from typing import Literal
 import numpy as np
 
 import matplotlib.figure
@@ -289,16 +297,27 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
         :width: 800
         :alt: Representative PISA graph.
 
+
+    By turning ``miniature`` to ``true``, and setting the figure size to (3, 2), you
+    instead get a plot like this:
+
+    .. image:: ../../doc/presentations/pisaGraphMini.png
+        :width: 400
+        :alt: Representative miniature PISA graph.
+
+    (Actually, this particular graph had overlapping labels that I had to remove with
+    :py:func:`~deleteTick`.)
     """
     if validate:
         schema.pisaGraph.validate(config)
     cfg = pu.buildConfig(config)
     del config  # Don't accidentally use the old one.
     logUtils.debug("Starting to draw PISA graph.")
-
-    axGraph, axSeq, axProfile, axAnnot, axCbar = pu.getPisaGraphAxes(
+    mini = cfg["figure"]["miniature"]
+    axGraph, axSeq, axProfile, axAnnot, axCbar, axLegend = pu.getPisaGraphAxes(
         fig, cfg["figure"]["left"], cfg["figure"]["bottom"],
-        cfg["figure"]["width"], cfg["figure"]["height"])
+        cfg["figure"]["width"], cfg["figure"]["height"],
+        mini)
 
     coords = cfg["coordinates"]
     sliceStart = coords["midpoint-offset"] - coords["input-slice-width"] // 2
@@ -306,7 +325,6 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
     genomeStart = coords["genome-window-start"] + sliceStart
     genomeEnd = coords["genome-window-start"] + sliceEnd
 
-    shearMat = cfg["pisa"]["values"][sliceStart:sliceEnd, sliceStart:sliceEnd]
     colorBlocks = []
     if cfg["use-annotation-colors"]:
         for annot in cfg["annotations"]["custom"]:
@@ -314,11 +332,15 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
                                 annot["end"] - genomeStart,
                                 annot["color"]))
     logUtils.debug("Axes set. Drawing graph.")
+    Δ = coords["output-slice-width"] - coords["input-slice-width"]
+    shearMat = cfg["pisa"]["values"][sliceStart - Δ:sliceEnd + Δ,
+                                     sliceStart - Δ:sliceEnd + Δ]
     pisaCax = pu.addPisaGraph(similarityMat=shearMat,
                               minValue=cfg["min-value"],
                               colorSpan=cfg["figure"]["color-span"],
                               colorBlocks=colorBlocks,
                               lineWidth=cfg["figure"]["line-width"],
+                              trim=Δ,
                               ax=axGraph)
 
     # Now set up the sequence/importance axis.
@@ -330,11 +352,12 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
                                 cfg["figure"]["tick-font-size"],
                                 cfg["figure"]["label-font-size"],
                                 cfg["importance"]["show-sequence"], True,
-                                False)
+                                "" if mini else "Contrib.\nscore",
+                                mini)
 
-    pu.addAnnotations(axAnnot, cfg["annotations"]["custom"],
-                      cfg["figure"]["annotation-height"], genomeStart,
-                      genomeEnd, cfg["figure"]["label-font-size"], False)
+    usedNames = pu.addAnnotations(axAnnot, cfg["annotations"]["custom"],
+        cfg["figure"]["annotation-height"], genomeStart,
+        genomeEnd, cfg["figure"]["label-font-size"], cfg["figure"]["miniature"])
 
     # Now, add the profiles.
     pu.addHorizontalProfilePlot(cfg["predictions"]["values"][sliceStart:sliceEnd],
@@ -346,11 +369,13 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
                                 cfg["figure"]["tick-font-size"],
                                 cfg["figure"]["label-font-size"],
                                 cfg["predictions"]["show-sequence"],
-                                False, False)
+                                False, "" if mini else "Pred.\nprofile", mini)
 
     pu.addCbar(pisaCax, axCbar, cfg["figure"]["tick-font-size"],
-               cfg["figure"]["label-font-size"], False)
+               cfg["figure"]["label-font-size"], mini)
 
+    if axLegend is not None:
+        pu.addLegend(usedNames, axLegend, cfg["figure"]["label-font-size"])
     logUtils.debug("PISA graph complete.")
     return {"axes": {"graph": axGraph, "importance": axSeq, "predictions": axProfile,
                      "annotations": axAnnot},
@@ -436,17 +461,26 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
         :width: 800
         :alt: Representative PISA plot.
 
+    By turning ``miniature`` to ``true``, and setting the figure size to (3, 2), you
+    instead get a plot like this:
+
+    .. image:: ../../doc/presentations/pisaPlotMini.png
+        :width: 400
+        :alt: Representative miniature PISA graph.
+
+    (Actually, this particular plot had overlapping labels that I had to remove with
+    :py:func:`~deleteTick`.)
     """
     if validate:
         schema.pisaPlot.validate(config)
     cfg = pu.buildConfig(config)
     del config  # Don't accidentally edit the old one.
     logUtils.debug("Starting to draw PISA graph.")
-
+    mini = cfg["figure"]["miniature"]
     axPisa, axSeq, axProfile, axCbar, axAnnot, axLegend = pu.getPisaAxes(
         fig, cfg["figure"]["left"], cfg["figure"]["bottom"],
         cfg["figure"]["width"], cfg["figure"]["height"],
-        cfg["miniature"])
+        mini)
     # PISA image plotting
     coords = cfg["coordinates"]
     sliceStartX = coords["midpoint-offset"] - coords["input-slice-width"] // 2
@@ -467,7 +501,7 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
                              cfg["figure"]["grid-mode"],
                              cfg["figure"]["tick-font-size"],
                              cfg["figure"]["label-font-size"], genomeStartX,
-                             cfg["miniature"])
+                             mini)
     # Now set up the sequence/importance axis.
     logUtils.debug("Graph complete. Finishing plot.")
     pu.addHorizontalProfilePlot(cfg["importance"]["values"][sliceStartX:sliceEndX],
@@ -477,24 +511,25 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
                                 cfg["figure"]["tick-font-size"],
                                 cfg["figure"]["label-font-size"],
                                 cfg["importance"]["show-sequence"], True,
-                                cfg["miniature"])
+                                "" if mini else "Contrib.\nscore",
+                                mini)
 
     usedNames = pu.addAnnotations(axAnnot, cfg["annotations"]["custom"],
                                   cfg["figure"]["annotation-height"],
                                   genomeStartX, genomeEndX,
-                                  cfg["figure"]["label-font-size"], cfg["miniature"])
+                                  cfg["figure"]["label-font-size"], mini)
     # Now, add the profiles.
     pu.addVerticalProfilePlot(cfg["predictions"]["values"][sliceStartY:sliceEndY],
                               axProfile,
                               cfg["predictions"]["color"][sliceStartY:sliceEndY],
                               coords["sequence"][sliceStartY:sliceEndY],
                               cfg["figure"]["tick-font-size"],
-                              cfg["predictions"]["show-sequence"],
-                              cfg["miniature"])
+                              cfg["figure"]["label-font-size"],
+                              mini)
     if axLegend is not None:
         pu.addLegend(usedNames, axLegend, cfg["figure"]["label-font-size"])
     pu.addCbar(pisaCax, axCbar, cfg["figure"]["tick-font-size"],
-               cfg["figure"]["label-font-size"], cfg["miniature"])
+               cfg["figure"]["label-font-size"], mini)
     return {"axes": {"pisa": axPisa, "importance": axSeq, "predictions": axProfile,
                      "annotations": axAnnot, "colorbar": axCbar,
                      "legend": axLegend},
@@ -701,6 +736,118 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
     """
     # This is just a wrapper to avoid circular imports.
     return pu.getCoordinateTicks(start, end, numTicks, zeroOrigin)
+
+
+def deleteTick(ax: AXES_T, which: Literal["x"] | Literal["y"] | Literal["both"],
+               index: int):
+    """Delete a particular offending tick from an Axes.
+
+    :param ax: The axes that has the offending tick.
+    :param which: Either ``"x"``, ``"y"``, or ``"both"``, indicating which axis
+        has the problem.
+    :param index: Which tick label index is the problem? This is a list index,
+        and a negative number removes a particular label starting from the right.
+        (Just like normal list indexing in Python.)
+
+
+    This function helps when you have overlapping ticks, which happens annoyingly often
+    since genomic coordinates tend to be huge numbers.
+
+    Consider the following PISA plot:
+
+    .. image:: ../../doc/presentations/pisaPlotMiniOverlappingLabels.png
+        :width: 400
+        :alt: Representative miniature PISA graph.
+
+    As you can see, the label for ``'950`` is overlapping with the right-end label for
+    ``180924977``. To delete this offending tick, I can use this function, like this::
+
+        r = bprplots.plotPisa(plotConfig, fig)
+        bprplots.deleteTick(r["axes"]["importance"], "x", -2)
+        bprplots.deleteTick(r["axes"]["pisa"], "x", -2)
+
+    Note that I had to remove the tick from both the importance and pisa axes.
+    The deletion on the pisa axes causes the grid line to disappear.
+
+    The result of this correction is the following:
+
+    .. image:: ../../doc/presentations/pisaPlotMini.png
+        :width: 400
+        :alt: Representative miniature PISA graph.
+
+    """
+    def prune(ticks, labels):
+        # We get numpy arrays in and want to do
+        # concatenation with +, so we have to listify.
+        ticks = list(ticks)
+        labels = list(labels)
+        if index < 0:
+            # Slicing from the right/bottom
+            breakPoint = len(ticks) + index
+        else:
+            breakPoint = index
+        survivingTicks = ticks[:breakPoint] + ticks[breakPoint + 1:]
+        survivingLabels = labels[:breakPoint] + labels[breakPoint + 1:]
+        return survivingTicks, survivingLabels
+
+    if which in {"x", "both"}:
+        xTicks = ax.get_xticks()
+        xLabels = ax.get_xticklabels()
+        newXTicks, newXLabels = prune(xTicks, xLabels)
+        ax.set_xticks(newXTicks)
+        ax.set_xticklabels(newXLabels)
+
+    if which in {"y", "both"}:
+        yTicks = ax.get_yticks()
+        yLabels = ax.get_yticklabels()
+        newYTicks, newYLabels = prune(yTicks, yLabels)
+        ax.set_yticks(newYTicks)
+        ax.set_yticklabels(newYLabels)
+
+
+def plotPisaWithFiles(pisaDats: str, cutMiddle: int, cutLengthX: int,
+                      cutLengthY: int, receptiveField: int, genomeWindowStart: int,
+                      genomeWindowChrom: str, genomeFastaFname: str, importanceBwFname: str,
+                      motifScanBedFname: str, profileDats: str,
+                      nameColors: dict[str, tuple[float, float, float]],
+                      fig: matplotlib.figure.Figure, bbox: tuple[float, float, float, float],
+                      colorSpan: float = 1.0, boxHeight: float = 0.1, fontsize: int = 5,
+                      mini: bool = False):
+    """Deprecated way to get the new config dict. Issues a warning if used."""
+    del fig
+    del receptiveField
+    logUtils.warning("This function has been replaced with the new plotting config style. "
+                     "Use this config: ")
+    cfg = {
+        "pisa": {"h5-name": pisaDats},
+        "coordinates": {
+            "genome-fasta": genomeFastaFname,
+            "midpoint-offset": cutMiddle,
+            "input-slice-width": cutLengthX,
+            "output-slice-width": cutLengthY,
+            "genome-window-start": genomeWindowStart,
+            "genome-window-chrom": genomeWindowChrom
+        },
+        "predictions": {"bigwig-name": profileDats},
+        "importance": {"bigwig-name": importanceBwFname},
+        "annotations": {"bed-name": motifScanBedFname,
+                        "name-colors": nameColors},
+        "figure": {
+            "left": bbox[0],
+            "bottom": bbox[1],
+            "width": bbox[2],
+            "height": bbox[3],
+            "color-span": colorSpan,
+            "annotation-height": boxHeight,
+            "tick-font-size": fontsize,
+            "label-font-size": fontsize,
+            "miniature": mini
+            }
+    }
+    logUtils.warning(cfg)
+    return cfg
+
+
 
 
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

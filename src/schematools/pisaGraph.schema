@@ -21,16 +21,20 @@
                         "annotation-height": {"type": "number"},
                         "tick-font-size": {"type": "integer"},
                         "label-font-size": {"type": "integer"},
-                        "color-span": {"type": "number"}
+                        "color-span": {"type": "number"},
+                        "miniature": {"type": "boolean"},
+                        "line-width": {"type": "integer"}
                     },
-                    "required": ["bottom", "left", "width", "height"]
+                    "required": ["bottom", "left", "width", "height"],
+                    "additionalProperties": false
                 },
                 "min-value": {"type": "number"},
                 "use-annotation-colors": {"type": "boolean"}
             },
 
             "required": ["pisa", "coordinates", "importance", "predictions",
-                "annotations", "figure", "min-value"]
+                "annotations", "figure", "min-value"],
+            "additionalProperties": false
         }
     },
     "type": "object",

@@ -9,6 +9,15 @@
     "min-value": <number>
 }
 
+<pisa-plot-configuration> ::= {
+    "pisa": <pisa-section>,
+    "coordinates": <coordinates-section>,
+    "importance": <profile-section>,
+    "predictions": <profile-section>,
+    "annotations": <annotation-section>,
+    "figure": <plot-figure-section>
+}
+
 <use-annotation-section> ::=
     <empty>
   | "use-annotation-colors": <boolean>,
@@ -83,7 +92,6 @@
 <name-color> ::=
     <string>: <color-spec>
 
-
 <list-of-annotation> ::=
     <empty>
   | <annotation>
@@ -108,6 +116,7 @@
     <annotation-height-section>
     <tick-font-size-section>
     <label-font-size-section>
+    <miniature-section>
     "color-span": <number>,
 
 <annotation-height-section> ::=
@@ -127,6 +136,7 @@
     <diagonal-mode-section>
     <figure-base>
 }
+
 <grid-mode-section> ::=
     <empty>
   | "grid-mode": "on",
@@ -137,17 +147,6 @@
   | "diagonal-mode": "on"
   | "diagonal-mode": "off"
   | "diagonal-mode": "edge"
-
-
-<pisa-plot-configuration> ::= {
-    <miniature-section>
-    "pisa": <pisa-section>,
-    "coordinates": <coordinates-section>,
-    "importance": <profile-section>,
-    "predictions": <profile-section>,
-    "annotations": <annotation-section>,
-    "figure": <plot-figure-section>
-}
 
 <miniature-section> ::=
     <empty>

@@ -46,7 +46,9 @@
                     "required": ["pisa-data"],
                     "not": {"required": ["h5-name"]}
                 }
-            ]
+            ],
+            "additionalProperties": false
+
         },
         "coordinates-section":{
             "$comment": "The coordinates to be used in a plot or graph.",
@@ -62,7 +64,8 @@
             },
             "required": ["midpoint-offset", "input-slice-width",
                          "output-slice-width", "genome-window-start",
-                         "genome-window-chrom"]
+                         "genome-window-chrom"],
+            "additionalProperties": false
         },
         "profile-section": {
             "$comment": "A profile (importance or predictions) to be used in a plot or graph.",
@@ -71,6 +74,7 @@
                 "bigwig-name": {"type": "string"},
                 "values": {"type": "array",
                            "items": {"type": "number"}},
+                "show-sequence": {"type": "boolean"},
                 "color": {"oneOf": [
                     {"$ref": "#/definitions/color-spec"},
                     {"$ref": "#/definitions/sequence-color-spec"},
@@ -80,7 +84,8 @@
             },
             "oneOf": [
                 {"required": ["bigwig-name"]},
-                {"required": ["values"]}]
+                {"required": ["values"]}],
+            "additionalProperties": false
         },
 
         "color-spec": {
@@ -110,7 +115,8 @@
                 {"required": ["tol-light"]},
                 {"required": ["ibm"]},
                 {"required": ["wong"]}
-            ]
+            ],
+            "additionalProperties": false
         },
         "sequence-color-spec": {
             "type": "object",
@@ -120,7 +126,8 @@
                 "G": {"$ref": "#/definitions/color-spec"},
                 "T": {"$ref": "#/definitions/color-spec"}
             },
-            "required": ["A", "C", "G", "T"]
+            "required": ["A", "C", "G", "T"],
+            "additionalProperties": false
         },
         "annotation-section": {
             "type": "object",
@@ -144,10 +151,12 @@
                             "name": {"type": "string"},
                             "color": {"$ref": "#/definitions/color-spec"}
                         },
-                        "required": ["start", "end", "name", "color"]
+                        "required": ["start", "end", "name", "color"],
+                        "additionalProperties": false
                     }
                 }
-            }
+            },
+            "additionalProperties": false
         }
     },
     "not": {}

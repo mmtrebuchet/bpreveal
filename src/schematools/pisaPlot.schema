@@ -29,15 +29,17 @@
                         "diagonal-mode": {
                             "type": "string",
                             "enum": ["on", "off", "edge"]
-                        }
+                        },
+                        "miniature": {"type": "boolean"}
                     },
-                    "required": ["bottom", "left", "width", "height", "color-span"]
-                },
-                "miniature": {"type": "boolean"}
+                    "required": ["bottom", "left", "width", "height", "color-span"],
+                    "additionalProperties": false
+                }
             },
 
             "required": ["pisa", "coordinates", "importance", "predictions",
-                "annotations", "figure"]
+                "annotations", "figure"],
+            "additionalProperties": false
         }
     },
     "type": "object",

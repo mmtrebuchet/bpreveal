@@ -29,5 +29,6 @@
             {"required": ["output-png"]},
             {"required": ["output-pdf"]}
         ]}
-    ]
+    ],
+    "additionalProperties": false
 }

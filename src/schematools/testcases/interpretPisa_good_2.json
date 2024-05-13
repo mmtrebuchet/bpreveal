@@ -4,7 +4,6 @@
     "model-file": "../models/joint_residual.model",
     "input-length": 3092,
     "output-length": 1000,
-    "heads": 1,
     "head-id": 0,
     "task-id": 0,
     "output-h5": "shap/pisa_3_split_00.h5",
