@@ -247,7 +247,7 @@ def addGenomeInfo(outFile: h5py.File, genome: pysam.FastaFile) -> \
     outFile.create_dataset("chrom_sizes", (genome.nreferences,), dtype="u8")
     chromNameToIndex = {}
     chromDtype = np.uint8
-    if genome.nreferences > 127:
+    if genome.nreferences > 127:  # type: ignore
         # We could store up to 255 in a uint8, but people might
         # .astype(int8) and that would be a problem. So we sacrifice a
         # bit if there are 128 to 255 chromosomes.

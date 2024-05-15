@@ -52,8 +52,8 @@ def main(config: dict):
     inH5 = h5py.File(config["input-h5"], "r")
     numHeads = 0
     tasksPerHead = []
-    while "head_{0:d}".format(numHeads) in inH5:
-        tasksPerHead.append(inH5["head_{0:d}".format(numHeads)].shape[2])
+    while f"head_{numHeads}" in inH5:
+        tasksPerHead.append(inH5[f"head_{numHeads}"].shape[2])
         numHeads += 1
     # Note that this is not actually the model input length:
     # This dataset has shape (input-length + 2*jitter)
@@ -79,7 +79,7 @@ def main(config: dict):
         outputSequences[:numInputRegions] = np.array(inH5["sequence"])
         for i in range(numHeads):
             outputHeads[i][:numInputRegions] = np.array(
-                inH5["head_{0:d}".format(i)])
+                inH5[f"head_{i}"])
         writeHead = numInputRegions
     else:
         writeHead = 0

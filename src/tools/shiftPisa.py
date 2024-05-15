@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+"""A little tool to shift pisa values in hdf5 files."""
 import argparse
 import numpy as np
 import numpy.typing as npt
@@ -8,6 +8,7 @@ from bpreveal.internal.constants import IMPORTANCE_T, IMPORTANCE_AR_T, PRED_AR_T
 
 
 def shiftPisa(dats: IMPORTANCE_AR_T, offset: int):
+    """Shift a (2D) PISA array."""
     newDats = np.zeros(dats.shape)
     if offset >= 0:
         newDats[:-offset, offset:] = dats[offset:, :-offset]
@@ -17,6 +18,7 @@ def shiftPisa(dats: IMPORTANCE_AR_T, offset: int):
 
 
 def shiftPredictions(preds: PRED_AR_T, offset: int):
+    """Shift an array of predictions."""
     ret = np.zeros(preds.shape)
     if offset >= 0:
         ret[:-offset] = preds[offset:]
@@ -59,7 +61,7 @@ def getMask(dats: IMPORTANCE_AR_T, offset: int,
                 elif chroms[i] != chroms[i + Δ]:
                     # We switched chromosome.
                     mask[i, :] = 0
-            else:
+            if Δ < 0:
                 # Negative shift case.
                 if i + Δ < 0:
                     # Off the top of the picture.
@@ -72,12 +74,18 @@ def getMask(dats: IMPORTANCE_AR_T, offset: int,
 
 
 def doShift(pisaFnames: list[str], shifts: list[int], outFname: str):
+    """Actually apply the shift.
+
+    :param pisaFnames: The names of the hdf5-format files to shift.
+    :param shifts: The integer shift amounts.
+    :param outFname: The name of the (single) hdf5-format file to write.
+    """
     pisaFps = [h5py.File(x, "r") for x in pisaFnames]
     with h5py.File(outFname, "w") as outFp:
         # Load up the data that doesn't change.
-        for fieldName in ["chrom_names", "chrom_sizes", "coords_chrom",
+        for fieldName in ("chrom_names", "chrom_sizes", "coords_chrom",
                         "coords_base", "descriptions",
-                        "head_id", "task_id", "sequence"]:
+                        "head_id", "task_id", "sequence"):
             if fieldName in pisaFps[0]:
                 fieldDset = pisaFps[0][fieldName]
                 fieldAr = np.array(fieldDset)
@@ -127,6 +135,7 @@ def doShift(pisaFnames: list[str], shifts: list[int], outFname: str):
 
 
 def getParser():
+    """Generate (but don't parse_args()) the argument parser."""
     parser = argparse.ArgumentParser(
         description="Slide pisa data to turn endpoint-based pisa data into midpoints."
     )
@@ -137,7 +146,7 @@ def getParser():
     parser.add_argument(
         "--mnase",
         help="Perform the +79, -80 shift that is recommended for mnase",
-        action='store_true')
+        action="store_true")
     parser.add_argument("--amount", help="How much should the input be shifted? "
                         "Cannot be used with --pisa5, --pisa3, or --mnase.", type=int)
     parser.add_argument(
@@ -148,6 +157,7 @@ def getParser():
 
 
 def main():
+    """Do the shifting."""
 
     args = getParser().parse_args()
 

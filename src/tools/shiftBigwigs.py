@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""A little script to shift and combine bigwig tracks."""
 
 import argparse
 import numpy as np
@@ -8,7 +9,8 @@ import pyBigWig
 import tqdm
 
 
-def scanBigwigs(bwFname1, bwFname2, outFname):
+def scanBigwigs(bwFname1: str, bwFname2: str, outFname: str):
+    """Show a plot of the correlation between the two bigwigs, and save data to outFname."""
     bw1 = pyBigWig.open(bwFname1)
     bw2 = pyBigWig.open(bwFname2)
     chromName = list(bw1.chroms().keys())[0]
@@ -17,8 +19,6 @@ def scanBigwigs(bwFname1, bwFname2, outFname):
     dat2 = np.nan_to_num(bw2.values(chromName, 0,
                                     bw2.chroms(chromName)))[:20000000]
     ret = scipy.signal.correlate(dat2, dat1)
-    print(dat1.shape)
-    print(ret.shape)
     xvals = range(-dat1.shape[0] + 1, dat1.shape[0])
     plt.plot(xvals, ret)
     plt.xlim(-100, 400)
@@ -26,21 +26,22 @@ def scanBigwigs(bwFname1, bwFname2, outFname):
     plt.show()
     with open(outFname, "w") as fp:
         for i in range(ret.shape[0] // 2 - 1000, ret.shape[0] // 2 + 1000):
-            fp.write("{0:d}\t{1:f}\n".format(xvals[i], ret[i]))
+            fp.write(f"{xvals[i]}\t{ret[i]}\n")
 
 
-def doShift(bwFnames, shifts, outFname):
+def doShift(bwFnames: list[str], shifts: list[int], outFname: str):
+    """Actually shift the files."""
     bws = [pyBigWig.open(x) for x in bwFnames]
     bwOut = pyBigWig.open(outFname, "w")
     bwChroms = bws[0].chroms()
     header = [(x, bwChroms[x]) for x in sorted(bwChroms.keys())]
     bwOut.addHeader(header)
-    chromDats = dict()
+    chromDats = {}
     for chromName in tqdm.tqdm(sorted(bwChroms.keys())):
         datOut = np.zeros((bwChroms[chromName], ), dtype=np.float32)
-        for i in range(len(bws)):
+        for i, bw in enumerate(bws):
             s = shifts[i]
-            d = np.nan_to_num(bws[i].values(chromName, 0, bwChroms[chromName]))
+            d = np.nan_to_num(bw.values(chromName, 0, bwChroms[chromName]))
             if s >= 0:
                 datOut[s:] += d[:-s]
             else:
@@ -57,6 +58,7 @@ def doShift(bwFnames, shifts, outFname):
 
 
 def getParser():
+    """Generate (but don't call parse_args()) the parser."""
     parser = argparse.ArgumentParser(
         description="Slide bigwigs to turn mnase endpoint data into midpoints."
     )
@@ -69,7 +71,7 @@ def getParser():
     parser.add_argument(
         "--mnase",
         help="Perform the +79, -80 shift that is recommended for mnase",
-        action='store_true')
+        action="store_true")
     parser.add_argument(
         "--out",
         help="The name of the bigwig file to write, or, if scanning, "
@@ -79,7 +81,7 @@ def getParser():
 
 
 def main():
-
+    """Run the program."""
     args = getParser().parse_args()
 
     if args.scan:

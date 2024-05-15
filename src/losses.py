@@ -31,7 +31,7 @@ def multinomialNll(trueCounts: tf.Tensor, logits: tf.Tensor) -> float:
     return curLoss
 
 
-def weightedMse(weightTensor: tf.Tensor):
+def weightedMse(weightTensor: tf.Tensor | tf.Variable | tf.Operation):
     """Loss for the adaptive counts loss weight.
 
     Given a weight tensor (a tensorflow Variable of shape (1,))

@@ -8,67 +8,6 @@ from bpreveal import logUtils
 from bpreveal import generators
 
 
-def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads: list[dict],
-                 trainBatchGen: generators.H5BatchGenerator,
-                 valBatchGen: generators.H5BatchGenerator) -> list[Callback]:
-    """Return a set of callbacks for your model.
-
-    :param earlyStop: The ``early-stopping-patience`` from the config file.
-    :param outputPrefix: The ``output-prefix`` for the model, including directory.
-    :param plateauPatience: The ``learning-rate-plateau-patience`` from the config file.
-    :param heads: The heads list for your model, to which adaptive loss λ tensors
-        have been added.
-    :param trainBatchGen: The batch generator for training. Just used to see how many
-        batches there will be.
-    :param valBatchGen: The batch generator for validation. Just used to see how many
-        batches there will be.
-    :return: A list of Keras callbacks that you should use to train your model.
-
-    The returned callbacks are:
-
-    EarlyStopping
-        Stop training if the validation loss hasn't improved for a while.
-    ModelCheckpoint
-        Write a checkpoint file every time the validation loss improves.
-    ReduceLROnPlateau
-        If validation loss hasn't improved for a while, decrease the learning rate.
-    ApplyAdaptiveCountsLoss
-        Implement the :doc:`adaptive counts loss algorithm<countsLossReweighting>`.
-
-    """
-    logUtils.debug(f"Creating callbacks based on {earlyStop=}, "
-                   f"{outputPrefix=}, {plateauPatience=}")
-    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
-        verbose = 1
-    else:
-        verbose = 0
-    earlyStopCallback = EarlyStopping(monitor="val_loss",
-                                      patience=earlyStop,
-                                      verbose=verbose,
-                                      mode="min",
-                                      restore_best_weights=True)
-
-    filepath = f"{outputPrefix}.checkpoint.model"
-    checkpointCallback = ModelCheckpoint(filepath,
-                                         monitor="val_loss",
-                                         verbose=verbose,
-                                         save_best_only=True,
-                                         mode="min")
-    plateauCallback = ReduceLROnPlateau(monitor="val_loss", factor=0.5,
-                                        patience=plateauPatience, verbose=verbose)
-    adaptiveLossCallback = ApplyAdaptiveCountsLoss(heads=heads, aggression=0.3,
-                                                   lrPlateauCallback=plateauCallback,
-                                                   earlyStopCallback=earlyStopCallback,
-                                                   checkpointCallback=checkpointCallback)
-    displayCallback = DisplayCallback(plateauCallback=plateauCallback,
-                                      earlyStopCallback=earlyStopCallback,
-                                      adaptiveLossCallback=adaptiveLossCallback,
-                                      trainBatchGen=trainBatchGen,
-                                      valBatchGen=valBatchGen)
-    return [earlyStopCallback, checkpointCallback, plateauCallback,
-            adaptiveLossCallback, displayCallback]
-
-
 class DisplayCallback(Callback):
     """Replaces the tensorflow progress bar logger with lots of printing to stderr.
 
@@ -628,4 +567,70 @@ class ApplyAdaptiveCountsLoss(Callback):
         # We've updated the loss. But now we have to go mess with the callbacks so that
         # the increased loss value isn't interpreted as the model getting worse.
         self.resetCallbacks()
+
+
+def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads: list[dict],
+                 trainBatchGen: generators.H5BatchGenerator,
+                 valBatchGen: generators.H5BatchGenerator) -> \
+        tuple[EarlyStopping, ModelCheckpoint, ReduceLROnPlateau,
+              ApplyAdaptiveCountsLoss, DisplayCallback]:
+    """Return a set of callbacks for your model.
+
+    :param earlyStop: The ``early-stopping-patience`` from the config file.
+    :param outputPrefix: The ``output-prefix`` for the model, including directory.
+    :param plateauPatience: The ``learning-rate-plateau-patience`` from the config file.
+    :param heads: The heads list for your model, to which adaptive loss λ tensors
+        have been added.
+    :param trainBatchGen: The batch generator for training. Just used to see how many
+        batches there will be.
+    :param valBatchGen: The batch generator for validation. Just used to see how many
+        batches there will be.
+    :return: A list of Keras callbacks that you should use to train your model.
+
+    The returned callbacks are:
+
+    EarlyStopping
+        Stop training if the validation loss hasn't improved for a while.
+    ModelCheckpoint
+        Write a checkpoint file every time the validation loss improves.
+    ReduceLROnPlateau
+        If validation loss hasn't improved for a while, decrease the learning rate.
+    ApplyAdaptiveCountsLoss
+        Implement the :doc:`adaptive counts loss algorithm<countsLossReweighting>`.
+    DisplayCallback
+        Write log files in a format that is compatible with
+        :py:mod:`showTrainingProgress<bpreveal.showTrainingProgress>`
+
+    """
+    logUtils.debug(f"Creating callbacks based on {earlyStop=}, "
+                   f"{outputPrefix=}, {plateauPatience=}")
+    if logUtils.getLogger().isEnabledFor(logUtils.INFO):
+        verbose = 1
+    else:
+        verbose = 0
+    earlyStopCallback = EarlyStopping(monitor="val_loss",
+                                      patience=earlyStop,
+                                      verbose=verbose,
+                                      mode="min",
+                                      restore_best_weights=True)
+
+    filepath = f"{outputPrefix}.checkpoint.model"
+    checkpointCallback = ModelCheckpoint(filepath,
+                                         monitor="val_loss",
+                                         verbose=verbose,
+                                         save_best_only=True,
+                                         mode="min")
+    plateauCallback = ReduceLROnPlateau(monitor="val_loss", factor=0.5,
+                                        patience=plateauPatience, verbose=verbose)
+    adaptiveLossCallback = ApplyAdaptiveCountsLoss(heads=heads, aggression=0.3,
+                                                   lrPlateauCallback=plateauCallback,
+                                                   earlyStopCallback=earlyStopCallback,
+                                                   checkpointCallback=checkpointCallback)
+    displayCallback = DisplayCallback(plateauCallback=plateauCallback,
+                                      earlyStopCallback=earlyStopCallback,
+                                      adaptiveLossCallback=adaptiveLossCallback,
+                                      trainBatchGen=trainBatchGen,
+                                      valBatchGen=valBatchGen)
+    return (earlyStopCallback, checkpointCallback, plateauCallback,
+            adaptiveLossCallback, displayCallback)
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

@@ -84,6 +84,7 @@ def removeOverlaps(entries: list[dict], colName: str, nameCol: str | None) -> li
 
 
 def main():
+    """Run the culling algorithm."""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)
     nameCol = None
@@ -92,7 +93,8 @@ def main():
         colNames, entries, _ = readTsv(inFname)
         if args.matchNames:
             nameCol = "short_name"
-    elif args.inBed is not None:
+    else:
+        assert args.inBed is not None, "Must provide tsv or bed!"
         inFname = args.inBed
         colNames = ["chrom", "start", "end", "name", "score", "strand"]
         convFns = [str, int, int, str, float, str]

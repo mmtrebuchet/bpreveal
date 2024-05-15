@@ -156,14 +156,15 @@ def makeBnf(request):
             with open("_generated/bnf/{0:s}.rst".format(modName), "w") as outFp, \
                     open(inFname, "r") as inFp:
                 for line in inFp:
-                    if m := re.match("[^<]*<([^>]*)> ::=", line):
+                    if m := re.match("[^<]*<([^>]*)> ::=(.*)", line):
                         # Create an anchor that I can jump to.
                         outFp.write('.. raw:: html\n\n')
                         outFp.write('    <a name="{0:s}"></a>\n\n'.format(m.group(1)))
                         outFp.write(".. _{0:s}:\n\n".format(m.group(1)))
                         outFp.write(".. highlight:: none\n\n")
                         outFp.write(".. parsed-literal::\n\n")
-                        outFp.write("    <:ref:`{0:s}<{0:s}>`> ::=\n".format(m.group(1)))
+                        outFp.write("    <:ref:`{0:s}<{0:s}>`> ::={1:s}\n"
+                                    .format(m.group(1), m.group(2)))
                     else:
                         outFp.write("    ")
                         inName = False
@@ -210,13 +211,13 @@ def tryBuildFile(fname):
             fp.write("\n.. highlight:: python\n\n")
             fp.write(".. automodule:: bpreveal.{0:s}\n    :members:\n\n".
                      format(fmtModName))
-        elif modName == "schema":
+        elif modName == "XXschema":
             fp.write(".. automodule:: bpreveal.{0:s}\n\n".
                      format(fmtModName))
             fp.write(
                 "    .. autodata:: schemaMap(dict[str, Draft7Validator])\n")
             fp.write("        :annotation:\n\n")
-            for majorFile in filesMajor + filesToolsMajor:
+            for majorFile in filesMajor + filesToolsMajor + ["pisaPlot.xx", "pisaGraph.xx"]:
                 fp.write("    .. autodata:: {0:s}(Draft7Validator)\n".format(
                     majorFile[:-3]))
                 fp.write("        :annotation:\n\n")

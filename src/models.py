@@ -9,7 +9,7 @@ from bpreveal import layers
 from bpreveal import logUtils
 
 
-def _soloModelHead(dilateOutput: klayers.Layer, individualHead: klayers.Layer,
+def _soloModelHead(dilateOutput: klayers.Layer, individualHead: dict,
                    outputFilterWidth: int) -> \
         tuple[klayers.Layer, klayers.Layer]:
     """A single output head for a solo model.
@@ -243,8 +243,8 @@ def transformationModel(soloModelIn: kmodels.Model,
     numHeads = len(headList)
     for i, individualHead in enumerate(headList):
         profileHead, countsHead = _transformationHead(
-                soloProfile=soloModelIn.outputs[i],  # noqa
-                soloCounts=soloModelIn.outputs[i + numHeads],
+                soloProfile=soloModelIn.outputs[i],  # noqa  # type: ignore
+                soloCounts=soloModelIn.outputs[i + numHeads],  # type: ignore
                 individualHead=individualHead,
                 profileArchitectureSpecification=profileArchitectureSpecification,
                 countsArchitectureSpecification=countsArchitectureSpecification)
@@ -326,16 +326,16 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
                               headList=headList, modelName="residual")
     inputLayer = residualModel.inputs
 
-    assert len(inputLayer) == 1, "Input layer of Keras model is >1. Cannot crop."
-    cropDiff = residualModel.inputs[0].shape[1] - biasModel.inputs[0].shape[1]
+    assert len(inputLayer) == 1, "Input layer of Keras model is >1. Cannot crop."  # type: ignore
+    cropDiff = residualModel.inputs[0].shape[1] - biasModel.inputs[0].shape[1]  # type: ignore
     assert cropDiff % 2 == 0, "Cropping returns an odd number: "\
                               "redo your model input sizes to be even numbers."
     cropFlankSize = int(cropDiff / 2)
     logUtils.info(f"Auto cropdown will trim {cropFlankSize} bases from the bias model input.")
     assert cropFlankSize >= 0, "Bias model inputs are larger than residual inputs"
     croppedInputLayer = klayers.Cropping1D(cropFlankSize,
-                                                   name="auto_crop_input_tensor")\
-                                                (inputLayer[0])  # noqa
+                                           name="auto_crop_input_tensor")\
+                                        (inputLayer[0])  # noqa  # type:ignore
     readyBiasHeads = biasModel([croppedInputLayer])
 
     logUtils.debug("Bias heads")
@@ -353,7 +353,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
         headName = head["head-name"]
         addProfile = klayers.Add(
                 name=f"combined_add_profile_{headName}")\
-            ([readyBiasHeads[i], residualModel.outputs[i]])  # noqa
+            ([readyBiasHeads[i], residualModel.outputs[i]])  # noqa  # type: ignore
         if head["use-bias-counts"]:
             # While we add logits, we have to convert from log space to linear space
             # This is because we want to model
@@ -364,11 +364,11 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
             absBiasCounts = klayers.Activation(
                     tf.math.exp,  # noqa
                     name=f"combined_exponentiate_bias_{headName}")\
-                (readyBiasHeads[i + numHeads])  # noqa
+                (readyBiasHeads[i + numHeads])  # noqa  # type: ignore
             absResidualCounts = klayers.Activation(
                     tf.math.exp,  # noqa
                     name=f"combined_exp_residual_{headName}") \
-                (residualModel.outputs[i + numHeads])  # noqa
+                (residualModel.outputs[i + numHeads])  # noqa  # type: ignore
             absCombinedCounts = klayers.Add(
                     name=f"combined_add_counts_{headName}") \
                 ([absBiasCounts, absResidualCounts])  # noqa
@@ -380,7 +380,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
             # The user doesn't want the counts value from the regression used,
             # just the profile part. This is useful when the concept of a
             # "negative peak set" is meaningless, like in MNase.
-            addCounts = residualModel.outputs[i + numHeads]
+            addCounts = residualModel.outputs[i + numHeads]  # type: ignore
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
     combModel = keras.Model(inputs=inputLayer,

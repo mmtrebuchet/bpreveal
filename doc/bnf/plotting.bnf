@@ -4,7 +4,7 @@
     "importance": <profile-section>,
     "predictions": <profile-section>,
     "annotations": <annotation-section>,
-    "figure": <graph-figure-section>,
+    "figure": {<figure-base>},
     <use-annotation-section>
     "min-value": <number>
 }
@@ -82,7 +82,7 @@
 
 <annotation-custom-section> ::=
     <empty>
-  | "custom": [list-of-annotation]
+  | "custom": [<list-of-annotation>]
 
 <dict-of-name-color> ::=
     <empty>
@@ -102,10 +102,6 @@
     "end": <integer>,
     "name": <string>,
     "color": <color-spec>
-}
-
-<graph-figure-section> ::= {
-    <figure-base>
 }
 
 <figure-base> ::=

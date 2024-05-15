@@ -198,13 +198,13 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
 
     mode is one of:
 
-    * "none", meaning that no resizing is done. In that case, this function will
+    * ``"none"``, meaning that no resizing is done. In that case, this function will
       check that the interval obeys stop-start == width. If an interval
       does not have the correct width, an assertion will fail.
-    * "center", in which case the interval is resized around its center.
-    * "start", in which case the start coordinate is preserved.
+    * ``"center"``, in which case the interval is resized around its center.
+    * ``"start"``, in which case the start coordinate is preserved.
 
-    The returned interval will obey x.end - x.start == width.
+    The returned interval will obey ``x.end - x.start == width``.
     It will preserve the chromosome, name, score, and strand
     information, but not other bed fields.
     """
@@ -363,9 +363,9 @@ def lineToInterval(line: str) -> pybedtools.Interval | Literal[False]:
 
 
 class ParallelCounter:
-    """A class that queues up getCounts() jobs and runs them in parallel.
+    """A class that queues up :py:func:`~getCounts` jobs and runs them in parallel.
 
-    This is used by the prepareBed scripts.
+    This is used by the :py:mod:`prepareBed<bpreveal.prepareBed>` script.
 
     :param bigwigNames: The name of the bigwig files to read from
     :param numThreads: How many parallel workers should be used?

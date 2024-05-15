@@ -1,4 +1,6 @@
 """Handy functions for dealing with slurm."""
+import os
+from stat import S_IREAD, S_IWRITE, S_IEXEC, S_IRGRP, S_IROTH
 
 
 def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: str,
@@ -23,18 +25,17 @@ def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: s
     sourceShell = ""
     match shellRcFiles:
         case (firstShell, secondShell):
-            sourceShell = "source {0:s}\nsource {1:s}\n".format(
-                firstShell, secondShell)
+            sourceShell = f"source {firstShell}\nsource {secondShell}\n"
         case str():
-            sourceShell = "source {0:s}\n".format(shellRcFiles)
+            sourceShell = f"source {shellRcFiles}\n"
         case (firstShell,):
-            sourceShell = "source {0:s}\n".format(firstShell)
+            sourceShell = f"source {firstShell}\n"
 
     if envName == "ml":
         condaString = "module load bpreveal\n"
     else:
         condaString = "conda deactivate\n"
-        condaString += "conda activate {envName:s}\n".format(envName=envName)
+        condaString += f"conda activate {envName}\n"
 
     return {"workDir": workingDirectory, "sourceShell": sourceShell, "condaString": condaString,
             "gpuType": "a100_3g.20gb", "maxJobs": maxJobs}
@@ -59,15 +60,14 @@ def configSlurmLocal(shellRcFiles: list[str] | str, envName: str, workingDirecto
     sourceShell = ""
     match shellRcFiles:
         case (firstShell, secondShell):
-            sourceShell = "source {0:s}\nsource {1:s}\n".format(
-                firstShell, secondShell)
+            sourceShell = f"source {firstShell}\nsource {secondShell}\n"
         case str():
-            sourceShell = "source {0:s}\n".format(shellRcFiles)
+            sourceShell = f"source {shellRcFiles}\n"
         case (firstShell,):
-            sourceShell = "source {0:s}\n".format(firstShell)
+            sourceShell = f"source {firstShell}\n"
 
     condaString = "conda deactivate\n"
-    condaString += "conda activate {envName:s}\n".format(envName=envName)
+    condaString += f"conda activate {envName}\n"
 
     return {"workDir": workingDirectory, "sourceShell": sourceShell, "condaString": condaString,
             "cpus": cpus, "memory": memory}
@@ -127,18 +127,18 @@ def jobsNonGpu(config: dict, tasks: list[str], jobName: str,
                                     maxJobs=config["maxJobs"])
     cmd += extraHeader + "\n\n"
     for i, task in enumerate(tasks):
-        cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(
-            i + 1)
-        cmd += "    {0:s}\n".format(task)
+        cmd += f"if [[ ${{SLURM_ARRAY_TASK_ID}} == {i + 1} ]] ; then\n"
+        cmd += f"    {task}\n"
         cmd += "fi\n\n"
-    outFname = config["workDir"] + "/slurm/{0:s}.slurm".format(jobName)
+    outFname = config["workDir"] + f"/slurm/{jobName}.slurm"
     with open(outFname, "w") as fp:
         fp.write(cmd)
     return outFname
 
 
-def jobsLocal(config, tasks, jobName, ntasks=None, mem=None, time=None,
-              extraHeader="", parallel=False):
+def jobsLocal(config: dict, tasks: list[str], jobName: str, ntasks: int | None = None,
+              mem: int | None = None, time: str | None = None,
+              extraHeader: str = "", parallel: bool = False):
     """Run a job on a non-gpu node.
 
     :param extraHeader: Any additional text to add to the job script.
@@ -167,16 +167,14 @@ def jobsLocal(config, tasks, jobName, ntasks=None, mem=None, time=None,
         maxJobsMem = config["memory"] // mem
         maxJobs = max(1, min(maxJobsCpu, maxJobsMem))
         for task in tasks:
-            cmd += "sem -j {0:d} {1:s}\n".format(maxJobs, task)
+            cmd += f"sem -j {maxJobs} {task}\n"
         cmd += "sem --wait\n"
     else:
         for task in tasks:
-            cmd += "{0:s}\n".format(task)
-    scriptFname = config["workDir"] + "/slurm/{0:s}.zsh".format(jobName)
+            cmd += f"{task}\n"
+    scriptFname = config["workDir"] + f"/slurm/{jobName}.zsh"
     with open(scriptFname, "w") as fp:
         fp.write(cmd)
-    import os
-    from stat import S_IREAD, S_IWRITE, S_IEXEC, S_IRGRP, S_IROTH
     # Chmod the file to rwxr--r--.
     os.chmod(scriptFname, mode=S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IROTH)
     return scriptFname
@@ -203,7 +201,8 @@ module load ucsc
 """
 
 
-def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
+def jobsGpu(config: dict, tasks: list[str], jobName: str, ntasks: int, mem: int,
+            time: str, extraHeader: str = ""):
     """Run a job on a gpu node.
 
     :param extraHeader: Any additional text to add to the job script.
@@ -222,20 +221,19 @@ def jobsGpu(config, tasks, jobName, ntasks, mem, time, extraHeader=""):
     cmd += extraHeader + "\n\n"
 
     for i, task in enumerate(tasks):
-        cmd += "if [[ ${{SLURM_ARRAY_TASK_ID}} == {0:d} ]] ; then\n".format(
-            i + 1)
-        cmd += "    {0:s}\n".format(task)
+        cmd += f"if [[ ${{SLURM_ARRAY_TASK_ID}} == {i + 1} ]] ; then\n"
+        cmd += f"    {task}\n"
         cmd += "fi\n\n"
-    outFname = config["workDir"] + "/slurm/{0:s}.slurm".format(jobName)
+    outFname = config["workDir"] + f"/slurm/{jobName}.slurm"
     with open(outFname, "w") as fp:
         fp.write(cmd)
     return outFname
 
 
-def writeDependencyScript(config: dict, jobspecs: list[list[str, list[str]]],
+def writeDependencyScript(config: dict, jobspecs: list[list[str | list[str]]],
                           wholeJobName: str, baseJobId: int | None = None,
                           local: bool = False,
-                          cancelScript: str = None):
+                          cancelScript: str | None = None):
     """Write a bash script that queues up a set of jobs with a given dependency structure.
 
     :param config: The configuration dict from configSlurm.
@@ -243,14 +241,14 @@ def writeDependencyScript(config: dict, jobspecs: list[list[str, list[str]]],
         where the first string is the name of the slurm file to run.
         The strings after it are the names of the slurm files that the
         job needs to finish before it can run (i.e., its dependencies).
-    :param wholeJobName: The name of the script file to generate
+    :param wholeJobName: The name of the script file to generate (excluding extension)
     :param baseJobId: If provided, make all jobs be dependencies of this job ID.
     :param local: Should this be run locally? If so, just write a shell script that runs
         all the jobs, with no slurm dependency stuff.
     :param cancelScript: Name of a script to write that contains commands to
-        cancel all of the jobs in this array.
+        cancel all of the jobs in this array (including extension)
     """
-    outFname = config["workDir"] + "/slurm/{0:s}.zsh".format(wholeJobName)
+    outFname = config["workDir"] + f"/slurm/{wholeJobName}.zsh"
     jobsRemaining = jobspecs[:]
     jobOrder = []
     depsSatisfied = []
@@ -271,7 +269,7 @@ def writeDependencyScript(config: dict, jobspecs: list[list[str, list[str]]],
             + str(jobsRemaining) + " with dependencies: " + str(depsSatisfied)
         jobsRemaining = newRemaining
 
-    jobToDepNumber = dict()
+    jobToDepNumber = {}
     i = 1
     for jobSpec in jobOrder:
         job, deps = jobSpec
@@ -281,38 +279,37 @@ def writeDependencyScript(config: dict, jobspecs: list[list[str, list[str]]],
     with open(outFname, "w") as fp:
         fp.write("#!/usr/bin/env zsh\n")
         if cancelScript is not None:
-            fp.write(
-                "echo '#!/usr/bin/env zsh' > {0:s}\n".format(cancelScript))
+            fp.write(f"echo '#!/usr/bin/env zsh' > {cancelScript}\n")
         i = 0
         for jobSpec in jobOrder:
             job, deps = jobSpec
             if local:
-                fp.write("echo 'Satisfied {0:s}'\n".format(", ".join(deps)))
+                dl = ", ".join(deps)
+                fp.write(f"echo 'Satisfied {dl}'\n")
                 logFile = f'{config["workDir"]}/logs/step_{i:03d}.log'
                 fp.write(f"echo 'log for job {job}' > {logFile}\n")
                 fp.write(f"{job} |& tee {logFile}\n")
-                fp.write("echo 'Completed {0:s}'\n".format(job))
+                fp.write(f"echo 'Completed {job}'\n")
                 i += 1
                 continue
             # First, create the dependency string.
+            depNumber = jobToDepNumber[job]
             if baseJobId is not None:
-                depStr = " --dependency=afterok:{0:d}".format(baseJobId)
+                depStr = f" --dependency=afterok:{baseJobId}"
             else:
                 depStr = ""
             if len(deps):
                 depStr = " --dependency=afterok"
                 if baseJobId is not None:
-                    depStr += ":{0:d}".format(baseJobId)
+                    depStr += f":{baseJobId}"
                 for dep in deps:
                     depStr = depStr + \
-                        ":${{DEP_{0:d}}}".format(jobToDepNumber[dep])
-            batchStr = "sbatch --kill-on-invalid-dep=yes " + depStr + " {0:s}".format(job)
+                        f":${{DEP_{depNumber}}}"
+            batchStr = f"sbatch --kill-on-invalid-dep=yes {depStr} {job}"
             fp.write(batchStr + "\n")
-            fp.write(("DEP_{0:d}=$(squeue -u $(whoami) | awk '{{print $1}}' |"
-                      "sed 's/_.*//'| sort -n | tail -n 1)\n").format(jobToDepNumber[job]))
-            fp.write("echo \"job '{0:s}' got dependency ${{DEP_{1:d}}}\"\n".
-                     format(job, jobToDepNumber[job]))
+            fp.write(f"DEP_{depNumber}=$(squeue -u $(whoami) | awk '{{print $1}}' |"
+                     "sed 's/_.*//'| sort -n | tail -n 1)\n")
+            fp.write(f"echo \"job '{job}' got dependency ${{DEP_{depNumber}}}\"\n")
             if cancelScript is not None:
-                fp.write('echo "scancel ${{DEP_{0:d}}}" >> {1:s}\n'.format(
-                    jobToDepNumber[job], cancelScript))
+                fp.write(f'echo "scancel ${{DEP_{depNumber}}}" >> {cancelScript}\n')
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

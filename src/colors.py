@@ -1,8 +1,5 @@
 """Utilities for manipulating colors.
 
-Importing this module also configures fonts for plotting.
-
-
 BNF
 ---
 
@@ -250,8 +247,8 @@ def loadFonts():
     """Configures the matplotlib default fonts to be in the Libertinus family.
 
     This places Libertinus fonts at the top of the order for serif and sans-serif
-    fontfamily, but does not overwrite the monospace family."""
-    # Loads up the Libertinus fonts so they can be used on plots.
+    fontfamily, but does not overwrite the monospace family.
+    """
     try:
         cwd = pathlib.Path(__file__).parent.parent.parent.resolve()
         fontdir = str(cwd / "doc" / "fonts" / "Libertinus-7.040" / "static/") + "/"
@@ -266,6 +263,7 @@ def loadFonts():
         plt.rcParams["font.serif"] = ["Libertinus Serif"] + oldFaces
         oldFaces = plt.rcParams["font.sans-serif"]
         plt.rcParams["font.sans-serif"] = ["Libertinus Sans"] + oldFaces
+        plt.rcParams["font.family"] = "serif"
         logUtils.debug("Configured matplotlib default fonts.")
     except Exception as e:  # pylint: disable=broad-exception-caught
         # If it didn't work, that's okay. User will still get good enough fonts.

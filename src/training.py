@@ -27,10 +27,12 @@ def buildLosses(heads: dict) -> tuple[list, list]:
 
     1. A list of all the profile losses followed by all the counts losses:
         ``profLoss1, profLoss2, ... profLossN, countsLoss1, countsLoss2, ... countsLossN``
-    2. A list of all the loss weights. Since the counts loss weight is included in the
-        actual loss function, the weights that are given to the Keras training routine
-        are all ones for the counts. The profile loss weights are taken straight from
-        your json. ``profileWeight1, profileWeight2, ... profileWeightN, 1, 1, ... 1``
+    2. A list of all the loss weights.
+        Since the counts loss weight is included in the actual loss function,
+        the weights that are given to the Keras training routine are all ones
+        for the counts. The profile loss weights are taken straight from your
+        json.
+        ``profileWeight1, profileWeight2, ... profileWeightN, 1, 1, ... 1``
     """
     logUtils.info("Building loss functions.")
     numHeads = len(heads)
@@ -120,7 +122,7 @@ def trainModel(model: keras.Model, trainBatchGen: generators.H5BatchGenerator,
     logUtils.info("Beginning training loop.")
     history = model.fit(trainBatchGen, epochs=epochs,
                         validation_data=valBatchGen, callbacks=callbacks,
-                        verbose=0)
+                        verbose=0)  # type: ignore
     logUtils.info("Training complete! Hooray!")
     # Turn the learning rate data into python floats, since they come as
     # numpy floats and those are not serializable.

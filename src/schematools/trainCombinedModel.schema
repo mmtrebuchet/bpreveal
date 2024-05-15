@@ -14,7 +14,7 @@
                 "max-jitter": {"type": "integer"},
                 "early-stopping-patience": {"type": "integer"},
                 "batch-size": {"type": "integer"},
-                "learning-rate": {"type": "number"},
+                "learning-rate": {"$ref": "/schema/base#/definitions/fraction"},
                 "learning-rate-plateau-patience": {"type": "integer"},
                 "transformation-model": {
                     "type": "object",
@@ -54,7 +54,7 @@
                     "profile-loss-weight": {"type": "number"},
                     "head-name": {"type": "string"},
                     "counts-loss-weight": {"type": "number"},
-                    "counts-loss-frac-target": {"type": "number"},
+                    "counts-loss-frac-target": {"$ref": "/schema/base#/definitions/fraction"},
                     "use-bias-counts": {"type": "boolean"}
                 },
                 "anyOf": [

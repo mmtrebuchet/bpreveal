@@ -17,7 +17,7 @@
         },
         "input-length": {"type": "integer"},
         "output-length": {"type": "integer"},
-        "heads": {"type": "integer"},
+        "heads": {"type": "integer", "minimum": 1},
         "head-id": {"type": "integer"},
         "profile-task-ids": {
             "type": "array",

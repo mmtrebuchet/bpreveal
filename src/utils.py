@@ -651,8 +651,8 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
         -> dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]:
     """Spin up an entire interpret pipeline just to interpret your sequences.
 
-    You should only use this for quick one-off things since it is EXTREMELY
-    slow.
+    You should only use this for quick one-off things since it takes a long time
+    to spin up and shut down the interpretation machinery.
 
     :param sequences: is a list (or technically any Iterable) of strings, and the
         returned importance scores will be in an order that corresponds
@@ -768,16 +768,65 @@ class BatchPredictor:
     you have to call getOutput() once for every time you called one of the
     submit methods.
 
+    The typical use case for a batcher streams its input, so you'd normally check
+    to see if there's output waiting after adding every input::
+
+        for query, label in queryGenerator:
+            batcher.submitString(query, label)
+            while batcher.outputReady():
+                # Any time the batcher has results, process them
+                # immediately.
+                preds, outLabel = batcher.getOutput()
+                processPredictions(preds, outLabel)
+        while not batcher.empty():
+            # We've finished adding our queries, now drain out
+            # any last results.
+            preds, outLabel = batcher.getOutput()
+            processPredictions(preds, outLabel)
+
+    Using the batcher in this way (checking to see if outputReady() after every
+    query submission) has the benefit of using very little memory. Instead of
+    building a huge array of queries and then predicting them in one go, the
+    batcher analyzes them as you come up with them. This means you can analyze
+    far more sequences than you can store in memory. (But if you have huge
+    numbers of sequences, consider using a :py:class:`~ThreadedBatchPredictor`
+    since it can do the calculations in parallel and in a separate thread.)
+
+    For small numbers of sequences, you can also submit all of them and then get
+    all of the results later:
+
+        for i in range(numQueries):
+            batcher.submitString(queries[i], None)
+        for _ in range(numQueries):
+            preds, _ = batcher.getOutput()
+            processPredictions(preds)
+
+    In this example, I'm not using the labels, so I just pass in None
+    as the label for each sequence and ignore the labels from getOutput()
+
+    You should not, however, demand an output after every submission, since this
+    will use a batch size of one and be painfully slow::
+
+        for query, label in queryGenerator:
+            batcher.submitString(query, label)
+            preds, outLabel = batcher.getOutput()  # WRONG: Runs a whole batch for each query
+            processPredictions(preds, outLabel)
+
     :param modelFname: The name of the BPReveal model that you want to make
         predictions from. It's the same name you give for the model in any of
         the other BPReveal tools.
     :param batchSize: is the number of samples that should be run simultaneously
         through the model.
     :param start: Ignored, but present here to give BatchPredictor the same API
-        as ThreadedBatchPredictor.
+        as ThreadedBatchPredictor. Creating a BatchPredictor loads up the model
+        and sets memory growth right then and there.
+    :param numThreads: Ignored, only present for compatibility with the API for
+        ThreadedBatchPredictor. A (non-threaded)BachPredictor runs its calculations
+        in the main thread and will block when it's actually doing calculations.
     """
 
-    def __init__(self, modelFname: str, batchSize: int, start: bool = True) -> None:
+    def __init__(self, modelFname: str, batchSize: int, start: bool = True,
+                 numThreads: int = 0) -> None:
         """Start up the BatchPredictor.
 
         This will load your model, and get ready to make predictions.
@@ -797,9 +846,10 @@ class BatchPredictor:
         self._inWaiting = 0
         self._outWaiting = 0
         del start  # We don't refer to start.
+        del numThreads
 
     def __enter__(self):
-        """Do nothing; context managers not supported."""
+        """Do nothing; context manager is a no-op for a non-threaded BatchPredictor."""
 
     def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
         """Quit the context manager.
@@ -920,15 +970,19 @@ class BatchPredictor:
     def outputReady(self) -> bool:
         """Is there any output ready for you?
 
+        If output is ready, then calling getOutput will give a result immediately.
+
         :return: True if the batcher is sitting on results, and False otherwise.
         """
         return self._outWaiting > 0
 
     def empty(self) -> bool:
-        """Is it possible to getOutput()?
+        """Is the batcher totally idle?
 
-        :return: True if predictions haven't been made yet, but
-            they would be made if you asked for output.
+        If the batcher is not empty, then you can safely call getOutput, though
+        it may block if it needs to run a calculation.
+
+        :return: True if there are no predictions at all in the queue.
         """
         return self._outWaiting == 0 and self._inWaiting == 0
 
@@ -936,9 +990,7 @@ class BatchPredictor:
         """Return one of the predictions made by the model.
 
         This implementation guarantees that predictions will be returned in
-        the same order as they were submitted, but you should not rely on that
-        in the future. Instead, you should use a label when you submit your
-        sequences and use that to determine order.
+        the same order as they were submitted.
 
         :return: A two-tuple.
         :rtype: tuple[list[LOGIT_AR_T, LOGIT_T], typing.Any]
@@ -954,11 +1006,12 @@ class BatchPredictor:
           (output-length x numTasks)
           As with calling the model directly, the first numHeads elements are the
           logits arrays, and then come the logcounts for each head.
-          You can pass the logits and logcounts values to utils.logitsToProfile
+          You can pass the logits and logcounts values to
+          :py:func:`utils.logitsToProfile<bpreveal.utils.logitsToProfile>`
           to get your profile.
 
-        * The second element will be the label you
-          passed in with the original sequence.
+        * The second element will be the label you passed in with the original
+          sequence.
 
         Graphically::
 
@@ -967,6 +1020,9 @@ class BatchPredictor:
               ],
               label)
 
+        If the batcher doesn't have any output ready but does have some work in the input
+        queue, then calling this function will block until the calculation is complete.
+        If there is output ready, then this function will not block.
         """
         if not self._outWaiting:
             if self._inWaiting:
@@ -980,12 +1036,12 @@ class BatchPredictor:
 
 
 class ThreadedBatchPredictor:
-    """Mirrors the API of the BachPredictor class, but predicts in a separate thread.
+    """Mirrors the API of :py:class:`~BatchPredictor`, but predicts in a separate thread.
 
-    This can give you a performance boost, and also lets you
-    shut down the predictor thread when you don't need it.
-    Supports the with statement to only turn on the batcher when you're using it,
-    or you can leave it running in the background.
+    This can give you a performance boost, and also lets you shut down the
+    predictor thread when you don't need it (thus freeing the GPU for other
+    things). Supports the ``with`` statement to only turn on the batcher when
+    you're using it, or you can leave it running in the background.
 
     Usage examples::
 
@@ -1003,12 +1059,16 @@ class ThreadedBatchPredictor:
         # On leaving the context, the predictor is shut down.
 
     The batcher guarantees that the order in which you get results is the same as
-    the order you submitted them in, but this could change in the future!
+    the order you submitted them in, even though the internal calculations may
+    happen out-of-order.
 
     :param modelFname: The name of the model to use to make predictions.
     :param batchSize: The number of samples to calculate at once.
-    :param start: Should the predictor start right away?
+    :param start: Should the predictor start right away? This should be False
+        if you're going to use this ThreadedBatchPredictor inside a context manager
+        (i.e., a ``with`` statement).
     :param numThreads: How many predictors should be spawned?
+        I recommend 2 or 3.
 
     """
 
@@ -1079,19 +1139,17 @@ class ThreadedBatchPredictor:
 
     def __del__(self):
         """General cleanup - kill the child process when this object leaves scope."""
-        if logUtils is not None:
-            logUtils.debug("Destructor called.")
         if self.running:
             self.stop()
 
     def stop(self):
         """Shut down the processor thread."""
         if self.running:
-            if logUtils is not None:
+            if logUtils is not None:  # logUtils may be None if stop() is called from __del__.
                 logUtils.debug("Shutting down threaded batcher.")
             if self._batchers is None:
                 assert False, "Attempting to shut down a running ThreadedBatchPredictor" \
-                    "When its _batchers is None"
+                    "When its _batchers is None."
             for i in range(self._numThreads):
                 self._inQueues[i].put("shutdown")
                 self._inQueues[i].close()
@@ -1112,7 +1170,10 @@ class ThreadedBatchPredictor:
             logUtils.warning("Attempting to stop a batcher that is already stopped.")
 
     def clear(self):
-        """Reset the batcher, emptying any queues and reloading the model."""
+        """Reset the batcher, emptying any queues and reloading the model.
+
+        This also starts the batcher.
+        """
         if self.running:
             self.stop()
         self.start()
@@ -1122,7 +1183,7 @@ class ThreadedBatchPredictor:
 
         :param sequence: An (input-length x 4) ndarray containing the
             one-hot encoded sequence to predict.
-        :param label: Any object; it will be returned with the prediction.
+        :param label: Any (picklable) object; it will be returned with the prediction.
         """
         if not self.running:
             logUtils.warning("Submitted a query when the batcher is stopped. Starting.")
@@ -1131,6 +1192,7 @@ class ThreadedBatchPredictor:
         query = (sequence, label)
         q.put(query, True, QUEUE_TIMEOUT)
         self._outQueueOrder.appendleft(self._inQueueIdx)
+        # Assign work in a round-robin fashion.
         self._inQueueIdx = (self._inQueueIdx + 1) % self._numThreads
         self._inFlight += 1
 
@@ -1138,7 +1200,7 @@ class ThreadedBatchPredictor:
         """Submit a given sequence for prediction.
 
         :param sequence: A string of length input-length
-        :param label: Any object. Label will be returned to you with the
+        :param label: Any (picklable) object. Label will be returned to you with the
             prediction.
         """
         seqOhe = oneHotEncode(sequence)
@@ -1146,6 +1208,8 @@ class ThreadedBatchPredictor:
 
     def outputReady(self) -> bool:
         """Is there any output ready for you?
+
+        If output is ready, then calling getOutput will give a result immediately.
 
         :return: True if the batcher is sitting on results, and False otherwise.
         """
@@ -1155,10 +1219,12 @@ class ThreadedBatchPredictor:
         return False
 
     def empty(self) -> bool:
-        """Is it possible to getOutput()?
+        """Is the batcher totally idle?
 
-        :return: True if predictions haven't been made yet, but
-            they would be made if you asked for output.
+        If the batcher is not empty, then you can call getOutput, though
+        it may block if it needs to run a calculation.
+
+        :return: True if there are no predictions at all in the queue.
         """
         return self._inFlight == 0
 
@@ -1168,7 +1234,7 @@ class ThreadedBatchPredictor:
         :return: The model's predictions.
         :rtype: tuple[list[LOGIT_AR_T, LOGCOUNT_T], typing.Any]
 
-        Same semantics as
+        Same semantics and blocking behavior as
         :py:meth:`BatchPredictor.getOutput<bpreveal.utils.BatchPredictor.getOutput>`.
         """
         nextQueueIdx = self._outQueueOrder.pop()
@@ -1177,7 +1243,7 @@ class ThreadedBatchPredictor:
                 # There are inputs that have not been processed. Run the batch.
                 self._inQueues[nextQueueIdx].put("finishBatch")
             else:
-                assert False, "There are no outputs ready, and the input queue is empty."
+                assert False, "The batcher is empty; cannot getOutput()."
         ret = self._outQueues[nextQueueIdx].get(True, QUEUE_TIMEOUT)
         self._inFlight -= 1
         return ret

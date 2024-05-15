@@ -199,7 +199,7 @@ class Generator:
 
 
 class Saver:
-    """The saver runs in the main thread, so it's safe to open files and stuff in __init__.
+    """Class to receive Results and deal with them.
 
     Descendants of this class shall receive Results from the batcher and save them to an
     appropriate structure, usually on disk.
@@ -232,7 +232,8 @@ class Saver:
         """Add the given Result to wherever you're saving them out.
 
         Note that this will not be called with None at the end of the run,
-        that is special-cased in the code that runs your saver.
+        that is special-cased in the code that runs your saver. (That code will
+        call done() when all of the results have been added.)
         """
         del result
         raise NotImplementedError()
@@ -250,6 +251,7 @@ class Saver:
         """Called when the batcher is complete (indicated by putting a None in its output queue).
 
         Now is the time to close all of your files.
+        This function is called in the child thread, not the parent thread.
         """
         logUtils.debug("Called done on the base Saver class.")
 
@@ -618,7 +620,7 @@ class FlatH5Saver(Saver):
             self.pbar.close()
         self._outFile.close()
 
-    def add(self, result: FlatResult):
+    def add(self, result: FlatResult):  # type: ignore
         """Add the given result to the output file.
 
         :param result: The output from the batcher.
@@ -780,7 +782,7 @@ class PisaH5Saver(Saver):
             self.pbar.close()
         self._outFile.close()
 
-    def add(self, result: PisaResult):
+    def add(self, result: PisaResult):  # type: ignore
         """Add the given result to the output file.
 
         :param result: The output from the batcher.
@@ -821,8 +823,6 @@ class PisaH5Saver(Saver):
             del self._chunksToWrite[chunkIdx]
         self._outFile["input_predictions"][index] = result.inputPrediction
         self._outFile["shuffle_predictions"][index, :] = result.shufflePredictions
-        # self._outFile["sequence"][index, :, :] = result.sequence
-        # self._outFile["shap"][index, :, :] = result.shap
         # Okay, now we either add the description line, or add a genomic coordinate.
         if self.genomeFname is not None:
             self._outFile["coords_chrom"][index] = self.chromNameToIdx[result.passData[0]]

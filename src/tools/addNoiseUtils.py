@@ -18,12 +18,13 @@ def loadFile(h5Fname: str, numHeads: int) -> None:
     """Initializer for a multiprocessing pool, loads up a global hdf5 file.
 
     :param h5Fname: The name of the input hdf5 File that the Pool workers will read from.
+    :param numHeads: The number of heads of your model.
     """
-    global SEQ_AR, HEAD_DATS
+    global SEQ_AR, HEAD_DATS  # pylint: disable=global-variable-not-assigned
     h5fp = h5py.File(h5Fname, "r")
     SEQ_AR = np.array(h5fp["sequence"])
     for i in range(numHeads):
-        HEAD_DATS.append(np.array(h5fp["head_{0:d}".format(i)]))
+        HEAD_DATS.append(np.array(h5fp[f"head_{i}"]))
 
 
 def gmstar(getMutArgs: tuple[str, list[int], int]):
@@ -217,8 +218,8 @@ def writeOutput(outFname: str, sequences: np.ndarray, heads: list[np.ndarray]) -
                          chunks=(H5_CHUNK_SIZE, sequences.shape[1], 4),
                          compression="gzip")
     for i, head in enumerate(heads):
-        logUtils.debug("Saving head {0:d}".format(i))
-        outFp.create_dataset("head_{0:d}".format(i), data=head, dtype=PRED_T,
+        logUtils.debug(f"Saving head {i}")
+        outFp.create_dataset(f"head_{i}", data=head, dtype=PRED_T,
                              chunks=(H5_CHUNK_SIZE,
                                      head.shape[1], head.shape[2]),
                              compression="gzip")
