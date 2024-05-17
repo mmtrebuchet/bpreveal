@@ -1,50 +1,152 @@
 """Types that are used throughout BPReveal."""
 from __future__ import annotations
-import typing
+from typing import TypeAlias, Literal
+from typing_extensions import TypedDict
 import numpy as np
 import numpy.typing as npt
 
-ONEHOT_T: typing.TypeAlias = np.uint8
+ONEHOT_T: TypeAlias = np.uint8
 """Data type for elements of a one-hot encoded sequence."""
-ONEHOT_AR_T: typing.TypeAlias = npt.NDArray[ONEHOT_T]
+ONEHOT_AR_T: TypeAlias = npt.NDArray[ONEHOT_T]
 """Data type for an array of one-hot encoded sequences"""
-PRED_T: typing.TypeAlias = np.float32
+PRED_T: TypeAlias = np.float32
 """Data type for coverage."""
-PRED_AR_T: typing.TypeAlias = npt.NDArray[PRED_T]
+PRED_AR_T: TypeAlias = npt.NDArray[PRED_T]
 """Data type for an array of predictions."""
 
-LOGIT_T: typing.TypeAlias = np.float32
+LOGIT_T: TypeAlias = np.float32
 """Data type for logits from the model."""
-LOGIT_AR_T: typing.TypeAlias = npt.NDArray[LOGIT_T]
+LOGIT_AR_T: TypeAlias = npt.NDArray[LOGIT_T]
 """Data type for an array of logits."""
 
-LOGCOUNT_T: typing.TypeAlias = np.float32
+LOGCOUNT_T: TypeAlias = np.float32
 """Data type for logcount values."""
 
-IMPORTANCE_T: typing.TypeAlias = np.float16
+IMPORTANCE_T: TypeAlias = np.float16
 """Store importance scores with 16 bits of precision.
 
 Since importance scores (particularly PISA values) take up a lot of space, I
 use a small floating point type and compression to mitigate the amount of data.
 """
 
-IMPORTANCE_AR_T: typing.TypeAlias = npt.NDArray[IMPORTANCE_T]
+IMPORTANCE_AR_T: TypeAlias = npt.NDArray[IMPORTANCE_T]
 """Data type for an array of importance values."""
 
-MODEL_ONEHOT_T: typing.TypeAlias = np.float32
+MODEL_ONEHOT_T: TypeAlias = np.float32
 """Inside the models, we use floating point numbers to represent one-hot sequences.
 
 For reasons I don't understand, setting this to uint8 DESTROYS pisa values.
 """
 
-MOTIF_FLOAT_T: typing.TypeAlias = np.float32
+MOTIF_FLOAT_T: TypeAlias = np.float32
 """The type used to represent cwms and pwms, and also the type used by the jaccard code.
 
 If you change this, be sure to change libJaccard.c and libJaccard.pyf (and run
 make) so that the jaccard library uses the correct data type.
 """
-MOTIF_FLOAT_AR_T: typing.TypeAlias = npt.NDArray[MOTIF_FLOAT_T]
+MOTIF_FLOAT_AR_T: TypeAlias = npt.NDArray[MOTIF_FLOAT_T]
 """An array of motif data."""
+
+
+COLOR_SPEC_T: TypeAlias = \
+    dict[Literal["rgb"], tuple[float, float, float]] | \
+    dict[Literal["rgba"], tuple[float, float, float, float]] | \
+    dict[Literal["tol"], int] | \
+    dict[Literal["tol-light"], int] | \
+    dict[Literal["ibm"], int] | \
+    dict[Literal["wong"], int] | \
+    tuple[float, float, float] | \
+    tuple[float, float, float, float]
+"""A COLOR_SPEC_T is anything that parseSpec can turn into an rgb or rgba triple.
+
+It may be one of the following things:
+
+1. ``{"rgb": (0.1, 0.2, 0.3)}``
+    giving an rgb triple.
+2. ``{"rgba": (0.1, 0.2, 0.3, 0.5)}``
+    giving an rgb triple with an alpha value.
+3. ``{"tol": 1}``
+    giving a numbered color from the tol palette.
+    Valid numbers are 0 to 7.
+4. ``{"tol-light": 1}``
+    giving a numbered color from the tolLight palette.
+    Valid numbers are 0 to 6.
+5. ``{"wong": 1}``
+    giving a numbered color from the wong palette.
+    Valid numbers are 0 to 7.
+6. ``{"ibm": 1}``
+    giving a numbered color from the ibm palette.
+    Valid numbers are 0 to 4.
+7. ``(0.1, 0.2, 0.3)``
+    giving an rgb triple.
+8. ``(0.1, 0.2, 0.3)``
+    giving an rgb triple with an alpha value.
+
+:meta hide-value:
+"""
+
+
+# pylint: disable=invalid-name
+class DNA_COLOR_SPEC_T(TypedDict):
+    """A type that assigns a color to each of the four bases.
+
+    It is a dictionary mapping the bases onto colorSpecs, like this::
+
+        {"A": {"wong": 3}, "C": {"wong": 5},
+         "G": {"wong": 4}, "T": {"wong": 6}}
+
+    :type: {Literal["A"]: :py:data:`~COLOR_SPEC_T`,
+            Literal["C"]: :py:data:`~COLOR_SPEC_T`,
+            Literal["G"]: :py:data:`~COLOR_SPEC_T`,
+            Literal["T"]: :py:data:`~COLOR_SPEC_T`}
+
+    """
+
+    A: COLOR_SPEC_T
+    C: COLOR_SPEC_T
+    G: COLOR_SPEC_T
+    T: COLOR_SPEC_T
+# pylint: enable=invalid-name
+
+
+RGB_T: TypeAlias = \
+    tuple[float, float, float] | \
+    tuple[float, float, float, float]
+"""An rgb or rgba triple."""
+
+
+class ANNOTATION_T(TypedDict):  # pylint: disable=invalid-name
+    """Represents a genomic region of interest. Includes color and a name.
+
+    start
+        the start point of the annotation, in genomic coordinates.
+    end
+        The end point of the annotation, in genomic coordinates.
+    name
+        The string giving the name of the annotation.
+    color
+        a :py:data:`COLOR_SPEC_T` giving the color to use when drawing
+        the annotation
+    bottom
+        As a fraction of the window height for annotations, where should this one's box start?
+        (Optional, default: 0)
+    top
+        As a fraction of the window height for annotations, where should this one's box end?
+        (Optional, default: 1.0)
+
+    """
+
+    start: int
+    end: int
+    name: str
+    color: COLOR_SPEC_T
+    bottom: float
+    top: float
+
+
+FONT_FAMILY = "serif"
+FONT_SIZE_TICKS = 8
+FONT_SIZE_LABELS = 10
 
 
 H5_CHUNK_SIZE: int = 128
@@ -87,11 +189,6 @@ GENOME_NUCLEOTIDE_FREQUENCY: dict[str, list[float]] = {
     "sacCer3":  [0.309806, 0.190882, 0.190596, 0.308714]  # noqa
 }
 """The frequency of A, C, G, and T (in that order) in common reference genomes."""
-
-
-FONT_FAMILY = "serif"
-FONT_SIZE_TICKS = 6
-FONT_SIZE_LABELS = 8
 
 
 def setTensorflowLoaded():

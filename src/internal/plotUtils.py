@@ -51,7 +51,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
         2. Give a color for each base by color-spec.
            This would be something like:
            ``{"A": {"wong": 3}, "C": {"wong": 5}, "G": {"wong": 4}, "T": {"wong": 6}}``
-           You can get the default BPReveal color map at :py:class:`~ColorMaps`.
+           You can get the default BPReveal color map at
+           :py:data:`dnaWong<bpreveal.colors.dnaWong>`.
         3. Give a list of colors for each base.
            This will be a list of length ``values.shape[0]`` and each entry
            should be a dictionary in either format
@@ -160,10 +161,10 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
             scaleIdx = 0
     multiLoc = mplticker.MultipleLocator(tickWidth)
     multiLoc.view_limits(start, end)
-    innerTickPoses = multiLoc.tick_values(start, end)
+    innerTickPoses = list(multiLoc.tick_values(start, end))
     while innerTickPoses[0] < start + tickWidth / 2:
         innerTickPoses = innerTickPoses[1:]
-    while len(innerTickPoses) and innerTickPoses[-1] > end - tickWidth / 2:
+    while len(innerTickPoses) > 0 and innerTickPoses[-1] > end - tickWidth / 2:
         innerTickPoses = innerTickPoses[:-1]
     tickPoses = [float(x) for x in [start] + list(innerTickPoses) + [end]]
     tickLabelStrs = [f"{int(x):,}" for x in tickPoses]
@@ -326,10 +327,10 @@ def normalizeProfileColor(colorSpec: DNA_COLOR_SPEC_T | COLOR_SPEC_T |  # noqa
     """Take the config color spec and expand it to a list of DNA_COLOR_SPEC_T.
 
     :param colorSpec: The colors to be used to color the bases.
-    :type colorSpec: :py:class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>`
-                     | :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`
-                     | list[:py:class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>`]
-                     | list[:py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
+    :type colorSpec: :py:class:`DNA_COLOR_SPEC_T<bpreveal.internal.constants.DNA_COLOR_SPEC_T>`
+        | :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`
+        | list[:py:class:`DNA_COLOR_SPEC_T<bpreveal.internal.constants.DNA_COLOR_SPEC_T>`]
+        | list[:py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]
     :param numItems: How many total bases are we going to plot?
 
     :return: A list of a DNA_COLOR_SPEC_T for each position in the profile. If only
@@ -374,7 +375,8 @@ def loadPisaAnnotations(bedFname: str, nameColors: dict[str, COLOR_SPEC_T],
         the colors that will be drawn for the annotations. If a name already exists
         in nameColors, use it. If a new name is found in the bed, add it to nameColors,
         drawing from the tolLight palette.
-    :type nameColors: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
+    :type nameColors: dict[str,
+        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]
     :param start: Genomic start coordinate.
     :param chrom: Chromosome that the region is on.
     :param length: The length of the region being plotted.
@@ -452,7 +454,7 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
     :param mini: If True, then don't write the names of the annotations in the boxes.
     :return: A dict of the names that were actually plotted, mapping each name to its
         colorSpec.
-    :rtype: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
+    :rtype: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]
     """
     offset = -boxHeight * 1.3
     lastR = 0
@@ -586,7 +588,7 @@ def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontsize: in
 
     :param usedNames: The names that are present in this view. Comes from
         :py:func:`~addAnnotations`.
-    :type usedNames: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]
+    :type usedNames: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]
     :param axLegend: The axes to draw the legend on.
     :param fontsize: How big do you want the text, in points?
     """
@@ -821,7 +823,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         If the origin of a line overlaps with a ColorBlock, then its color is set
         to the rgb color in the block.
     :type colorBlocks: list[tuple[int, int,
-        :py:data:`COLOR_SPEC_T<bpreveal.colors.COLOR_SPEC_T>`]]
+        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]]
     :param lineWidth: The thickness of the drawn lines. For large figures,
         thicker lines avoid Moiré patterns.
     :param trim: The similarity matrix may be bigger than the area you want to

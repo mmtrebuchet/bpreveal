@@ -210,7 +210,7 @@ import matplotlib.figure
 from matplotlib.axes import Axes as AXES_T
 
 from bpreveal import logUtils
-from bpreveal.internal.constants import PRED_AR_T, ONEHOT_AR_T, \
+from bpreveal.internal.constants import DNA_COLOR_SPEC_T, PRED_AR_T, ONEHOT_AR_T, \
     FONT_FAMILY, FONT_SIZE_TICKS, FONT_SIZE_LABELS
 import bpreveal.internal.plotUtils as pu
 from bpreveal import utils
@@ -680,7 +680,7 @@ def plotSequenceHeatmap(hmap: ONEHOT_AR_T, ax: AXES_T, upsamplingFactor: int = 1
 
 
 def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
-             colors: bprcolors.DNA_COLOR_SPEC_T | list[bprcolors.DNA_COLOR_SPEC_T],
+             colors: DNA_COLOR_SPEC_T | list[DNA_COLOR_SPEC_T],
              spaceBetweenLetters: float = 0) -> None:
     """Plot an array of sequence data (like a pwm).
 
@@ -689,8 +689,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
     :param width: The width of the total logo, useful for aligning axis labels.
     :param ax: A matplotlib axes object on which the logo will be drawn.
     :param colors: The colors to use for shading the sequence. See below for details.
-    :type colors: :class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>` |
-        list[:class:`DNA_COLOR_SPEC_T<bpreveal.colors.DNA_COLOR_SPEC_T>`]
+    :type colors: :class:`DNA_COLOR_SPEC_T<bpreveal.internal.constants.DNA_COLOR_SPEC_T>` |
+        list[:class:`DNA_COLOR_SPEC_T<bpreveal.internal.constants.DNA_COLOR_SPEC_T>`]
     :param spaceBetweenLetters: How much should the letters be squished? This is
         given as a fraction of the total letter width. For example, to have
         a gap of 2 pixels between letters that are 10 pixels wide, set

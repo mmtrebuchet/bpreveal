@@ -4,6 +4,31 @@ import sys
 import json
 
 
+def stripComments(o):
+    """Traverse the dictionary o and remove any keys named "$comment"."""
+    match o:
+        case str():
+            return o
+        case dict():
+            iret = {}
+            for k, v in o.items():
+                if k == "$comment":
+                    continue
+                iret[k] = stripComments(v)
+            return iret
+        case list():
+            return [stripComments(x) for x in o]
+        case int():
+            return o
+        case float():
+            return o
+        case None:
+            return o
+        case _:
+            print(o)
+            return o
+
+
 def build():
     """Read in the .schema files and generate schema.py."""
     with open(sys.argv[1], "w") as fp:
@@ -19,7 +44,7 @@ def build():
         for schemaFname in sys.argv[2:]:
             fp.write("_" + schemaFname + 'Schema = json.loads("""')
             with open("schematools/" + schemaFname + ".schema", "r") as sfp:
-                jsonStr = json.dumps(json.load(sfp))
+                jsonStr = json.dumps(stripComments(json.load(sfp)))
                 fp.write(jsonStr)
             fp.write('""")  # noqa\n')
             fp.write("_" + schemaFname + "Schema['$id'] = 'https://example.com/"

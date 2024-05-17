@@ -728,8 +728,8 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
         See :func:`bpreveal.motifUtils.cwmTrimPoints` for details of these parameters.
 
     :param backgroundProbs: An array of shape (4,) of floats that gives the background
-        distribution for each base in the genome. See :func:`ppmToPwm` and
-        :func:`pwmToPssm` for details on this argument.
+        distribution for each base in the genome. See :func:`~ppmToPwm` and
+        :func:`ppmToPssm` for details on this argument.
 
     :param modiscoWindow: The size of the window that was used by Modisco during scanning.
         (That's the ``-w`` argument to ``modisco motifs``.) Until BPReveal 6.0.0, passing

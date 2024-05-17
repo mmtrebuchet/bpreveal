@@ -53,11 +53,24 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 5. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
    introduced in 4.1.2, will switch from being ``false`` by default to being ``true``
    by default. This fixes an off-by-one bug in how receptive field was calculated.
-6. If I can get Tensorflow 2.16 working smoothly, I'll go ahead and upgrade the project
+6. If I can get Keras 3.0 working smoothly, I'll go ahead and upgrade the project
    to that version. This will likely introduce some breaking changes.
 
 BPReveal 4.x
 ------------
+
+BPReveal 4.2.0
+^^^^^^^^^^^^^^
+1. BPReveal now uses tensorflow 2.16 and Python 3.12. It still uses the legacy
+   Keras, though. If you were manually working with Keras, you will need to
+   import ``tf_keras`` instead.
+2. The tools.plots module has been retired. It has been replaced by
+   :py:mod:`plotting<bpreveal.plotting>`, which exposes a semi-coherent API and has
+   generally been cleaned way up. The old module now emits a warning, but it will stay
+   around until at least version 6.0.0.
+3. The names of the type variables in the :py:mod:`gaOptimise<bpreveal.gaOptimize>` were
+   switched to UPPER_CASE to match the rest of the project. This should have no effect
+   on user code.
 
 BPReveal 4.1.4
 ^^^^^^^^^^^^^^

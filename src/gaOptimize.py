@@ -12,14 +12,15 @@ import matplotlib.colors
 import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
-from bpreveal.internal.constants import LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
+from bpreveal.internal.constants import ANNOTATION_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
+from bpreveal.colors import dnaWong
 
 # Types
-CorruptorLetter: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \
+CORRUPTOR_LETTER_T: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \
     | Literal["d"] | Literal["Ǎ"] | Literal["Č"] | Literal["Ǧ"] | Literal["Ť"]
 """Any letter that is a valid corruptor."""
 
-Corruptor: TypeAlias = tuple[int, CorruptorLetter]
+CORRUPTOR_T: TypeAlias = tuple[int, CORRUPTOR_LETTER_T]
 """A corruptor gives a coordinate and a change to make.
 
 The change is represented by a single letter. The letters `ACGT` indicate a SNP
@@ -34,15 +35,15 @@ Examples::
     (1603, "d")
 """
 
-Profile: TypeAlias = list[tuple[LOGIT_AR_T, LOGCOUNT_T]]
-"""A profile is the result from running a model.
+GA_RESULT_T: TypeAlias = list[tuple[LOGIT_AR_T, LOGCOUNT_T]]
+"""A GA result is the result from running a model.
 
 It is a list of (logits, logcounts) tuples.
 
 :type: list[tuple[LOGIT_AR_T, LOGCOUNT_T]
 """
 
-CandidateCorruptor: TypeAlias = tuple[int, str]
+CANDIDATE_CORRUPTOR_T: TypeAlias = tuple[int, str]
 """A candidate corruptor gives all possible mutations at a particular locus.
 
 Examples::
@@ -55,7 +56,7 @@ Note that it is possible for a CandidateCorruptor to only allow for one
 possible mutation at a locus.
 """
 
-ANNOTATION_T: TypeAlias = tuple[tuple[int, int], str, str] \
+GA_ANNOTATION_T: TypeAlias = tuple[tuple[int, int], str, str] \
     | tuple[tuple[int, int], str, str, float, float]
 """The shape for an annotation object to pass to :func:`plotTraces`.
 
@@ -72,16 +73,16 @@ It contains:
 # A few variables that you can use to get the accented letters Ǎ, Č, Ǧ, and Ť
 # in case they aren't easily typeable on your keyboard:
 
-IN_A: CorruptorLetter = "Ǎ"
+IN_A: CORRUPTOR_LETTER_T = "Ǎ"
 """The letter Ǎ represents inserting an A"""
 
-IN_C: CorruptorLetter = "Č"
+IN_C: CORRUPTOR_LETTER_T = "Č"
 """The letter Č represents inserting a C"""
 
-IN_G: CorruptorLetter = "Ǧ"
+IN_G: CORRUPTOR_LETTER_T = "Ǧ"
 """The letter Ǧ represents inserting a G"""
 
-IN_T: CorruptorLetter = "Ť"
+IN_T: CORRUPTOR_LETTER_T = "Ť"
 """The letter Ť represents inserting a T"""
 
 IN_L = "ǍČǦŤ"
@@ -90,7 +91,7 @@ IN_L = "ǍČǦŤ"
 IN_D = {"A": "Ǎ", "C": "Č", "G": "Ǧ", "T": "Ť"}
 """A dict mapping a regular letter ACGT to an insertion code ǍČǦŤ"""
 
-CORRUPTOR_TO_IDX: dict[CorruptorLetter, int] =\
+CORRUPTOR_TO_IDX: dict[CORRUPTOR_LETTER_T, int] =\
     {"A": 0, "C": 1, "G": 2, "T": 3,
      "Ǎ": 4, "Č": 5, "Ǧ": 6, "Ť": 7,
      "d": 8}
@@ -101,29 +102,25 @@ IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
 This is the inverse of CORRUPTOR_TO_IDX.
 """
 
-_seqCmap = {"A": (0, 204, 148), "C": (0, 114, 178),
-            "G": (240, 228, 66), "T": (213, 94, 0)}
-for _k in "ACGT":
-    _seqCmap[_k] = tuple((x / 255 for x in _seqCmap[_k]))
 corruptorColors = {
-    "A": _seqCmap["A"], "C": _seqCmap["C"], "G": _seqCmap["G"], "T": _seqCmap["T"],
+    "A": dnaWong["A"], "C": dnaWong["C"], "G": dnaWong["G"], "T": dnaWong["T"],
     "d": (0, 0, 0),
-    "Ǎ": _seqCmap["A"], "Č": _seqCmap["C"], "Ǧ": _seqCmap["G"], "Ť": _seqCmap["T"]}
+    "Ǎ": dnaWong["A"], "Č": dnaWong["C"], "Ǧ": dnaWong["G"], "Ť": dnaWong["T"]}
 """BPreveal's coloring for bases. A is green, C is blue, G is yellow, and T is red.
 
 These colors are drawn from the Wong palette, but with the green lightened a bit.
 
-:type: dict[CorruptorLetter, tuple[float, float, float]]
+:type: dict[CORRUPTOR_LETTER_T, tuple[float, float, float]]
 
 :meta hide-value:
 """
 
 
-def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
+def corruptorsToArray(corruptorList: list[CORRUPTOR_T]) -> list[tuple[int, int]]:
     """Convert a list of Corruptors to an array of numbers.
 
     :param corruptorList: A list of corruptors to serialize.
-    :type corruptorList: list[:data:`Corruptor<bpreveal.gaOptimize.Corruptor>`]
+    :type corruptorList: list[:data:`CORRUPTOR_T<bpreveal.gaOptimize.CORRUPTOR_T>`]
     :return: A list of tuples of numbers representing the same information.
 
     Given a list of corruptor tuples, like ``[(1354, 'C'), (1514, 'Ť'), (1693, 'd')]``,
@@ -139,12 +136,12 @@ def corruptorsToArray(corruptorList: list[Corruptor]) -> list[tuple[int, int]]:
     return ret
 
 
-def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[Corruptor]:
+def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[CORRUPTOR_T]:
     """Turn an array of numbers into a Corruptor list.
 
     :param corruptorArray: A list of tuples of ints.
     :return: Corruptors corresponding to the array.
-    :rtype: list[:py:data:`Corruptor<bpreveal.gaOptimize.Corruptor>`]
+    :rtype: list[:py:data:`CORRUPTOR_T<bpreveal.gaOptimize.CORRUPTOR_T>`]
 
     Takes an array of numerical corruptors in the form
     ``[ [1354, 1], [1514, 7], [1693, 8] ]``
@@ -161,12 +158,12 @@ def arrayToCorruptors(corruptorArray: list[tuple[int, int]]) -> list[Corruptor]:
     return ret
 
 
-def stringToCorruptorList(corruptorStr: str) -> list[Corruptor]:
-    """Parse a string and turn it into a :py:data:`~Corruptor` list.
+def stringToCorruptorList(corruptorStr: str) -> list[CORRUPTOR_T]:
+    """Parse a string and turn it into a :py:data:`~CORRUPTOR_T` list.
 
     :param corruptorStr: The string to parse.
     :return: A list of Corruptors.
-    :rtype: list[:py:data:`~Corruptor`]
+    :rtype: list[:py:data:`~CORRUPTOR_T`]
 
     Takes a string representing a list of corruptors and generates
     the actual list as a python object. For example, if the string is
@@ -190,14 +187,14 @@ class Organism:
     """Represents the set of corruptors that are to be applied to the input sequence.
 
     :param corruptors: A list of corruptors that this organism represents.
-    :type corruptors: list[:py:data:`~Corruptor`]
+    :type corruptors: list[:py:data:`~CORRUPTOR_T`]
     """
 
-    profile: Profile
+    profile: GA_RESULT_T
     score: float
-    corruptors: list[Corruptor]
+    corruptors: list[CORRUPTOR_T]
 
-    def __init__(self, corruptors: list[Corruptor]) -> None:
+    def __init__(self, corruptors: list[CORRUPTOR_T]) -> None:
         """Construct an organism with the given corruptors."""
         self.corruptors = sorted(corruptors)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
@@ -257,12 +254,13 @@ class Organism:
         fullSequence = "".join(seq) + initialSequence[readHead:]
         return fullSequence[:inputLength]
 
-    def setScore(self, scoreFn: Callable[[Profile, list[Corruptor]], float]) -> None:
+    def setScore(self, scoreFn: Callable[[GA_RESULT_T, list[CORRUPTOR_T]], float]) -> None:
         """Apply the score function to this organism's profile.
 
         :param scoreFn: A function that takes this organism's profile and its corruptor
             list and returns a float.
-        :type scoreFn: Callable(:py:data:`~Profile`, list[:py:data:`~Corruptor`]) -> float
+        :type scoreFn: Callable(:py:data:`~GA_RESULT_T`,
+            list[:py:data:`~CORRUPTOR_T`]) -> float
 
         This function can only be called after the organism's profile has been set!
         """
@@ -324,15 +322,15 @@ class Organism:
         # We have identical corruptors, we are the same organism.
         return 0
 
-    def mutated(self, allowedCorruptors: list[CandidateCorruptor],
-                checkCorruptors: Callable[[list[Corruptor]], bool]) -> "Organism":
+    def mutated(self, allowedCorruptors: list[CANDIDATE_CORRUPTOR_T],
+                checkCorruptors: Callable[[list[CORRUPTOR_T]], bool]) -> "Organism":
         """Mutate this organism's corruptors.
 
         :param allowedCorruptors: All corruptors that this organism has access to
-        :type allowedCorruptors: list[:py:data:`~CandidateCorruptor`]
+        :type allowedCorruptors: list[:py:data:`~CANDIDATE_CORRUPTOR_T`]
         :param checkCorruptors: A function that accepts a list of corruptors and
             returns True if they are a valid combination and False otherwise.
-        :type checkCorruptors: Callable[[list[:py:data:`~Corruptor`]], bool]
+        :type checkCorruptors: Callable[[list[:py:data:`~CORRUPTOR_T`]], bool]
         :return: A newly-allocated Organism with a new set of corruptors.
 
         This is something you may want to override in a subclass.
@@ -364,13 +362,13 @@ class Organism:
         return Organism(candidateCorruptors)  # type: ignore
 
     def mixed(self, other: "Organism",
-              checkCorruptors: Callable[[list[Corruptor]], bool]) -> "Organism":
+              checkCorruptors: Callable[[list[CORRUPTOR_T]], bool]) -> "Organism":
         """Make a new organism by combining this one with another.
 
         :param other: Another organism that this should be mixed with.
         :param checkCorruptors: A function that returns True if a corruptor
             list is valid, and False otherwise.
-        :type checkCorruptors: Callable[[list[:py:data:`~Corruptor`]], bool]
+        :type checkCorruptors: Callable[[list[:py:data:`~CORRUPTOR_T`]], bool]
         :return: A newly-allocated Organism that is a blend of both parents.
 
         This is also something you may wish to override in a subclass.
@@ -429,15 +427,16 @@ class Population:
     :param numCorruptors: determines how many corruptors will be applied
         in each organism.
     :param allowedCorruptors: is a list of tuples. (see below)
-    :type allowedCorruptors: list[:py:data:`~CandidateCorruptor`]
+    :type allowedCorruptors: list[:py:data:`~CANDIDATE_CORRUPTOR_T`]
     :param checkCorruptors: is a function that determines if a list of corruptors
         is valid. (see below)
-    :type checkCorruptors: Callable[[list[:py:data:`~Corruptor`]], bool]
+    :type checkCorruptors: Callable[[list[:py:data:`~CORRUPTOR_T`]], bool]
     :param fitnessFn: The fitness function. It takes two arguments:
         The first argument is a list of tuples containing the model outputs.
         These have the same organization as the outputs from batchPredictor.
         The second argument is a list of corruptors, as presented to checkCorruptors.
-    :type fitnessFn: Callable[[:py:data:`~Profile`, list[:py:data:`~Corruptor`]], float],
+    :type fitnessFn: Callable[[:py:data:`~GA_RESULT_T`,
+        list[:py:data:`~CORRUPTOR_T`]], float],
     :param numSurvivingParents: The number of parents that will be kept for the next
         generation, usually referred to as elitism in GA terminology.
     :param predictor: A BatchPredictor that has been set up with the model you
@@ -452,7 +451,7 @@ class Population:
     then numPossibleDeletions = 0.
 
     allowedCorruptors is a list of tuples, with each tuple being a
-    :py:data:`~CandidateCorruptor`. Each tuple contains two elements: a number,
+    :py:data:`~CANDIDATE_CORRUPTOR_T`. Each tuple contains two elements: a number,
     representing the position in the input sequence (starting at zero), and the
     second is a string containing the allowed corruptions at the base at the
     positing given by the number. For example, if your sequence is AGGCA, and
@@ -466,7 +465,7 @@ class Population:
     letter with a caron, like Ǎ, Č, Ǧ, or Ť, means that the given letter
     should be inserted AFTER the base number.
 
-    checkCorruptors should take a list of :py:data:`~Corruptor`. These are
+    checkCorruptors should take a list of :py:data:`~CORRUPTOR_T`. These are
     tuples, and the first element of each tuple is a number, representing the
     base to be corrupted, and the second will be a single character,
     representing the corruption to be applied The corruptor locations will
@@ -483,20 +482,23 @@ class Population:
     When the population is created, the organisms will have no profile or score
     information.
 
-    After you execute :py:meth:`runCalculation()<~runCalculation>`, each
+    After you execute
+    :py:meth:`runCalculation()<bpreveal.gaOptimize.Population.runCalculation>`, each
     organism will contain profile and score data, and the organisms list will
     be sorted in ascending order of score. So organisms[-1] is the best
     organism in the population.
 
-    After you call :py:meth:`nextGeneration()<~nextGeneration>`, the organisms
+    After you call
+    :py:meth:`nextGeneration()<bpreveal.gaOptimize.Population.nextGeneration>`,
+    the organisms
     in the population are reset and don't contain score or profile information
     any more.
     """
 
     def __init__(self, initialSequence: str, inputLength: int, populationSize: int,
-                 numCorruptors: int, allowedCorruptors: list[CandidateCorruptor],
-                 checkCorruptors: Callable[[list[Corruptor]], bool],
-                 fitnessFn: Callable[[Profile, list[Corruptor]], float],
+                 numCorruptors: int, allowedCorruptors: list[CANDIDATE_CORRUPTOR_T],
+                 checkCorruptors: Callable[[list[CORRUPTOR_T]], bool],
+                 fitnessFn: Callable[[GA_RESULT_T, list[CORRUPTOR_T]], float],
                  numSurvivingParents: int, predictor: utils.BatchPredictor):
         """Construct a population."""
         self.initialSequence = initialSequence
@@ -657,7 +659,7 @@ class Population:
 
 def getCandidateCorruptorList(sequence: str, regions: list[tuple[int, int]] | None = None,
                               allowDeletion: bool = True,
-                              allowInsertion: bool = True) -> list[CandidateCorruptor]:
+                              allowInsertion: bool = True) -> list[CANDIDATE_CORRUPTOR_T]:
     """Give the corruptors that are possible in a given sequence.
 
     :param sequence: The DNA sequence that will be used.
@@ -665,7 +667,7 @@ def getCandidateCorruptorList(sequence: str, regions: list[tuple[int, int]] | No
     :param allowDeletion: Is deletion a valid corruptor type?
     :param allowInsertion: Is insertion a valid corruptor type?
     :return: A list of Corruptors.
-    :rtype: list[:py:data:`~Corruptor`]
+    :rtype: list[:py:data:`~CORRUPTOR_T`]
 
     Given a sequence (a string), this generates a list of tuples
     that contain all of the possible corruptors for each position in the
@@ -710,11 +712,11 @@ def getCandidateCorruptorList(sequence: str, regions: list[tuple[int, int]] | No
     return ret
 
 
-def anyCorruptorsCloserThan(corList: list[Corruptor], distance: int) -> bool:
+def anyCorruptorsCloserThan(corList: list[CORRUPTOR_T], distance: int) -> bool:
     """Are any corruptors close to each other?
 
     :param corList: The corruptors to consider.
-    :type corList: list[:py:data:`~Corruptor`]
+    :type corList: list[:py:data:`~CORRUPTOR_T`]
     :param distance: The minimum distance that must be between corruptors.
     :return: True if there exist two corruptors from corList that are less than
         distance apart, False otherwise.
@@ -733,17 +735,17 @@ def anyCorruptorsCloserThan(corList: list[Corruptor], distance: int) -> bool:
     return False
 
 
-def removeCorruptors(corruptorList: list[CandidateCorruptor],
-                     corsToRemove: list[Corruptor]) -> list[CandidateCorruptor]:
+def removeCorruptors(corruptorList: list[CANDIDATE_CORRUPTOR_T],
+                     corsToRemove: list[CORRUPTOR_T]) -> list[CANDIDATE_CORRUPTOR_T]:
     """Take corruptors out of a list.
 
     :param corruptorList: A list of candidate corruptors, like [(100, "ACG")].
-    :type corruptorList: list[:py:data:`~CandidateCorruptor`]
+    :type corruptorList: list[:py:data:`~CANDIDATE_CORRUPTOR_T`]
     :param corsToRemove: A list of corruptors.
-    :type corsToRemove: list[:py:data:`~Corruptor`]
+    :type corsToRemove: list[:py:data:`~CORRUPTOR_T`]
     :return: A newly-allocated list of candidate corruptors with the given corruptors
         removed.
-    :rtype: list[:py:data:`~CandidateCorruptor`]
+    :rtype: list[:py:data:`~CANDIDATE_CORRUPTOR_T`]
 
     Given a candidate corruptor list, like from getCandidateCorruptorList, and
     a list of tuples giving disallowed corruptors, return a new candidate corruptor
@@ -773,11 +775,11 @@ def removeCorruptors(corruptorList: list[CandidateCorruptor],
     return ret
 
 
-def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
+def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
     r"""Is a list of corruptors even possible?
 
     :param corruptorList: The corruptors to consider.
-    :type corruptorList: list[:py:data:`~Corruptor`]
+    :type corruptorList: list[:py:data:`~CORRUPTOR_T`]
     :return: True if the corruptors could be applied by an organism,
         False otherwise.
 
@@ -827,8 +829,8 @@ def validCorruptorList(corruptorList: list[Corruptor]) -> bool:
 def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
                negTraces: list[tuple[PRED_AR_T, str, str]],
                xvals: npt.NDArray[np.float32],
-               annotations: list[ANNOTATION_T],
-               corruptors: list[Corruptor],
+               annotations: list[GA_ANNOTATION_T | ANNOTATION_T],
+               corruptors: list[CORRUPTOR_T],
                ax: matplotlib.axes.Axes) -> None:
     """Generate a nice little plot with pips for corruptors and boxes for annotations.
 
@@ -837,7 +839,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
     :param xvals: An array giving the genomic coordinates of your data.
     :param annotations: Annotations that you'd like to put on your plot.
     :param corruptors: A list of Corruptors that you'd like to put on your plot.
-    :type corruptors: list[:py:data:`~Corruptor`]
+    :type corruptors: list[:py:data:`~CORRUPTOR_T`]
     :param ax: The matplotlib Axes object to draw on.
 
     posTraces is a list of tuples. Each tuple has three things:
@@ -851,7 +853,9 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
     being plotted. This is handy to make different conditions visually
     distinct, and of course for chip-nexus data.
 
-    annotations is a list of tuples. Each tuple contains:
+    annotations is a list of tuples or
+    :py:class:`ANNOTATION_T<bpreveal.internal.constants.ANNOTATION_T>`.
+    Each tuple contains:
 
         1. a pair of integers, giving the start and stop points of that annotation,
         2. a string giving its label,
@@ -879,7 +883,15 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
     for negTrace in negTraces:
         ax.plot(xvals, -negTrace[0] - boxHeight, label=negTrace[1], color=negTrace[2])
     usedLabels = []
-    for annot in annotations:
+    for a in annotations:
+        match a:  # Transform a new-style annotation into an old-style.
+            case {"start": start, "end": end, "name": name,
+                  "color": color, "bottom": bottom, "top": top}:
+                annot = ((start, end), name, color, bottom, top)
+            case {"start": start, "end": end, "name": name, "color": color}:
+                annot = ((start, end), name, color)
+            case _:
+                annot = a
         match annot:
             case ((l, r), label, color):
                 h = boxHeight  # Just for brevity.

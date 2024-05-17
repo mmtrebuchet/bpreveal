@@ -11,79 +11,13 @@ BNF
 """
 from __future__ import annotations
 import pathlib
-from typing import TypeAlias, Literal, TypedDict
 import numpy as np
 import matplotlib as mpl
 import matplotlib.colors as mplcolors
 import matplotlib.font_manager
 import matplotlib.pyplot as plt
 from bpreveal import logUtils
-
-COLOR_SPEC_T: TypeAlias = \
-    dict[Literal["rgb"], tuple[float, float, float]] | \
-    dict[Literal["rgba"], tuple[float, float, float, float]] | \
-    dict[Literal["tol"], int] | \
-    dict[Literal["tol-light"], int] | \
-    dict[Literal["ibm"], int] | \
-    dict[Literal["wong"], int] | \
-    tuple[float, float, float] | \
-    tuple[float, float, float, float]
-"""A COLOR_SPEC_T is anything that parseSpec can turn into an rgb or rgba triple.
-
-It may be one of the following things:
-
-1. ``{"rgb": (0.1, 0.2, 0.3)}``
-    giving an rgb triple.
-2. ``{"rgba": (0.1, 0.2, 0.3, 0.5)}``
-    giving an rgb triple with an alpha value.
-3. ``{"tol": 1}``
-    giving a numbered color from the tol palette.
-    Valid numbers are 0 to 7.
-4. ``{"tol-light": 1}``
-    giving a numbered color from the tolLight palette.
-    Valid numbers are 0 to 6.
-5. ``{"wong": 1}``
-    giving a numbered color from the wong palette.
-    Valid numbers are 0 to 7.
-6. ``{"ibm": 1}``
-    giving a numbered color from the ibm palette.
-    Valid numbers are 0 to 4.
-7. ``(0.1, 0.2, 0.3)``
-    giving an rgb triple.
-8. ``(0.1, 0.2, 0.3)``
-    giving an rgb triple with an alpha value.
-
-:meta hide-value:
-"""
-
-
-# pylint: disable=invalid-name
-class DNA_COLOR_SPEC_T(TypedDict):
-    """A type that assigns a color to each of the four bases.
-
-    It is a dictionary mapping the bases onto colorSpecs, like this::
-
-        {"A": {"wong": 3}, "C": {"wong": 5},
-         "G": {"wong": 4}, "T": {"wong": 6}}
-
-    :type: {Literal["A"]: :py:data:`~COLOR_SPEC_T`,
-            Literal["C"]: :py:data:`~COLOR_SPEC_T`,
-            Literal["G"]: :py:data:`~COLOR_SPEC_T`,
-            Literal["T"]: :py:data:`~COLOR_SPEC_T`}
-
-    """
-
-    A: COLOR_SPEC_T
-    C: COLOR_SPEC_T
-    G: COLOR_SPEC_T
-    T: COLOR_SPEC_T
-# pylint: enable=invalid-name
-
-
-RGB_T: TypeAlias = \
-    tuple[float, float, float] | \
-    tuple[float, float, float, float]
-"""An rgb or rgba triple."""
+from bpreveal.internal.constants import RGB_T, DNA_COLOR_SPEC_T, COLOR_SPEC_T
 
 
 def _toFractions(colorList: tuple[tuple[int, int, int], ...]) -> tuple[RGB_T, ...]:
@@ -133,7 +67,7 @@ tol: tuple[RGB_T, ...] = _toFractions(tolRgb)
 
 .. image:: ../../doc/presentations/tol.png
 
-:type: tuple[:py:class:`~RGB_T`, ...]
+:type: tuple[:py:class:`RGB_T<bpreveal.internal.constants.RGB_T>`, ...]
 
 :meta hide-value:
 """
@@ -143,7 +77,7 @@ ibm: tuple[RGB_T, ...] = _toFractions(ibmRgb)
 
 .. image:: ../../doc/presentations/ibm.png
 
-:type: tuple[:py:class:`~RGB_T`, ...]
+:type: tuple[:py:class:`RGB_T<bpreveal.internal.constants.RGB_T>`, ...]
 
 :meta hide-value:
 """
@@ -153,7 +87,7 @@ wong: tuple[RGB_T, ...] = _toFractions(wongRgb)
 
 .. image:: ../../doc/presentations/wong.png
 
-:type: tuple[:py:class:`~RGB_T`, ...]
+:type: tuple[:py:class:`RGB_T<bpreveal.internal.constants.RGB_T>`, ...]
 
 :meta hide-value:
 """
@@ -163,7 +97,7 @@ tolLight: tuple[RGB_T, ...] = _toFractions(tolLightRgb)
 
 .. image:: ../../doc/presentations/tolLight.png
 
-:type: tuple[:py:class:`~RGB_T`, ...]
+:type: tuple[:py:class:`RGB_T<bpreveal.internal.constants.RGB_T>`, ...]
 
 :meta hide-value:
 """
@@ -178,13 +112,13 @@ A is green, C is blue, G is yellow, and T is red.
 defaultProfile: COLOR_SPEC_T = {"tol": 0}
 """The default color for profile plots. It's tol[0].
 
-:type: :py:class:`~COLOR_SPEC_T`
+:type: :py:class:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`
 
 :meta hide-value:
 """
 
 
-_oldPisaCmap = mpl.colormaps["RdBu_r"].resampled(256)
+_oldPisaCmap = mpl.colormaps["RdBu_r"].resampled(256)  # pylint: disable=unsubscriptable-object
 _newPisaColors = _oldPisaCmap(np.linspace(0, 1, 256))
 _pink = np.array([248 / 256, 24 / 256, 148 / 256, 1])
 _green = np.array([24 / 256, 248 / 256, 148 / 256, 1])
@@ -211,7 +145,7 @@ def parseSpec(  # pylint: disable=too-many-return-statements
     """Given a color-spec (See the BNF), convert it into an rgb or rgba tuple.
 
     :param colorSpec: The color specification.
-    :type colorSpec: :py:data:`~COLOR_SPEC_T`
+    :type colorSpec: :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`
     :return: An rgb triple (or rgba quadruple).
 
     If colorSpec is a 3-tuple, it is interpreted as an rgb color. If it is a
@@ -253,7 +187,7 @@ def loadFonts():
         cwd = pathlib.Path(__file__).parent.parent.parent.resolve()
         fontdir = str(cwd / "doc" / "fonts" / "Libertinus-7.040" / "static/") + "/"
         fontFiles = matplotlib.font_manager.findSystemFonts(fontpaths=[fontdir])
-        for ff in fontFiles:
+        for ff in fontFiles:  # pylint: disable=not-an-iterable
             try:
                 matplotlib.font_manager.fontManager.addfont(ff)
             except:  # pylint: disable=bare-except  # noqa

@@ -92,6 +92,7 @@ def writeBigWig(inH5: h5py.File, outFname: str):  # pylint: disable=too-many-sta
     logUtils.info("Files opened; writing regions")
     regionRange = logUtils.wrapTqdm(range(numRegions))
     nextRegion = None
+    nextStop = 0
     for regionNumber in regionRange:
         # Extract the appropriate region from the sorted list.
 
