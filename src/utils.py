@@ -73,7 +73,6 @@ def setMemoryGrowth() -> None:
         tf.config.experimental.set_memory_growth(device=gpus[0], enable=True)
         logUtils.debug("GPU memory growth enabled.")
     except Exception as inst:  # pylint: disable=broad-exception-caught
-        print(inst)
         logUtils.warning("Not using GPU")
         logUtils.debug("Because: " + str(inst))
     constants.setTensorflowLoaded()

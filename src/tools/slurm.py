@@ -304,7 +304,7 @@ def writeDependencyScript(config: dict, jobspecs: list[list[str | list[str]]],
                     depStr += f":{baseJobId}"
                 for dep in deps:
                     depStr = depStr + \
-                        f":${{DEP_{depNumber}}}"
+                        f":${{DEP_{jobToDepNumber[dep]}}}"
             batchStr = f"sbatch --kill-on-invalid-dep=yes {depStr} {job}"
             fp.write(batchStr + "\n")
             fp.write(f"DEP_{depNumber}=$(squeue -u $(whoami) | awk '{{print $1}}' |"

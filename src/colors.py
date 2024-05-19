@@ -141,20 +141,36 @@ pisaNoClip = mplcolors.ListedColormap(_oldPisaCmap(np.linspace(0, 1, 256)))
 
 
 def parseSpec(  # pylint: disable=too-many-return-statements
-        colorSpec: COLOR_SPEC_T) -> RGB_T:
+        colorSpec: COLOR_SPEC_T | str) -> RGB_T:
     """Given a color-spec (See the BNF), convert it into an rgb or rgba tuple.
 
     :param colorSpec: The color specification.
-    :type colorSpec: :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`
+    :type colorSpec: :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>` | str
     :return: An rgb triple (or rgba quadruple).
 
-    If colorSpec is a 3-tuple, it is interpreted as an rgb color. If it is a
-    4-tuple, it is interpreted as rgba. If it is a dictionary containing
-    ``{"rgb": (0.1, 0.2, 0.3)}`` then it is interpreted as an rgb color, and
-    it's the same story if the dictionary has structure ``{"rgba": (0.1, 0.2,
-    0.3, 0.8)}``. If it is a dictionary with a key naming a palette (one of
-    "tol", "tol-light", "wong", or "ibm") and an integer value, then the value
-    is the ith color of the corresponding palette.
+    Based on the shape of colorSpec, this function interprets it differently.
+    If colorSpec is a...
+
+    3-tuple
+        it is interpreted as an rgb color,
+
+    4-tuple
+        it is interpreted as rgba,
+
+    ``{"rgb": (0.1, 0.2, 0.3)}``
+        it is interpreted as an rgb color,
+
+    ``{"rgba": (0.1, 0.2, 0.3, 0.8)}``
+        it is interpreted as an rgba color,
+
+    ``{"<palette-name>": 3}``
+        where ``<palette-name>`` is one of "tol", "tol-light",
+        "wong", or "ibm"), then the value is the ``i``th color
+        of the corresponding palette.
+
+    ``"b"``
+        or any other string, then it is interpreted as a matplotlib
+        color string and is passed to ``matplotlib.colors.to_rgb``.
     """
     match colorSpec:
         case(r, g, b):
@@ -173,6 +189,8 @@ def parseSpec(  # pylint: disable=too-many-return-statements
             return ibm[num]
         case {"wong": num}:
             return wong[num]
+        case str():
+            return mplcolors.to_rgb(colorSpec)
         case _:
             assert False, f"Invalid color spec: {colorSpec}"
 

@@ -13,7 +13,7 @@ import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 from bpreveal.internal.constants import ANNOTATION_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
-from bpreveal.colors import dnaWong
+from bpreveal.colors import dnaWong, parseSpec
 
 # Types
 CORRUPTOR_LETTER_T: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \
@@ -895,15 +895,17 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
         match annot:
             case ((l, r), label, color):
                 h = boxHeight  # Just for brevity.
-                ax.fill([l, l, r, r], [-h, h, h, -h], color, label=label)
+                fcolor = parseSpec(color)
+                ax.fill([l, l, r, r], [-h, h, h, -h], fcolor, label=label)
             case ((l, r), label, color, startFrac, stopFrac):
                 bottom = -boxHeight + (2 * boxHeight * startFrac)
                 top = -boxHeight + (2 * boxHeight * stopFrac)
+                fcolor = parseSpec(color)
                 if (color, label) not in usedLabels:
-                    ax.fill([l, l, r, r], [bottom, top, top, bottom], color, label=label)
+                    ax.fill([l, l, r, r], [bottom, top, top, bottom], fcolor, label=label)
                     usedLabels.append((color, label))
                 else:
-                    ax.fill([l, l, r, r], [bottom, top, top, bottom], color)
+                    ax.fill([l, l, r, r], [bottom, top, top, bottom], fcolor)
 
     for cor in corruptors:
         match cor:
@@ -928,6 +930,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
             # Use a wedge for deletions
             corXvals = [left, left + 4, left, right, right - 4, right]
             corYvals = [bottom, midPt, top, top, midPt, bottom]
-        ax.fill(corXvals, corYvals, matplotlib.colors.to_hex(corruptorColors[corType]))
+        corColor = parseSpec(corruptorColors[corType])
+        ax.fill(corXvals, corYvals, matplotlib.colors.to_hex(corColor))
     ax.legend()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
