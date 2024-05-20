@@ -54,6 +54,7 @@
 <seqlet-contrib-section> ::=
     <empty>
   | "modisco-contrib-h5" : <file-name>,
+    "modisco-window": <integer>,
 
 <seqlet-tsv-section> ::=
     <empty>

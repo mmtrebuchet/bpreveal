@@ -17,7 +17,7 @@ BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 ENV_FLAG=-n
-ENV_NAME=bpreveal-dogwood-2
+ENV_NAME=bpreveal-teak
 
 # CHANGE this to conda if you don't have mamba installed.
 # (I recommend using mamba; it's way faster.)

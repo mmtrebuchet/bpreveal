@@ -295,7 +295,8 @@ void initialize(){
     set_randfunc(random);
 }
 
-void shuffleStr(const char *input, char *output, int length, int kmerSize, int numShuffles){
+void shuffleStr(const char *restrict input, char *restrict output,
+                int length, int kmerSize, int numShuffles){
     int i;
     shuffle1(input, length, kmerSize);
     for(i = 0; i < numShuffles; i++){
@@ -308,7 +309,8 @@ void shuffleStr(const char *input, char *output, int length, int kmerSize, int n
 #define G_OHE (1<<2)
 #define T_OHE (1<<3)
 
-void shuffleOhe(const char *input, char * output, int alphabetSize,
+void shuffleOhe(const char *restrict input, char *restrict output,
+                int alphabetSize,
                 int length, int kmerSize, int numShuffles){
     //The array is in row-major order, so we need to pack it into a temporary string.
     char *inputString = malloc(length * sizeof(char));

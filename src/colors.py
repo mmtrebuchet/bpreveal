@@ -165,12 +165,13 @@ def parseSpec(  # pylint: disable=too-many-return-statements
 
     ``{"<palette-name>": 3}``
         where ``<palette-name>`` is one of "tol", "tol-light",
-        "wong", or "ibm"), then the value is the ``i``th color
-        of the corresponding palette.
+        "wong", or "ibm"), then the value is the color ``i`` in
+        the corresponding palette.
 
     ``"b"``
         or any other string, then it is interpreted as a matplotlib
         color string and is passed to ``matplotlib.colors.to_rgb``.
+
     """
     match colorSpec:
         case(r, g, b):

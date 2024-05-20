@@ -9,7 +9,7 @@ This program requires just a few libraries. I provide a buildCondaLocal.zsh
 script that you can run on your own machine to automatically build an
 environment, or you can install the dependencies yourself with conda or pip.
 
-python >= 3.11
+python >= 3.12
     This project uses features that were introduced in Python 3.11 heavily, so
     earlier Python versions will not work.
 tfmodisco-lite
@@ -22,10 +22,11 @@ pysam
 pyBedTools
     Used to read in region files. You will also need to make sure you have
     BedTools installed to use pyBedTools.
-tensorflow < 2.16
+tensorflow 2.16
     Does the heavy work of machine learning. Tensorflow 2.16 added a bunch of crummy
-    backwards-incompatible behavior and it will be supported with BPReveal 5.0.
-tensorflow-probability < 0.24
+    backwards-incompatible behavior and some of the internal API had to be restructured,
+    this was done in BPReveal 4.2.0.
+tensorflow-probability
     Used to create the multinomial loss function.
 matplotlib
     Used to make pretty plots.
@@ -35,9 +36,10 @@ h5py
     Used to read and write data files.
 jsonschema
     Used to validate the json files given to the Main CLI programs.
-gcc, gfortran
+gcc, gfortran, meson
     You'll need a C compiler and a Fortran compiler to build the
-    Jaccard and ushuffle libraries.
+    Jaccard and ushuffle libraries, and as of Python 3.12 you also
+    need the meson build system.
 
 
 While not strictly necessary, the following packages are very useful:
@@ -78,7 +80,11 @@ skip this because the script takes care of this part.
 
     conda develop /path/to/bpreveal/pkg
 
-4. (Optional) Build the documentation in the ``doc/`` directory::
+4. Set Tensorflow to use its old internal Keras version::
+
+    export TF_USE_LEGACY_KERAS=1
+
+5. (Optional) Build the documentation in the ``doc/`` directory::
 
     make html latexpdf
 

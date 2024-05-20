@@ -24,8 +24,8 @@ FLOAT_T jaccardIntersection(FLOAT_T x, FLOAT_T y){
     }
 }
 
-void jaccardRegion(FLOAT_T *importanceScores, FLOAT_T scaleFactor,
-                    FLOAT_T *cwm, int length, FLOAT_T *jaccardValue){
+void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scaleFactor,
+                   const FLOAT_T * const restrict cwm, int length, FLOAT_T *restrict jaccardValue){
     /*For a particular region of the importance scores, calculate the continuous
     * jaccard similarity. Returns a single number that corresponds to the formula in
     * the modisco paper, namely that
@@ -65,7 +65,8 @@ void jaccardRegion(FLOAT_T *importanceScores, FLOAT_T scaleFactor,
 
 }
 
-void sumRegion(FLOAT_T *values, int length, FLOAT_T *out){
+void sumRegion(const FLOAT_T * const restrict values,
+               int length, FLOAT_T *restrict out){
     /*
      * For an array values of shape (length, 4), calculates the sum of
      * the absolute values of that array. Stores the result in out.
@@ -80,8 +81,9 @@ void sumRegion(FLOAT_T *values, int length, FLOAT_T *out){
 }
 
 
-void slidingJaccard(FLOAT_T *importanceScores, int importanceLength,
-                    FLOAT_T *cwm, int cwmLength, FLOAT_T *jaccardOut, FLOAT_T *sumsOut){
+void slidingJaccard(const FLOAT_T * const restrict importanceScores, int importanceLength,
+                    const FLOAT_T * const restrict cwm, int cwmLength,
+                    FLOAT_T *restrict jaccardOut, FLOAT_T *restrict sumsOut){
     /*
      * The meat of the implementation. Given an array importanceScores of shape
      * (importanceLength, 4) and a cwm of shape (cwmLength, 4), calculate the

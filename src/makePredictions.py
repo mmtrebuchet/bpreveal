@@ -217,7 +217,7 @@ def main(config: dict):
                 pbar.update()
                 writer.addEntry(ret)
         # Done with the main loop, clean up the batcher.
-        logUtils.debug("Done with main loop.")
+        logUtils.debug("Done submitting queries. Draining batcher.")
         while not batcher.empty():
             # We've just run a batch. Write it out.
             ret = batcher.getOutput()

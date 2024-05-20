@@ -5,8 +5,11 @@
  *
  */
 
-void runRow(FLOAT_T *restrict source, FLOAT_T *restrict dest, int numRows, int numSourceCols,
-           int numDestCols, int depth, int *restrict rowIndexes, int *restrict colIndexes, int row){
+void runRow(const FLOAT_T * const restrict source, FLOAT_T *restrict dest,
+            int numRows, int numSourceCols, int numDestCols, int depth,
+            const int * const restrict rowIndexes,
+            const int * const restrict colIndexes,
+            int row){
     for(int destCol = 0; destCol < numDestCols; destCol++){
         for(int z = 0; z < depth; z++){
             int sr = rowIndexes[row];
@@ -20,8 +23,10 @@ void runRow(FLOAT_T *restrict source, FLOAT_T *restrict dest, int numRows, int n
     }
 }
 
-void runRowChar(unsigned char *restrict source, FLOAT_T *restrict dest, int numRows, int numSourceCols,
-           int numDestCols, int depth, int *restrict rowIndexes, int *restrict colIndexes, int row){
+void runRowChar(const unsigned char * const restrict source, FLOAT_T *restrict dest,
+                int numRows, int numSourceCols, int numDestCols, int depth,
+                const int * const restrict rowIndexes,
+                const int * const restrict colIndexes, int row){
     for(int destCol = 0; destCol < numDestCols; destCol++){
         for(int z = 0; z < depth; z++){
             int sr = rowIndexes[row];
@@ -35,8 +40,10 @@ void runRowChar(unsigned char *restrict source, FLOAT_T *restrict dest, int numR
     }
 }
 
-void slide(FLOAT_T *restrict source, FLOAT_T *restrict dest, int numRows, int numSourceCols,
-           int numDestCols, int depth, int *restrict rowIndexes, int *restrict colIndexes){
+void slide(const FLOAT_T * const restrict source, FLOAT_T *restrict dest,
+           int numRows, int numSourceCols, int numDestCols, int depth,
+           const int * const restrict rowIndexes,
+           const int * const restrict colIndexes){
     /**
     * source is a (numRows x numSourceCols x depth) array.
     * dest is a (numRows x numDestCols x depth) array.
@@ -56,8 +63,10 @@ void slide(FLOAT_T *restrict source, FLOAT_T *restrict dest, int numRows, int nu
     }
 }
 
-void slideChar(unsigned char *restrict source, FLOAT_T *restrict dest, int numRows, int numSourceCols,
-           int numDestCols, int depth, int *restrict rowIndexes, int *restrict colIndexes){
+void slideChar(const unsigned char * const restrict source, FLOAT_T *restrict dest,
+               int numRows, int numSourceCols, int numDestCols, int depth,
+               const int * const restrict rowIndexes,
+               const int * const restrict colIndexes){
     /**
     * source is a (numRows x numSourceCols x depth) array.
     * dest is a (numRows x numDestCols x depth) array.

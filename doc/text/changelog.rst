@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.2.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.2.0, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 4.2.0, 2024-05-20
+''''''''''''''''''''''''''
 
 NEW FEATURES:
     * The old ``plots.py`` package in the tools directory has been re-worked and is
@@ -28,10 +28,13 @@ ENHANCEMENTS:
     * Upgraded to Python 3.12 and Tensorflow 2.16. This required a bit of messing about
       with keras (BPReveal is still using the old Keras and won't switch until a major
       version goes by.)
+    * The :py:func:`plotTraces<bpreveal.gaOptimize.plotTraces>` function now accepts
+      color specs of the form used by the :py:mod:`colors<bpreveal.colors>` module.
 
 BREAKING CHANGES:
     * The upgrade to Tensorflow 2.16 has not been seamless. If you want to import
-      anything from Keras, you have to instead import tf_keras.
+      anything from Keras, you have to instead import tf_keras and deal with really
+      spotty documentation.
     * Some of the type names in :py:mod:`gaOptimize<bpreveal.gaOptimize>` were changed
       to UPPER_CASE.
 

@@ -19,6 +19,8 @@ _NORMAL_REGEXES = [
     re.compile(".*Could not find TensorRT.*"),
     re.compile(".*is called are written to STDERR.*"),
     re.compile(".*ReduceLROnPlateau reducing.*"),
+    re.compile(".*does not guarantee that XLA will be used.*"),
+    re.compile("^I0000 00:00.*StreamExecutor device.*"),
     re.compile("^DEBUG.*")]
 
 

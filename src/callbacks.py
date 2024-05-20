@@ -207,7 +207,7 @@ class DisplayCallback(Callback):
         if len(list(self.printLocationsEpoch.keys())) == 0:
             # We haven't calculated any print locations yet.
             self._calcPositions(logs)
-        if (time.perf_counter() - self.lastBatchEndTime > 1)\
+        if (time.perf_counter() - self.lastBatchEndTime > 1.0)\
                 or batch in [self.numBatches - 1, 0]:
             # Only print once per second, or if we're on the first
             # or last batch.
@@ -226,7 +226,7 @@ class DisplayCallback(Callback):
         self.firstValBatchTime = min(time.perf_counter(), self.firstValBatchTime)
         self.lastValBatchTime = time.perf_counter()
         # pylint: enable=attribute-defined-outside-init
-        if (time.perf_counter() - self.lastValBatchEndTime > 0.1) \
+        if (time.perf_counter() - self.lastValBatchEndTime > 1.0) \
                 or batch in [self.numValBatches - 1, 0]:
             self.lastValBatchEndTime = time.perf_counter()
             lines = [((max(self.printLocationsBatch.values()), 1, "Eval batch"),
