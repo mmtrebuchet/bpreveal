@@ -1,7 +1,7 @@
 """Types that are used throughout BPReveal."""
 from __future__ import annotations
 from typing import TypeAlias, Literal
-from typing_extensions import TypedDict
+from typing import TypedDict
 import numpy as np
 import numpy.typing as npt
 
