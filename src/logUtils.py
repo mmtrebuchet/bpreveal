@@ -26,7 +26,7 @@ If you're feeling lazy, you can even ``from bpreveal import logUtils as logging`
 """
 import logging as _logging
 import sys as _sys
-import _thread
+import _thread  # pylint: disable=import-private-name
 from collections.abc import Iterable
 import traceback as _traceback
 from logging import DEBUG

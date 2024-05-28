@@ -23,9 +23,25 @@
   | "use-annotation-colors": <boolean>,
 
 <pisa-section> ::= {
-    "h5-name": <string>,
-  | "values": [<list-of-list-of-number>]
+    <pisa-rasterize-section>
+    <pisa-color-map-section>
+    <pisa-data-section>
 }
+
+
+
+<pisa-data-section> ::=
+    "h5-name": <string>
+  | "values": [<list-of-list-of-number>]
+
+<pisa-rasterize-section> ::=
+    <empty>
+  | "rasterize": <boolean>,
+
+<pisa-color-map-section> ::=
+    <empty>
+  | "color-map": "clip",
+  | "color-map": "noclip",
 
 <list-of-list-of-number> ::=
     <list-of-number>, <list-of-number>

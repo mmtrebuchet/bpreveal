@@ -216,30 +216,6 @@ def massageTickLabels(labelList: list[str]) -> list[str]:
     return labelsThousands
 
 
-def normalizeProfileSection(oldConfig: dict, newConfig: dict, group: str):
-    """Take a raw config dict and populate any defaults and load up bigwig data."""
-    # Do we need to load bigwig data?
-    newConfig[group]["show-sequence"] = oldConfig[group].get("show-sequence", False)
-    if "bigwig-name" in oldConfig[group]:
-        vals = loadFromBigwig(oldConfig[group]["bigwig-name"],
-                              oldConfig["coordinates"]["genome-window-start"],
-                              oldConfig["coordinates"]["genome-window-chrom"],
-                              newConfig["pisa"]["values"].shape[1])
-        newConfig[group]["values"] = vals
-    else:
-        newConfig[group]["values"] = np.array(oldConfig[group]["values"])
-
-    # Convert the color spec into a list for each base.
-    if newConfig[group]["show-sequence"]:
-        backupColor = bprcolors.dnaWong
-    else:
-        backupColor = bprcolors.defaultProfile
-
-    newConfig[group]["color"] = normalizeProfileColor(
-        oldConfig[group].get("color", backupColor),
-        len(newConfig[group]["values"]))
-
-
 def buildConfig(oldConfig: dict) -> dict:
     """Read in a config and add any missing data.
 
@@ -248,6 +224,71 @@ def buildConfig(oldConfig: dict) -> dict:
         messing with the original data.
 
     This loads in profile and pisa data from files and expands the color specs.
+
+    The returned config will have the following structure:
+
+    .. highlight:: none
+
+    ::
+
+        {
+            "pisa": {
+                "values": <numpy array of pisa values, from loadPisa>,
+                "color-map": <Colormap, default: bpreveal.colors.pisaClip>,
+                "rasterize": <boolean, default True>
+            },
+            "coordinates": {
+                "sequence": <string>,
+                "midpoint-offset": <integer>,
+                "input-slice-width": <integer>,
+                "output-slice-width": <integer>,
+                "genome-window-start": <integer>,
+                "genome-window-chrom": <string>
+            },
+            "importance": {
+                "values": <numpy array>,
+                "show-sequence": <boolean>,
+                "color": [<list of DNA_COLOR_SPEC_T>]
+            },
+            "predictions": {
+                "values": <numpy array>,
+                "show-sequence": <boolean>,
+                "color": [<list of DNA_COLOR_SPEC_T>]
+            },
+            "annotations": {
+                "name-colors": <dict[str, COLOR_SPEC_T]>,
+                "custom": [<list of {"start": <integer>, "end": <integer>,
+                                     "name": <string>, "color": <COLOR_SPEC_T>}>]
+            },
+            "figure": {
+                "grid-mode": <string, default "on">,
+                "diagonal-mode": <string: default "edge">,
+                "bottom": <fraction>,
+                "left": <fraction>,
+                "width": <fraction>,
+                "height": <fraction>,
+                "annotation-height": <fraction, default 0.13>
+                "tick-font-size": <integer, default FONT_SIZE_TICKS>,
+                "label-font-size": <integer, default FONT_SIZE_LABELS>,
+                "miniature": <boolean, default False>,
+                "color-span": <fraction>
+            },
+            "use-annotation-colors": <boolean, default False>,
+            "min-value": <number>
+        }
+
+    Note that ``"grid-mode"`` and ``"diagonal-mode"`` will only be present if the
+    configuration is for a PISA plot,
+    and ``"use-annotation-colors"`` and ``"min-value"`` will only be present if
+    the configuration is for a PISA graph.
+
+    The test to see if a configuration is for a graph is whether it contains a
+    ``"min-value"`` key. If it does, it's a graph config. If not, it's a plot config.
+
+    .. note::
+        The returned configuration will NOT validate as a json, because it contains
+        numpy arrays.
+
     """
     oldCoords = oldConfig["coordinates"]
     newCoords = {
@@ -288,6 +329,18 @@ def buildConfig(oldConfig: dict) -> dict:
     else:
         newConfig["pisa"]["values"] = np.array(oldConfig["pisa"]["values"])
 
+    match oldConfig["pisa"].get("color-map", "clip"):
+        case "clip":
+            newConfig["pisa"]["color-map"] = bprcolors.pisaClip
+        case "noclip":
+            newConfig["pisa"]["color-map"] = bprcolors.pisaNoClip
+        case _:
+            logUtils.debug("Did not get a string color map, "
+                           "assuming it is a matplotlib.colors.Colormap")
+            newConfig["pisa"]["color-map"] = oldConfig["pisa"]["color-map"]
+    newConfig["pisa"]["rasterize"] = oldConfig["pisa"].get("rasterize", True)
+
+    # Now profile and importance data.
     normalizeProfileSection(oldConfig, newConfig, "importance")
     normalizeProfileSection(oldConfig, newConfig, "predictions")
 
@@ -319,6 +372,30 @@ def loadFromBigwig(bwFname: str, start: int, chrom: str, length: int) -> PRED_AR
     impScores = np.nan_to_num(impFp.values(chrom, start, start + length))
     impFp.close()
     return impScores
+
+
+def normalizeProfileSection(oldConfig: dict, newConfig: dict, group: str):
+    """Take a raw config dict and populate any defaults and load up bigwig data."""
+    # Do we need to load bigwig data?
+    newConfig[group]["show-sequence"] = oldConfig[group].get("show-sequence", False)
+    if "bigwig-name" in oldConfig[group]:
+        vals = loadFromBigwig(oldConfig[group]["bigwig-name"],
+                              oldConfig["coordinates"]["genome-window-start"],
+                              oldConfig["coordinates"]["genome-window-chrom"],
+                              newConfig["pisa"]["values"].shape[1])
+        newConfig[group]["values"] = vals
+    else:
+        newConfig[group]["values"] = np.array(oldConfig[group]["values"])
+
+    # Convert the color spec into a list for each base.
+    if newConfig[group]["show-sequence"]:
+        backupColor = bprcolors.dnaWong
+    else:
+        backupColor = bprcolors.defaultProfile
+
+    newConfig[group]["color"] = normalizeProfileColor(
+        oldConfig[group].get("color", backupColor),
+        len(newConfig[group]["values"]))
 
 
 def normalizeProfileColor(colorSpec: DNA_COLOR_SPEC_T | COLOR_SPEC_T |  # noqa
@@ -404,42 +481,8 @@ def loadPisaAnnotations(bedFname: str, nameColors: dict[str, COLOR_SPEC_T],
     return annotations
 
 
-def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
-                           colors: list[DNA_COLOR_SPEC_T], sequence: str,
-                           fontsize: int, fontSizeAxLabel: int, mini: bool):
-    """Plot a profile on a vertical axes.
-
-    :param profile: The values that should be plotted. This will be an ndarray.
-    :param axProfile: The axes to draw the profile on.
-    :param colors: A DNA_COLOR_SPEC_T for each base.
-    :param sequence: The underlying DNA sequence. Used to determine the colors
-        to use.
-    :param fontsize: How big do you want the tick labels, in points?
-    :param fontSizeAxLabel: How big do you want the word "Profile" on your axes?
-    :param mini: If True, then all ticks are removed and the axis is not labeled.
-    """
-    plotProfile = list(profile)
-    for pos, val in enumerate(plotProfile):
-        y = len(plotProfile) - pos - 1
-        axProfile.fill_betweenx([y, y + 1], val, step="post",
-                                color=parseSpec(colors[pos][sequence[pos]]),
-                                linewidth=0.1)
-    axProfile.set_ylim(0, len(profile))
-    axProfile.set_xlim(0, float(np.max(profile)))
-    if mini:
-        axProfile.set_xticks([])
-        axProfile.xaxis.set_visible(False)
-    else:
-        profileXticks = axProfile.get_xticks()
-        if max(profileXticks) > np.max(profile) * 1.01:
-            profileXticks = profileXticks[:-1]
-        axProfile.set_xticks(profileXticks, profileXticks, fontsize=fontsize,
-                             fontfamily=FONT_FAMILY)
-        axProfile.set_xlabel("Profile", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
-
-
 def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
-                   genomeStartX: int, genomeEndX: int, fontsize: int,
+                   genomeStartX: int, genomeEndX: int, fontSize: int,
                    mini: bool) -> dict[str, COLOR_SPEC_T]:
     """Apply the given annotations to the drawing area given by axAnnot.
 
@@ -450,7 +493,7 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
     :param genomeStartX: Where does the x-axis of the annotation axis start,
         in genomic coordinates?
     :param genomeEndX: Where does the annotation axis end, in genomic coordinates?
-    :param fontsize: How big do you want the text in the boxes?
+    :param fontSize: How big do you want the text in the boxes?
     :param mini: If True, then don't write the names of the annotations in the boxes.
     :return: A dict of the names that were actually plotted, mapping each name to its
         colorSpec.
@@ -480,7 +523,7 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
                      label=annot["name"], color=parseSpec(annot["color"]))
         if not mini:
             axAnnot.text((aleft + aright) / 2, offset + boxHeight / 2, annot["name"],
-                     fontstyle="italic", fontsize=fontsize, fontfamily=FONT_FAMILY,
+                     fontstyle="italic", fontsize=fontSize, fontfamily=FONT_FAMILY,
                      ha="center", va="center")
         usedNames[annot["name"]] = annot["color"]
         offset -= boxHeight * 1.5
@@ -490,8 +533,10 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
 
 def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
                 diagMode: Literal["on"] | Literal["off"] | Literal["edge"],
-                gridMode: Literal["on"] | Literal["off"], fontsize: int,
-                fontSizeAxLabel: int, genomeWindowStart: int, mini: bool) -> ScalarMappable:
+                gridMode: Literal["on"] | Literal["off"], fontSizeTicks: int,
+                fontSizeAxLabel: int, genomeWindowStart: int, mini: bool,
+                cmap: mplcolors.Colormap = bprcolors.pisaClip,
+                rasterize: bool = True) -> ScalarMappable:
     """Plot the pisa data on an axes.
 
     :param shearMat: The PISA data to actually plot, already sheared and cropped.
@@ -505,18 +550,22 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
         indicate where the diagonal is, but the middle of the plot will not have
         a diagonal line.
     :param gridMode: Should a grid be drawn? Options are "on" or "off".
-    :param fontsize: How big should the text be on the ticks, in points?
+    :param fontSizeTicks: How big should the text be on the ticks, in points?
     :param fontSizeAxLabel: How big should the font size be for labels, in points?
     :param genomeWindowStart: Where does the x-axis of shearMat start, in genomic
         coordinates?
     :param mini: If True, then draw a plot that works better as a half-page visual.
         The axes are simplified and the annotation text is moved to a separate legend.
+    :param cmap: The color map to use. Defaults to
+        :py:data:`pisaClip<bpreveal.colors.pisaClip>`.
+    :param rasterize: Should the boxes be rendered down to a pixel-based image?
+        Rasterizing can make large pisa plots much easier to work with downstream, but
+        it makes them uneditable.
     :return: A mappable that can be used to generate the color bar.
     """
     xlen = shearMat.shape[1]
     axStartY = (xlen - shearMat.shape[0]) // 2
     axStopY = axStartY + shearMat.shape[0]
-    cmap = bprcolors.pisaClip
 
     plotMat = np.array(shearMat)
     plotMat *= math.log10(math.e) * 10
@@ -548,7 +597,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
     ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart + 1,
                       genomeWindowStart + shearMat.shape[0], numYTicks, True)
     ticksY = [x + axStartY + 0.5 for x in ticksY]
-    axPisa.set_yticks(ticksY, tickLabelsY, fontsize=fontsize, fontfamily=FONT_FAMILY)
+    axPisa.set_yticks(ticksY, tickLabelsY, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
     axPisa.set_ylim(axStopY - 0.5, axStartY + 0.5)
     axPisa.set_xlim(0.5, xlen - 0.5)
     match gridMode:
@@ -558,24 +607,121 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
             pass
     norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
     smap = ScalarMappable(norm=norm, cmap=cmap)
-    axPisa.set_rasterization_zorder(0)
+    if rasterize:
+        axPisa.set_rasterization_zorder(0)
     return smap
 
 
-def addCbar(pisaCax: ScalarMappable, axCbar: AXES_T, fontSize: int,
+def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
+                 colorBlocks: list[tuple[int, int, COLOR_SPEC_T]],
+                 lineWidth: float, trim: int, ax: AXES_T,
+                 cmap: mplcolors.Colormap = bprcolors.pisaClip,
+                 rasterize: bool = True) -> ScalarMappable:
+    """Draw a graph representation of a PISA matrix.
+
+    :param similarityMat: The PISA array, already sheared. It should be square.
+    :param minValue: PISA values less than this will not be plotted at all.
+    :param colorSpan: Values higher than this will be clipped.
+    :param colorBlocks: Regions of the plot that override the color of the lines.
+        These are tuples of (start, end, (r, g, b)).
+        If the origin of a line overlaps with a ColorBlock, then its color is set
+        to the rgb color in the block.
+    :type colorBlocks: list[tuple[int, int,
+        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]]
+    :param lineWidth: The thickness of the drawn lines. For large figures,
+        thicker lines avoid Moiré patterns.
+    :param trim: The similarity matrix may be bigger than the area you want to
+        show on the plot. This allows lines to go off the edge of the page
+        and makes it clear that a motif's effect extends to bases in the output
+        that are not seen in the figure. ``trim`` bases on each side will not
+        be shown on the x-axis, but the information about them contained in
+        ``similarityMat`` will be used to draw lines that go off the edge.
+    :param ax: The axes to draw on. The xlim and ylim will be clobbered by this function.
+    :param cmap: (Optional) The colormap to use for the graph. Note that
+        ``colorBlocks`` overrides the colormap wherever they occur.
+    :param rasterize: Should the lines be rendered down to a pixel-based image?
+        Rasterizing can make large pisa graphs much easier to work with downstream, but
+        it makes them uneditable.
+    """
+
+    plotMat = np.array(similarityMat)
+    # convert into dB
+    plotMat *= math.log10(math.e) * 10
+    colorSpan *= math.log10(math.e) * 10
+    minValue *= math.log10(math.e) * 10
+
+    def addLine(xLower, xUpper, value):
+        if abs(value) < minValue:
+            return False
+        if value < 0:
+            value += minValue
+        elif value > 0:
+            value -= minValue
+        if value > colorSpan:
+            value = colorSpan
+        if value < -colorSpan:
+            value = -colorSpan
+        xmax = 1
+        turnPoint = 0.5
+        verts = [
+            (xLower + 0.5, 0.),
+            (xLower + 0.5, xmax * turnPoint),
+            (xUpper + 0.5, xmax * turnPoint),
+            (xUpper + 0.5, xmax)]
+        codes = [
+            Path.MOVETO,
+            Path.CURVE4,
+            Path.CURVE4,
+            Path.CURVE4]
+        path = Path(verts, codes)
+        normValue = (value + colorSpan) / (2 * colorSpan)
+        normα = abs(value / colorSpan)
+
+        color = cmap(normValue, alpha=normα)
+        for colorBlock in colorBlocks:
+            start, end, colorSpec = colorBlock
+            r, g, b = parseSpec(colorSpec)[:3]
+            if start <= xLower < end:
+                color = (r, g, b, normα)
+                break
+
+        curPatch = patches.PathPatch(path, facecolor="none", lw=lineWidth,
+                                     edgecolor=color, zorder=-10)
+        return (abs(value), curPatch)
+    patchList = []
+
+    for row in logUtils.wrapTqdm(range(plotMat.shape[0]), "DEBUG"):
+        for col in range(plotMat.shape[1]):
+            if curPatch := addLine(col - trim, row - trim,
+                                   plotMat[row, col]):
+                patchList.append(curPatch)
+    psSorted = sorted(patchList, key=lambda x: x[0])
+    for p in logUtils.wrapTqdm(psSorted, "DEBUG"):
+        ax.add_patch(p[1])
+    ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5 - 2 * trim)
+    ax.set_ylim(0, 1)
+    if rasterize:
+        ax.set_rasterization_zorder(0)
+    # Last quick thing to do - generate a color map.
+    norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
+    smap = ScalarMappable(norm=norm, cmap=cmap)
+    return smap
+
+
+def addCbar(pisaCax: ScalarMappable, axCbar: AXES_T, fontSizeTicks: int,
             fontSizeAxLabel: int, mini: bool):
     """Add a color bar to the given axes.
 
     :param pisaCax: The mappable generated by the PISA plotting/graphing function.
     :param axCbar: The axes on which the color bar will be drawn.
-    :param fontSize: How big should the tick labels be, in points?
+    :param fontSizeTicks: How big should the tick labels be, in points?
     :param fontSizeAxLabel: How big should the label at the bottom be?
     :param mini: If True, squish the label a bit for printing in a smaller space.
     """
     cbar = plt.colorbar(mappable=pisaCax, cax=axCbar)
     bottom, top = axCbar.get_ylim()
     axCbar.set_yticks(cbar.get_ticks(), [f"{x:0.1f}" for x in cbar.get_ticks()],
-                      fontsize=fontSize, fontfamily=FONT_FAMILY)
+                      fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
     axCbar.set_ylim(bottom, top)
     if mini:
         axCbar.set_xlabel("PISA\neffect\n(dBr)", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
@@ -583,14 +729,14 @@ def addCbar(pisaCax: ScalarMappable, axCbar: AXES_T, fontSize: int,
         axCbar.set_xlabel("PISA effect\n(dBr)", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
 
 
-def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontsize: int):
+def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontSize: int):
     """Add a legend to map the annotations to colors.
 
     :param usedNames: The names that are present in this view. Comes from
         :py:func:`~addAnnotations`.
     :type usedNames: dict[str, :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]
     :param axLegend: The axes to draw the legend on.
-    :param fontsize: How big do you want the text, in points?
+    :param fontSize: How big do you want the text, in points?
     """
     offset = 1
     for name, color in usedNames.items():
@@ -598,7 +744,7 @@ def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontsize: in
                       [offset, offset + 1, offset + 1, offset],
                       color=parseSpec(color))
         axLegend.text(0.5, offset + 0.5, name, fontstyle="italic",
-                      fontsize=fontsize, fontfamily=FONT_FAMILY,
+                      fontsize=fontSize, fontfamily=FONT_FAMILY,
                       ha="center", va="center")
         offset += 2
     axLegend.set_xlim(0, 1)
@@ -749,6 +895,40 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     return axGraph, axImportance, axPredictions, axAnnot, axCbar, axLegend
 
 
+def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
+                           colors: list[DNA_COLOR_SPEC_T], sequence: str,
+                           fontSizeTicks: int, fontSizeAxLabel: int, mini: bool):
+    """Plot a profile on a vertical axes.
+
+    :param profile: The values that should be plotted. This will be an ndarray.
+    :param axProfile: The axes to draw the profile on.
+    :param colors: A DNA_COLOR_SPEC_T for each base.
+    :param sequence: The underlying DNA sequence. Used to determine the colors
+        to use.
+    :param fontSizeTicks: How big do you want the tick labels, in points?
+    :param fontSizeAxLabel: How big do you want the word "Profile" on your axes?
+    :param mini: If True, then all ticks are removed and the axis is not labeled.
+    """
+    plotProfile = list(profile)
+    for pos, val in enumerate(plotProfile):
+        y = len(plotProfile) - pos - 1
+        axProfile.fill_betweenx([y, y + 1], val, step="post",
+                                color=parseSpec(colors[pos][sequence[pos]]),
+                                linewidth=0.1)
+    axProfile.set_ylim(0, len(profile))
+    axProfile.set_xlim(0, float(np.max(profile)))
+    if mini:
+        axProfile.set_xticks([])
+        axProfile.xaxis.set_visible(False)
+    else:
+        profileXticks = axProfile.get_xticks()
+        if max(profileXticks) > np.max(profile) * 1.01:
+            profileXticks = profileXticks[:-1]
+        axProfile.set_xticks(profileXticks, profileXticks, fontsize=fontSizeTicks,
+                             fontfamily=FONT_FAMILY)
+        axProfile.set_xlabel("Profile", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
+
+
 def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], sequence: str,
                              genomeStartX: int, genomeEndX: int, axSeq: AXES_T,
                              axGraph: AXES_T | None, fontSizeTicks: int, fontSizeAxLabel: int,
@@ -808,93 +988,4 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
             axGraph.tick_params(axis="x", which="major", length=0, labelbottom=False)
     axSeq.set_ylabel(yAxisLabel, fontsize=fontSizeAxLabel,
                      fontfamily=FONT_FAMILY, rotation=0, loc="bottom", labelpad=40)
-
-
-def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
-                 colorBlocks: list[tuple[int, int, COLOR_SPEC_T]],
-                 lineWidth: float, trim: int, ax: AXES_T) -> ScalarMappable:
-    """Draw a graph representation of a PISA matrix.
-
-    :param similarityMat: The PISA array, already sheared. It should be square.
-    :param minValue: PISA values less than this will not be plotted at all.
-    :param colorSpan: Values higher than this will be clipped.
-    :param colorBlocks: Regions of the plot that override the color of the lines.
-        These are tuples of (start, end, (r, g, b)).
-        If the origin of a line overlaps with a ColorBlock, then its color is set
-        to the rgb color in the block.
-    :type colorBlocks: list[tuple[int, int,
-        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]]
-    :param lineWidth: The thickness of the drawn lines. For large figures,
-        thicker lines avoid Moiré patterns.
-    :param trim: The similarity matrix may be bigger than the area you want to
-        show on the plot. This allows lines to go off the edge of the page
-        and makes it clear that a motif's effect extends to bases in the output
-        that are not seen in the figure. ``trim`` bases on each side will not
-        be shown on the x-axis, but the information about them contained in
-        ``similarityMat`` will be used to draw lines that go off the edge.
-    :param ax: The axes to draw on. The xlim and ylim will be clobbered by this function.
-    """
-    cmap = bprcolors.pisaClip
-
-    plotMat = np.array(similarityMat)
-    # convert into dB
-    plotMat *= math.log10(math.e) * 10
-    colorSpan *= math.log10(math.e) * 10
-    minValue *= math.log10(math.e) * 10
-
-    def addLine(xLower, xUpper, value):
-        if abs(value) < minValue:
-            return False
-        if value < 0:
-            value += minValue
-        elif value > 0:
-            value -= minValue
-        if value > colorSpan:
-            value = colorSpan
-        if value < -colorSpan:
-            value = -colorSpan
-        xmax = 1
-        turnPoint = 0.5
-        verts = [
-            (xLower + 0.5, 0.),
-            (xLower + 0.5, xmax * turnPoint),
-            (xUpper + 0.5, xmax * turnPoint),
-            (xUpper + 0.5, xmax)]
-        codes = [
-            Path.MOVETO,
-            Path.CURVE4,
-            Path.CURVE4,
-            Path.CURVE4]
-        path = Path(verts, codes)
-        normValue = (value + colorSpan) / (2 * colorSpan)
-        normα = abs(value / colorSpan)
-
-        color = cmap(normValue, alpha=normα)
-        for colorBlock in colorBlocks:
-            start, end, colorSpec = colorBlock
-            r, g, b = parseSpec(colorSpec)[:3]
-            if start <= xLower < end:
-                color = (r, g, b, normα)
-                break
-
-        curPatch = patches.PathPatch(path, facecolor="none", lw=lineWidth,
-                                     edgecolor=color, zorder=-10)
-        return (abs(value), curPatch)
-    patchList = []
-
-    for row in logUtils.wrapTqdm(range(plotMat.shape[0]), "DEBUG"):
-        for col in range(plotMat.shape[1]):
-            if curPatch := addLine(col - trim, row - trim,
-                                   plotMat[row, col]):
-                patchList.append(curPatch)
-    psSorted = sorted(patchList, key=lambda x: x[0])
-    for p in logUtils.wrapTqdm(psSorted, "DEBUG"):
-        ax.add_patch(p[1])
-    ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5 - 2 * trim)
-    ax.set_ylim(0, 1)
-    ax.set_rasterization_zorder(0)
-    # Last quick thing to do - generate a color map.
-    norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
-    smap = ScalarMappable(norm=norm, cmap=cmap)
-    return smap
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

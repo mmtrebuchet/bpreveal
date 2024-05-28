@@ -48,7 +48,7 @@ fail-under=10
 #from-stdin=
 
 # Files or directories to be skipped. They should be base names, not paths.
-ignore=CVS,shap.py,schema.py,tools,makePredictionsBed.py,makePredictionsFasta.py
+ignore=CVS,schema.py,tools,makePredictionsBed.py,makePredictionsFasta.py
 
 # Add files or directories matching the regular expressions patterns to the
 # ignore-list. The regex matches against paths and can be in Posix or Windows
@@ -83,18 +83,22 @@ limit-inference-results=100000
 
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
-load-plugins=pylint.extensions.docparams,
-             pylint.extensions.docstyle,
-             pylint.extensions.redefined_variable_type,
+load-plugins=pylint.extensions.bad_builtin,
              pylint.extensions.check_elif,
              pylint.extensions.code_style,
              pylint.extensions.comparison_placement,
              pylint.extensions.confusing_elif,
              pylint.extensions.consider_refactoring_into_while_condition,
              pylint.extensions.dict_init_mutate,
+             pylint.extensions.docparams,
+             pylint.extensions.docstyle,
+             pylint.extensions.dunder,
              pylint.extensions.empty_comment,
              pylint.extensions.eq_without_hash,
+             pylint.extensions.overlapping_exceptions,
+             pylint.extensions.private_import,
              pylint.extensions.redefined_loop_name,
+             pylint.extensions.redefined_variable_type,
              pylint.extensions.set_membership,
              pylint.extensions.typing
 

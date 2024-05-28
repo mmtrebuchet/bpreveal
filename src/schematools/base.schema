@@ -29,28 +29,28 @@
             "type": "object",
             "properties": {
                 "h5-name" : {"type": "string"},
-                "values": {
-                    "$comment": {"type": "array",
-                        "items": {
-                            "type": "array",
-                            "items": {"type": "number"}
-                        }
-                    }
-                },
-                "colors": {"type": "array",
-                    "items": {
+                "values": {"oneOf": [
+                    {
+                        "type": "ndarray"
+                    },
+                    {
                         "type": "array",
-                        "items": {"$ref": "#/definitions/color-spec"}
+                        "items": {"type": "array", "items": {"type": "number"}}
                     }
-                }
+                ]},
+                "color-map": {
+                    "oneOf": [{"type": "string", "enum": ["clip", "noclip"]},
+                              {"type": "colormap"}]
+                },
+                "rasterize": {"type": "boolean"}
             },
             "oneOf": [
                 {
                     "required": ["h5-name"],
-                     "not": {"required": ["pisa-data"]}
+                     "not": {"required": ["values"]}
                 },
                 {
-                    "required": ["pisa-data"],
+                    "required": ["values"],
                     "not": {"required": ["h5-name"]}
                 }
             ],
@@ -79,8 +79,10 @@
             "type": "object",
             "properties": {
                 "bigwig-name": {"type": "string"},
-                "values": {"$comment": {"type": "array",
-                           "items": {"type": "number"}}},
+                "values": {"oneOf": [
+                    {"type": "ndarray"},
+                    {"type": "array", "items": {"type": "number"}}
+                ]},
                 "show-sequence": {"type": "boolean"},
                 "color": {"oneOf": [
                     {"$ref": "#/definitions/color-spec"},
@@ -97,34 +99,43 @@
         },
 
         "color-spec": {
-            "type": "object",
-            "properties": {
-                "rgb": {
+            "oneOf": [
+                {
                     "type": "array",
                     "minItems": 3,
-                    "maxItems": 3,
-                    "items": {"type": "number"}
-                },
-                "rgba": {
-                    "type": "array",
-                    "minItems": 4,
                     "maxItems": 4,
                     "items": {"type": "number"}
                 },
-                "tol": {"type": "integer"},
-                "tol-light": {"type": "integer"},
-                "ibm": {"type": "integer"},
-                "wong": {"type": "integer"}
-            },
-            "oneOf": [
-                {"required": ["rgb"]},
-                {"required": ["rgba"]},
-                {"required": ["tol"]},
-                {"required": ["tol-light"]},
-                {"required": ["ibm"]},
-                {"required": ["wong"]}
-            ],
-            "additionalProperties": false
+                {
+                    "type": "object",
+                    "properties": {
+                        "rgb": {
+                            "type": "array",
+                            "minItems": 3,
+                            "maxItems": 3,
+                            "items": {"type": "number"}
+                        },
+                        "rgba": {
+                            "type": "array",
+                            "minItems": 4,
+                            "maxItems": 4,
+                            "items": {"type": "number"}
+                        },
+                        "tol": {"type": "integer"},
+                        "tol-light": {"type": "integer"},
+                        "ibm": {"type": "integer"},
+                        "wong": {"type": "integer"}
+                    },
+                    "oneOf": [
+                        {"required": ["rgb"]},
+                        {"required": ["rgba"]},
+                        {"required": ["tol"]},
+                        {"required": ["tol-light"]},
+                        {"required": ["ibm"]},
+                        {"required": ["wong"]}
+                    ],
+                    "additionalProperties": false}
+            ]
         },
         "sequence-color-spec": {
             "type": "object",

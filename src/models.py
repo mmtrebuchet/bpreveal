@@ -5,7 +5,7 @@ from tf_keras.backend import int_shape
 # from tensorflow.keras.backend import int_shape
 import tf_keras.layers as klayers
 import tf_keras.models as kmodels
-from bpreveal import layers
+from bpreveal import layers as bprlayers
 from bpreveal import logUtils
 
 
@@ -128,30 +128,30 @@ def _buildSimpleTransformationModel(architectureSpecification: dict,
         match layerType:
             case "linear":
                 activationLayers.append(
-                    layers.LinearRegression(
+                    bprlayers.LinearRegression(
                             name=f"regress_linear_{headName}")  # noqa
                         (inputLayer))  # noqa
             case "sigmoid":
-                inputLinear = layers.LinearRegression(
+                inputLinear = bprlayers.LinearRegression(
                         name=f"sigmoid_in_linear_{headName}")\
                     (inputLayer)  # noqa
                 sigmoided = klayers.Activation(
                         activation=keras.activations.sigmoid,  # noqa
                         name=f"sigmoid_activation_{headName}")\
                     (inputLinear)  # noqa
-                outputLinear = layers.LinearRegression(
+                outputLinear = bprlayers.LinearRegression(
                         name=f"sigmoid_out_linear_{headName}")\
                     (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
             case "relu":
-                inputLinear = layers.LinearRegression(
+                inputLinear = bprlayers.LinearRegression(
                         name=f"relu_in_linear_{headName}")\
                     (inputLayer)  # noqa
                 sigmoided = klayers.Activation(
                         activation=keras.activations.relu,  # noqa
                         name=f"relu_activation_{headName}")\
                     (inputLinear)  # noqa
-                outputLinear = layers.LinearRegression(
+                outputLinear = bprlayers.LinearRegression(
                         name=f"relu_out_linear_{headName}")\
                     (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
