@@ -110,7 +110,7 @@ def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
 
 
 def getSequences(bed: pybedtools.BedTool, genome: pysam.FastaFile, outputLength: int,
-                 inputLength: int, jitter: int, revcomp: bool):
+                 inputLength: int, jitter: int, revcomp: bool) -> ONEHOT_AR_T:
     """Extract sequences from the fasta.
 
     :param bed: A BedTool containing the regions to get sequence data for.
@@ -186,7 +186,7 @@ def getHead(bed: pybedtools.BedTool, bigwigFnames: list[str], outputLength: int,
     return headVals
 
 
-def writeH5(config: dict):
+def writeH5(config: dict) -> None:
     """Main method, load the config and then generate training data hdf5 files.
 
     :param config: The configuration json.
@@ -216,8 +216,8 @@ def writeH5(config: dict):
                     case 2:
                         revcomp = [1, 0]
                     case _:
-                        assert False, "Cannot automatically determine revcomp "\
-                                      "order with more than two tasks."
+                        raise ValueError("Cannot automatically determine revcomp "
+                                         "order with more than two tasks.")
         else:
             revcomp = False  # pylint: disable=redefined-variable-type
         headVals = getHead(regions, head["bigwig-files"], outputLength, jitter, revcomp)

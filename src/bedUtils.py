@@ -125,7 +125,7 @@ def tileSegments(inputLength: int, outputLength: int,
     padding = (inputLength - outputLength) // 2
     logUtils.debug(f"Calculated {padding=}")
 
-    def shrinkSegment(s: pybedtools.Interval):
+    def shrinkSegment(s: pybedtools.Interval) -> pybedtools.Interval:
         newEnd = s.end - padding
         newStart = s.start + padding
         if newEnd - newStart < outputLength:
@@ -213,7 +213,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
     match mode:
         case "none":
             if end - start != width:
-                assert False, f"An input region is not the expected width: {interval}"
+                raise ValueError(f"An input region is not the expected width: {interval}")
         case "center":
             center = (end + start) // 2
             start = center - width // 2
@@ -222,7 +222,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
             start = start - width // 2
             end = start + width
         case _:
-            assert False, f"Unsupported resize mode: {mode}"
+            raise ValueError(f"Unsupported resize mode: {mode}")
     if start <= 0 or end >= genome.get_reference_length(interval.chrom):
         return False  # We're off the edge of the chromosome.
     return pybedtools.Interval(interval.chrom, start, end, name=interval.name,
@@ -231,7 +231,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
 
 def _metapeakThread(bwFname: str,
                     inQueue: multiprocessing.Queue,
-                    outQueue: multiprocessing.Queue):
+                    outQueue: multiprocessing.Queue) -> None:
     bigwigFp = pyBigWig.open(bwFname)
     totalProfile = None
     numQueries = 0
@@ -301,10 +301,10 @@ def metapeak(intervals: pybedtools.BedTool,
     for interval in intervalList:
         inQueue.put((interval.chrom, interval.start, interval.end, interval.strand),
                     timeout=QUEUE_TIMEOUT)
-    for i in range(numThreads):
+    for _ in range(numThreads):
         inQueue.put(None, timeout=QUEUE_TIMEOUT)  # We're done, send the termination signal.
     rets = []
-    for i in range(numThreads):
+    for _ in range(numThreads):
         rets.append(outQueue.get(timeout=QUEUE_TIMEOUT))
     for i in range(numThreads):
         pids[i].join(timeout=QUEUE_TIMEOUT)
@@ -398,13 +398,13 @@ class ParallelCounter:
             self.numInDeque += 1
             self.inFlight -= 1
 
-    def done(self):
+    def done(self) -> None:
         """Wrap up the show - close the child threads."""
         for _ in range(self.numThreads):
             self.inQueue.put(None)
         [x.join() for x in self.threads]  # pylint: disable=expression-not-assigned
 
-    def getResult(self):
+    def getResult(self) -> tuple[float, int]:
         """Get the next result.
 
         :return: A tuple of (counts, idx), where counts is the total counts

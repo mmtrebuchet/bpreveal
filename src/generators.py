@@ -7,6 +7,7 @@ import math
 import time
 import h5py
 import numpy as np
+from numpy._typing import NDArray
 import tf_keras as keras
 from bpreveal import logUtils
 from bpreveal.internal.constants import MODEL_ONEHOT_T, PRED_T
@@ -53,7 +54,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.addMeanCounts()
         logUtils.info("Batch generator initialized.")
 
-    def addMeanCounts(self):
+    def addMeanCounts(self) -> None:
         """For all heads, calculate the average number of reads over all regions.
 
         In the BPNet paper, it was shown that λ½ = ĉ/2, where ĉ is the average
@@ -76,7 +77,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         """How many *batches* of data are there in this Generator?"""
         return math.ceil(self.numRegions / self.batchSize)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple[NDArray, list[NDArray]]:
         """Get the next *batch* of data."""
         batchStart = idx * self.batchSize
         batchEnd = min((idx + 1) * self.batchSize, self.numRegions)
@@ -124,13 +125,12 @@ class H5BatchGenerator(keras.utils.Sequence):
         Δt = stopTime - startTime
         logUtils.debug(f"Loaded new batch in {Δt:5f} seconds.")
 
-    def _shiftSequence(self, regionIndexes, sliceCols):
+    def _shiftSequence(self, regionIndexes: NDArray, sliceCols: NDArray) -> None:
         # This is a good target for optimization - it takes multiple seconds!
         slideChar(self.fullSequences, self._allBatchSequences,
               regionIndexes, sliceCols)
-        # self._allBatchSequences = shuffledSeqs[:, sliceCols, :]
 
-    def _shiftData(self, regionIndexes, sliceCols):
+    def _shiftData(self, regionIndexes: NDArray, sliceCols: NDArray) -> None:
         # This is a big target for optimization - it takes seconds to load a batch.
         for headIdx, _ in enumerate(self.headList):
             slide(self.fullData[headIdx], self._allBatchValues[headIdx],
@@ -138,7 +138,7 @@ class H5BatchGenerator(keras.utils.Sequence):
             valSums = np.sum(self._allBatchValues[headIdx], axis=(1, 2))
             self._allBatchCounts[headIdx] = np.log(valSums)
 
-    def on_epoch_end(self):  # pylint: disable=invalid-name
+    def on_epoch_end(self) -> None:  # pylint: disable=invalid-name
         """When the epoch is done, re-jitter the data by calling refreshData."""
         self.refreshData()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

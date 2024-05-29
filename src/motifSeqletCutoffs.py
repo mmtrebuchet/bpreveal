@@ -128,7 +128,7 @@ from bpreveal import logUtils
 from bpreveal import motifUtils
 
 
-def main(config: dict):
+def main(config: dict) -> None:
     """Determine the cutoffs based on modisco outputs.
 
     :param config: A JSON object based on the motifSeqletCutoffs specification.

@@ -4,6 +4,7 @@ import curses
 import sys
 import argparse
 import re
+from typing import Any
 from bpreveal import logUtils
 # These will be initialized after we have a window.
 _COLOR_GREENBG = _COLOR_REDBG = _COLOR_ALARM = _COLOR_HIGHLIGHT = _COLOR_CRITICAL = None
@@ -62,7 +63,7 @@ class Screen:
     exitWhenDone = True
     """Should the screen ever exit after it gets the last line?"""
 
-    def __init__(self, stdscr, noDebug: bool, border: int, colSep: int,
+    def __init__(self, stdscr, noDebug: bool, border: int, colSep: int,  # noqa: ANN001
                  statusHeight: int, messageHeight: int | None):
         self.noDebug = noDebug
         self._border = border
@@ -167,7 +168,7 @@ class Screen:
         status = "Waiting for input."
         self.printString(1, 1, "S", status)
 
-    def _getWindowProperties(self, winName):
+    def _getWindowProperties(self, winName: str) -> tuple[Any, int, str]:
         match winName:
             case "B":
                 win = self._batchWin
@@ -202,12 +203,12 @@ class Screen:
                     win = self._debugWin
                 width = self._width - 2 * self._border
             case _:
-                assert False, f"No window for {winName}"
+                raise ValueError(f"No window for {winName}")
         assert win is not None, "No window initialized."
         return win, width, title
 
     def printString(self, row: int, col: int, winName: str, text: str,
-                    color: int | None = None):
+                    color: int | None = None) -> None:
         """Print a given string at a location in a window.
 
         :param row: What row within the window should the string start at?
@@ -234,7 +235,7 @@ class Screen:
         except curses.error:
             pass
 
-    def _drawBorders(self, highlightWin: str | None = None):
+    def _drawBorders(self, highlightWin: str | None = None) -> None:
         """Update all the borders, and highlight the label for the given window."""
         if highlightWin == "V":
             highlightWin = "B"
@@ -251,7 +252,7 @@ class Screen:
                 win.addstr(0, (width - (len(title) + 2)) // 2, " " + title + " ")
             win.refresh()
 
-    def _writeMessages(self):
+    def _writeMessages(self) -> None:
         """Write all of the messages in the message and debug buffers."""
         for i, msg in enumerate(self._messageBuffer):
             if isNormalMessage(msg):
@@ -265,7 +266,7 @@ class Screen:
                 self.printString(i + 1, 1, "D", msg)
             self._debugWin.refresh()
 
-    def updateStatus(self, winName: str):
+    def updateStatus(self, winName: str) -> None:
         """Update the status box to indicate which area is active.
 
         :param winName: A character, one of ``BλEMDX``
@@ -286,7 +287,7 @@ class Screen:
         elif winName in "FX":
             self.shutdown(winName)
 
-    def shutdown(self, winName: str):
+    def shutdown(self, winName: str) -> None:
         """Keep the display up for a bit, then close it out.
 
         :param winName: Either ``X`` or ``F``. If ``X``, make the window green
@@ -413,7 +414,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def runScreen(stdscr, args):
+def runScreen(stdscr: Any, args: argparse.Namespace) -> None:
     """Called by the wrapper, this constructs the screen and feeds it with stdin."""
     curses.curs_set(0)
     printer = Screen(stdscr, args.noDebug, 1, 0, 3, args.messageHeight)

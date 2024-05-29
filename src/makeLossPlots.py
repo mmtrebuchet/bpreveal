@@ -4,6 +4,7 @@ import json
 import re
 import math
 import argparse
+from matplotlib.figure import Figure
 import numpy as np
 import matplotlib.pyplot as plt
 from bpreveal import logUtils
@@ -44,7 +45,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def reweightCountsLosses(history: dict, lossTypes: list[list[str]]):
+def reweightCountsLosses(history: dict, lossTypes: list[list[str]]) -> list[float]:
     """Add corrections for the adaptive counts loss algorithm.
 
     :param history: The loss history, straight from the json.
@@ -101,7 +102,7 @@ def reweightCountsLosses(history: dict, lossTypes: list[list[str]]):
     return countsLossWeight
 
 
-def main():
+def main() -> None:
     """Make the plots."""
     args = getParser().parse_args()
     if args.verbose:
@@ -131,7 +132,7 @@ def main():
     fig.savefig(args.output, dpi=args.dpi)
 
 
-def plotLosses(lossTypes, history, startFrom):
+def plotLosses(lossTypes: list[list[str]], history: dict, startFrom: int) -> Figure:
     """Given all the loss data, plot them in a grid."""
     logUtils.info("Loss types: " + str(lossTypes))
     logUtils.info("History types: " + str(list(history.keys())))

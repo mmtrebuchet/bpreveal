@@ -70,7 +70,7 @@ import bpreveal.training
 # pylint: disable=duplicate-code
 
 
-def main(config):
+def main(config: dict) -> None:
     """Build and train the transformation model."""
     logUtils.setVerbosity(config["verbosity"])
     logUtils.debug("Initializing")

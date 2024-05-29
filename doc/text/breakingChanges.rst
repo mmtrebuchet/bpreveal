@@ -59,6 +59,14 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 BPReveal 4.x
 ------------
 
+BPReveal 4.3.0
+^^^^^^^^^^^^^^
+1. Some of the arguments in :py:mod:`internal.plotUtils<bpreveal.internal.plotUtils>`
+   were renamed to improve consistency.
+2. The internal implementation of transformation models was changed so that they can
+   be interpreted with shap. If you were messing with the internal layers in a
+   transformation model, they're different now.
+
 BPReveal 4.2.0
 ^^^^^^^^^^^^^^
 1. BPReveal now uses tensorflow 2.16 and Python 3.12. It still uses the legacy

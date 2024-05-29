@@ -22,16 +22,6 @@ logUtils.warning("The tools/plots.py module is deprecated and will be retired in
         "much better-organized. This module will not be maintained and will "
         "likely break as new features are added.")
 _seqCmap = {"A": (0, 158, 115), "C": (0, 114, 178), "G": (240, 228, 66), "T": (213, 94, 0)}
-# _seqCmap = {"A": (50, 173, 188), "C": (0, 79, 201), "G": (240, 193, 89), "T": (213, 59, 23)}
-# avgColors = [0,0,0]
-# deltas = [0, -35, 23]
-# for s in "ACGT":
-#     for i in range(3):
-#         avgColors[i] += _seqCmap[s][i]
-#         print(_seqCmap[s][i] + deltas[i], end = ' ')
-#     print()
-# for i in range(3):
-#     print(avgColors[i] / 4 - 113.25)
 
 cmapIbm = [[100, 143, 255],
            [120, 94, 240],
@@ -510,7 +500,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax, colors="seq",
             case dict():
                 rgb = colors[base]
             case _:
-                assert False
+                raise ValueError()
         return np.array(rgb) / 256.
 
     for predIdx in range(values.shape[0]):
@@ -939,13 +929,8 @@ def _getPisaGraphAxes(fig, bbox):
     axAnnot.set_axis_off()
     axGraph.set_yticks([])
     axProfile.set_xticks([])
-    # axSeq.set_frame_on(False)
     axSeq.set_yticks([])
     axAnnot.set_ylim(0, -1)
-    # axAnnot.set_axis_off()
-    # axProfile.set_yticks([])
-    # axProfile.set_frame_on(False)
-    # axProfile.xaxis.set_visible(False)
     return axGraph, axSeq, axProfile, axAnnot
 
 

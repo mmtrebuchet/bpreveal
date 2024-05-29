@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Make sure that all of the schemas are correct by testing them on known good and bad inputs."""
+# flake8: noqa: T201
 import json
 import os
 import argparse
 import jsonschema
 import bpreveal.schema as schemas
-
 p = argparse.ArgumentParser(description="Check the test cases for schemas.")
 p.add_argument("--show-correct", help="Show a note when a test is successful.",
                action="store_true", dest="showCorrect")

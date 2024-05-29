@@ -38,7 +38,7 @@ def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: s
         condaString += f"conda activate {envName}\n"
 
     return {"workDir": workingDirectory, "sourceShell": sourceShell, "condaString": condaString,
-            "gpuType": "a100_3g.20gb", "maxJobs": maxJobs}
+            "gpuType": "a100", "maxJobs": maxJobs}
 
 
 def configSlurmLocal(shellRcFiles: list[str] | str, envName: str, workingDirectory: str,
@@ -157,7 +157,7 @@ def jobsLocal(config: dict, tasks: list[str], jobName: str, ntasks: int | None =
     condaString = config["condaString"]
 
     if condaString[:6] == "module":
-        assert False, "Cannot run local jobs if the configuration specified 'ml'."
+        raise ValueError("Cannot run local jobs if the configuration specified 'ml'.")
 
     cmd = LOCAL_HEADER.format(
         sourcerc=config["sourceShell"], condastring=condaString)

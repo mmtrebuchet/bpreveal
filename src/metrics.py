@@ -107,6 +107,7 @@ import json
 import typing
 from multiprocessing import Process, Queue
 import sys
+from numpy._typing import NDArray
 import pyBigWig
 import numpy as np
 import scipy.stats
@@ -118,7 +119,7 @@ from bpreveal.internal.constants import QUEUE_TIMEOUT
 class Region:
     """A simple container from a line from a bed file."""
 
-    def __init__(self, line):
+    def __init__(self, line: str):
         lsp = line.split()
         self.chrom = lsp[0]
         self.start = int(lsp[1])
@@ -136,8 +137,8 @@ class MetricsCalculator:
     :param tid: The thread ID of this process.
     """
 
-    def __init__(self, referenceBwFname, predictedBwFname, applyAbs, inQueue,
-                 outQueue, tid):
+    def __init__(self, referenceBwFname: str, predictedBwFname: str, applyAbs: bool,
+                 inQueue: Queue, outQueue: Queue, tid: int):
         self.referenceBw = pyBigWig.open(referenceBwFname, "r")
         self.predictedBw = pyBigWig.open(predictedBwFname, "r")
         self.applyAbs = applyAbs
@@ -146,7 +147,7 @@ class MetricsCalculator:
         self.tid = tid
 
     def runRegions(self, regionReference: Region,
-                   regionPredicted: Region, regionID: typing.Any):
+                   regionPredicted: Region, regionID: typing.Any) -> None:
         """Run the calculation on a single region.
 
         :param regionReference: A region in the reference bigwig.
@@ -187,7 +188,7 @@ class MetricsCalculator:
         ret = (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCounts, predictedCounts)
         self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
-    def run(self):
+    def run(self) -> None:
         """Watch the input queue and run queries until you get the stop signal."""
         while True:
             match self.inQueue.get(timeout=QUEUE_TIMEOUT):
@@ -197,14 +198,14 @@ class MetricsCalculator:
                 case (regionRef, regionPred, regionID):
                     self.runRegions(regionRef, regionPred, regionID)
 
-    def finish(self):
+    def finish(self) -> None:
         """Wrap up shop, close the bigwigs."""
         self.referenceBw.close()
         self.predictedBw.close()
 
 
 def calculatorThread(referenceBwFname: str, predictedBwFname: str, applyAbs: bool,
-                     inQueue: Queue, outQueue: Queue, tid: int):
+                     inQueue: Queue, outQueue: Queue, tid: int) -> None:
     """Just spawns a MetricsCalculator and runs it.
 
     :param referenceBwFname: The file name of the reference bigwig.
@@ -220,7 +221,7 @@ def calculatorThread(referenceBwFname: str, predictedBwFname: str, applyAbs: boo
 
 
 def regionGenThread(regionsFname: str, regionQueue: Queue,
-                    numThreads: int, numberQueue: Queue):
+                    numThreads: int, numberQueue: Queue) -> None:
     """A thread to generate regions and stuff them in the regionQueue.
 
     :param regionsFname: The bed file to read in.
@@ -242,14 +243,14 @@ def regionGenThread(regionsFname: str, regionQueue: Queue,
     numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
     for i, r in enumerate(regions):
         regionQueue.put((r, r, i), timeout=QUEUE_TIMEOUT)
-    for i in range(numThreads):
+    for _ in range(numThreads):
         regionQueue.put(None, timeout=QUEUE_TIMEOUT)
     logUtils.debug("Generator done.")
 
 
 def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
                     header: bool = False, write: bool = True,
-                    outputFp: typing.TextIO = sys.stdout):
+                    outputFp: typing.TextIO = sys.stdout) -> None:
     """Given a vector of statistics, calculate percentile values.
 
     :param name: The name of the statistic being calculated. Used for output.
@@ -280,7 +281,7 @@ def percentileStats(name: str, vector: np.ndarray, jsonDict: dict,
 
 def receiveThread(numRegions: int, outputQueue: Queue,
                   skipZeroes: bool, jsonOutput: bool, jsonDict: dict,
-                  outputFile: str | None):
+                  outputFile: str | None) -> None:
     """Listen to the output from the calculator threads and process it.
 
     :param numRegions: How many total regions will be calculated?
@@ -315,7 +316,7 @@ def receiveThread(numRegions: int, outputQueue: Queue,
         referenceCounts[regionID] = referenceCount
         predictedCounts[regionID] = predictedCount
     if skipZeroes:
-        def norm(vector):
+        def norm(vector: NDArray) -> NDArray:
             return vector[np.isfinite(vector)]
         mnlls = norm(mnlls)
         jsds = norm(jsds)
@@ -354,7 +355,7 @@ def receiveThread(numRegions: int, outputQueue: Queue,
 
 
 def runMetrics(reference: str, predicted: str, regions: str, threads: int, applyAbs: bool,
-               skipZeroes: bool, jsonOutput: bool, outputFile: str | None):
+               skipZeroes: bool, jsonOutput: bool, outputFile: str | None) -> None:
     """Run the calculation.
 
     :param reference: The name of the bigwig file with reference data.
@@ -375,7 +376,7 @@ def runMetrics(reference: str, predicted: str, regions: str, threads: int, apply
     resultQueue = Queue()
     numberQueue = Queue()
     if not jsonOutput:
-        print(f"reference {reference} predicted {predicted} regions {regions}")
+        print(f"reference {reference} predicted {predicted} regions {regions}")  # noqa: T201
     regionThread = Process(target=regionGenThread,
                            args=(regions, regionQueue, threads, numberQueue),
                            daemon=True)
@@ -446,7 +447,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     """Run the whole thing."""
     args = getParser().parse_args()
     if args.verbose:

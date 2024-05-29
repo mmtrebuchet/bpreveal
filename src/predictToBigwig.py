@@ -276,7 +276,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     """Run the program."""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)

@@ -191,7 +191,7 @@ GENOME_NUCLEOTIDE_FREQUENCY: dict[str, list[float]] = {
 """The frequency of A, C, G, and T (in that order) in common reference genomes."""
 
 
-def setTensorflowLoaded():
+def setTensorflowLoaded() -> None:
     """Call this when you first load tensorflow."""
     global GLOBAL_TENSORFLOW_LOADED
     GLOBAL_TENSORFLOW_LOADED = True

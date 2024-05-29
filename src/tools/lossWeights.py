@@ -9,6 +9,7 @@ First, pick a counts-loss-weight that sounds reasonable, like 10. Train a model.
 Run this script on the history json from that training, giving it a desired
 ratio of counts to profile loss.
 """
+# flake8: noqa: T201
 import json
 import re
 import argparse

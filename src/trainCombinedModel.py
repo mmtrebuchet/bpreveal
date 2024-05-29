@@ -57,7 +57,7 @@ from bpreveal import logUtils
 # pylint: disable=duplicate-code
 
 
-def main(config):
+def main(config: dict) -> None:
     """Build and train a combined model."""
     logUtils.setVerbosity(config["verbosity"])
     logUtils.debug("Initializing")

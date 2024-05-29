@@ -42,7 +42,7 @@ _BPREVEAL_LOGGER = None
 _BPREVEAL_LOGGER_LOCK = threading.Lock()
 
 
-def _getCaller(offset=3):
+def _getCaller(offset: int = 3) -> tuple:
     """Returns a code and frame object for the lowest non-logging stack frame."""
     # pylint: disable=protected-access
     f = _sys._getframe(offset)
@@ -57,7 +57,7 @@ def _getCaller(offset=3):
     return None, None
 
 
-def _loggerFindCaller(stack_info=False, stacklevel=1):  # pylint: disable=invalid-name
+def _loggerFindCaller(stack_info=False, stacklevel=1):  # pylint: disable=invalid-name # noqa
     del stacklevel
     code, frame = _getCaller(4)
     sinfo = None
@@ -153,36 +153,36 @@ def getLogger() -> _logging.Logger:
         return _BPREVEAL_LOGGER
 
 
-def log(level: int | str, msg, *args, **kwargs):
+def log(level: int | str, msg: str, *args, **kwargs) -> None:
     """Log message at the given level."""
     if isinstance(level, str):
         level = _LEVEL_MAP[level]
     getLogger().log(level, msg, *args, **kwargs)
 
 
-def debug(msg, *args, **kwargs):
+def debug(msg: str, *args, **kwargs) -> None:
     """For nitty-gritty details."""
     logger = getLogger()
     logger.debug(msg, *args, **kwargs)
 
 
-def error(msg, *args, **kwargs):
+def error(msg: str, *args, **kwargs) -> None:
     """Something went horribly wrong."""
     getLogger().error(msg, *args, **kwargs)
 
 
-def critical(msg, *args, **kwargs):
+def critical(msg: str, *args, **kwargs) -> None:
     """The world is ending. This is not used by BPReveal."""
     getLogger().critical(msg, *args, **kwargs)
 
 
-def info(msg, *args, **kwargs):
+def info(msg: str, *args, **kwargs) -> None:
     """Normal progress messages."""
     logger = getLogger()
     logger.info(msg, *args, **kwargs)
 
 
-def warning(msg, *args, **kwargs):
+def warning(msg: str, *args, **kwargs) -> None:
     """Something the user should pay attention to."""
     getLogger().warning(msg, *args, **kwargs)
 
@@ -209,7 +209,7 @@ _THREAD_ID_MASK = 2 * _sys.maxsize + 1
 _log_counter_per_token = {}
 
 
-def logFirstN(level: int, msg: str, n: int, *args):
+def logFirstN(level: int, msg: str, n: int, *args: list) -> None:
     """Log 'msg % args' at level 'level' only first 'n' times.
 
     Not threadsafe.
@@ -226,13 +226,13 @@ def logFirstN(level: int, msg: str, n: int, *args):
     logIf(level, msg, count < n, *args)
 
 
-def logIf(level: str | int, msg: str, condition: bool, *args):
+def logIf(level: str | int, msg: str, condition: bool, *args: list) -> None:
     """Log 'msg % args' at level 'level' only if condition is fulfilled."""
     if condition:
         log(level, msg, *args)
 
 
-def _getFileAndLine():
+def _getFileAndLine() -> tuple[str, int]:
     """Returns (filename, linenumber) for the stack frame."""
     code, f = _getCaller()
     if not code:
@@ -245,7 +245,7 @@ def getVerbosity() -> int:
     return getLogger().getEffectiveLevel()
 
 
-def setVerbosity(userLevel: str | int):
+def setVerbosity(userLevel: str | int) -> None:
     """Set the verbosity for this BPReveal session.
 
     BPReveal uses the python logging module for its printing, and
@@ -264,7 +264,8 @@ def setVerbosity(userLevel: str | int):
     debug("Logging configured.")
 
 
-def setBooleanVerbosity(verbose: bool, verboseLevel: str = "INFO", quietLevel: str = "WARNING"):
+def setBooleanVerbosity(verbose: bool, verboseLevel: str = "INFO",
+                        quietLevel: str = "WARNING") -> None:
     """Instead of passing in an int or a string, use a boolean to set verbosity.
 
     :param verbose: Should the logging be verbose?
@@ -279,7 +280,7 @@ def setBooleanVerbosity(verbose: bool, verboseLevel: str = "INFO", quietLevel: s
         getLogger().setLevel(quietLevel)
 
 
-def _getThreadId():
+def _getThreadId() -> int:
     """Get id of current thread, suitable for logging as an unsigned quantity."""
     threadId = _thread.get_ident()
     return threadId & _THREAD_ID_MASK
@@ -316,7 +317,7 @@ def wrapTqdm(iterable: Iterable | int, logLevel: str | int = _logging.INFO,
     elif isinstance(logLevel, int):
         logLevelInternal: int = logLevel
     else:
-        assert False, "Invalid type passed to wrapTqdm"
+        raise TypeError(f"Invalid type ({type(logLevel)}) passed to wrapTqdm")
 
     if isinstance(iterable, int):
         if getLogger().isEnabledFor(logLevelInternal):
@@ -327,5 +328,5 @@ def wrapTqdm(iterable: Iterable | int, logLevel: str | int = _logging.INFO,
         if getLogger().isEnabledFor(logLevelInternal):
             return tqdm.tqdm(iterableOut, **tqdmKwargs)
         return tqdm.tqdm(iterableOut, **tqdmKwargs, disable=True)
-    assert False, "Your iterable is not valid with tqdm."
+    raise TypeError("Your iterable is not valid with tqdm.")
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

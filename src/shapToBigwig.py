@@ -5,7 +5,7 @@ import h5py
 import pyBigWig
 import numpy as np
 from bpreveal import logUtils
-from bpreveal.internal.constants import H5_CHUNK_SIZE
+from bpreveal.internal.constants import H5_CHUNK_SIZE, IMPORTANCE_AR_T, ONEHOT_AR_T
 
 
 class BatchedH5Reader:
@@ -25,7 +25,7 @@ class BatchedH5Reader:
         self._curChunkEnd = -100000
         self._loadChunk(0)
 
-    def _loadChunk(self, index: int):
+    def _loadChunk(self, index: int) -> None:
         """Makes sure that the given chunk has been read."""
         if self._curChunkStart <= index < self._curChunkEnd:
             return
@@ -36,7 +36,7 @@ class BatchedH5Reader:
         self.curSeqs = np.array(self.h5fp["input_seqs"]
                                 [self._curChunkStart:self._curChunkEnd, :, :])
 
-    def readScore(self, idx: int):
+    def readScore(self, idx: int) -> IMPORTANCE_AR_T:
         """Read in score information from the hdf5.
 
         :param idx: The index of the score that we want to read.
@@ -45,7 +45,7 @@ class BatchedH5Reader:
         self._loadChunk(idx)
         return self.curScore[idx - self._curChunkStart, :, :]
 
-    def readSeq(self, idx: int):
+    def readSeq(self, idx: int) -> ONEHOT_AR_T:
         """Read in sequence information from the hdf5.
 
         :param idx: The index of the sequence to read.
@@ -55,7 +55,7 @@ class BatchedH5Reader:
         return self.curSeqs[idx - self._curChunkStart, :, :]
 
 
-def writeBigWig(inH5: h5py.File, outFname: str):  # pylint: disable=too-many-statements
+def writeBigWig(inH5: h5py.File, outFname: str) -> None:  # pylint: disable=too-many-statements
     """Write the data in the h5 file to a bigwig on disk.
 
     :param inH5: The (open) hdf5 file to use
@@ -161,7 +161,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     """Run the program."""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)

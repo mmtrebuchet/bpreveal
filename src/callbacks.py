@@ -1,296 +1,11 @@
 """A set of callbacks useful for training a model."""
 import re
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from tf_keras.callbacks import ModelCheckpoint, EarlyStopping, \
     ReduceLROnPlateau, Callback
 from bpreveal import logUtils
 from bpreveal import generators
-
-
-class DisplayCallback(Callback):
-    """Replaces the tensorflow progress bar logger with lots of printing to stderr.
-
-    :param trainBatchGen: The training batch generator.
-    :param valBatchGen: The validation batch generator.
-    :param plateauCallback: The plateau callback, used to access the LR schedule.
-    :param earlyStopCallback: The EarlyStopping callback, used to see how long we have left.
-    :param adaptiveLossCallback: The adaptive loss callback, used to read λ values.
-    """
-
-    epochNumber = 0
-    """What is the currently-running epoch number?"""
-    batchNumber = 0
-    """What is the currently-running training batch number?"""
-    printLocationsEpoch = {}
-    """For a given data type, what row should it be printed on
-    in the epoch pane? For example, "val_loss" might go on row 5."""
-
-    printLocationsBatch = {}
-    """What row should each data type go on in the batch pane?"""
-    multipliers = {}
-    """For a given data type, what constant should it be multiplied by
-    for display? This is used to weight profile losses by profile-loss-weight.
-    """
-    prevEpochLogs = None
-    """The logs from last epoch"""
-    lastBatchEndTime = 0
-    """When did the last batch finish?"""
-    lastValBatchEndTime = 0
-    """When did the last validation batch finish?"""
-    lastEpochEndTime = None
-    """When did the last epoch finish?"""
-    lastEpochStartTime = None
-    """When did the current epoch start?"""
-    numEpochs: int
-    """What is the maximum number of training epochs?"""
-    numBatches: int
-    """How many training batches per epoch?"""
-    numValBatches: int
-    """How many validation batches per epoch?"""
-    curEpochWaitTime = None
-    """How long between the end of the last epoch and the start of this one?"""
-    maxLen = 0
-    """Of all the data types, what is the length of the longest name?
-    Used to calculate column positions."""
-    trainBeginTime: float
-    """When did the whole training process start?"""
-
-    def __init__(self, plateauCallback, earlyStopCallback,
-                 adaptiveLossCallback, trainBatchGen, valBatchGen):
-        super().__init__()
-        self.plateauCallback = plateauCallback
-        self.earlyStopCallback = earlyStopCallback
-        self.adaptiveLossCallback = adaptiveLossCallback
-        self.numBatches = len(trainBatchGen)
-        self.numValBatches = len(valBatchGen)
-
-    def _calcPositions(self, initialLogs: dict):
-        """Assign rows and columns to all log types.
-
-        Given the first set of logs from a training batch,
-        work out where all of the logs need to be displayed in their window.
-        """
-        profileLosses = []
-        countsLosses = []
-        remainingTerms = []
-        for lossName in initialLogs.keys():
-            foundInHeads = False
-            for head in self.adaptiveLossCallback.heads:
-                headName = head["head-name"]
-                profileRe = fr".*profile_{headName}_loss"
-                countsRe = fr".*logcounts_{headName}_loss"
-                if re.fullmatch(profileRe, lossName):
-                    profileLosses.append(lossName)
-                    profileLosses.append("val_" + lossName)
-                    profileLosses.append("EPOCH_SPACER")
-                    self.multipliers[lossName] = head["profile-loss-weight"]
-                    self.multipliers["val_" + lossName] = head["profile-loss-weight"]
-                    foundInHeads = True
-                    break
-                if re.fullmatch(countsRe, lossName):
-                    countsLosses.append(lossName)
-                    countsLosses.append("val_" + lossName)
-                    countsLosses.append("EPOCH_SPACER")
-                    foundInHeads = True
-                    break
-            if not foundInHeads:
-                if lossName not in ["lr", "epoch", "batch", "loss"]:
-                    remainingTerms.append(lossName)
-        assert len(remainingTerms) == 0, str(remainingTerms) + " includes unknown loss component. "\
-            "not " + str(profileLosses) + "/" + str(countsLosses)
-
-        printOrderEpoch = ["Epoch", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
-        printOrderEpoch.extend(profileLosses)
-        printOrderEpoch.extend(countsLosses)
-        printOrderEpoch.extend(["Best epoch", "Best loss", "Epochs until earlystop",
-                           "lr", "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
-                           "Training time", "Validation time",
-                           "Seconds / epoch", "Minutes to earlystop", "Minutes elapsed"])
-
-        printOrderBatch = ["batch", "loss", "EPOCH_SPACER"]
-        printOrderBatch.extend(profileLosses)
-        printOrderBatch.extend(countsLosses)
-        # Now that we have the orders, just enumerate them and put them in
-        # printLocations.
-        for i, po in enumerate(printOrderEpoch):
-            self.printLocationsEpoch[po] = i + 2
-        for i, po in enumerate([x for x in printOrderBatch if x != "EPOCH_SPACER"]):
-            self.printLocationsBatch[po] = i + 2
-        self.maxLen = max((len(x) for x in printOrderEpoch))
-
-    def on_train_begin(self, logs: dict | None = None):  # pylint: disable=invalid-name
-        """Just loads in the total number of epochs."""
-        del logs
-        params = self.params.get
-        self.trainBeginTime = time.perf_counter()
-        autoTotal = params("epochs", params("nb_epochs", None))
-        if autoTotal is not None:
-            self.numEpochs = autoTotal
-
-    def on_epoch_begin(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
-        """Just sets the timers up, so you can check how long an epoch took at the end."""
-        del logs
-        self.epochNumber = epoch
-        # pylint: disable=attribute-defined-outside-init
-        self.batchNumber = 0
-        self.curEpochStartTime = time.perf_counter()
-        self.firstBatchTime = time.perf_counter() + 1e10
-        self.firstValBatchTime = time.perf_counter() + 1e10
-        if self.lastEpochEndTime is not None:
-            self.curEpochWaitTime = time.perf_counter() - self.lastEpochEndTime
-        # pylint: enable=attribute-defined-outside-init
-
-    def formatStr(self, val: str | int | float | tuple[int, int]) -> str:
-        """Formats an object to be 10 characters wide.
-
-        If a second object is provided, format as a ratio.
-
-        :param val: The thing to format
-        :return: An 11 character wide formatted string.
-        """
-        match val:
-            case str():
-                return f"{val:>11s}"
-            case int():
-                return f"{val:>11d}"
-            case float():
-                return f"{val:>11.3f}"
-            case int(), int():
-                return f"{val[0]:>4d} / {val[1]:>4d}"
-            case _, None:
-                return f"{str(val):>11s}"
-            case _:
-                return "     FMT_ERR"
-
-    def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
-        """Writes out all the logs for this epoch and the last one at INFO logging level."""
-        del epoch
-        if logs is None:
-            logUtils.warning("Received empty logs at epoch end.")
-            logs = {}
-        logs = {k: logs[k] for k in logs.keys()}
-        recordEpoch = self.earlyStopCallback.best_epoch
-        correctedLoss = self.earlyStopCallback.best
-        # Add some extra data to the logs. (Note that I copied the logs dict)
-        logs["Best epoch"] = recordEpoch
-        logs["Best loss"] = float(correctedLoss)
-        logs["Epochs until earlystop"] = (self.earlyStopCallback.wait,
-                                          self.earlyStopCallback.patience)
-        logs["Epochs until LR plateau"] = (self.plateauCallback.wait,
-                                           self.plateauCallback.patience)
-        if self.lastEpochEndTime is not None:
-            timePerEpoch = time.perf_counter() - self.lastEpochEndTime
-            logs["Seconds / epoch"] = timePerEpoch
-            logs["Minutes to earlystop"] = timePerEpoch * (
-                self.earlyStopCallback.patience - self.earlyStopCallback.wait) / 60
-        if self.curEpochWaitTime is not None:
-            logs["Setup time"] = self.curEpochWaitTime
-        logs["Training time"] = self.lastBatchTime - self.firstBatchTime
-        logs["Validation time"] = self.lastValBatchTime - self.firstValBatchTime
-        self.lastEpochEndTime = time.perf_counter()
-        logs["Minutes elapsed"] = (self.lastEpochEndTime - self.trainBeginTime) / 60
-        lines = self._getEpochLines(logs)
-        self._writeLogLines(lines, logUtils.info, "E")
-        lines = self._getλLines()
-        self._writeLogLines(lines, logUtils.debug, "λ")
-        self.prevEpochLogs = logs
-
-    def on_train_batch_end(self, batch: int,  # pylint: disable=invalid-name
-                           logs: dict | None = None):
-        """Write the loss info for the current batch at DEBUG level."""
-        # pylint: disable=attribute-defined-outside-init
-        logs = logs or {}
-        self.firstBatchTime = min(time.perf_counter(), self.firstBatchTime)
-        self.lastBatchTime = time.perf_counter()
-        # pylint: enable=attribute-defined-outside-init
-        if len(list(self.printLocationsEpoch.keys())) == 0:
-            # We haven't calculated any print locations yet.
-            self._calcPositions(logs)
-        if (time.perf_counter() - self.lastBatchEndTime > 1.0)\
-                or batch in [self.numBatches - 1, 0]:
-            # Only print once per second, or if we're on the first
-            # or last batch.
-            self.lastBatchEndTime = time.perf_counter()
-
-            logs = {k: logs[k] for k in logs.keys()}
-            self.batchNumber = batch
-            self._writeLogLines(self._getBatchLines(logs), logUtils.debug,
-                                "BH" if batch == 0 else "B")
-
-    def on_test_batch_end(self, batch: int,  # pylint: disable=invalid-name
-                          logs: dict | None = None):
-        """Just emit a counter with the batch number at DEBUG level."""
-        del logs
-        # pylint: disable=attribute-defined-outside-init
-        self.firstValBatchTime = min(time.perf_counter(), self.firstValBatchTime)
-        self.lastValBatchTime = time.perf_counter()
-        # pylint: enable=attribute-defined-outside-init
-        if (time.perf_counter() - self.lastValBatchEndTime > 1.0) \
-                or batch in [self.numValBatches - 1, 0]:
-            self.lastValBatchEndTime = time.perf_counter()
-            lines = [((max(self.printLocationsBatch.values()), 1, "Eval batch"),
-                      (max(self.printLocationsBatch.values()),
-                       20,
-                       self.formatStr((batch, self.numValBatches - 1))))]
-            self._writeLogLines(lines, logUtils.debug, "V")
-
-    def _writeLogLines(self, lines: Sequence[Sequence[tuple[int, int, str]]],
-                       writer, win: str):
-        """Actually write the lines to the logger.
-
-        :param writer: The logger to use
-        :type writer: logging.logger
-        :param lines: A list of tuples containing (row, column, string) data.
-        :param win: A character (or two, if you want to include highlighting)
-            that determines which window will be used in the display program.
-        """
-        for line in lines:
-            # Condense all of the outputs on one line into one string.
-            if len(line) == 0:
-                return
-            row = line[0][0]
-            lineLen = line[-1][1] + len(line[-1][2])
-            outChrs = list(" " * lineLen)
-            for _, col, text in line:
-                for i, c in enumerate(text):
-                    outChrs[i + col] = c
-            writer(f"∬{row}∬1∬{win}∬{''.join(outChrs)}")
-
-    def _getλLines(self) -> list[list[tuple[int, int, str]]]:
-        lines = []
-        for i, headName in enumerate(self.adaptiveLossCallback.λHistory.keys()):
-            λValue = self.adaptiveLossCallback.λHistory[headName][-1]
-            lines.append([((i + 2, 1, headName)), (i + 2, 20, f"{λValue:8.3f}")])
-        return lines
-
-    def _getEpochLines(self, logs) -> list[list[tuple[int, int, str]]]:
-        lines = []
-        logs["Epoch"] = (self.epochNumber, self.numEpochs)
-        logs["lr"] = f"{logs['lr']:10.7f}"
-        for lk in logs.keys():
-            lines.append([(self.printLocationsEpoch[lk], 1, lk)])
-
-            outStr = self.formatStr(logs[lk])
-            lines[-1].append((self.printLocationsEpoch[lk], self.maxLen + 2, outStr))
-
-            if self.prevEpochLogs is not None:
-                outStrOld = self.formatStr(self.prevEpochLogs.get(lk, ""))
-                lines[-1].append(
-                    (self.printLocationsEpoch[lk], self.maxLen + 2 + 14, outStrOld))
-
-        return lines
-
-    def _getBatchLines(self, logs) -> list[list[tuple[int, int, str]]]:
-
-        logs["batch"] = (self.batchNumber, self.numBatches - 1)
-
-        lines = []
-        for lk in logs.keys():
-            lines.append([(self.printLocationsBatch[lk], 1, lk)])
-            outStr = self.formatStr(logs[lk])
-            lines[-1].append((self.printLocationsBatch[lk], self.maxLen + 2, outStr))
-        return lines
 
 
 class ApplyAdaptiveCountsLoss(Callback):
@@ -335,7 +50,9 @@ class ApplyAdaptiveCountsLoss(Callback):
     λHistory: dict[str, list]
 
     def __init__(self, heads: list[dict], aggression: float,
-                 lrPlateauCallback, earlyStopCallback, checkpointCallback):
+                 lrPlateauCallback: ReduceLROnPlateau,
+                 earlyStopCallback: EarlyStopping,
+                 checkpointCallback: ModelCheckpoint):
         """Build the callback."""
         super().__init__()
         self.heads = heads
@@ -349,7 +66,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         for head in heads:
             self.λHistory[head["head-name"]] = []
 
-    def on_train_begin(self, logs: dict | None = None):  # pylint: disable=invalid-name
+    def on_train_begin(self, logs: dict | None = None) -> None:  # pylint: disable=invalid-name
         """Set up the initial guesses for λ.
 
         :param logs: Ignored.
@@ -415,17 +132,17 @@ class ApplyAdaptiveCountsLoss(Callback):
         if None in [profile, counts, valProfile, valCounts]:
             # We missed one of the losses. Abort!
             # (with some debugging information.
-            print("Loss names ", list(epochLosses.keys()))
-            print("head name ", headName)
-            print("regex matches ", [profile, counts, valProfile, valCounts])
-            assert False, "A loss didn't match any regex."
+            logUtils.error("Loss names " + str(list(epochLosses.keys())))
+            logUtils.error("head name " + str(headName))
+            logUtils.error("regex matches " + str([profile, counts, valProfile, valCounts]))
+            raise ValueError("The loss didn't match any regex.")
         ret = (epochLosses[profile],
                epochLosses[counts],
                epochLosses[valProfile],
                epochLosses[valCounts])
         return ret
 
-    def whatWouldValLossBe(self, epoch: int):
+    def whatWouldValLossBe(self, epoch: int) -> float:
         """Determine a previous epoch's validation loss but use the current λ values to do it.
 
         :param epoch: The epoch number where you'd like to know what the loss would have been.
@@ -450,7 +167,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                        f"with original loss {logs['val_loss']}")
         return valTotalLoss
 
-    def resetCallbacks(self):
+    def resetCallbacks(self) -> None:
         """Manipulate the other callbacks so they don't break when λ changes.
 
         This is the squirreliest method here. The other callbacks that track model progression
@@ -484,7 +201,8 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
 
-    def on_epoch_end(self, epoch: int, logs: dict | None = None):  # pylint: disable=invalid-name
+    def on_epoch_end(self, epoch: int,
+                     logs: dict | None = None) -> None:  # pylint: disable=invalid-name
         """Update the other callbacks and calculate a new λ.
 
         :param epoch: The epoch number that just finished.
@@ -567,6 +285,295 @@ class ApplyAdaptiveCountsLoss(Callback):
         # We've updated the loss. But now we have to go mess with the callbacks so that
         # the increased loss value isn't interpreted as the model getting worse.
         self.resetCallbacks()
+
+
+class DisplayCallback(Callback):
+    """Replaces the tensorflow progress bar logger with lots of printing to stderr.
+
+    :param trainBatchGen: The training batch generator.
+    :param valBatchGen: The validation batch generator.
+    :param plateauCallback: The plateau callback, used to access the LR schedule.
+    :param earlyStopCallback: The EarlyStopping callback, used to see how long we have left.
+    :param adaptiveLossCallback: The adaptive loss callback, used to read λ values.
+    """
+
+    epochNumber = 0
+    """What is the currently-running epoch number?"""
+    batchNumber = 0
+    """What is the currently-running training batch number?"""
+    printLocationsEpoch = {}
+    """For a given data type, what row should it be printed on
+    in the epoch pane? For example, "val_loss" might go on row 5."""
+
+    printLocationsBatch = {}
+    """What row should each data type go on in the batch pane?"""
+    multipliers = {}
+    """For a given data type, what constant should it be multiplied by
+    for display? This is used to weight profile losses by profile-loss-weight.
+    """
+    prevEpochLogs = None
+    """The logs from last epoch"""
+    lastBatchEndTime = 0
+    """When did the last batch finish?"""
+    lastValBatchEndTime = 0
+    """When did the last validation batch finish?"""
+    lastEpochEndTime = None
+    """When did the last epoch finish?"""
+    lastEpochStartTime = None
+    """When did the current epoch start?"""
+    numEpochs: int
+    """What is the maximum number of training epochs?"""
+    numBatches: int
+    """How many training batches per epoch?"""
+    numValBatches: int
+    """How many validation batches per epoch?"""
+    curEpochWaitTime = None
+    """How long between the end of the last epoch and the start of this one?"""
+    maxLen = 0
+    """Of all the data types, what is the length of the longest name?
+    Used to calculate column positions."""
+    trainBeginTime: float
+    """When did the whole training process start?"""
+
+    def __init__(self, plateauCallback: ReduceLROnPlateau, earlyStopCallback: EarlyStopping,
+                 adaptiveLossCallback: ApplyAdaptiveCountsLoss,
+                 trainBatchGen: generators.H5BatchGenerator,
+                 valBatchGen: generators.H5BatchGenerator):
+        super().__init__()
+        self.plateauCallback = plateauCallback
+        self.earlyStopCallback = earlyStopCallback
+        self.adaptiveLossCallback = adaptiveLossCallback
+        self.numBatches = len(trainBatchGen)
+        self.numValBatches = len(valBatchGen)
+
+    def _calcPositions(self, initialLogs: dict) -> None:
+        """Assign rows and columns to all log types.
+
+        Given the first set of logs from a training batch,
+        work out where all of the logs need to be displayed in their window.
+        """
+        profileLosses = []
+        countsLosses = []
+        remainingTerms = []
+        for lossName in initialLogs.keys():
+            foundInHeads = False
+            for head in self.adaptiveLossCallback.heads:
+                headName = head["head-name"]
+                profileRe = fr".*profile_{headName}_loss"
+                countsRe = fr".*logcounts_{headName}_loss"
+                if re.fullmatch(profileRe, lossName):
+                    profileLosses.append(lossName)
+                    profileLosses.append("val_" + lossName)
+                    profileLosses.append("EPOCH_SPACER")
+                    self.multipliers[lossName] = head["profile-loss-weight"]
+                    self.multipliers["val_" + lossName] = head["profile-loss-weight"]
+                    foundInHeads = True
+                    break
+                if re.fullmatch(countsRe, lossName):
+                    countsLosses.append(lossName)
+                    countsLosses.append("val_" + lossName)
+                    countsLosses.append("EPOCH_SPACER")
+                    foundInHeads = True
+                    break
+            if not foundInHeads:
+                if lossName not in ["lr", "epoch", "batch", "loss"]:
+                    remainingTerms.append(lossName)
+        assert len(remainingTerms) == 0, str(remainingTerms) + " includes unknown loss component. "\
+            "not " + str(profileLosses) + "/" + str(countsLosses)
+
+        printOrderEpoch = ["Epoch", "EPOCH_SPACER", "loss", "val_loss", "EPOCH_SPACER"]
+        printOrderEpoch.extend(profileLosses)
+        printOrderEpoch.extend(countsLosses)
+        printOrderEpoch.extend(["Best epoch", "Best loss", "Epochs until earlystop",
+                           "lr", "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
+                           "Training time", "Validation time",
+                           "Seconds / epoch", "Minutes to earlystop", "Minutes elapsed"])
+
+        printOrderBatch = ["batch", "loss", "EPOCH_SPACER"]
+        printOrderBatch.extend(profileLosses)
+        printOrderBatch.extend(countsLosses)
+        # Now that we have the orders, just enumerate them and put them in
+        # printLocations.
+        for i, po in enumerate(printOrderEpoch):
+            self.printLocationsEpoch[po] = i + 2
+        for i, po in enumerate([x for x in printOrderBatch if x != "EPOCH_SPACER"]):
+            self.printLocationsBatch[po] = i + 2
+        self.maxLen = max((len(x) for x in printOrderEpoch))
+
+    def on_train_begin(self, logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+        """Just loads in the total number of epochs."""
+        del logs
+        params = self.params.get
+        self.trainBeginTime = time.perf_counter()
+        autoTotal = params("epochs", params("nb_epochs", None))
+        if autoTotal is not None:
+            self.numEpochs = autoTotal
+
+    def on_epoch_begin(self, epoch: int,
+                       logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+        """Just sets the timers up, so you can check how long an epoch took at the end."""
+        del logs
+        self.epochNumber = epoch
+        # pylint: disable=attribute-defined-outside-init
+        self.batchNumber = 0
+        self.curEpochStartTime = time.perf_counter()
+        self.firstBatchTime = time.perf_counter() + 1e10
+        self.firstValBatchTime = time.perf_counter() + 1e10
+        if self.lastEpochEndTime is not None:
+            self.curEpochWaitTime = time.perf_counter() - self.lastEpochEndTime
+        # pylint: enable=attribute-defined-outside-init
+
+    def formatStr(self, val: str | int | float | tuple[int, int]) -> str:
+        """Formats an object to be 10 characters wide.
+
+        If a second object is provided, format as a ratio.
+
+        :param val: The thing to format
+        :return: An 11 character wide formatted string.
+        """
+        match val:
+            case str():
+                return f"{val:>11s}"
+            case int():
+                return f"{val:>11d}"
+            case float():
+                return f"{val:>11.3f}"
+            case int(), int():
+                return f"{val[0]:>4d} / {val[1]:>4d}"
+            case _, None:
+                return f"{str(val):>11s}"
+            case _:
+                return "     FMT_ERR"
+
+    def on_epoch_end(self, epoch: int,
+                     logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+        """Writes out all the logs for this epoch and the last one at INFO logging level."""
+        del epoch
+        if logs is None:
+            logUtils.warning("Received empty logs at epoch end.")
+            logs = {}
+        logs = {k: logs[k] for k in logs.keys()}
+        recordEpoch = self.earlyStopCallback.best_epoch
+        correctedLoss = self.earlyStopCallback.best
+        # Add some extra data to the logs. (Note that I copied the logs dict)
+        logs["Best epoch"] = recordEpoch
+        logs["Best loss"] = float(correctedLoss)
+        logs["Epochs until earlystop"] = (self.earlyStopCallback.wait,
+                                          self.earlyStopCallback.patience)
+        logs["Epochs until LR plateau"] = (self.plateauCallback.wait,
+                                           self.plateauCallback.patience)
+        if self.lastEpochEndTime is not None:
+            timePerEpoch = time.perf_counter() - self.lastEpochEndTime
+            logs["Seconds / epoch"] = timePerEpoch
+            logs["Minutes to earlystop"] = timePerEpoch * (
+                self.earlyStopCallback.patience - self.earlyStopCallback.wait) / 60
+        if self.curEpochWaitTime is not None:
+            logs["Setup time"] = self.curEpochWaitTime
+        logs["Training time"] = self.lastBatchTime - self.firstBatchTime
+        logs["Validation time"] = self.lastValBatchTime - self.firstValBatchTime
+        self.lastEpochEndTime = time.perf_counter()
+        logs["Minutes elapsed"] = (self.lastEpochEndTime - self.trainBeginTime) / 60
+        lines = self._getEpochLines(logs)
+        self._writeLogLines(lines, logUtils.info, "E")
+        lines = self._getλLines()
+        self._writeLogLines(lines, logUtils.debug, "λ")
+        self.prevEpochLogs = logs
+
+    def on_train_batch_end(self, batch: int,  # pylint: disable=invalid-name
+                           logs: dict | None = None) -> None:
+        """Write the loss info for the current batch at DEBUG level."""
+        # pylint: disable=attribute-defined-outside-init
+        logs = logs or {}
+        self.firstBatchTime = min(time.perf_counter(), self.firstBatchTime)
+        self.lastBatchTime = time.perf_counter()
+        # pylint: enable=attribute-defined-outside-init
+        if len(list(self.printLocationsEpoch.keys())) == 0:
+            # We haven't calculated any print locations yet.
+            self._calcPositions(logs)
+        if (time.perf_counter() - self.lastBatchEndTime > 1.0)\
+                or batch in [self.numBatches - 1, 0]:
+            # Only print once per second, or if we're on the first
+            # or last batch.
+            self.lastBatchEndTime = time.perf_counter()
+
+            logs = {k: logs[k] for k in logs.keys()}
+            self.batchNumber = batch
+            self._writeLogLines(self._getBatchLines(logs), logUtils.debug,
+                                "BH" if batch == 0 else "B")
+
+    def on_test_batch_end(self, batch: int,  # pylint: disable=invalid-name
+                          logs: dict | None = None) -> None:
+        """Just emit a counter with the batch number at DEBUG level."""
+        del logs
+        # pylint: disable=attribute-defined-outside-init
+        self.firstValBatchTime = min(time.perf_counter(), self.firstValBatchTime)
+        self.lastValBatchTime = time.perf_counter()
+        # pylint: enable=attribute-defined-outside-init
+        if (time.perf_counter() - self.lastValBatchEndTime > 1.0) \
+                or batch in [self.numValBatches - 1, 0]:
+            self.lastValBatchEndTime = time.perf_counter()
+            lines = [((max(self.printLocationsBatch.values()), 1, "Eval batch"),
+                      (max(self.printLocationsBatch.values()),
+                       20,
+                       self.formatStr((batch, self.numValBatches - 1))))]
+            self._writeLogLines(lines, logUtils.debug, "V")
+
+    def _writeLogLines(self, lines: Sequence[Sequence[tuple[int, int, str]]],
+                       writer: Callable, win: str) -> None:
+        """Actually write the lines to the logger.
+
+        :param writer: The logger to use
+        :type writer: logging.logger
+        :param lines: A list of tuples containing (row, column, string) data.
+        :param win: A character (or two, if you want to include highlighting)
+            that determines which window will be used in the display program.
+        """
+        for line in lines:
+            # Condense all of the outputs on one line into one string.
+            if len(line) == 0:
+                return
+            row = line[0][0]
+            lineLen = line[-1][1] + len(line[-1][2])
+            outChrs = list(" " * lineLen)
+            for _, col, text in line:
+                for i, c in enumerate(text):
+                    outChrs[i + col] = c
+            writer(f"∬{row}∬1∬{win}∬{''.join(outChrs)}")
+
+    def _getλLines(self) -> list[list[tuple[int, int, str]]]:
+        lines = []
+        for i, headName in enumerate(self.adaptiveLossCallback.λHistory.keys()):
+            λValue = self.adaptiveLossCallback.λHistory[headName][-1]
+            lines.append([((i + 2, 1, headName)), (i + 2, 20, f"{λValue:8.3f}")])
+        return lines
+
+    def _getEpochLines(self, logs: dict) -> list[list[tuple[int, int, str]]]:
+        lines = []
+        logs["Epoch"] = (self.epochNumber, self.numEpochs)
+        logs["lr"] = f"{logs['lr']:10.7f}"
+        for lk in logs.keys():
+            lines.append([(self.printLocationsEpoch[lk], 1, lk)])
+
+            outStr = self.formatStr(logs[lk])
+            lines[-1].append((self.printLocationsEpoch[lk], self.maxLen + 2, outStr))
+
+            if self.prevEpochLogs is not None:
+                outStrOld = self.formatStr(self.prevEpochLogs.get(lk, ""))
+                lines[-1].append(
+                    (self.printLocationsEpoch[lk], self.maxLen + 2 + 14, outStrOld))
+
+        return lines
+
+    def _getBatchLines(self, logs: dict) -> list[list[tuple[int, int, str]]]:
+
+        logs["batch"] = (self.batchNumber, self.numBatches - 1)
+
+        lines = []
+        for lk in logs.keys():
+            lines.append([(self.printLocationsBatch[lk], 1, lk)])
+            outStr = self.formatStr(logs[lk])
+            lines[-1].append((self.printLocationsBatch[lk], self.maxLen + 2, outStr))
+        return lines
 
 
 def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads: list[dict],

@@ -246,7 +246,8 @@ def loadRegionsByRegex(trainString: str, testString: str, valString: str,
     return trainRegions, testRegions, valRegions, rejectRegions
 
 
-def loadRegions(config: dict):
+def loadRegions(config: dict) -> tuple[pybedtools.BedTool, pybedtools.BedTool,
+                                       pybedtools.BedTool, pybedtools.BedTool]:
     """Given a configuration (see the specification), return four PyBedTools BedTool objects.
 
     :param config: A JSON object satisfying the prepareBed specification.
@@ -276,7 +277,7 @@ def loadRegions(config: dict):
             trainRegions, testRegions, valRegions, rejectRegions = \
                 loadRegionsByRegex(trainString, testString, valString, regionFnames)
         case _:
-            assert False, f"Config invalid: {config['splits']}"
+            raise ValueError(f"Config invalid: {config['splits']}")
 
     logUtils.info(f"Training regions: {len(trainRegions)}")
     logUtils.info(f"Validation regions: {len(valRegions)}")
@@ -387,7 +388,7 @@ def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
 def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
                       bigRegionsList: list[pybedtools.Interval],
                       bigwigLists: list[list[str]], validRegions: np.ndarray,
-                      numThreads: int):
+                      numThreads: int) -> None:
     """Filters the regions in smallRegionList based on the min-quantile or min-counts in the config.
 
     :param config: Straight from the configuration JSON.
@@ -434,7 +435,8 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
 
 
 def validateRegions(config: dict, regions: pybedtools.BedTool,
-                    genome: pysam.FastaFile, bigwigLists: list[list[str]], numThreads: int):
+                    genome: pysam.FastaFile, bigwigLists: list[list[str]],
+                    numThreads: int) -> tuple[pybedtools.BedTool, pybedtools.BedTool]:
     """The workhorse of this program.
 
     :param config: Straight from the JSON.
@@ -513,7 +515,7 @@ def validateRegions(config: dict, regions: pybedtools.BedTool,
     return (pybedtools.BedTool(filteredRegions), rejects)
 
 
-def rewriteOldBigwigsFormat(config):
+def rewriteOldBigwigsFormat(config: dict) -> None:
     """If the config has a bigwigs section, rewrite it to the new style."""
     logUtils.warning("You are using a deprecated JSON format for prepareBed.py")
     logUtils.warning("This will result in an error in BPReveal 5.0")
@@ -555,7 +557,7 @@ def rewriteOldBigwigsFormat(config):
     config["heads"] = headsConfig
 
 
-def prepareBeds(config: dict):
+def prepareBeds(config: dict) -> None:
     """The main function of this script.
 
     :param config: A JSON object matching the prepareBed specification.
@@ -595,7 +597,6 @@ def prepareBeds(config: dict):
 
     bigwigLists = []
     for head in config["heads"]:
-        # bigwigLists.append([pyBigWig.open(bwName) for bwName in head["bigwig-names"]])
         bigwigLists.append(head["bigwig-names"])
     logUtils.info("Training regions validation beginning.")
     validTrain, rejectTrain = validateRegions(config, trainRegions, genome, bigwigLists, numThreads)

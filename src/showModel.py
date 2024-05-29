@@ -27,10 +27,10 @@ if __name__ == "__main__":
     utils.setMemoryGrowth()
 
 
-def main(modelFname: str, pngFile: str | None):
+def main(modelFname: str, pngFile: str | None) -> None:
     """Read in the model named by modelFname, show it as text, and optionally save as a png."""
     model = utils.loadModel(modelFname)
-    print(model.summary(expand_nested=True, show_trainable=True))
+    print(model.summary(expand_nested=True, show_trainable=True))  # noqa: T201
     if pngFile is not None:
         from tf_keras.utils import plot_model  # pylint: disable=import-outside-toplevel
         plot_model(model, pngFile, show_shapes=True, show_dtype=True,

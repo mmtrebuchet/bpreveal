@@ -119,7 +119,7 @@ from bpreveal import logUtils
 from bpreveal import motifUtils
 
 
-def main(config: dict):
+def main(config: dict) -> None:
     """Run the scan.
 
     :param config: A JSON object matching the motifScan specification.

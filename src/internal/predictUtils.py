@@ -23,7 +23,7 @@ class FastaReader:
     numPredictions = 0
     _nextLabel = ""
 
-    def __init__(self, fastaFname):
+    def __init__(self, fastaFname: str):
         """Scan the file to count the total lines, then load the first sequence."""
         # First, scan over the file and count how many sequences are in it.
         logUtils.info("Counting number of samples.")
@@ -44,7 +44,7 @@ class FastaReader:
         self._nextLabel = self._fp.readline().strip()[1:]
         self.pop()  # Read in the first sequence.
 
-    def pop(self):
+    def pop(self) -> None:
         """Pop the current sequence off the queue. Updates curSequence and curLabel."""
         # We know we're at the start of the sequence section of a fasta.
         self._idx += 1
@@ -100,7 +100,7 @@ class BedReader:
         self.padding = padding
         self._fetch()
 
-    def _fetch(self):
+    def _fetch(self) -> None:
         r = self._bt[self._idx]
         s = self.genome.fetch(r.chrom, r.start - self.padding, r.end + self.padding)
         self.curSequence = s.upper()
@@ -108,7 +108,7 @@ class BedReader:
         self.curStart = r.start
         self.curEnd = r.end
 
-    def pop(self):
+    def pop(self) -> None:
         """Pop the current sequence off the queue."""
         self._idx += 1
         if self._idx >= self.numPredictions:
@@ -126,7 +126,7 @@ class H5Writer:
 
     """
 
-    def __init__(self, fname, numHeads, numPredictions,
+    def __init__(self, fname: str, numHeads: int, numPredictions: int,
                  bedFname: str | None = None, genomeFname: str | None = None):
         """Load everything that can be loaded before the subprocess launches."""
         self._fp = h5py.File(fname, "w")
@@ -144,7 +144,7 @@ class H5Writer:
         # We don't know the output length yet, since the model hasn't run any batches.
         # We'll construct the datasets on the fly once we get our first output.
 
-    def buildDatasets(self, sampleOutputs: list):
+    def buildDatasets(self, sampleOutputs: list) -> None:
         """Actually construct the output hdf5 file.
 
         You must give this function the first prediction from the model so that
@@ -180,7 +180,7 @@ class H5Writer:
                                             + sampleOutputs[headID].shape)  # noqa
         logUtils.debug("Initialized datasets.")
 
-    def addEntry(self, batcherOut: tuple):
+    def addEntry(self, batcherOut: tuple) -> None:
         """Add a single output from the Batcher."""
         # Give this exactly the output from the batcher, and it will queue the data
         # to be written to the hdf5 on the next commit.
@@ -203,7 +203,7 @@ class H5Writer:
         if self.batchWriteHead == self.writeChunkSize:
             self.commit()
 
-    def commit(self):
+    def commit(self) -> None:
         """Actually write the data out to the backing hdf5 file."""
         start = self.writeHead
         stop = start + self.batchWriteHead
@@ -215,7 +215,7 @@ class H5Writer:
         self.writeHead += self.batchWriteHead
         self.batchWriteHead = 0
 
-    def close(self):
+    def close(self) -> None:
         """Close the output hdf5.
 
         You MUST call close on this object, as otherwise the last bit of data won't
@@ -272,7 +272,7 @@ def addGenomeInfo(outFile: h5py.File, genome: pysam.FastaFile) -> \
 
 
 def addCoordsInfo(regions: pybedtools.BedTool, outFile: h5py.File,
-                  genome: pysam.FastaFile, stopName: str = "coords_stop"):
+                  genome: pysam.FastaFile, stopName: str = "coords_stop") -> None:
     """Initialize an hdf5 with coordinate information.
 
     Creates the chrom_names, chrom_sizes, coords_chrom, coords_start,

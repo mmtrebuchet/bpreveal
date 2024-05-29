@@ -11,7 +11,7 @@ from bpreveal.internal.constants import IMPORTANCE_T, ONEHOT_T, IMPORTANCE_AR_T,
 
 
 def flipAndSave(inpAr: IMPORTANCE_AR_T | ONEHOT_AR_T,
-                fname: str, dtype: type):
+                fname: str, dtype: type) -> None:
     """Save the datasets in the format expected by modiscolite.
 
     The hdf5 file contains scores in the format
@@ -52,7 +52,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     """Runs the program"""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)

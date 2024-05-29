@@ -3,6 +3,7 @@
 
 Useful before you submit a big job!
 """
+# flake8: noqa: T201
 import json
 import argparse
 import jsonschema

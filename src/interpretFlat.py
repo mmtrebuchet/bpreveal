@@ -159,7 +159,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal.internal import predictUtils
 
 
-def main(config: dict):
+def main(config: dict) -> None:
     """Run the interpretation.
 
     :param config: A JSON object matching the interpretFlat specification.

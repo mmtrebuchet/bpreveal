@@ -411,8 +411,8 @@ class Organism:
             if checkCorruptors(chosens):
                 assert validCorruptorList(chosens), "Mixing gave invalid organism."
                 return Organism(chosens)
-        assert False, "Took over 100 attempts to mix organisms" + \
-            str(self.corruptors) + str(other.corruptors)
+        raise ValueError("Took over 100 attempts to mix "
+            "organisms " + str(self.corruptors) + str(other.corruptors))
 
 
 class Population:
@@ -546,7 +546,7 @@ class Population:
 
             if self.checkCorruptors(sorted(cors)):  # type: ignore
                 return Organism(cors)  # type: ignore
-        assert False, "Over 100 attempts to choose corruptors for new organism."
+        raise ValueError("Over 100 attempts to choose corruptors for new organism.")
 
     def runCalculation(self) -> None:
         """Run the GA.
@@ -762,7 +762,7 @@ def removeCorruptors(corruptorList: list[CANDIDATE_CORRUPTOR_T],
         -> [(100, "ACG"), (101, "A"), (102, "CGT"), (104, "AT")]
 
     """
-    def removeLetters(original, forbidden):
+    def removeLetters(original: str, forbidden: str) -> str:
         return "".join([x for x in original if x not in forbidden])
     ret = []
     for c in corruptorList:
@@ -918,9 +918,6 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
 
         left = pos - 5
         right = pos + 5
-        # left = cor[0] - 5
-        # right = cor[0] + 5
-        # h = boxHeight  # Just for brevity.
         midPt = (bottom + top) / 2
         if corType in "ACGT":
             # Use a diamond for SNPs.

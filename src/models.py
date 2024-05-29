@@ -2,7 +2,6 @@
 import tensorflow as tf
 import tf_keras as keras
 from tf_keras.backend import int_shape
-# from tensorflow.keras.backend import int_shape
 import tf_keras.layers as klayers
 import tf_keras.models as kmodels
 from bpreveal import layers as bprlayers
@@ -128,30 +127,30 @@ def _buildSimpleTransformationModel(architectureSpecification: dict,
         match layerType:
             case "linear":
                 activationLayers.append(
-                    bprlayers.LinearRegression(
+                    bprlayers.linearRegression(
                             name=f"regress_linear_{headName}")  # noqa
                         (inputLayer))  # noqa
             case "sigmoid":
-                inputLinear = bprlayers.LinearRegression(
+                inputLinear = bprlayers.linearRegression(
                         name=f"sigmoid_in_linear_{headName}")\
                     (inputLayer)  # noqa
                 sigmoided = klayers.Activation(
                         activation=keras.activations.sigmoid,  # noqa
                         name=f"sigmoid_activation_{headName}")\
                     (inputLinear)  # noqa
-                outputLinear = bprlayers.LinearRegression(
+                outputLinear = bprlayers.linearRegression(
                         name=f"sigmoid_out_linear_{headName}")\
                     (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
             case "relu":
-                inputLinear = bprlayers.LinearRegression(
+                inputLinear = bprlayers.linearRegression(
                         name=f"relu_in_linear_{headName}")\
                     (inputLayer)  # noqa
                 sigmoided = klayers.Activation(
                         activation=keras.activations.relu,  # noqa
                         name=f"relu_activation_{headName}")\
                     (inputLinear)  # noqa
-                outputLinear = bprlayers.LinearRegression(
+                outputLinear = bprlayers.linearRegression(
                         name=f"relu_out_linear_{headName}")\
                     (sigmoided)  # noqa
                 activationLayers.append(outputLinear)
@@ -357,7 +356,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
         if head["use-bias-counts"]:
             # While we add logits, we have to convert from log space to linear space
             # This is because we want to model
-            # counts = biasCounts + residualCounts
+            # counts = biasCounts + residualCounts noqa
             # but the counts in BPNet are log-counts.
             # TODO: Rewrite this using tf.math.reduce_logsumexp, since it would avoid
             # some numerical stability problems.

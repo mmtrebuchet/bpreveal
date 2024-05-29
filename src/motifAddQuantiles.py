@@ -121,7 +121,7 @@ API
 ---
 
 """
-
+# flake8: noqa: ANN
 import csv
 import argparse
 import numpy as np
@@ -208,7 +208,7 @@ def addFieldQuantileData(standardRecords, sampleRecords, recordNames,
                                      writeName)
 
 
-def addAllMetadata(standardRecords, sampleRecords, recordNames, readNames, writeNames):
+def addAllMetadata(standardRecords, sampleRecords, recordNames, readNames, writeNames) -> None:
     """Add all of the quantile metadata.
 
     For each mapped hit, appends ALL quantile values calculated from the seqlet
@@ -220,7 +220,7 @@ def addAllMetadata(standardRecords, sampleRecords, recordNames, readNames, write
                              recordNames, readName, writeNames[i])
 
 
-def writeTsv(records, fieldNames, fname):
+def writeTsv(records, fieldNames, fname) -> None:
     """Write a new set of mapped hits with the newly-appended quantile information."""
     with open(fname, "w", newline="") as fp:
         writer = csv.DictWriter(fp, fieldnames=fieldNames, extrasaction="ignore",
@@ -254,7 +254,7 @@ def getParser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     """Add quantile information."""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)

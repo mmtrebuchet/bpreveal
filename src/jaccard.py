@@ -22,7 +22,7 @@ def slidingJaccard(importanceScores: constants.IMPORTANCE_AR_T,
 
 
 def jaccardRegion(importanceScores: constants.IMPORTANCE_AR_T,
-                  scaleFactor: float, cwm: constants.MOTIF_FLOAT_AR_T):
+                  scaleFactor: float, cwm: constants.MOTIF_FLOAT_AR_T) -> float:
     r"""For given region's importance scores, calculate the continuous Jaccard similarity.
 
     :param importanceScores: An array of shape (length, 4)

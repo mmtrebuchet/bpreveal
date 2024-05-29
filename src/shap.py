@@ -4,7 +4,7 @@ I modified a bit to work with TF 2.16 and trimmed some imports.
 
 Note: I have *removed* quite a few features that BPReveal doesn't use.
 """
-
+# flake8: noqa: ANN001, ANN201
 import numpy as np
 # pylint: disable=invalid-name,missing-function-docstring
 
@@ -184,7 +184,7 @@ class TFDeepExplainer:
         output_phis = []
         for i in range(model_output_ranks.shape[1]):
             phis = []
-            for k, xv in enumerate(X):
+            for xv in X:
                 phis.append(np.zeros(xv.shape))
             for j in range(X[0].shape[0]):
                 bg_data = self.data([X[idx][j] for idx in range(len(X))])  # type: ignore
@@ -376,9 +376,7 @@ def maxpool(explainer, op, *grads):
 
 
 def gather(explainer, op, *grads):
-    # params = op.inputs[0]
     indices = op.inputs[1]
-    # axis = op.inputs[2]
     var = explainer.variable_inputs(op)
     if var[1] and not var[0]:
         assert len(
@@ -454,7 +452,7 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
         if i != input_ind:
             assert not explainer.variable_inputs(op)[i], str(
                 i) + "th input to " + op.name + " cannot vary!"
-    print(tf.shape(op_inputs))
+
     xin0, rin0 = tf.split(op_inputs[input_ind], 2)
     xout, rout = tf.split(op.outputs[input_ind], 2)
     delta_in0 = xin0 - rin0
@@ -600,7 +598,6 @@ op_handlers["StopGradient"] = passthrough
 op_handlers["Shape"] = break_dependence
 op_handlers["RandomUniform"] = break_dependence
 op_handlers["ZerosLike"] = break_dependence
-# op_handlers["StopGradient"] = break_dependence
 # this allows us to stop attributions when we want to (like softmax re-centering)
 
 # ops that are linear and only allow a single input to vary
@@ -617,7 +614,6 @@ op_handlers["FusedBatchNorm"] = linearity_1d(0)
 op_handlers["Relu"] = nonlinearity_1d(0)
 op_handlers["Selu"] = nonlinearity_1d(0)
 op_handlers["Elu"] = nonlinearity_1d(0)
-op_handlers["Elu"] = passthrough
 op_handlers["Sigmoid"] = nonlinearity_1d(0)
 op_handlers["Tanh"] = nonlinearity_1d(0)
 op_handlers["Softplus"] = nonlinearity_1d(0)

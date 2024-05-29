@@ -146,7 +146,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 from bpreveal import interpretUtils
 
 
-def main(config: dict):
+def main(config: dict) -> None:
     """Run the calculation.
 
     :param config: A JSON object matching the interpretPisa specification.

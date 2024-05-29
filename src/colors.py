@@ -193,10 +193,10 @@ def parseSpec(  # pylint: disable=too-many-return-statements
         case str():
             return mplcolors.to_rgb(colorSpec)
         case _:
-            assert False, f"Invalid color spec: {colorSpec}"
+            raise ValueError(f"Invalid color spec: {colorSpec}")
 
 
-def loadFonts():
+def loadFonts() -> None:
     """Configures the matplotlib default fonts to be in the Libertinus family.
 
     This places Libertinus fonts at the top of the order for serif and sans-serif

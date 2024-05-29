@@ -185,7 +185,7 @@ class Generator:
         """
         raise NotImplementedError()
 
-    def construct(self):
+    def construct(self) -> None:
         """Set up the generator (in the child thread).
 
         When the generator is about to start, this method is called once before
@@ -193,7 +193,7 @@ class Generator:
         """
         raise NotImplementedError()
 
-    def done(self):
+    def done(self) -> None:
         """When the batcher is done, this is called to free any allocated resources."""
         raise NotImplementedError()
 
@@ -220,7 +220,7 @@ class Saver:
     def __init__(self):
         raise NotImplementedError()
 
-    def construct(self):
+    def construct(self) -> None:
         """Do any setup necessary in the child thread.
 
         This function should actually open the output files, since it will
@@ -228,7 +228,7 @@ class Saver:
         """
         raise NotImplementedError()
 
-    def add(self, result: Result):
+    def add(self, result: Result) -> None:
         """Add the given Result to wherever you're saving them out.
 
         Note that this will not be called with None at the end of the run,
@@ -238,7 +238,7 @@ class Saver:
         del result
         raise NotImplementedError()
 
-    def parentFinish(self):
+    def parentFinish(self) -> None:
         """Called in the parent thread when the saver is done.
 
         Usually, there's nothing to do, but the parent thread might need
@@ -247,7 +247,7 @@ class Saver:
         """
         logUtils.debug("Called parentFinish on the base Saver class.")
 
-    def done(self):
+    def done(self) -> None:
         """Called when the batcher is complete (indicated by putting a None in its output queue).
 
         Now is the time to close all of your files.
@@ -310,7 +310,7 @@ class FlatRunner:
             args=(self._countsOutQueue, countsSaver, 1),
             daemon=True)
 
-    def run(self):
+    def run(self) -> None:
         """Start up the threads and waits for them to finish."""
         logUtils.info("Beginning flat run.")
         self._genThread.start()
@@ -395,14 +395,13 @@ class PisaRunner:
                 daemon=True))
         self._saver = saver
 
-    def run(self):
+    def run(self) -> None:
         """Start up the threads and waits for them to finish."""
         logUtils.info("Beginning PISA run.")
         self._genThread.start()
         logUtils.debug("Started generator.")
         for bt in self._batchThreads:
             bt.start()
-        # self._batchThread.start()
         logUtils.debug("Started batcher.")
         _saverThread(self._outQueue, self._saver, self.numBatchers)
         logUtils.info("Saver complete. Finishing.")
@@ -410,7 +409,6 @@ class PisaRunner:
         logUtils.debug("Generator joined.")
         for bt in self._batchThreads:
             bt.join()
-        # self._batchThread.join()
         logUtils.debug("Batcher joined.")
         self._saver.parentFinish()
         logUtils.info("Done.")
@@ -450,7 +448,7 @@ class FlatListSaver(Saver):
         self._outSeqArray = multiprocessing.Array(ctypes.c_int8, numSamples * inputLength * 4)
         logUtils.debug("Created shared arrays for the list saver.")
 
-    def construct(self):
+    def construct(self) -> None:
         """Set up the data sets.
 
         This is run in the child process.
@@ -460,7 +458,7 @@ class FlatListSaver(Saver):
         self._results = []
         logUtils.debug("Constructed child thread flat list saver.")
 
-    def parentFinish(self):
+    def parentFinish(self) -> None:
         """Extract the data from the child process.
 
         This must be called to load the shap data from the child,
@@ -479,7 +477,7 @@ class FlatListSaver(Saver):
                     self.seq[idx, outOffset, k] = self._outSeqArray[readHead]
         logUtils.debug("Finished list saver in parent thread. Your data are ready!")
 
-    def done(self):
+    def done(self) -> None:
         """Copy over the data from the child thread to the parent.
 
         This method is called from the child process.
@@ -496,7 +494,7 @@ class FlatListSaver(Saver):
                     self._outSeqArray[writeHead] = oneHotBase
         logUtils.debug("Finished list saver in child thread.")
 
-    def add(self, result: FlatResult):  # type: ignore
+    def add(self, result: FlatResult) -> None:  # type: ignore
         """Add the result to the internal list.
 
         This is called from the child process.
@@ -538,7 +536,7 @@ class FlatH5Saver(Saver):
         self.inputLength = inputLength
         self._useTqdm = useTqdm
 
-    def construct(self):
+    def construct(self) -> None:
         """Set up the data sets for writing.
 
         This is called inside the child thread.
@@ -562,7 +560,7 @@ class FlatH5Saver(Saver):
                                          dtype=h5py.string_dtype("utf-8"))
         logUtils.debug("Saver initialized, hdf5 file created.")
 
-    def _loadGenome(self):
+    def _loadGenome(self) -> None:
         """Does a few things.
 
         1. It creates chrom_names and chrom_sizes datasets in the output hdf5.
@@ -610,7 +608,7 @@ class FlatH5Saver(Saver):
             self._outFile.create_dataset("coords_end", (self.numSamples, ), dtype=posDtype)
         logUtils.debug("Genome data loaded.")
 
-    def done(self):
+    def done(self) -> None:
         """Close up shop.
 
         Called in the child process.
@@ -620,7 +618,7 @@ class FlatH5Saver(Saver):
             self.pbar.close()
         self._outFile.close()
 
-    def add(self, result: FlatResult):  # type: ignore
+    def add(self, result: FlatResult) -> None:  # type: ignore
         """Add the given result to the output file.
 
         :param result: The output from the batcher.
@@ -701,7 +699,7 @@ class PisaH5Saver(Saver):
         self.receptiveField = receptiveField
         self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
 
-    def construct(self):
+    def construct(self) -> None:
         """Run in the child thread."""
         self._outFile = h5py.File(self._outputFname, "w")
         self._outFile.create_dataset("input_predictions",
@@ -729,7 +727,7 @@ class PisaH5Saver(Saver):
                                          dtype=h5py.string_dtype("utf-8"))
         logUtils.debug("Saver initialized, hdf5 file created.")
 
-    def _loadGenome(self):
+    def _loadGenome(self) -> None:
         """Does a few things.
 
         1. It creates chrom_names and chrom_sizes datasets in the output hdf5.
@@ -775,14 +773,14 @@ class PisaH5Saver(Saver):
             self._outFile.create_dataset("coords_base", (self.numSamples, ), dtype="u4")
         logUtils.debug("Genome data loaded.")
 
-    def done(self):
+    def done(self) -> None:
         """Called from the child process."""
         logUtils.debug("Saver closing.")
         if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
 
-    def add(self, result: PisaResult):  # type: ignore
+    def add(self, result: PisaResult) -> None:  # type: ignore
         """Add the given result to the output file.
 
         :param result: The output from the batcher.
@@ -851,7 +849,7 @@ class ListGenerator(Generator):
         self.inputLength = len(self._sequences[0])
         self._passDataList = passDataList
 
-    def construct(self):
+    def construct(self) -> None:
         """Set up stuff in the child thread.
 
         Note that this doesn't load data - because the child thread is
@@ -863,7 +861,7 @@ class ListGenerator(Generator):
         else:
             self._passData = self._passDataList
 
-    def done(self):
+    def done(self) -> None:
         """Called in the child thread, does nothing."""
 
     def __iter__(self):
@@ -907,7 +905,7 @@ class FastaGenerator(Generator):
         self.index = 0
         logUtils.info(f"Fasta generator initialized with {self.numRegions} regions.")
 
-    def construct(self):
+    def construct(self) -> None:
         """Open the file and start reading."""
         logUtils.info("Constructing fasta generator in its thread.")
         self.fastaFile = open(self.fastaFname, "r")  # pylint: disable=consider-using-with
@@ -915,7 +913,7 @@ class FastaGenerator(Generator):
         # [1:] to get rid of the '>'.
         logUtils.debug(f"Initial sequence to read: {self.nextSequenceID}")
 
-    def done(self):
+    def done(self) -> None:
         """Close the Fasta file."""
         logUtils.info("Closing fasta generator.")
         self.fastaFile.close()
@@ -974,7 +972,7 @@ class FlatBedGenerator(Generator):
         self.numRegions = numRegions
         logUtils.info(f"Bed generator initialized with {self.numRegions} regions")
 
-    def construct(self):
+    def construct(self) -> None:
         """Open the bed file and fasta genome."""
         # We create a list of all the regions now, but we'll look up the sequences
         # and stuff on the fly.
@@ -1005,7 +1003,7 @@ class FlatBedGenerator(Generator):
         self.readHead += 1
         return ret
 
-    def done(self):
+    def done(self) -> None:
         """Close the fasta file."""
         logUtils.debug(f"Closing bed generator, read {self.readHead} entries")
         self.genome.close()
@@ -1040,7 +1038,7 @@ class PisaBedGenerator(Generator):
         self.numRegions = numRegions
         logUtils.info(f"Bed generator initialized with {self.numRegions} regions")
 
-    def construct(self):
+    def construct(self) -> None:
         """Run in the child thread, opens up the files and reads the bed."""
         # We create a list of all the regions now, but we'll look up the sequences
         # and stuff on the fly.
@@ -1074,7 +1072,7 @@ class PisaBedGenerator(Generator):
         self.readHead += 1
         return ret
 
-    def done(self):
+    def done(self) -> None:
         """Close the fasta."""
         logUtils.debug(f"Closing bed generator, read {self.readHead} entries")
         self.genome.close()
@@ -1082,7 +1080,7 @@ class PisaBedGenerator(Generator):
 
 def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, numHeads: int,
-                       taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int):
+                       taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int) -> None:
     """The thread that spins up the batcher."""
     logUtils.debug("Starting flat batcher thread.")
     b = _FlatBatcher(modelName, batchSize, outQueue, headID,
@@ -1103,7 +1101,7 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, taskID: int,
                        numShuffles: int, receptiveField: int, kmerSize: int,
-                       memFrac: float):
+                       memFrac: float) -> None:
     """The thread that spins up the batcher."""
     logUtils.debug("Starting batcher thread.")
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
@@ -1122,7 +1120,7 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 
 
 def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
-                     numBatchers: int):
+                     numBatchers: int) -> None:
     """The thread that spins up the generator and emits queries."""
     logUtils.debug("Starting generator thread.")
     generator.construct()
@@ -1139,7 +1137,7 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
 
 
 def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
-                 numBatchers: int):
+                 numBatchers: int) -> None:
     """The thread that spins up the saver."""
     logUtils.debug("Saver thread started.")
     saver.construct()
@@ -1180,11 +1178,15 @@ class _PisaBatcher:
         # pylint: disable=import-outside-toplevel
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         import tensorflow as tf
-        # tf.compat.v1.disable_eager_execution()
         from bpreveal import shap
         # pylint: enable=import-outside-toplevel
         utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
+        if not isShappable(self.model):
+            logUtils.error(f"The model you have provided ({modelFname}) is not shappable "
+                           "because it contains LinearRegression layers. Re-train the "
+                           "model with BPReveal > 4.3.0 and then re-run interpretation.")
+            raise TypeError("Invalid model architecture.")
         self.batchSize = batchSize
         self.outQueue = outQueue
         self.headID = headID
@@ -1209,7 +1211,7 @@ class _PisaBatcher:
             self.generateShuffles)
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
-    def generateShuffles(self, modelInputs):
+    def generateShuffles(self, modelInputs: list) -> list:
         """Callback for shap."""
         if self.kmerSize == 1:
             rng = np.random.default_rng(seed=355687)
@@ -1220,7 +1222,7 @@ class _PisaBatcher:
                                        seed=355687)
         return [shuffles]
 
-    def addSample(self, query: Query):
+    def addSample(self, query: Query) -> None:
         """Add a query to the batch.
 
         Runs the batch if it has enough work accumulated.
@@ -1229,13 +1231,13 @@ class _PisaBatcher:
         if len(self.curBatch) >= self.batchSize:
             self.finishBatch()
 
-    def finishBatch(self):
+    def finishBatch(self) -> None:
         """If there's any work waiting to be done, do it."""
         if len(self.curBatch) > 0:
             self.runPrediction()
             self.curBatch = []
 
-    def runPrediction(self):
+    def runPrediction(self) -> None:
         """Actually run the batch."""
         # Now for the meat of all this boilerplate. Take the query sequences and
         # run them through the model, then run the shuffles, then run shap.
@@ -1315,12 +1317,16 @@ class _FlatBatcher:
         # pylint: disable=import-outside-toplevel, unused-import
         import bpreveal.internal.disableTensorflowLogging # noqa
         import tensorflow as tf
-        # tf.compat.v1.disable_eager_execution()
         from bpreveal import shap
         # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(0.4, 1024)
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         self.model = utils.loadModel(modelFname)
+        if not isShappable(self.model):
+            logUtils.error(f"The model you have provided ({modelFname}) is not shappable "
+                           "because it contains LinearRegression layers. Re-train the "
+                           "model with BPReveal > 4.3.0 and then re-run interpretation.")
+            raise TypeError("Invalid model architecture.")
         self.batchSize = batchSize
         self.outQueue = outQueue
         self.kmerSize = kmerSize
@@ -1355,7 +1361,7 @@ class _FlatBatcher:
 
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
-    def generateShuffles(self, modelInputs):
+    def generateShuffles(self, modelInputs: list) -> list:
         """Callback for shap."""
         if self.kmerSize == 1:
             rng = np.random.default_rng(seed=355687)
@@ -1366,19 +1372,19 @@ class _FlatBatcher:
                                        seed=355687)
         return [shuffles]
 
-    def addSample(self, query: Query):
+    def addSample(self, query: Query) -> None:
         """Append the sample to the work queue."""
         self.curBatch.append(query)
         if len(self.curBatch) >= self.batchSize:
             self.finishBatch()
 
-    def finishBatch(self):
+    def finishBatch(self) -> None:
         """If there's any work to do, finish it."""
         if len(self.curBatch) > 0:
             self.runPrediction()
             self.curBatch = []
 
-    def runPrediction(self):
+    def runPrediction(self) -> None:
         """Actually run the calculation."""
         # Now for the meat of all this boilerplate. Take the query sequences and
         # run them through the model, then run the shuffles, then run shap.
@@ -1408,7 +1414,7 @@ class _FlatBatcher:
             self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
 
-def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-name
+def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-name  # noqa
     """Combine the shap multipliers and difference from reference to generate hypothetical scores.
 
     This is injected deep into shap and generates the hypothetical importance scores.
@@ -1425,4 +1431,30 @@ def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-n
         projectedHypotheticalContribs[:, :, i] = np.sum(hypotheticalContribs, axis=-1)
     # There are no bias importances, so the np.zeros_like(orig_inp[1]) is not needed.
     return [np.mean(projectedHypotheticalContribs, axis=0)]
+
+
+def isShappable(model) -> bool:  # noqa: ANN001
+    """Checks to see if the model can be shapped.
+
+    Early versions of BPReveal created combined and transformation models that
+    were incompatible with DeepShap.
+
+    :param model: The (loaded) Keras model that you want to check.
+    :type model: keras.Model
+    :return: True if it's safe to shap the model.
+    """
+
+    def isShappableLayer(layer) -> bool:  # noqa: ANN001
+        if hasattr(layer, "layers"):
+            for sublayer in layer.layers:
+                if not isShappableLayer(sublayer):
+                    return False
+        if str(layer).find("saved_model.load.LinearRegression") >= 0:
+            # We have an old-style model. Shapping won't work.
+            return False
+        return True
+    for layer in model.layers:
+        if not isShappableLayer(layer):
+            return False
+    return True
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

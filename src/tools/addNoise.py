@@ -69,7 +69,7 @@ def main(config: dict):
     logUtils.debug("Setup complete. Creating datasets.")
     outputSequences = np.empty((numOutputRegions, inputLength, 4))
     outputHeads = []
-    for i, numTasks in enumerate(tasksPerHead):
+    for numTasks in tasksPerHead:
         outputHeads.append(
             np.empty((numOutputRegions, outputLength, numTasks)))
     if keepOriginal:

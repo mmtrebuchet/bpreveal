@@ -1,4 +1,5 @@
 """Defines the Multinomial NLL loss and the adaptive counts loss."""
+from collections.abc import Callable
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_keras import backend
@@ -31,7 +32,7 @@ def multinomialNll(trueCounts: tf.Tensor, logits: tf.Tensor) -> float:
     return curLoss
 
 
-def weightedMse(weightTensor: tf.Variable):
+def weightedMse(weightTensor: tf.Variable) -> Callable:
     """Loss for the adaptive counts loss weight.
 
     Given a weight tensor (a tensorflow Variable of shape (1,))

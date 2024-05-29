@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """A utility to calculate the input and output length of BPReveal models."""
+# flake8: noqa: T201
 import argparse
 
 
@@ -191,7 +192,7 @@ def lengthCalcMain():
         print(outLen)
         assert outLen > 0, f"Predicted output length {outLen} is empty."
     else:
-        assert False, "Must provide one of --input-len or --output-len"
+        raise ValueError("Must provide one of --input-len or --output-len")
 
 
 if __name__ == "__main__":

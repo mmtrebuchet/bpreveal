@@ -21,7 +21,7 @@ from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
 from bpreveal.internal import constants
 
 
-def loadModel(modelFname: str):
+def loadModel(modelFname: str):  # noqa: ANN201
     """Load up a BPReveal model.
 
     .. note::
@@ -210,7 +210,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
                     total = free = float(smiOut[2]) * 1024  # Convert to MiB
                     logUtils.debug(f"Found {total} GB of memory.")
                 else:
-                    assert False, "Could not parse nvidia-smi line: " + lines[1]
+                    raise ValueError("Could not parse nvidia-smi line: " + lines[1])
     if total == 0.0:
         # We didn't find memory in CUDA_VISIBLE_DEVICES.
         cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
@@ -301,7 +301,7 @@ def loadChromSizes(chromSizesFname: str | None = None,
         for chromName in chromNames:
             ret[chromName] = fasta.get_reference_length(chromName)
         return ret
-    assert False, "You can't ask for chrom sizes without some argument!"
+    raise ValueError("You can't ask for chrom sizes without some argument!")
 
 
 def blankChromosomeArrays(genomeFname: str | None = None,
@@ -347,7 +347,7 @@ def blankChromosomeArrays(genomeFname: str | None = None,
 def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
                 regionList: list[tuple[str, int, int]] | None = None,
                 regionData: typing.Any = None,
-                chromSizes: dict[str, int] | None = None):
+                chromSizes: dict[str, int] | None = None) -> None:
     """Write a bigwig file given some region data.
 
     You must specify either:
@@ -519,11 +519,11 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
         model = loadModel("/scratch/mnase.model")
         preds = model.predict(np.array([oneHotSeq]))
         print(preds[0].shape)
-        # (1, 1000, 2)
+        # > (1, 1000, 2)
         # because there was one input sequence, the output-length is 1000 and
         # there are two tasks in this head.
         print(preds[1].shape)
-        # (1, 1)
+        # > (1, 1)
         # because there is one input sequence and there's just one logcounts value
         # for each region.
         # Note that if the model had two heads, preds[1] would be the logits from the
@@ -531,7 +531,7 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
         # head 2, respectively.
         profiles = logitsToProfile(preds[0][0], preds[1][0])
         print(profiles.shape)
-        # (1000, 2)
+        # > (1000, 2)
         # Because we have an output length of 1000 and two tasks.
         # These are now the predicted coverage, in read-space.
 
@@ -539,7 +539,6 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
     # Logits will have shape (output-length x numTasks)
     assert len(logitsAcrossSingleRegion.shape) == 2
     # If the logcounts passed in is a float, this will break.
-    # assert len(logCountsAcrossSingleRegion.shape) == 1  # Logits will be a scalar value
 
     profileProb = scipy.special.softmax(logitsAcrossSingleRegion)
     profile = profileProb * np.exp(logCountsAcrossSingleRegion)
@@ -586,18 +585,18 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> \
         seq = genome.fetch("chrII", 429454, 432546)
         profile = easyPredict([seq], "/scratch/mnase.model")
         print(len(profile))
-        # 1
+        # > 1
         # because we ran one sequence.
         print(len(profile[0]))
-        # 1
+        # > 1
         # because there is one head in this model.
         print(profile[0][0].shape)
-        # (1000, 2)
+        # > (1000, 2)
         # Because we have an output length of 1000 and two tasks.
         # These are now the predicted coverage, in read-space.
         singleProfile = easyPredict(seq, "/scratch/mnase.model")
         print(singleProfile[0].shape)
-        # (1000, 2)
+        # > (1000, 2)
         # Note how I only had to index singleProfile once, (to get the first head)
         # since I passed in a single string as the sequence.
     """
@@ -850,7 +849,7 @@ class BatchPredictor:
     def __enter__(self):
         """Do nothing; context manager is a no-op for a non-threaded BatchPredictor."""
 
-    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
+    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):  # noqa: ANN001
         """Quit the context manager.
 
         If this batcher was used in a context manager, exiting does nothing, but raises
@@ -930,7 +929,7 @@ class BatchPredictor:
         # With that ugliness out of the way, now I just populate the rest of
         # the prediction table.
         writeHead = 1
-        for i in range(numSamples - 1):
+        for _ in range(numSamples - 1):
             nextElem = self._inQueue.pop()
             modelInputs[writeHead] = nextElem[0]
             labels.append(nextElem[1])
@@ -1028,7 +1027,7 @@ class BatchPredictor:
                 # There are inputs that have not been processed. Run the batch.
                 self.runBatch()
             else:
-                assert False, "There are no outputs ready, and the input queue is empty."
+                raise queue.Empty("There are no outputs ready, and the input queue is empty.")
         ret = self._outQueue.pop()
         self._outWaiting -= 1
         return ret
@@ -1095,7 +1094,7 @@ class ThreadedBatchPredictor:
         """
         self.start()
 
-    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
+    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):  # noqa: ANN001
         """When leaving a context manager's with statement, shut down the batcher."""
         self.stop()
         if exceptionType is not None:
@@ -1104,7 +1103,7 @@ class ThreadedBatchPredictor:
         del exceptionTraceback  # Disable unused warning
         return True
 
-    def start(self):
+    def start(self) -> None:
         """Spin up the batcher thread.
 
         If you submit sequences without starting the batcher,
@@ -1141,14 +1140,14 @@ class ThreadedBatchPredictor:
         if self.running:
             self.stop()
 
-    def stop(self):
+    def stop(self) -> None:
         """Shut down the processor thread."""
         if self.running:
             if logUtils is not None:  # logUtils may be None if stop() is called from __del__.
                 logUtils.debug("Shutting down threaded batcher.")
             if self._batchers is None:
-                assert False, "Attempting to shut down a running ThreadedBatchPredictor" \
-                    "When its _batchers is None."
+                raise ValueError("Attempting to shut down a running ThreadedBatchPredictor"
+                    "When its _batchers is None.")
             for i in range(self._numThreads):
                 self._inQueues[i].put("shutdown")
                 self._inQueues[i].close()
@@ -1168,7 +1167,7 @@ class ThreadedBatchPredictor:
         elif logUtils is not None:
             logUtils.warning("Attempting to stop a batcher that is already stopped.")
 
-    def clear(self):
+    def clear(self) -> None:
         """Reset the batcher, emptying any queues and reloading the model.
 
         This also starts the batcher.
@@ -1242,13 +1241,14 @@ class ThreadedBatchPredictor:
                 # There are inputs that have not been processed. Run the batch.
                 self._inQueues[nextQueueIdx].put("finishBatch")
             else:
-                assert False, "The batcher is empty; cannot getOutput()."
+                raise queue.Empty("The batcher is empty; cannot getOutput().")
         ret = self._outQueues[nextQueueIdx].get(True, QUEUE_TIMEOUT)
         self._inFlight -= 1
         return ret
 
 
-def _batcherThread(modelFname, batchSize, inQueue, outQueue):
+def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Queue,
+                   outQueue: multiprocessing.Queue) -> None:
     """Run batches from the ThreadedBatchPredictor in this separate thread.
 
     .. note::

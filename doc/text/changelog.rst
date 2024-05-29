@@ -8,6 +8,44 @@ see :doc:`breakingChanges`.
 BPReveal 4.x
 ------------
 
+BPReveal 4.3.x
+^^^^^^^^^^^^^^
+
+BPReveal 4.3.0, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+BREAKING CHANGES:
+    * Some of the arguments were renamed in various functions in
+      :py:mod:`internal.plotUtils<bpreveal.internal.plotUtils>`.
+      The arguments are now more consistent across the module.
+    * Getting the schema to support numpy arrays has caused some tensorflow
+      problems with glibc on one of my BPReveal installs. I was able to fix
+      this by importing ``bpreveal.schema`` before importing anything from
+      ``tensorflow``. This shouldn't affect you unless you were working with
+      bpreveal.schema and tensorflow in the same script.
+    * The implementation of the transformation model was changed, so if you were
+      going inside the transformation model and messing with its layers,
+      they're all different (and honestly simpler) now. This change has no
+      effect on the outputs, and if you're not poking around at internal layers
+      there should be no effect.
+
+ENHANCEMENTS:
+    * You can now specify a custom color map in
+      :py:func:`plotPisa<bpreveal.plotting.plotPisa>` and
+      :py:func:`plotPisaGraph<bpreveal.plotting.plotPisaGraph>`.
+
+BUG FIXES:
+    * The schema for plots can now validate numpy arrays.
+    * Fixed an issue in the implementation of Transformation models that prevented
+      them from being shapped. You can now interpret transformation and combined models,
+      but only ones that are trained with BPReveal 4.3.0 or later. (Older models that
+      cannot be interpreted will now issue an informative error)
+    * Related to the transformation model issue, the code would previously allow you
+      to interpret a combined model, but during the calculation of shap values,
+      only the residual component of the model was considered. This was a bug, and it
+      now raises an error as it should.
+
+
 BPReveal 4.2.x
 ^^^^^^^^^^^^^^
 

@@ -43,7 +43,7 @@ from bpreveal import plotting
 from bpreveal import logUtils
 
 
-def main(cfg):
+def main(cfg: dict) -> None:
     """Actually make the plot(s)."""
     startTime = time.perf_counter()
     logUtils.setVerbosity(cfg.get("verbosity", "WARNING"))

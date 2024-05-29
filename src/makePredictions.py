@@ -133,7 +133,7 @@ from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal import predictUtils
 
 
-def getReader(config):
+def getReader(config: dict) -> predictUtils.BedReader | predictUtils.FastaReader:
     """Loads the reader appropriate for the configuration."""
     if "bed-file" in config:
         # We're reading from a bed.
@@ -147,11 +147,11 @@ def getReader(config):
         fastaFname = config["fasta-file"]
         reader = predictUtils.FastaReader(fastaFname)
     else:
-        assert False, "Could not find an input source in your config."
+        raise ValueError("Could not find an input source in your config.")
     return reader
 
 
-def getWriter(config, numPredictions):
+def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
     """Creates a writer appropriate for the configuration."""
     outFname = config["settings"]["output-h5"]
     numHeads = config["settings"]["heads"]
@@ -174,11 +174,11 @@ def getWriter(config, numPredictions):
             writer = predictUtils.H5Writer(outFname, numHeads, numPredictions)
             logUtils.debug("Initialized writer from a fasta reader without coordinates.")
     else:
-        assert False, "Could not construct a writer."
+        raise ValueError("Could not construct a writer.")
     return writer
 
 
-def main(config: dict):
+def main(config: dict) -> None:
     """Run the predictions.
 
     :param config: is taken straight from the json specification.

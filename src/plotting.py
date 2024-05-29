@@ -215,6 +215,7 @@ Module contents
 
 """
 from typing import Literal
+from collections.abc import Iterable
 import numpy as np
 
 import matplotlib.figure
@@ -229,9 +230,10 @@ from bpreveal import motifUtils
 from bpreveal import schema
 import bpreveal.colors as bprcolors
 from bpreveal.colors import parseSpec
+from numpy.typing import NDArray
 
 
-def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = True):
+def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = True) -> dict:
     r"""Make a graph-style PISA plot.
 
     :param config: The JSON (or any dictionary, really) configuration for this PISA plot.
@@ -414,7 +416,7 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
             "config": cfg}
 
 
-def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True):
+def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True) -> dict:
     r"""Given the actual vectors to show, make a pretty PISA plot.
 
     :param config: The JSON (or any dictionary, really) configuration for this PISA plot.
@@ -581,7 +583,7 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
 
 
 def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-statements
-                       fig: matplotlib.figure.Figure, sortKey=None):
+                       fig: matplotlib.figure.Figure, sortKey: NDArray | None = None) -> None:
     """Create a plot showing a pattern's seqlets and their match scores.
 
     :param sortKey: Either None (do not sort) or an array of shape (numSeqlets,)
@@ -648,7 +650,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-
 
     yvals = np.arange(len(pattern.seqlets), 0, -1)
 
-    def plotStat(stat, axPos, name, rightTicks):
+    def plotStat(stat, axPos, name, rightTicks):  # noqa
         stat = np.array(stat)
         axCurStat = fig.add_axes((0.3 + axPos * 0.2, 0.1 + HIST_HEIGHT + PAD,
                                   0.2 - PAD, 0.8 - HIST_HEIGHT))
@@ -691,7 +693,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-
     plotStat([x.contribMagnitude for x in pattern.seqlets], 2, "contribMag", True)
 
 
-def plotSequenceHeatmap(hmap: ONEHOT_AR_T, ax: AXES_T, upsamplingFactor: int = 10):
+def plotSequenceHeatmap(hmap: ONEHOT_AR_T, ax: AXES_T, upsamplingFactor: int = 10) -> None:
     """Show a sequence heatmap from an array of one-hot encoded sequences.
 
     :param hmap: An array of sequences of shape (numSequences, length, 4)
@@ -781,7 +783,7 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
 
 
 def deleteTick(ax: AXES_T, which: Literal["x"] | Literal["y"] | Literal["both"],
-               index: int):
+               index: int) -> None:
     """Delete a particular offending tick from an Axes.
 
     :param ax: The axes that has the offending tick.
@@ -818,7 +820,7 @@ def deleteTick(ax: AXES_T, which: Literal["x"] | Literal["y"] | Literal["both"],
         :alt: Representative miniature PISA graph.
 
     """
-    def prune(ticks, labels):
+    def prune(ticks: Iterable, labels: Iterable) -> tuple[list, list[str]]:
         # We get numpy arrays in and want to do
         # concatenation with +, so we have to listify.
         ticks = list(ticks)
@@ -854,7 +856,7 @@ def plotPisaWithFiles(pisaDats: str, cutMiddle: int, cutLengthX: int,
                       nameColors: dict[str, tuple[float, float, float]],
                       fig: matplotlib.figure.Figure, bbox: tuple[float, float, float, float],
                       colorSpan: float = 1.0, boxHeight: float = 0.1, fontsize: int = 5,
-                      mini: bool = False):
+                      mini: bool = False) -> dict:
     """Deprecated way to get the new config dict. Issues a warning if used."""
     del fig
     del receptiveField
