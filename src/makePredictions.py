@@ -117,6 +117,8 @@ coords_stop
     The end point of each predicted region.
     Only populated if a bed file and genome were provided.
 
+metadata
+    A group containing the configuration that was used when the program was run.
 API
 ---
 
@@ -131,6 +133,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal import predictUtils
+import bpreveal.internal.files
 
 
 def getReader(config: dict) -> predictUtils.BedReader | predictUtils.FastaReader:
@@ -160,7 +163,7 @@ def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
         genomeFname = config["genome"]
         writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
                                        numPredictions=numPredictions, bedFname=bedFname,
-                                       genomeFname=genomeFname)
+                                       genomeFname=genomeFname, config=str(config))
         logUtils.debug("Initialized writer from a bed reader.")
     elif "fasta-file" in config:
         bedFname = config["coordinates"]["bed-file"]
@@ -168,7 +171,7 @@ def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
         if "coordinates" in config:
             writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
                                            numPredictions=numPredictions, bedFname=bedFname,
-                                           genomeFname=genomeFname)
+                                           genomeFname=genomeFname, config=str(config))
             logUtils.debug("Initialized writer from a fasta reader with coordinates.")
         else:
             writer = predictUtils.H5Writer(outFname, numHeads, numPredictions)

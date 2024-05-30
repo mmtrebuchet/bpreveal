@@ -112,6 +112,9 @@ hyp_scores
     hypothetical ones, multiply ``hyp_scores`` by ``input_seqs`` to zero out
     all purely hypothetical contribution scores.
 
+metadata
+    A group containing the configuration used to generate the scores.
+
 
 Fasta file
 ^^^^^^^^^^
@@ -187,11 +190,13 @@ def main(config: dict) -> None:
     profileWriter = interpretUtils.FlatH5Saver(
         outputFname=config["profile-h5"], numSamples=generator.numRegions,
         inputLength=config["input-length"], genome=genomeFname,
-        useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
+        useTqdm=logUtils.getVerbosity() <= logUtils.INFO,
+        config=str(config))
     countsWriter = interpretUtils.FlatH5Saver(
         outputFname=config["counts-h5"], numSamples=generator.numRegions,
         inputLength=config["input-length"], genome=genomeFname,
-        useTqdm=False)
+        useTqdm=False,
+        config=str(config))
 
     batcher = interpretUtils.FlatRunner(
         modelFname=config["model-file"], headID=config["head-id"],

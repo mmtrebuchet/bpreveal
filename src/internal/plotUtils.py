@@ -302,7 +302,6 @@ def buildConfig(oldConfig: dict) -> dict:
     newFig["annotation-height"] = oldFig.get("annotation-height", 0.13)
     newFig["tick-font-size"] = oldFig.get("tick-font-size", FONT_SIZE_TICKS)
     newFig["label-font-size"] = oldFig.get("label-font-size", FONT_SIZE_LABELS)
-    newFig["line-width"] = oldFig.get("line-width", 1)
     newFig["miniature"] = oldFig.get("miniature", False)
 
     newConfig = {
@@ -315,6 +314,7 @@ def buildConfig(oldConfig: dict) -> dict:
 
     if "min-value" in oldConfig:
         # We have a graph-style config.
+        newFig["line-width"] = oldFig.get("line-width", 1)
         newConfig["min-value"] = oldConfig["min-value"]
         newConfig["use-annotation-colors"] = oldConfig.get("use-annotation-colors", False)
     else:

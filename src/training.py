@@ -1,8 +1,10 @@
 """A simple set of functions that train with a curses display."""
 import json
+from typing import Any
 import h5py
 import tensorflow as tf
 import tf_keras as keras
+import numpy as np
 from bpreveal.callbacks import getCallbacks
 from tf_keras.callbacks import History
 from bpreveal import logUtils
@@ -59,6 +61,41 @@ def buildLosses(heads: dict) -> tuple[list, list]:
     return (allLosses, allWeights)
 
 
+def _makeJsonSerializable(cfg: Any) -> Any:  # pylint: disable=too-many-return-statements
+    """Takes history dictionary that may contain ndarrays and tf.Variables and makes it json-safe.
+
+    :param cfg: The object to serialize
+    :return: An object that JSON can handle.
+    """
+    match cfg:
+        case dict():
+            ret = {}
+            for k, v in cfg.items():
+                ret[str(k)] = _makeJsonSerializable(v)
+            return ret
+        case int():
+            return cfg
+        case float():
+            return cfg
+        case list():
+            return [_makeJsonSerializable(x) for x in cfg]
+        case tuple():
+            return [_makeJsonSerializable(x) for x in cfg]
+        case str():
+            return cfg
+    if isinstance(cfg, tf.Variable):
+        return {_makeJsonSerializable(cfg.name): _makeJsonSerializable(cfg.numpy())}
+    if isinstance(cfg, np.ndarray):
+        return [_makeJsonSerializable(x) for x in cfg]
+    try:
+        r = float(cfg)
+        return r
+    except (TypeError, ValueError):
+        pass
+    logUtils.warning(f"Unknown type for config dict: {cfg} has type {type(cfg)}.")
+    return str(cfg)
+
+
 def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
                         outputLength: int) -> History:
     """Load up the generators from your config file and train the model!
@@ -91,8 +128,10 @@ def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
         config["heads"])
     logUtils.info("Saving history.")
     historyName = f"{config['settings']['output-prefix']}.history.json"
+    hist = history.history
+    hist["config"] = config
     with open(historyName, "w") as fp:
-        json.dump(history.history, fp, ensure_ascii=False, indent=4)
+        json.dump(_makeJsonSerializable(hist), fp, ensure_ascii=False, indent=4)
     return history
 
 
@@ -124,10 +163,6 @@ def trainModel(model: keras.Model, trainBatchGen: generators.H5BatchGenerator,
                         validation_data=valBatchGen, callbacks=callbacks,
                         verbose=0)  # type: ignore
     logUtils.info("Training complete! Hooray!")
-    # Turn the learning rate data into python floats, since they come as
-    # numpy floats and those are not serializable.
-    logUtils.debug("Fixing non-floating-point variables in history.")
-    history.history["lr"] = [float(x) for x in history.history["lr"]]
     # Add the counts loss weight history to the history json.
     lossCallback = callbacks[3]
     history.history["counts-loss-weight"] = lossCallback.λHistory

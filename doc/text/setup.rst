@@ -41,6 +41,8 @@ gcc, gfortran, meson
     Jaccard and ushuffle libraries, and as of Python 3.12 you also
     need the meson build system.
 
+Optional
+^^^^^^^^
 
 While not strictly necessary, the following packages are very useful:
 
@@ -52,10 +54,17 @@ pydot, graphviz
     These are only necessary to use showModel.py, which is deprecated and
     will be removed in BPReveal 6.0.0.
 
+
+Development
+^^^^^^^^^^^
+
 Additionally, for development, there are a few libraries that I find useful:
 
 flake8, pydocstyle, pylint
     Used to check the code for style issues.
+flake8-bugbear, flake8-mutable, flake8-print, flake8-eradicate, flake8-annotations, flake8-pep585
+    Obsessive style checking.
+    BPReveal gets a perfect score from these very aggressive linters.
 sphinx, sphinx_rtd_theme, sphinx-argparse, sphinx-autodoc-typehints
     Used to generate the documentation you're reading right now.
 coverage
@@ -69,7 +78,8 @@ BPReveal fully installed. If you use the buildCondaLocal.zsh script, you can
 skip this because the script takes care of this part.
 
 1. In the ``src/`` directory of BPReveal, run ``make clean && make`` to build
-   the Jaccard and ushuffle libraries. This step also generates the json schemas
+   the ``libjaccard``, ``libslide``, and ``libushuffle`` libraries.
+   This step also generates the json schemas
    that are used to check your inputs for bugs.
 2. Add the ``bin/`` directory to your path. This will be something like::
 
@@ -86,7 +96,7 @@ skip this because the script takes care of this part.
 
 5. (Optional) Build the documentation in the ``doc/`` directory::
 
-    make html latexpdf
+    cd /path/to/bpreveal/doc && make html latexpdf
 
 ..
     Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.

@@ -47,6 +47,8 @@ head_0, head_1, head_2, ...
 sequence
     The one-hot encoded sequence for each corresponding region. It will have
     shape ``(num-regions x (input-length + 2*jitter) x 4)``.
+metadata
+    A group containing the configuration used when the program was run.
 
 Additional information
 ----------------------
@@ -99,6 +101,7 @@ from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, PRED_AR_T, \
     H5_CHUNK_SIZE, PRED_T
+import bpreveal.internal.files
 
 
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
@@ -198,6 +201,7 @@ def writeH5(config: dict) -> None:
     genome = pysam.FastaFile(config["genome"])
     logUtils.debug("Opening output file.")
     outFile = h5py.File(config["output-h5"], "w")
+    bpreveal.internal.files.addH5Metadata(outFile, config=str(config))
     logUtils.debug("Loading sequence information.")
     seqs = getSequences(regions, genome, outputLength,
                         inputLength, jitter, config["reverse-complement"])

@@ -65,7 +65,8 @@ BPReveal 4.3.0
    were renamed to improve consistency.
 2. The internal implementation of transformation models was changed so that they can
    be interpreted with shap. If you were messing with the internal layers in a
-   transformation model, they're different now.
+   transformation model, they're different now. If you're not probing at the internal
+   layers, this will have no effect - the API is unchanged.
 
 BPReveal 4.2.0
 ^^^^^^^^^^^^^^

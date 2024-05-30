@@ -23,6 +23,7 @@ from bpreveal import utils
 from bpreveal import ushuffle
 from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
     H5_CHUNK_SIZE, MODEL_ONEHOT_T, QUEUE_TIMEOUT
+import bpreveal.internal.files as bprfiles
 
 
 class Query:
@@ -528,13 +529,15 @@ class FlatH5Saver(Saver):
     pbar: tqdm.tqdm | None = None
 
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
-                 genome: str | None = None, useTqdm: bool = False):
+                 genome: str | None = None, useTqdm: bool = False,
+                 config: str | None = None):
         self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
         self._outputFname = outputFname
         self.numSamples = numSamples
         self.genomeFname = genome
         self.inputLength = inputLength
         self._useTqdm = useTqdm
+        self.config = str(config)
 
     def construct(self) -> None:
         """Set up the data sets for writing.
@@ -543,6 +546,7 @@ class FlatH5Saver(Saver):
         """
         logUtils.info("Initializing saver.")
         self._outFile = h5py.File(self._outputFname, "w")
+        bprfiles.addH5Metadata(self._outFile, config=self.config)
         self._chunksToWrite = {}
 
         self._outFile.create_dataset("hyp_scores",
@@ -689,7 +693,7 @@ class PisaH5Saver(Saver):
     """
 
     def __init__(self, outputFname: str, numSamples: int, numShuffles: int, receptiveField: int,
-                 genome: str | None = None, useTqdm: bool = False):
+                 genome: str | None = None, useTqdm: bool = False, config: str | None = None):
         logUtils.info("Initializing saver.")
         self._outputFname = outputFname
         self.numSamples = numSamples
@@ -698,10 +702,12 @@ class PisaH5Saver(Saver):
         self._useTqdm = useTqdm
         self.receptiveField = receptiveField
         self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
+        self.config = str(config)
 
     def construct(self) -> None:
         """Run in the child thread."""
         self._outFile = h5py.File(self._outputFname, "w")
+        bprfiles.addH5Metadata(self._outFile, config=self.config)
         self._outFile.create_dataset("input_predictions",
                                      (self.numSamples,), dtype="f4")
         self._outFile.create_dataset("shuffle_predictions",

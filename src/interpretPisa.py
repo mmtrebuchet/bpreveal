@@ -99,6 +99,9 @@ shap
     These values are contribution scores to the difference-from-reference
     of the logit at this base.
 
+metadata
+    A group containing the configuration used to perform the calculation.
+
 If you specified a bed file with input regions, it will also have these datasets:
 
 chrom_names
@@ -203,7 +206,8 @@ def main(config: dict) -> None:
                                         numShuffles=config["num-shuffles"],
                                         receptiveField=receptiveField,
                                         genome=genome,
-                                        useTqdm=logUtils.getVerbosity() <= logUtils.INFO)
+                                        useTqdm=logUtils.getVerbosity() <= logUtils.INFO,
+                                        config=str(config))
     batcher = interpretUtils.PisaRunner(modelFname=config["model-file"],
                                         headID=config["head-id"],
                                         taskID=config["task-id"],

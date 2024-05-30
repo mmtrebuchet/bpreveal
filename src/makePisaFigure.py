@@ -36,11 +36,13 @@ Parameter notes
 """
 
 import sys
+import datetime
 import time
 import json
 import matplotlib.pyplot as plt
 from bpreveal import plotting
 from bpreveal import logUtils
+import bpreveal
 
 
 def main(cfg: dict) -> None:
@@ -53,6 +55,10 @@ def main(cfg: dict) -> None:
     transparent = cfg.get("transparent", False)
     fig = plt.figure(figsize=(width, height), dpi=dpi)
     logUtils.info("Starting to draw graphs.")
+    metadata = {"bpreveal_version": bpreveal.__version__,
+                "config": str(cfg),
+                "created_date": str(datetime.datetime.today())
+                }
     for c in cfg.get("graph-configs", []):
         # We want a pisa graph.
         plotting.plotPisaGraph(c, fig)
@@ -62,9 +68,11 @@ def main(cfg: dict) -> None:
         plotting.plotPisa(c, fig)
     logUtils.info("Saving.")
     if "output-png" in cfg:
-        fig.savefig(cfg["output-png"], dpi=dpi, transparent=transparent)
+        fig.savefig(cfg["output-png"], dpi=dpi, transparent=transparent,
+                    metadata=metadata)
     if "output-png" in cfg:
-        fig.savefig(cfg["output-png"], dpi=dpi, transparent=transparent)
+        fig.savefig(cfg["output-png"], dpi=dpi, transparent=transparent,
+                    metadata=metadata)
     Δt = time.perf_counter() - startTime
     logUtils.info(f"Figure generation complete in {Δt}.")
 

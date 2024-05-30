@@ -8,6 +8,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal.constants import LOGIT_T, LOGCOUNT_T
+import bpreveal.internal.files
 
 
 class FastaReader:
@@ -127,9 +128,11 @@ class H5Writer:
     """
 
     def __init__(self, fname: str, numHeads: int, numPredictions: int,
-                 bedFname: str | None = None, genomeFname: str | None = None):
+                 bedFname: str | None = None, genomeFname: str | None = None,
+                 config: str | None = None):
         """Load everything that can be loaded before the subprocess launches."""
         self._fp = h5py.File(fname, "w")
+        bpreveal.internal.files.addH5Metadata(self._fp, config=str(config))
         self.numHeads = numHeads
         self.numPredictions = numPredictions
         self.writeHead = 0

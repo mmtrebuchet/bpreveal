@@ -60,8 +60,8 @@ class Screen:
     _mesgWidth = 0
     _charsToClear = {}
     """Can I write things to the screen now?"""
-    exitWhenDone = True
-    """Should the screen ever exit after it gets the last line?"""
+    exitTime: int
+    """How long should the printer wait around after a successful exit?"""
 
     def __init__(self, stdscr, noDebug: bool, border: int, colSep: int,  # noqa: ANN001
                  statusHeight: int, messageHeight: int | None):
@@ -120,7 +120,8 @@ class Screen:
 
         self._width = width = curses.COLS  # pylint: disable=no-member
         height = curses.LINES  # pylint: disable=no-member
-        messageHeight = height // 7
+        if messageHeight is None:
+            messageHeight = height // 7
         self.joinMessages = noDebug or messageHeight < 8
         if self.joinMessages:
             messageHeight = height // 5
@@ -312,25 +313,15 @@ class Screen:
             win, _, _ = self._getWindowProperties(windowName)
             win.redrawwin()
             win.refresh()
-        if self.exitWhenDone:
-            for i in range(100):  # Tenths of a second, so 10 s.
-                msg = msgHeader + " This window will close " \
-                    f"in {(100 - i) // 10}, or exit with <C-c>."
-                self.printString(1, 1, "S", msg, color)
-                try:
-                    curses.napms(100)
-                except KeyboardInterrupt:
-                    # Time to quit.
-                    return
-        else:
-            msg = msgHeader + " Exit with <C-c>."
+        for i in range(self.exitTime * 10):  # Tenths of a second, so 10 s.
+            msg = msgHeader + " This window will close " \
+                f"in {((self.exitTime * 10) - i) // 10}, or exit with <C-c>."
             self.printString(1, 1, "S", msg, color)
-            while True:
-                try:
-                    curses.napms(100)
-                except KeyboardInterrupt:
-                    # Time to quit.
-                    return
+            try:
+                curses.napms(100)
+            except KeyboardInterrupt:
+                # Time to quit.
+                return
 
     def addLine(self, line: str) -> bool:
         r"""Take a line from the log and put the info in the right place.
@@ -399,6 +390,9 @@ def getParser() -> argparse.ArgumentParser:
                         help="Instead of exiting 10 seconds "
                         "after the training is done, keep this window open so you "
                         "can look at numbers.", dest="noExit")
+    parser.add_argument("--exit-delay", type=int, default=10, dest="exitDelay",
+                        help="Pause for this many seconds after training is complete "
+                             "before closing the window.")
     parser.add_argument("--delay",
                         help="After reading a line, pause for this many milliseconds.",
                         type=int, default=0)
@@ -407,7 +401,7 @@ def getParser() -> argparse.ArgumentParser:
                         dest="readTTY")
     parser.add_argument("--no-debug", help="Don't show debug-level messages.",
                         dest="noDebug", action="store_true")
-    parser.add_argument("--message-height",
+    parser.add_argument("--message-height", type=int,
                         help="The height (rows) of the message area at "
                         "the bottom of the window.",
                         default=None, dest="messageHeight")
@@ -418,7 +412,11 @@ def runScreen(stdscr: Any, args: argparse.Namespace) -> None:
     """Called by the wrapper, this constructs the screen and feeds it with stdin."""
     curses.curs_set(0)
     printer = Screen(stdscr, args.noDebug, 1, 0, 3, args.messageHeight)
-    printer.exitWhenDone = not args.noExit
+    if args.noExit:
+        exitTime = 10000
+    else:
+        exitTime = args.exitDelay
+    printer.exitTime = exitTime
     for line in sys.stdin:
         if len(line.strip()) > 0:
             ret = printer.addLine(line.strip())
