@@ -33,6 +33,20 @@ def jaccardRegion(importanceScores: constants.IMPORTANCE_AR_T,
 
     This implements the formula in the modisco paper, namely that
 
+    #ifdef MAN_PAGE
+    .. code-block :: text
+
+                   Σ (v[1,i] ∩ v[2,i])
+        J(v₁,v₂) = -------------------
+                   Σ (v[1,i] ∪ v[2,i])
+
+    where:
+
+    .. code-block :: text
+
+        x ∩ y = min(|x|, |y|) * sign(x) * sign(y)
+        x ∪ y = max(|x|, |y|)
+    #else
     .. math::
 
         J(v_1,v_2) = \frac{\sum_i (v_{1,i} \cap v_{2,i})}{\sum_i (v_{1,i} \cup v_{2,i})}
@@ -43,6 +57,9 @@ def jaccardRegion(importanceScores: constants.IMPORTANCE_AR_T,
 
         x \cap y &= min(|x|, |y|) * sign(x) * sign(y) \\
         x \cup y &= max(|x|, |y|)
+
+    #endif
+
 
     The scaleFactor is a number that the importanceScores array should be multiplied by.
     If you just want the continuous Jaccard metric, set this to 1.0.

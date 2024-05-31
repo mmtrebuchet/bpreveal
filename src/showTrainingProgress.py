@@ -335,17 +335,32 @@ class Screen:
         Lines that have position information will contain a double integral sign
         as a delimiter, like this:
 
+        #ifdef MAN_PAGE
+
+        ``∬INFO : 2024-02-14 13:39:11 :callbacks.py:207 :∬2∬30∬E∬ 47 /  200``
+
+        #else
+
         :math:`\tt INFO : 2024-02-14 13:39:11 :callbacks.py:207 :
         \iint{}2\iint{}30\iint{}E\iint{} 47 /  200`
+
+        #endif
 
         The entries are, in order: row, column, window, message.
         A window may be two characters, the second one being either ``H`` or ``A``,
         meaning that the text should be shown in green or red, respectively.
 
+        #ifdef MAN_PAGE
+        If a line does not contain ``∬``, then it is displayed in the
+        message tab or the debug tab.
+        The debug tab is reserved for messages starting with the
+        string ``DEBUG``, and messages gets everything else.
+        #else
         If a line does not contain ":math:`\tt \iint`", then it is displayed in the
         message tab or the debug tab.
         The debug tab is reserved for messages starting with the
         string ``DEBUG``, and messages gets everything else.
+        #endif
         """
         # Is this a line with position information?
         if "∬" in line:

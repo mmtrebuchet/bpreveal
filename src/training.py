@@ -21,7 +21,11 @@ def buildLosses(heads: dict) -> tuple[list, list]:
 
     This method injects the λ parameter used for the adaptive loss algorithm into the
     heads data structure. After this function is done, each head in heads will contain
-    a member called :math:`\tt INTERNAL\_\lambda{}\text{-}variable`. This in actual TensorFlow
+    #ifdef MAN_PAGE
+    a member called ``INTERNAL_λ-variable``. This is an actual TensorFlow
+    #else
+    a member called :math:`\tt INTERNAL\_\lambda{}\text{-}variable`. This is an actual TensorFlow
+    #endif
     variable, and it is hooked in to the counts loss so that the adaptive loss callback
     (which also gets a copy of ``heads``) can adjust it during training.
 

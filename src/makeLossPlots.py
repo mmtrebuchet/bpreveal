@@ -3,11 +3,13 @@
 import json
 import re
 import math
+import datetime
 import argparse
 from matplotlib.figure import Figure
 import numpy as np
 import matplotlib.pyplot as plt
 from bpreveal import logUtils
+import bpreveal
 
 plt.rcParams["font.size"] = 8
 
@@ -117,6 +119,8 @@ def main() -> None:
     else:
         lossTypes = []
         for lt in history.keys():
+            if lt == "config":
+                continue
             if lt == "counts-loss-weight":
                 logUtils.info("Fount adaptive counts loss history.")
                 continue
@@ -128,8 +132,14 @@ def main() -> None:
     if "counts-loss-weight" in history:
         reweightCountsLosses(history, lossTypes)
 
+    metadata = {"bpreveal_version": str(bpreveal.__version__),
+                "created_date": str(datetime.datetime.today()),
+                "json": str(args.json),
+                "exclude": str(args.exclude),
+                "start-from": str(args.startFrom)
+                }
     fig = plotLosses(lossTypes, history, args.startFrom)
-    fig.savefig(args.output, dpi=args.dpi)
+    fig.savefig(args.output, dpi=args.dpi, metadata=metadata)
 
 
 def plotLosses(lossTypes: list[list[str]], history: dict, startFrom: int) -> Figure:

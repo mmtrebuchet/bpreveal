@@ -5,7 +5,7 @@ import sys
 import re
 
 
-def makeTitle(text: str, borderChar: str, upperBorder: bool = False):
+def makeTitle(text: str, borderChar: str, upperBorder: bool = False) -> str:
     """Make a RST title line."""
     border = borderChar * len(text)
     if upperBorder:
@@ -40,8 +40,8 @@ filesApi = ["bedUtils.py", "callbacks.py", "colors.py", "gaOptimize.py",
             "plotting.py", "schema.py", "training.py", "ushuffle.py",
             "utils.py"]
 
-filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "predictUtils.py",
-                    "plotUtils.py"]
+filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "files.py",
+                    "predictUtils.py", "plotUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py"]
@@ -56,7 +56,7 @@ nameModifiers = {
 }
 
 
-def formatModuleName(fileName):
+def formatModuleName(fileName: str) -> str:
     """Take a file name and turn it into a module name that can be resolved."""
     moduleBase = fileName
     if fileName[-3:] == ".py":
@@ -67,7 +67,7 @@ def formatModuleName(fileName):
     return moduleBase
 
 
-def makeHeader():
+def makeHeader() -> None:
     """Build all the category pages."""
     with open("_generated/makeHeader", "w") as fp:
         allTargets = []
@@ -110,7 +110,7 @@ def makeHeader():
         fp.write("allGenerated = " + " ".join(allTargets) + "\n")
 
 
-def makeBase():
+def makeBase() -> None:
     """Make the first layer of the documentation, with folders."""
     ftypes = [["text", "Overview", filesText],
               ["majorcli", "Main CLI", filesMajor],
@@ -151,7 +151,7 @@ def makeBase():
             "* :ref:`genindex`\n* :ref:`modindex`\n* :ref:`search`\n")
 
 
-def makeBnf(request):
+def makeBnf(request: str) -> None:
     """Given an input bnf file, turn it into one with links and stuff."""
     modRequested = request[4:][:-4]  # strip bnf/ and .rst.
     for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
@@ -188,7 +188,7 @@ def makeBnf(request):
                                 curName = curName + c
 
 
-def tryBuildFile(fname):
+def tryBuildFile(fname: str) -> None:
     """Build the given file."""
     modName = fname[:-3]  # Strip off .py
     fmtModName = formatModuleName(fname)
@@ -229,7 +229,7 @@ def tryBuildFile(fname):
         fp.write("\n.. raw:: latex\n\n    \\clearpage\n")
 
 
-def main():
+def main() -> None:
     """Actually build all of the files need to make the documentation."""
     requestName = sys.argv[1]
     if not os.path.exists("_generated"):

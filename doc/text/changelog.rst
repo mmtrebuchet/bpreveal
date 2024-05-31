@@ -33,6 +33,11 @@ ENHANCEMENTS:
     * You can now specify a custom color map in
       :py:func:`plotPisa<bpreveal.plotting.plotPisa>` and
       :py:func:`plotPisaGraph<bpreveal.plotting.plotPisaGraph>`.
+    * Added the ability to generate man pages for documentation.
+      This required adding a preprocessor to the docstring processor;
+      it is based on the C preprocessor, and has ``#define``, ``#undef``,
+      ``#ifdef``, ``#ifndef``, ``#else``, and ``#endif``.
+      BPReveal now adds itself to your man path when you activate it.
 
 BUG FIXES:
     * The schema for plots can now validate numpy arrays.

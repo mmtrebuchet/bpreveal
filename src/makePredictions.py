@@ -119,6 +119,7 @@ coords_stop
 
 metadata
     A group containing the configuration that was used when the program was run.
+
 API
 ---
 

@@ -36,10 +36,17 @@ simple
     This transformation applies the specified functions to
     the output of the solo model, and adjusts the parameters to best fit the
     experimental data.
+    #ifdef MAN_PAGE
+    A linear model applies y=m*x+b to the solo predictions (which,
+    remember, are in log-space),
+    a sigmoid applies y = m₁ * sigmoid(m₂x+b₂) + b₁,
+    and a relu applies y = m₁ * relu(m₂x+b₂) + b₁.
+    #else
     A linear model applies :math:`y=m x+b` to the solo predictions (which,
     remember, are in log-space),
     a sigmoid applies :math:`y = m_1 *sigmoid(m_2x+b_2) + b_1`,
     and a relu applies :math:`y = m_1 * relu(m_2x+b_2) + b_1`.
+    #endif
     In other words, there's a linear model both before and after the sigmoid
     or relu activation.
     Generally, you need to use these more complex functions when the solo

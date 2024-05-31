@@ -784,6 +784,26 @@ def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
         False otherwise.
 
     A valid list satisfies the following property.
+    #ifdef MAN_PAGE
+    For each pair (c[n], c[n+1]) in corruptorList:
+
+    * c[n][0] <= c[n+1][0] (The list is ordered by the position of the corruptor.)
+
+    * If c[n][0] == c[n+1][0]:
+
+        * (c[n][1], c[n+1][1]) must be in sorted order. For stupid reasons,
+          sorted order is ``ACGTdČŤǍǦ``.
+
+        * Neither c[n][1] nor c[n+1][1] are ``"d"``.
+
+            * (You can't delete a base and do anything else to it.)
+
+        * c[n][1] ∈ ``"ACGT"`` ⇒ c[n+1][1] ∈ ``"ǍČǦŤ"``.
+
+            * (If you have a SNP, the only other thing
+              at that position must be an insertion.)
+
+    #else
     For each pair :math:`(c_n, c_{n+1})` in corruptorList:
 
     * :math:`c_n[0] <= c_{n+1}[0]` (The list is ordered by the position of the corruptor.)
@@ -801,6 +821,8 @@ def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
 
             * (If you have a SNP, the only other thing
               at that position must be an insertion.)
+
+    #endif
 
     """
     if len(corruptorList) == 0:

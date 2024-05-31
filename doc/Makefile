@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    ?=
+SPHINXOPTS    ?= -E
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     ?= .
 BUILDDIR      ?= _build
@@ -62,3 +62,6 @@ html: nofonthtml ${fonts}
 latexpdf: Makefile ${allGenerated} conf.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+
+man: Makefile ${allGenerated} conf.py
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
