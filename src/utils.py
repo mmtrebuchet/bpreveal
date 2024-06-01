@@ -355,9 +355,8 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
     * ``chromDict``,
         in which case ``regionList``, ``chromSizes``
         and ``regionData`` must be ``None``, or
-    * ``regionList``,
-        ``chromSizes``, and ``regionData``, in which
-        case ``chromDict`` must be ``None``.
+    * ``regionList``, ``chromSizes``, and ``regionData``,
+        in which case ``chromDict`` must be ``None``.
 
     :param bwFname: The name of the bigwig file to write.
     :param chromDict: A dict mapping chromosome names to the data for that

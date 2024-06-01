@@ -27,6 +27,7 @@ help:
 clean:
 	if [ -d "_generated" ]; then rm -r _generated; fi
 	if [ -d "$(BUILDDIR)" ]; then rm -r $(BUILDDIR); fi
+	if [ -f index.rst ]; then rm index.rst; fi
 
 .PHONY: help Makefile
 

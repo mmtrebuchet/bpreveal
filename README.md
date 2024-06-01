@@ -43,16 +43,19 @@ BPReveal follows a traditional Unix-style directory structure:
 
 ## Documentation
 
-The readthedocs documentation is kept relatively current, but you can easily get
+The readthedocs documentation is kept current, but you can easily get
 your own local copy.
 The BPReveal project uses Sphinx to generate documentation. If you want to build
 the documentation, make sure that `INSTALL_DEVTOOLS=true` in the install script,
-then run `make html` or `make latexpdf` in the doc directory.
+then run `make html`, `make man`, or `make latexpdf` in the doc directory.
 Documentation will be in
-`doc/_build/html/index.html` or `doc/_build/latex/bpreveal.pdf`.
+`doc/_build/html/index.html`, `doc/_build/man`, or `doc/_build/latex/bpreveal.pdf`.
+If you use the buildConda scripts, then it will put the man pages on `MANPATH`
+but you need to `make man` in the `doc/` directory to generate the pages.
 
 If you're at Stowers, then the documentation will be included in the
 repositories that I maintain at /n/projects/cm2363/public-bpreveal/<version>/doc.
+You can use `man bpreveal` to get a list of the available man pages.
 
 ## Installing
 To install BPReveal, EDIT and then run one of the `buildConda` scripts in the

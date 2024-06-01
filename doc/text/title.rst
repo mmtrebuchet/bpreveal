@@ -13,6 +13,28 @@ and effect over a region.
 
 For a summary of the components of BPReveal, see :doc:`Programs<_generated/programs>`.
 
+#ifdef MAN_PAGE
+
+**Man pages**
+
+BPReveal contains a lot of code! This meta-man page contains
+all of the documentation, but you can look up the documentation you
+need in one of the pages relevant to the program you're using.
+
+Here are the man pages included in BPReveal:
+
+Section 1: MAN_PAGES_SECTION_1
+
+Section 3: MAN_PAGES_SECTION_3
+
+Section 7: MAN_PAGES_SECTION_7
+
+You can use ``man motifScan`` to get documentation on the ``motifScan``
+program, for example.
+
+#endif
+
+
 **Authors**
 
 * Charles McAnany, Ph.D.

@@ -179,6 +179,11 @@ echo "export BPREVEAL_KILL_PATH=${BPREVEAL_DIR}/bin"\
 echo "export PATH=\$BPREVEAL_KILL_PATH:\$PATH"\
     >> ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_bin_activate.sh
 
+echo "export BPREVEAL_MAN_KILL_PATH=${BPREVEAL_DIR}/doc/_build/man"\
+    > ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_man_activate.sh
+echo "export MANPATH=\$BPREVEAL_MAN_KILL_PATH:\$MANPATH"\
+    >> ${CONDA_PREFIX}/etc/conda/activate.d/bpreveal_man_activate.sh
+
 echo "export XLA_FLAGS=\"--xla_gpu_cuda_data_dir=${CONDA_PREFIX}\"" \
     > ${CONDA_PREFIX}/etc/conda/activate.d/cuda_xla_activate.sh
 
@@ -210,6 +215,10 @@ echo "export PATH=\$(echo \$PATH | tr ':' '\n' | grep -v \$BPREVEAL_KILL_PATH | 
     > ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
 echo "unset BPREVEAL_KILL_PATH"\
     >> ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_bin_deactivate.sh
+echo "export MANPATH=\$(echo \$MANPATH | tr ':' '\n' | grep -v \$BPREVEAL_MAN_KILL_PATH | tr '\n' ':')"\
+    > ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_man_deactivate.sh
+echo "unset BPREVEAL_MAN_KILL_PATH"\
+    >> ${CONDA_PREFIX}/etc/conda/deactivate.d/bpreveal_man_deactivate.sh
 echo "unset XLA_FLAGS" \
     > ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
 echo '\nexport LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH | sed "s|$BPREVEAL_KILL_LD_LIB_PATH||" )'\
