@@ -17,9 +17,11 @@ Parameter notes
     must be present, and you can have both.
 
 ``output-png``, ``output-pdf``
-    The name you want your figure saved as. You can specify both in order
-    to have both a pdf and png saved of the same figure.
-    At least one must be specified, and you can have both.
+    The name you want your figure saved as. You can specify both in order to
+    have both a pdf and png saved of the same figure.
+    If you specify both ``output-gui`` and also save the figure with
+    ``output-png`` or ``output-pdf``, then the figure will be saved
+    *before* any manipulation in the GUI.
 
 ``width``, ``height``
     (optional) The width and height of the generated figure, in inches.
@@ -33,6 +35,12 @@ Parameter notes
     (optional) Should the figure have a transparent background?
     Default: False
 
+``output-gui``
+    (optional) Should the figure be displayed with plt.show()?
+    Default: False.
+
+The configuration dictionaries for the individual plots and graphs are detailed at
+:py:mod:`plotting<bpreveal.plotting>`.
 """
 
 import sys
@@ -75,6 +83,9 @@ def main(cfg: dict) -> None:
                     metadata=metadata)
     Δt = time.perf_counter() - startTime
     logUtils.info(f"Figure generation complete in {Δt}.")
+    if cfg.get("output-gui", False):
+        logUtils.info("Starting GUI.")
+        plt.show()
 
 
 if __name__ == "__main__":

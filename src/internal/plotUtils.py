@@ -30,7 +30,8 @@ import bpreveal.colors as bprcolors
 
 def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
              colors: DNA_COLOR_SPEC_T | list[DNA_COLOR_SPEC_T],
-             spaceBetweenLetters: float = 0) -> None:
+             spaceBetweenLetters: float = 0,
+             origin: tuple[float, float] = (0, 0)) -> None:
     """Plot an array of sequence data (like a pwm).
 
     :param values: An (N,4) array of sequence data. This could be, for example,
@@ -42,6 +43,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
         given as a fraction of the total letter width. For example, to have
         a gap of 2 pixels between letters that are 10 pixels wide, set
         ``spaceBetweenLetters=0.2``.
+    :param origin: Where, in the coordinates of the axis, should the logo start?
+        Default: draw the logo starting at (0,0).
 
     Colors, if provided, can have several meanings:
         1. Give a color for each base type by RGB value.
@@ -106,8 +109,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
         top = 0
         for nl in negLetters:
             # Note that top < base because nl[1] < 0
-            base = top + nl[1]
-            left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2
+            base = top + nl[1] + origin[1]
+            left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2 + origin[0]
             right = left + width / values.shape[0] - spaceBetweenLetters
             _drawLetter(nl[0], left=left, right=right, bottom=base, top=top,
                        color=getColor(predIdx, nl[0]), ax=ax, flip=True)
@@ -116,8 +119,8 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
         # Draw the positive letters.
         base = 0
         for pl in posLetters:
-            top = base + pl[1]
-            left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2
+            top = base + pl[1] + origin[1]
+            left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2 + origin[0]
             right = left + width / values.shape[0] - spaceBetweenLetters
             _drawLetter(pl[0], left=left, right=right, bottom=base, top=top,
                        color=getColor(predIdx, pl[0]), ax=ax)
@@ -481,6 +484,54 @@ def loadPisaAnnotations(bedFname: str, nameColors: dict[str, COLOR_SPEC_T],
     return annotations
 
 
+def addResizeCallbacks(ax: AXES_T, which: Literal["both"] | Literal["x"] | Literal["y"],
+                       numYTicks: int, numXTicks: int, fontSizeTicks: int) -> None:
+    """Given an axes, add callbacks so that when it gets resized, the ticks update.
+
+    :param ax: The axes that will be interactively resized.
+    :param which: Either ``"x"``, ``"y"``, or ``"both"``, indicating which axis the
+        callback should be applied to.
+    :param numYTicks: How many ticks should be generated on the Y axis?
+    :param numXTicks: How many ticks should be generated on the X axis?
+    :param fontSizeTicks: What font size should be used for the tick labels?
+    """
+    def resizeCallbackY(ax: AXES_T) -> None:
+        newLim = ax.get_ylim()
+        if math.fmod(newLim[0], 1) == 0.5:
+            lb = int(newLim[0] + 0.5)
+        else:
+            lb = int(newLim[0] - 0.5)
+        if math.fmod(newLim[1], 1) == 0.5:
+            ub = int(newLim[1] + 0.5)
+        else:
+            ub = int(newLim[1] + 1.5)
+        ticksY, tickLabelsY = getCoordinateTicks(lb, ub, numYTicks, False)
+        ticksY = [x - 0.5 for x in ticksY]
+        ax.set_yticks(ticksY, tickLabelsY, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
+
+    def resizeCallbackX(ax: AXES_T) -> None:
+        newLim = ax.get_xlim()
+        if math.fmod(newLim[0], 1) == 0.5:
+            lb = int(newLim[0] + 0.5)
+        else:
+            lb = int(newLim[0] + 1.5)
+        if math.fmod(newLim[1], 1) == 0.5:
+            ub = int(newLim[1] - 0.5)
+        else:
+            ub = int(newLim[1] - 1.5)
+        ticksX, tickLabelsX = getCoordinateTicks(lb, ub + 1, numXTicks, False)
+        ticksX = [x - 0.5 for x in ticksX]
+        ax.set_xticks(ticksX, tickLabelsX, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
+    match which:
+        case "both":
+            ax.callbacks.connect("ylim_changed", resizeCallbackY)
+            ax.callbacks.connect("xlim_changed", resizeCallbackX)
+        case "y":
+            ax.callbacks.connect("ylim_changed", resizeCallbackY)
+        case "x":
+            ax.callbacks.connect("xlim_changed", resizeCallbackX)
+
+
 def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
                    genomeStartX: int, genomeEndX: int, fontSize: int,
                    mini: bool) -> dict[str, COLOR_SPEC_T]:
@@ -570,43 +621,48 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
     plotMat = np.array(shearMat)
     plotMat *= math.log10(math.e) * 10
     colorSpan *= math.log10(math.e) * 10
-    extent = (0, xlen, axStopY, axStartY)
-    axPisa.imshow(plotMat, vmin=-colorSpan, vmax=colorSpan, extent=extent,
+    norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
+    smap = ScalarMappable(norm=norm, cmap=cmap)
+    extent = (genomeWindowStart, genomeWindowStart + xlen,
+              genomeWindowStart + axStartY, genomeWindowStart + axStopY)
+    g = genomeWindowStart
+    extent = (g + 0, g + xlen,
+              g + axStopY, g + axStartY)
+    axPisa.imshow(plotMat, vmin=-colorSpan, vmax=colorSpan, extent=extent, origin="upper",
                   cmap=cmap, aspect="auto", interpolation="nearest", zorder=-10)
 
+    # Prepare to draw the diagonal.
+    if xlen > shearMat.shape[0]:
+        # We have a wide plot, so clip in appropriately.
+        xStart = (xlen - shearMat.shape[0]) // 2
+        xEnd = xlen - xStart
+        xStart += genomeWindowStart
+        xEnd += genomeWindowStart
+    else:
+        xStart = genomeWindowStart
+        xEnd = xlen + xStart
     match diagMode:
         case "off":
             pass
         case "on":
-            axPisa.plot([0, xlen], [0, xlen], "k--", lw=0.5)
+            axPisa.plot([xStart, xEnd], [xStart, xEnd], "k--", lw=0.5)
         case "edge":
-            if xlen > shearMat.shape[0]:
-                # We have a wide plot, so clip in appropriately.
-                xStart = (xlen - shearMat.shape[0]) // 2
-                xEnd = xlen - xStart
-            else:
-                xStart = 0
-                xEnd = xlen
-            axPisa.plot([xStart, xStart + xlen * 0.02], [xStart, xStart + xlen * 0.02],
+            axPisa.plot([xStart, xStart + xlen * 0.02 + 1], [xStart, xStart + xlen * 0.02 + 1],
                         "k-", lw=2.0)
-            axPisa.plot([xEnd - xlen * 0.02, xEnd], [xEnd - xlen * 0.02, xEnd], "k-", lw=2.0)
+            axPisa.plot([xEnd - xlen * 0.02 - 1, xEnd],
+                        [xEnd - xlen * 0.02 - 1, xEnd], "k-", lw=2.0)
     if not mini:
         axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
                       fontfamily=FONT_FAMILY, labelpad=-5)
     numYTicks = 4 if mini else 10
-    ticksY, tickLabelsY = getCoordinateTicks(genomeWindowStart + 1,
-                      genomeWindowStart + shearMat.shape[0], numYTicks, True)
-    ticksY = [x + axStartY + 0.5 for x in ticksY]
-    axPisa.set_yticks(ticksY, tickLabelsY, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
-    axPisa.set_ylim(axStopY - 0.5, axStartY + 0.5)
-    axPisa.set_xlim(0.5, xlen - 0.5)
+    addResizeCallbacks(axPisa, "both", numYTicks, numYTicks, fontSizeTicks)
+    axPisa.set_ylim(extent[2] - 0.5, extent[3] + 0.5)
+    axPisa.set_xlim(extent[0] + 0.5, extent[1] - 0.5)
     match gridMode:
         case "on":
             axPisa.grid()
         case "off":
             pass
-    norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
-    smap = ScalarMappable(norm=norm, cmap=cmap)
     if rasterize:
         axPisa.set_rasterization_zorder(0)
     return smap
@@ -614,6 +670,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
 
 def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
                  colorBlocks: list[tuple[int, int, COLOR_SPEC_T]],
+                 genomeStart: int,
                  lineWidth: float, trim: int, ax: AXES_T,
                  cmap: mplcolors.Colormap = bprcolors.pisaClip,
                  rasterize: bool = True) -> ScalarMappable:
@@ -628,6 +685,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         to the rgb color in the block.
     :type colorBlocks: list[tuple[int, int,
         :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]]
+    :param genomeStart: The genomic coordinate of the left side of similarityMat.
     :param lineWidth: The thickness of the drawn lines. For large figures,
         thicker lines avoid Moiré patterns.
     :param trim: The similarity matrix may be bigger than the area you want to
@@ -692,13 +750,14 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
 
     for row in logUtils.wrapTqdm(range(plotMat.shape[0]), "DEBUG"):
         for col in range(plotMat.shape[1]):
-            if curPatch := addLine(col - trim, row - trim,
+            if curPatch := addLine(col - trim + genomeStart,
+                                   row - trim + genomeStart,
                                    plotMat[row, col]):
                 patchList.append(curPatch)
     psSorted = sorted(patchList, key=lambda x: x[0])
     for p in logUtils.wrapTqdm(psSorted, "DEBUG"):
         ax.add_patch(p[1])
-    ax.set_xlim(0.5, np.max(plotMat.shape) - 0.5 - 2 * trim)
+    ax.set_xlim(0.5 + genomeStart, np.max(plotMat.shape) - 0.5 - 2 * trim + genomeStart)
     ax.set_ylim(0, 1)
     if rasterize:
         ax.set_rasterization_zorder(0)
@@ -780,9 +839,9 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
     seqHeight = height / 8
 
     axPisa = fig.add_axes((left, bottom + seqHeight, pisaWidth, pisaHeight))
-    axSeq = fig.add_axes((left, bottom, pisaWidth, seqHeight))
+    axSeq = fig.add_axes((left, bottom, pisaWidth, seqHeight), sharex=axPisa)
     axProfile = fig.add_axes((left + pisaWidth + profileWidth * 0.02,
-                              bottom + seqHeight, profileWidth * 0.9, pisaHeight))
+                              bottom + seqHeight, profileWidth * 0.9, pisaHeight), sharey=axPisa)
     axCbar = fig.add_axes((left + pisaWidth + profileWidth + cbarSpaceWidth,
                            bottom + seqHeight + pisaHeight / (8 if mini else 4),
                            cbarWidth, pisaHeight / (3 if mini else 2)))
@@ -795,12 +854,17 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
     axAnnot = fig.add_axes((left,
                             bottom + seqHeight + 2 * pisaHeight / 3,
                             pisaWidth,
-                            pisaHeight / 3))
-    axAnnot.set_axis_off()
+                            pisaHeight / 3),
+                           sharex=axPisa)
 
     axSeq.set_frame_on(False)
     axSeq.set_yticks([])
     axAnnot.set_ylim(-1, 0)
+    # We don't want to resize the y-axis of the annotation axis, even if the user
+    # is zooming around. So every time a key gets released, set the ylim for the
+    # annotation axis to the appropriate value.
+    fig.canvas.mpl_connect("key_release_event", lambda _: axAnnot.set_ylim(-1, 0))
+    fig.canvas.mpl_connect("button_release_event", lambda _: axAnnot.set_ylim(-1, 0))
     axAnnot.set_axis_off()
     axProfile.set_yticks([])
     axProfile.set_frame_on(False)
@@ -866,10 +930,12 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     annotBase = graphBase + graphHeight * offsetFracAnnot
     annotHeight = graphHeight * heightFracAnnot
 
-    axImportance = fig.add_axes((left, bottom + seqBase, graphWidth, seqHeight))
     axGraph = fig.add_axes((left, bottom + graphBase, graphWidth, graphHeight))
+    axImportance = fig.add_axes((left, bottom + seqBase, graphWidth, seqHeight),
+                                sharex=axGraph)
     axPredictions = fig.add_axes((left, bottom + profileBase,
-                              graphWidth, profileHeight))
+                              graphWidth, profileHeight),
+                                 sharex=axGraph)
 
     axCbar = fig.add_axes((left + width - cbarWidth,
                            bottom + graphBase + graphHeight / (8 if mini else 4),
@@ -881,8 +947,11 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
                             bottom + graphBase + graphHeight * (1 / 3 + 1 / 7),
                             cbarWidth * 3, graphHeight * (1 - 1 / 3 - 1 / 7)))
         axLegend.set_axis_off()
-    axAnnot = fig.add_axes((left, bottom + annotBase, graphWidth, annotHeight))
+    axAnnot = fig.add_axes((left, bottom + annotBase, graphWidth, annotHeight),
+                           sharex=axGraph)
     axAnnot.set_axis_off()
+    fig.canvas.mpl_connect("key_release_event", lambda _: axAnnot.set_ylim(-1, 0))
+    fig.canvas.mpl_connect("button_release_event", lambda _: axAnnot.set_ylim(-1, 0))
     axGraph.set_yticks([])
     axPredictions.set_xticks([])
     axPredictions.set_yticks([])
@@ -897,6 +966,7 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
 
 def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
                            colors: list[DNA_COLOR_SPEC_T], sequence: str,
+                           genomeWindowStart: int,
                            fontSizeTicks: int, fontSizeAxLabel: int, mini: bool) -> None:
     """Plot a profile on a vertical axes.
 
@@ -905,17 +975,19 @@ def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
     :param colors: A DNA_COLOR_SPEC_T for each base.
     :param sequence: The underlying DNA sequence. Used to determine the colors
         to use.
+    :param genomeWindowStart: Where in genomic coordinates does the sequence start?
+        Since axProfile has a sharey relationship with axPisa, this puts the profile
+        in the right place.
     :param fontSizeTicks: How big do you want the tick labels, in points?
     :param fontSizeAxLabel: How big do you want the word "Profile" on your axes?
     :param mini: If True, then all ticks are removed and the axis is not labeled.
     """
     plotProfile = list(profile)
     for pos, val in enumerate(plotProfile):
-        y = len(plotProfile) - pos - 1
+        y = pos + genomeWindowStart
         axProfile.fill_betweenx([y, y + 1], val, step="post",
                                 color=parseSpec(colors[pos][sequence[pos]]),
                                 linewidth=0.1)
-    axProfile.set_ylim(0, len(profile))
     axProfile.set_xlim(0, float(np.max(profile)))
     if mini:
         axProfile.set_xticks([])
@@ -955,21 +1027,20 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
     :param mini: If True, use fewer x-ticks.
     """
     numXTicks = 4 if mini else 10
-    ticksX, tickLabelsX = getCoordinateTicks(genomeStartX + 1, genomeEndX, numXTicks, True)
-    ticksX = [tick + 0.5 for tick in ticksX]
-    axSeq.set_xlim(0.5, values.shape[0] - 0.5)
+    addResizeCallbacks(axSeq, "x", 0, numXTicks, fontSizeTicks)
+    axSeq.set_xlim(0.5 + genomeStartX, genomeEndX - 0.5)
     if showSequence:
         # We have a short enough window to draw individual letters.
         seqOhe = utils.oneHotEncode(sequence) * 1.0
         for i in range(len(sequence)):
             seqOhe[i, :] *= values[i]
         # Draw the letters.
-        plotLogo(seqOhe, len(sequence), axSeq, colors=colors)
+        plotLogo(seqOhe, len(sequence), axSeq, colors=colors, origin=(genomeStartX, 0))
         axSeq.set_ylim(float(np.min(seqOhe)), float(np.max(seqOhe)))
     else:
         # Window span too big - just show a profile.
         for pos, score in enumerate(values):
-            x = pos
+            x = pos + genomeStartX
             axSeq.fill_between([x, x + 1], score, step="post",
                                color=parseSpec(colors[pos][sequence[pos]]),
                                lw=0)
@@ -978,14 +1049,13 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
             axSeq.plot([0, values.shape[0]], [0, 0], "k--", lw=0.5)
         axSeq.set_ylim(min(values), max(values))
     if labelXAxis:
-        axSeq.set_xticks(ticksX, tickLabelsX, fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
-
         axSeq.xaxis.set_tick_params(labelbottom=True, which="major")
         axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel,
                          fontfamily=FONT_FAMILY)
         if axGraph is not None:
-            axGraph.set_xticks(ticksX)
             axGraph.tick_params(axis="x", which="major", length=0, labelbottom=False)
+    else:
+        axSeq.xaxis.set_tick_params(labelbottom=False)
     axSeq.set_ylabel(yAxisLabel, fontsize=fontSizeAxLabel,
                      fontfamily=FONT_FAMILY, rotation=0, loc="bottom", labelpad=40)
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

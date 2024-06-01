@@ -18,6 +18,7 @@
         "transparent": {"type": "boolean"},
         "output-png": {"type": "string"},
         "output-pdf": {"type": "string"},
+        "output-gui": {"type": "boolean"},
         "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "allOf": [
@@ -27,7 +28,8 @@
         ]},
         {"anyOf": [
             {"required": ["output-png"]},
-            {"required": ["output-pdf"]}
+            {"required": ["output-pdf"]},
+            {"required": ["output-gui"]}
         ]}
     ],
     "additionalProperties": false

@@ -13,6 +13,7 @@
   | "height": <integer>
   | "output-png": <file-name>
   | "output-pdf": <file-name>
+  | "output-gui": <boolean>
   | "dpi": <integer>
   | "transparent": <boolean>
   | <verbosity-section>

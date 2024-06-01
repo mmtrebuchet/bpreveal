@@ -18,6 +18,10 @@ BREAKING CHANGES:
     * Some of the arguments were renamed in various functions in
       :py:mod:`internal.plotUtils<bpreveal.internal.plotUtils>`.
       The arguments are now more consistent across the module.
+    * To support interactive PISA plots and graphs, a few new arguments
+      were added to functions in
+      :py:mod:`internal.plotUtils<bpreveal.internal.plotUtils>`.
+      The API of the :py:mod:`plotting<bpreveal.plotting>` module is unchanged.
     * Getting the schema to support numpy arrays has caused some tensorflow
       problems with glibc on one of my BPReveal installs. I was able to fix
       this by importing ``bpreveal.schema`` before importing anything from
@@ -38,6 +42,9 @@ ENHANCEMENTS:
       it is based on the C preprocessor, and has ``#define``, ``#undef``,
       ``#ifdef``, ``#ifndef``, ``#else``, and ``#endif``.
       BPReveal now adds itself to your man path when you activate it.
+    * By specifying ``"output-gui": true`` in a configuration file for
+      :py:mod:`makePisaFigure<bpreveal.makePisaFigure>`, you can have
+      an interactive PISA plot that supports zooming.
 
 BUG FIXES:
     * The schema for plots can now validate numpy arrays.
