@@ -4,8 +4,9 @@
 For each position, if there are two motifs that claim it, remove the motif with a lower
 value in the specified score.
 """
-
+import ast
 import argparse
+from typing import Any
 from bpreveal import logUtils
 from bpreveal.motifAddQuantiles import readTsv, writeTsv
 
@@ -19,6 +20,14 @@ def getParser() -> argparse.ArgumentParser:
         help="The name of the tsv column that should be used to compare two called motifs "
              "to see which one is better. (Beds should use the score column to compare.)",
         default="score")
+    p.add_argument("--filter",
+        help="Only consider motifs that have at least this value in the given column. "
+                   "Format: Any valid Python expression where the identifiers are "
+                   "column names in the tsv. "
+                   "(Don't forget to quote comparison operators on the shell!)",
+        default="True",
+        dest="filter",
+        type=str)
     p.add_argument("--in-tsv",
         help="The input file, in TSV format. One of --input-tsv or --input-bed is required",
         dest="inTsv")
@@ -42,6 +51,95 @@ def getParser() -> argparse.ArgumentParser:
         help="Show progress.",
         action="store_true")
     return p
+
+
+def evalAst(t: ast.AST, env: dict[str, Any]) -> int | float | bool:
+    """Evaluates the (ast.parse()d) filter string t using variables in the environment env.
+
+    :param t: The parsed AST that should be evaluated
+    :param env: The environment containing the variables used in the expression.
+    :return: The value of the expression.
+
+
+    Syntax:
+        TODO add syntax
+
+    """
+    match t:
+        case ast.Module():
+            return evalAst(t.body[0], env)
+        case ast.Constant():
+            return t.value
+        case ast.Expr():
+            return evalAst(t.value, env)
+        case ast.Compare():
+            prev = evalAst(t.left, env)
+            for op, rhs in zip(t.ops, t.comparators):
+                rv = evalAst(rhs, env)
+                match op:
+                    case ast.Lt():
+                        if prev >= rv:
+                            return False
+                    case ast.Gt():
+                        if prev <= rv:
+                            return False
+                    case ast.LtE():
+                        if prev > rv:
+                            return False
+                    case ast.GtE():
+                        if prev < rv:
+                            return False
+                    case ast.NotEq():
+                        if prev == rv:
+                            return False
+                    case ast.Eq():
+                        if prev != rv:
+                            return False
+                    case _:
+                        raise SyntaxError(f"Unsupported comparison operator in expression: {op}")
+                # Go to next comparison.
+                prev = rv
+            return True
+        case ast.BinOp():
+            lhs = evalAst(t.left, env)
+            rhs = evalAst(t.right, env)
+            match t.op:
+                case ast.Add():
+                    return lhs + rhs
+                case ast.Sub():
+                    return lhs - rhs
+                case ast.Mult():
+                    return lhs * rhs
+                case ast.Div():
+                    return lhs / rhs
+                case _:
+                    raise SyntaxError(f"Unsupported binary operator in expression: {t.op}")
+        case ast.BoolOp():
+            match t.op:
+                case ast.And():
+                    for v in t.values:
+                        if not evalAst(v, env):
+                            return False
+                    return True
+                case ast.Or():
+                    for v in t.values:
+                        if evalAst(v, env):
+                            return True
+                    return False
+                case _:
+                    raise SyntaxError(f"Unsupported boolean operator in expression: {t.op}")
+        case ast.UnaryOp():
+            match t.op:
+                case ast.USub():
+                    return -evalAst(t.operand, env)
+                case _:
+                    raise SyntaxError(f"Unsupported unary operator in expression: {t.op}")
+        case ast.Name():
+            return env[t.id]
+        case _:
+            print(ast.dump(t))
+            print("no")
+            return "error"  # type: ignore
 
 
 def removeOverlaps(entries: list[dict], colName: str, nameCol: str | None) -> list[dict]:
@@ -78,6 +176,10 @@ def removeOverlaps(entries: list[dict], colName: str, nameCol: str | None) -> li
                 if e[colName] < other[colName]:
                     recordEntry = False
                     break
+                elif e[colName] == other[colName]:
+                    # We have a tie. I need to pick
+                    # a winner, so I'll say the motif on the left wins.
+                    other[colName] = other[colName] - 10000
         if recordEntry:
             outEntries.append(e)
     return outEntries
@@ -109,10 +211,16 @@ def main():
         if args.matchNames:
             nameCol = "name"
 
-    def sortKey(e):
+    def sortKey(e: dict) -> tuple[str, int]:
         return (e["chrom"], e["start"])
     logUtils.info("Loaded input file")
     sortEntries = sorted(entries, key=sortKey)
+    strippedEntries = []
+    filterAst = ast.parse(args.filter)
+    for e in sortEntries:
+        if evalAst(filterAst, e):
+            strippedEntries.append(e)
+    sortEntries = strippedEntries
 
     outs = removeOverlaps(sortEntries, args.column, nameCol)
     if args.outTsv is not None:

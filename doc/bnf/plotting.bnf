@@ -28,8 +28,6 @@
     <pisa-data-section>
 }
 
-
-
 <pisa-data-section> ::=
     "h5-name": <string>
   | "values": [<list-of-list-of-number>]
@@ -117,8 +115,23 @@
     "start": <integer>,
     "end": <integer>,
     "name": <string>,
+    <annotation-shape>
+    <annotation-position>
     "color": <color-spec>
 }
+
+<annotation-shape> ::=
+    <empty>
+  | "shape": <annotation-shape-type>,
+
+<annotation-shape-type> ::=
+    "diamond" | "wedge" | "box" | "indel" | "snp" | "A" | "C"
+  | "G" | "T" | "d" | "Ǎ" | "Č" | "Ǧ" | "Ť"
+
+<annotation-position> ::=
+    <empty>
+  | "top": <fraction>,
+    "bottom": <fraction>,
 
 <figure-base> ::=
     "bottom": <number>,
