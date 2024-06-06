@@ -40,7 +40,7 @@ class BatchedH5Reader:
         """Read in score information from the hdf5.
 
         :param idx: The index of the score that we want to read.
-        :return: An array of shape (input-length, 4) containing hypothetical scores.
+        :return: An array of shape (input-length, NUM_BASES) containing hypothetical scores.
         """
         self._loadChunk(idx)
         return self.curScore[idx - self._curChunkStart, :, :]
@@ -49,7 +49,7 @@ class BatchedH5Reader:
         """Read in sequence information from the hdf5.
 
         :param idx: The index of the sequence to read.
-        :return: One-hot encoded sequences, shape (input-length, 4)
+        :return: One-hot encoded sequences, shape (input-length, NUM_BASES)
         """
         self._loadChunk(idx)
         return self.curSeqs[idx - self._curChunkStart, :, :]

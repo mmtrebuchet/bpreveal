@@ -1,23 +1,25 @@
 ! File libjaccard.pyf
 python module libjaccard
 interface
-    subroutine slidingJaccard(importanceScores, importanceLength, cwm, cwmLength, jaccardOut, sumsOut)
+    subroutine slidingJaccard(importanceScores, importanceLength, cwm, cwmLength, numBases, jaccardOut, sumsOut)
         intent(c) slidingJaccard
         intent(c)
         integer intent(in) :: importanceLength
         integer intent(in) :: cwmLength
-        real intent(in),dimension(importanceLength,4) :: importanceScores
-        real intent(in),dimension(cwmLength,4) :: cwm
+        integer intent(in) :: numBases
+        real intent(in),dimension(importanceLength,numBases) :: importanceScores
+        real intent(in),dimension(cwmLength,numBases) :: cwm
         real intent(out),dimension(importanceLength - cwmLength + 1) :: jaccardOut
         real intent(out),dimension(importanceLength - cwmLength + 1) :: sumsOut
     end subroutine slidingJaccard
 
-    subroutine jaccardRegion(importanceScores, scaleFactor, cwm, length, jaccardValue)
+    subroutine jaccardRegion(importanceScores, scaleFactor, cwm, length, numBases, jaccardValue)
         intent(c) jaccardRegion
         intent(c)
         integer intent(in) :: length
-        real intent(in),dimension(length,4) :: importanceScores
-        real intent(in), dimension(length,4) :: cwm
+        integer intent(in) :: numBases
+        real intent(in),dimension(length, numBases) :: importanceScores
+        real intent(in), dimension(length, numBases) :: cwm
         real intent(in),dimension(1) :: scaleFactor
         real intent(out), dimension(1) :: jaccardValue
     end subroutine jaccardRegion

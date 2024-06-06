@@ -8,9 +8,9 @@ def slidingJaccard(importanceScores: constants.IMPORTANCE_AR_T,
         tuple[constants.MOTIF_FLOAT_AR_T, constants.MOTIF_FLOAT_AR_T]:
     """Calculate the sliding Jaccard similarity.
 
-    :param importanceScores: An array of shape (M, 4) giving hypothetical importance
+    :param importanceScores: An array of shape (M, NUM_BASES) giving hypothetical importance
         scores.
-    :param cwm: An array of shape (N, 4), giving a motif's CWM.
+    :param cwm: An array of shape (N, NUM_BASES), giving a motif's CWM.
     :return: A tuple of arrays, both with shape (M - N + 1).
         The first one gives the sliding Jaccard similarities
         and the second gives the contribution magnitudes.
@@ -25,10 +25,10 @@ def jaccardRegion(importanceScores: constants.IMPORTANCE_AR_T,
                   scaleFactor: float, cwm: constants.MOTIF_FLOAT_AR_T) -> float:
     r"""For given region's importance scores, calculate the continuous Jaccard similarity.
 
-    :param importanceScores: An array of shape (length, 4)
+    :param importanceScores: An array of shape (length, NUM_BASES)
         giving a region's hypothetical importance scores.
     :param scaleFactor: A constant that the importance scores should be multiplied by.
-    :param cwm: An array of shape (length, 4) giving the CWM for a motif.
+    :param cwm: An array of shape (length, NUM_BASES) giving the CWM for a motif.
     :return: A single float giving the Jaccard match
 
     This implements the formula in the modisco paper, namely that

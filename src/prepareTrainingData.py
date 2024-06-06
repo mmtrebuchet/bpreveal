@@ -46,7 +46,7 @@ head_0, head_1, head_2, ...
     shape ``(num-regions x (output-length + 2*jitter) x num-tasks)``.
 sequence
     The one-hot encoded sequence for each corresponding region. It will have
-    shape ``(num-regions x (input-length + 2*jitter) x 4)``.
+    shape ``(num-regions x (input-length + 2*jitter) x NUM_BASES)``.
 metadata
     A group containing the configuration used when the program was run.
 
@@ -100,7 +100,7 @@ import pybedtools
 from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, PRED_AR_T, \
-    H5_CHUNK_SIZE, PRED_T
+    H5_CHUNK_SIZE, PRED_T, NUM_BASES
 import bpreveal.internal.files
 
 
@@ -126,13 +126,13 @@ def getSequences(bed: pybedtools.BedTool, genome: pysam.FastaFile, outputLength:
         If so, then each region will produce two sequences: one forward and
         one reverse-complemented.
     :return: An array of one-hot-encoded sequences of shape
-        ```(numSequences x inputLength + 2*jitter, 4)```.
+        ```(numSequences x inputLength + 2*jitter, NUM_BASES)```.
     """
     numSequences = bed.count()
     if not revcomp:
-        seqs = np.zeros((numSequences, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
+        seqs = np.zeros((numSequences, inputLength + 2 * jitter, NUM_BASES), dtype=ONEHOT_T)
     else:
-        seqs = np.zeros((numSequences * 2, inputLength + 2 * jitter, 4), dtype=ONEHOT_T)
+        seqs = np.zeros((numSequences * 2, inputLength + 2 * jitter, NUM_BASES), dtype=ONEHOT_T)
     padding = ((inputLength + 2 * jitter) - outputLength) // 2
     for i, region in enumerate(bed):
         chrom = region.chrom
@@ -207,7 +207,7 @@ def writeH5(config: dict) -> None:
                         inputLength, jitter, config["reverse-complement"])
 
     outFile.create_dataset("sequence", data=seqs, dtype=ONEHOT_T,
-                           chunks=(H5_CHUNK_SIZE, seqs.shape[1], 4), compression="gzip")
+                           chunks=(H5_CHUNK_SIZE, seqs.shape[1], NUM_BASES), compression="gzip")
     logUtils.debug("Sequence dataset created.")
     for i, head in enumerate(config["heads"]):
         if config["reverse-complement"]:

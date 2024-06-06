@@ -6,6 +6,7 @@ import tf_keras.layers as klayers
 import tf_keras.models as kmodels
 from bpreveal import layers as bprlayers
 from bpreveal import logUtils
+from bpreveal.internal.constants import NUM_BASES
 
 
 def _soloModelHead(dilateOutput: klayers.Layer, individualHead: dict,
@@ -60,7 +61,7 @@ def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-arg
 
     :return: A TF model.
 
-    Input to this model is a (batch x inputLength x 4) tensor of one-hot encoded DNA.
+    Input to this model is a (batch x inputLength x NUM_BASES) tensor of one-hot encoded DNA.
     Output is a list of (profilePreds, profilePreds, profilePreds,... ,
     countPreds, countPreds, countPreds...).
     profilePreds is a tensor of shape (batch x numTasks x outputLength), containing the
@@ -72,7 +73,7 @@ def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-arg
     such as an input that is too long.
     """
     logUtils.debug("Building solo model")
-    inputLayer = keras.Input((inputLength, 4), name=f"{modelName}_input")
+    inputLayer = keras.Input((inputLength, NUM_BASES), name=f"{modelName}_input")
 
     initialConv = klayers.Conv1D(
             filters=numFilters, kernel_size=inputFilterWidth, padding="valid",  # noqa
@@ -300,7 +301,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
     :return: Three kmodels.
 
         * The first is the combined output, i.e., the COMBINED node in the
-          graph above. Input to this model is a (batch x inputLength x 4) tensor
+          graph above. Input to this model is a (batch x inputLength x NUM_BASES) tensor
           of one-hot encoded DNA. Output is a list of (profilePreds,
           profilePreds, profilePreds,... , countPreds, countPreds,
           countPreds...). profilePreds is a tensor of shape (batch x numTasks x

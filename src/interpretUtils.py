@@ -21,8 +21,8 @@ import pybedtools
 from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal import ushuffle
-from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
-    H5_CHUNK_SIZE, MODEL_ONEHOT_T, QUEUE_TIMEOUT
+from bpreveal.internal.constants import NUM_BASES, ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
+    H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_T, QUEUE_TIMEOUT
 import bpreveal.internal.files as bprfiles
 
 
@@ -31,7 +31,7 @@ class Query:
 
     It has three things.
 
-    :param sequence: The ``(input-length, 4)`` one-hot encoded sequence of the current base.
+    :param sequence: The ``(input-length, NUM_BASES)`` one-hot encoded sequence of the current base.
     :param passData: As with Result objects, is either a tuple of ``(chromName, position)``
         (for when you have a bed file) or a string with a fasta description line
         (for when you're starting with a fasta). If you're using the
@@ -91,10 +91,10 @@ class PisaResult(Result):
         returned by running predictions on the reference sequence, again evaluated
         at the position of the base that was being shapped.
 
-    :param sequence: is a ``(receptive-field, 4)`` numpy array of the
+    :param sequence: is a ``(receptive-field, NUM_BASES)`` numpy array of the
         one-hot encoded input sequence.
 
-    :param shap: is a ``(receptive-field, 4)`` numpy array of shap scores.
+    :param shap: is a ``(receptive-field, NUM_BASES)`` numpy array of shap scores.
 
     :param passData: is data that is not touched by the batcher, but added by
         the generator and necessary for creating the output file.
@@ -127,8 +127,8 @@ class FlatResult(Result):
     """A Result object that is given to savers for flat interpretation analysis.
 
     :param sequence: A one-hot encoded array of the sequence that was explained, of shape
-        ``(input-length, 4)``
-    :param shap: An array of shape ``(input-length, 4)``, containing the shap scores.
+        ``(input-length, NUM_BASES)``
+    :param shap: An array of shape ``(input-length, NUM_BASES)``, containing the shap scores.
 
     :param passData: is a (picklable) object that is passed through from the generator.
         For bed-based interpretations, it will be a three-tuple of (chrom, start, end)
@@ -445,8 +445,10 @@ class FlatListSaver(Saver):
         # Also note that the internal shared arrays are float32 or int8,
         # not float16 like normal importance scores (this is because
         # there's a float in ctypes, but not a float16.)
-        self._outShapArray = multiprocessing.Array(ctypes.c_float, numSamples * inputLength * 4)
-        self._outSeqArray = multiprocessing.Array(ctypes.c_int8, numSamples * inputLength * 4)
+        self._outShapArray = multiprocessing.Array(ctypes.c_float,
+                                                   numSamples * inputLength * NUM_BASES)
+        self._outSeqArray = multiprocessing.Array(ctypes.c_int8,
+                                                  numSamples * inputLength * NUM_BASES)
         logUtils.debug("Created shared arrays for the list saver.")
 
     def construct(self) -> None:
@@ -468,12 +470,14 @@ class FlatListSaver(Saver):
         more intuitive way.
         """
         logUtils.debug("Finishing in parent.")
-        self.shap = np.zeros((self.numSamples, self.inputLength, 4), dtype=np.float32)
-        self.seq = np.zeros((self.numSamples, self.inputLength, 4), dtype=ONEHOT_T)
+        # Note that this will be IMPORTANCE_T, even though the internal
+        # self.outShapArray is float32.
+        self.shap = np.zeros((self.numSamples, self.inputLength, NUM_BASES), dtype=IMPORTANCE_T)
+        self.seq = np.zeros((self.numSamples, self.inputLength, NUM_BASES), dtype=ONEHOT_T)
         for idx in range(self.numSamples):
             for outOffset in range(self.inputLength):
-                for k in range(4):
-                    readHead = idx * self.inputLength * 4 + outOffset * 4 + k
+                for k in range(NUM_BASES):
+                    readHead = idx * self.inputLength * NUM_BASES + outOffset * NUM_BASES + k
                     self.shap[idx, outOffset, k] = self._outShapArray[readHead]
                     self.seq[idx, outOffset, k] = self._outSeqArray[readHead]
         logUtils.debug("Finished list saver in parent thread. Your data are ready!")
@@ -488,8 +492,8 @@ class FlatListSaver(Saver):
             svals = r.shap
             seqvals = r.sequence
             for outOffset in range(self.inputLength):
-                for k in range(4):
-                    writeHead = idx * self.inputLength * 4 + outOffset * 4 + k
+                for k in range(NUM_BASES):
+                    writeHead = idx * self.inputLength * NUM_BASES + outOffset * NUM_BASES + k
                     self._outShapArray[writeHead] = svals[outOffset, k]
                     oneHotBase = ctypes.c_int8(int(seqvals[outOffset, k]))
                     self._outSeqArray[writeHead] = oneHotBase
@@ -531,7 +535,7 @@ class FlatH5Saver(Saver):
     def __init__(self, outputFname: str, numSamples: int, inputLength: int,
                  genome: str | None = None, useTqdm: bool = False,
                  config: str | None = None):
-        self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), inputLength, 4)
+        self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), inputLength, NUM_BASES)
         self._outputFname = outputFname
         self.numSamples = numSamples
         self.genomeFname = genome
@@ -550,11 +554,11 @@ class FlatH5Saver(Saver):
         self._chunksToWrite = {}
 
         self._outFile.create_dataset("hyp_scores",
-                                     (self.numSamples, self.inputLength, 4),
+                                     (self.numSamples, self.inputLength, NUM_BASES),
                                      dtype=IMPORTANCE_T, chunks=self.chunkShape,
                                      compression="gzip")
         self._outFile.create_dataset("input_seqs",
-                                     (self.numSamples, self.inputLength, 4),
+                                     (self.numSamples, self.inputLength, NUM_BASES),
                                      dtype=ONEHOT_T, chunks=self.chunkShape,
                                      compression="gzip")
         if self.genomeFname is not None:
@@ -701,7 +705,7 @@ class PisaH5Saver(Saver):
         self.genomeFname = genome
         self._useTqdm = useTqdm
         self.receptiveField = receptiveField
-        self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), receptiveField, 4)
+        self.chunkShape = (min(H5_CHUNK_SIZE, numSamples), receptiveField, NUM_BASES)
         self.config = str(config)
 
     def construct(self) -> None:
@@ -709,18 +713,18 @@ class PisaH5Saver(Saver):
         self._outFile = h5py.File(self._outputFname, "w")
         bprfiles.addH5Metadata(self._outFile, config=self.config)
         self._outFile.create_dataset("input_predictions",
-                                     (self.numSamples,), dtype="f4")
+                                     (self.numSamples,), dtype=PRED_T)
         self._outFile.create_dataset("shuffle_predictions",
                                      (self.numSamples, self.numShuffles),
-                                     dtype="f4")
+                                     dtype=PRED_T)
         self._chunksToWrite = {}
 
         self._outFile.create_dataset("shap",
-                                     (self.numSamples, self.receptiveField, 4),
+                                     (self.numSamples, self.receptiveField, NUM_BASES),
                                      dtype=IMPORTANCE_T, chunks=self.chunkShape,
                                      compression="gzip")
         self._outFile.create_dataset("sequence",
-                                     (self.numSamples, self.receptiveField, 4),
+                                     (self.numSamples, self.receptiveField, NUM_BASES),
                                      dtype=ONEHOT_T, chunks=self.chunkShape,
                                      compression="gzip")
         self.pbar = None
@@ -1254,7 +1258,7 @@ class _PisaBatcher:
         # First, build up an array of sequences to test.
         numQueries = len(self.curBatch)
         inputLength = self.curBatch[0].sequence.shape[0]
-        oneHotBuf = np.empty((numQueries * (self.numShuffles + 1), inputLength, 4),
+        oneHotBuf = np.empty((numQueries * (self.numShuffles + 1), inputLength, NUM_BASES),
                              dtype=MODEL_ONEHOT_T)
         # To predict on as large a batch as possible, I put the actual sequences and all the
         # references for the current batch into this array. The first <nsamples> rows are the real
@@ -1272,7 +1276,7 @@ class _PisaBatcher:
         # Points to the index into oneHotBuf where the next data should be added.
         shuffleInsertHead = numQueries
         # These are the (real) sequences that will be passed to the explainer.
-        # Note that it's a list of arrays, and each array has shape (1,inputLength,4)
+        # Note that it's a list of arrays, and each array has shape (1,inputLength,NUM_BASES)
 
         for i, q in enumerate(self.curBatch):
             oneHotBuf[i, :, :] = q.sequence
@@ -1401,7 +1405,7 @@ class _FlatBatcher:
         # First, build up an array of sequences to test.
         numQueries = len(self.curBatch)
         inputLength = self.curBatch[0].sequence.shape[0]
-        oneHotBuf = np.empty((numQueries, inputLength, 4), dtype=MODEL_ONEHOT_T)
+        oneHotBuf = np.empty((numQueries, inputLength, NUM_BASES), dtype=MODEL_ONEHOT_T)
         # To predict on as large a batch as possible, I put all of the sequences
         # to explain in this array, like this:
         # REAL_SEQUENCE_1_REAL_SEQUENCE_1_REAL_SEQUENCE_1
@@ -1429,7 +1433,7 @@ def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-n
     projectedHypotheticalContribs = \
         np.zeros_like(bg_data[0]).astype("float")
     assert len(orig_inp[0].shape) == 2
-    for i in range(4):  # We're going to go over all the base possibilities.
+    for i in range(NUM_BASES):  # We're going to go over all the base possibilities.
         hypotheticalInput = np.zeros_like(orig_inp[0]).astype("float")
         hypotheticalInput[:, i] = 1.0
         hypotheticalDiffref = hypotheticalInput[None, :, :] - bg_data[0]

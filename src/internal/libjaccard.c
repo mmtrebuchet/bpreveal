@@ -1,6 +1,5 @@
 #include <math.h>
-
-#define FLOAT_T float
+#include "constants.h"
 
 /* C implementation for sliding Jaccard similarity, based on Ziga Avsec's implementation.
  * There are two functions here that are exported as Python functions through Numpy's amazing
@@ -9,6 +8,7 @@
  * and the numpy f2py module will magically create a python module that you can import.
  *
  */
+
 
 FLOAT_T jaccardIntersection(FLOAT_T x, FLOAT_T y){
     /* Implements
@@ -25,7 +25,8 @@ FLOAT_T jaccardIntersection(FLOAT_T x, FLOAT_T y){
 }
 
 void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scaleFactor,
-                   const FLOAT_T * const restrict cwm, int length, FLOAT_T *restrict jaccardValue){
+                   const FLOAT_T * const restrict cwm, int length, int numBases,
+                   FLOAT_T *restrict jaccardValue){
     /*For a particular region of the importance scores, calculate the continuous
     * jaccard similarity. Returns a single number that corresponds to the formula in
     * the modisco paper, namely that
@@ -39,14 +40,14 @@ void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scal
     *     x ∪ y = max(|x|, |y|)
     *
     * The importanceScores should be an array of shape
-    * (length, 4). Note that this function is perfectly fine if importanceScores is longer
+    * (length, numBases). Note that this function is perfectly fine if importanceScores is longer
     * than length, since it will only look at the first length values in it. For this reason,
     * it is critical that the length is the first dimension, so that we can index into the array
     * without knowing its actual size.
     * the scaleFactor is a number that the importanceScores array should be multiplied by.
     * If you just want the continuous jaccard metric, set this to 1.0.
     *
-    * cwm is an array of shape (cwmLength, 4) and represents the CWM that will be scanned.
+    * cwm is an array of shape (cwmLength, numBases) and represents the CWM that will be scanned.
     *
     * Stores the calculated jaccard distance in jaccardValue.
     *
@@ -54,9 +55,9 @@ void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scal
     FLOAT_T numerator = 0;
     FLOAT_T denominator = 0;
     for(int cwmPos = 0; cwmPos < length; cwmPos++){
-        for(int base = 0; base < 4; base++){
-            FLOAT_T x = importanceScores[cwmPos*4 + base] * scaleFactor;
-            FLOAT_T y = cwm[cwmPos * 4 + base];
+        for(int base = 0; base < numBases; base++){
+            FLOAT_T x = importanceScores[cwmPos*numBases + base] * scaleFactor;
+            FLOAT_T y = cwm[cwmPos * numBases + base];
             numerator += jaccardIntersection(x,y);
             denominator += fmax(fabs(x), fabs(y));
         }
@@ -66,15 +67,15 @@ void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scal
 }
 
 void sumRegion(const FLOAT_T * const restrict values,
-               int length, FLOAT_T *restrict out){
+               int length, int numBases, FLOAT_T *restrict out){
     /*
-     * For an array values of shape (length, 4), calculates the sum of
+     * For an array values of shape (length, numBases), calculates the sum of
      * the absolute values of that array. Stores the result in out.
      */
     FLOAT_T ret = 0;
     for (int i = 0; i < length; i++){
-         for (int j = 0; j < 4; j++){
-            ret += fabs(values[i*4+j]);
+         for (int j = 0; j < numBases; j++){
+            ret += fabs(values[i*numBases+j]);
          }
     }
     *out = ret;
@@ -82,11 +83,11 @@ void sumRegion(const FLOAT_T * const restrict values,
 
 
 void slidingJaccard(const FLOAT_T * const restrict importanceScores, int importanceLength,
-                    const FLOAT_T * const restrict cwm, int cwmLength,
+                    const FLOAT_T * const restrict cwm, int cwmLength, int numBases,
                     FLOAT_T *restrict jaccardOut, FLOAT_T *restrict sumsOut){
     /*
      * The meat of the implementation. Given an array importanceScores of shape
-     * (importanceLength, 4) and a cwm of shape (cwmLength, 4), calculate the
+     * (importanceLength, numBases) and a cwm of shape (cwmLength, numBases), calculate the
      * sliding Jaccard similarity as cwm is passed over importanceScores.
      * The arrays jaccardOut and sumsOut both have shape (importanceLength - cwmLength + 1,)
      * because the similarity scores are only calculated where both the CWM and
@@ -97,12 +98,13 @@ void slidingJaccard(const FLOAT_T * const restrict importanceScores, int importa
     FLOAT_T jaccardValue;
     FLOAT_T sumOfImportances;
     FLOAT_T sumOfCwm;
-    sumRegion(cwm, cwmLength, &sumOfCwm);
+    sumRegion(cwm, cwmLength, numBases, &sumOfCwm);
 
     for(int i = 0; i < importanceLength - cwmLength + 1; i++){
-        sumRegion(importanceScores+i*4, cwmLength, &sumOfImportances);
+        sumRegion(importanceScores+i*numBases, cwmLength, numBases,
+                  &sumOfImportances);
         FLOAT_T scaleFactor = sumOfCwm / (sumOfImportances == 0 ? 0.0000001 : sumOfImportances);
-        jaccardRegion(importanceScores+i*4, scaleFactor, cwm, cwmLength,
+        jaccardRegion(importanceScores+i*numBases, scaleFactor, cwm, cwmLength, numBases,
                       &jaccardValue);
 
 

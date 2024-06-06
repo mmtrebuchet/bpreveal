@@ -2,6 +2,7 @@
 """A script to take the predictions hdf5 file and turn it into a bigwig."""
 import argparse
 import multiprocessing
+from bpreveal.internal.constants import PRED_T
 import tqdm
 import h5py
 import pyBigWig
@@ -98,7 +99,7 @@ def getChromVector(regionList: list[Region], h5fp: h5py.File, headID: int,
     """
     chromSize = h5fp["chrom_sizes"][regionList[0].chromIdx]
     regionCounts = np.zeros((chromSize,), dtype=np.uint16)
-    regionValues = np.zeros((chromSize,), dtype=np.float32)
+    regionValues = np.zeros((chromSize,), dtype=PRED_T)
     for r in regionList:
         regionCounts[r.start:r.end] += 1
         regionValues[r.start:r.end] += r.getValues(h5fp, mode, headID, taskID)
@@ -196,7 +197,7 @@ def writeBigWig(inH5Fname: str, outFname: str, headID: int, taskID: int, mode: s
     outBw = pyBigWig.open(outFname, "w")
 
     outBw.addHeader(bwHeader)
-    logUtils.debug(bwHeader)
+    logUtils.debug(str(bwHeader))
     logUtils.info("Added header.")
     regionsByChrom = buildRegionList(inH5)
     chromList = sorted(regionsByChrom.keys())

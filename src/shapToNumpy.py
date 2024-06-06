@@ -15,8 +15,8 @@ def flipAndSave(inpAr: IMPORTANCE_AR_T | ONEHOT_AR_T,
     """Save the datasets in the format expected by modiscolite.
 
     The hdf5 file contains scores in the format
-    ``(num-regions x input-length x 4)``, but modiscolite requires
-    ``(num-regions x 4 x input-length)``.
+    ``(num-regions x input-length x NUM_BASES)``, but modiscolite requires
+    ``(num-regions x NUM_BASES x input-length)``.
 
     :param inpAr: The data to save out
     :param fname: The file to save. If it ends with ``npz``, it will be saved compressed.

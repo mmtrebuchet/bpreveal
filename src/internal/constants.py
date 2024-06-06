@@ -148,6 +148,9 @@ FONT_FAMILY = "serif"
 FONT_SIZE_TICKS = 8
 FONT_SIZE_LABELS = 10
 
+NUM_BASES: int = 4
+"""How many DNA base types are there?"""
+
 
 H5_CHUNK_SIZE: int = 128
 """When saving large hdf5 files, store the data in compressed chunks.

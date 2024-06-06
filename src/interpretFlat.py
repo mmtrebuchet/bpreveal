@@ -104,11 +104,11 @@ coords_chrom
 
 input_seqs
     A one-hot encoded array representing the input sequences. It will have
-    shape ``(num-regions x input-length x 4)``
+    shape ``(num-regions x input-length x NUM_BASES)``
 
 hyp_scores
     A table of the shap scores. It will have shape ``(num-regions x
-    input-length x 4)``. If you want the actual contribution scores, not the
+    input-length x NUM_BASES)``. If you want the actual contribution scores, not the
     hypothetical ones, multiply ``hyp_scores`` by ``input_seqs`` to zero out
     all purely hypothetical contribution scores.
 

@@ -34,7 +34,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
              origin: tuple[float, float] = (0, 0)) -> None:
     """Plot an array of sequence data (like a pwm).
 
-    :param values: An (N,4) array of sequence data. This could be, for example,
+    :param values: An (N,NUM_BASES) array of sequence data. This could be, for example,
         a pwm or a one-hot encoded sequence.
     :param width: The width of the total logo, useful for aligning axis labels.
     :param ax: A matplotlib axes object on which the logo will be drawn.
@@ -261,7 +261,8 @@ def buildConfig(oldConfig: dict) -> dict:
             "annotations": {
                 "name-colors": <dict[str, COLOR_SPEC_T]>,
                 "custom": [<list of {"start": <integer>, "end": <integer>,
-                                     "name": <string>, "color": <COLOR_SPEC_T>}>]
+                                     "name": <string>, "color": <COLOR_SPEC_T>,
+                                     "shape": "box"}>]
             },
             "figure": {
                 "grid-mode": <string, default "on">,
@@ -357,6 +358,8 @@ def buildConfig(oldConfig: dict) -> dict:
                                         newConfig["pisa"]["values"].shape[1])
         newConfig["annotations"]["name-colors"] = nameColors  # nameColors was mutated!
         newConfig["annotations"]["custom"] = newConfig["annotations"]["custom"] + newCustom
+    for annot in newConfig["annotations"]["custom"]:
+        annot["shape"] = annot.get("shape", "box")
 
     if "genome-fasta" in oldCoords:
         newCoords["sequence"] = loadSequence(
@@ -532,6 +535,33 @@ def addResizeCallbacks(ax: AXES_T, which: Literal["both"] | Literal["x"] | Liter
             ax.callbacks.connect("xlim_changed", resizeCallbackX)
 
 
+def _getAnnotationShape(shape: str, aleft: float, aright: float,
+                        height: float) -> tuple[list[float], list[float]]:
+    """Gets a set of X and Y coordinates that will draw the given shape at the given position.
+
+    :param shape: A valid shape string.
+    :param aleft: The left edge of the shape.
+    :param aright: The right edge of the shape.
+    :param height: The height of the shape.
+    :raises ValueError: If the given ``shape`` is not a valid one.
+    :return: Two lists, the first giving X coordinates and the second giving Y coordinates.
+    """
+    midPt = (aleft + aright) / 2
+    if shape in {"diamond", "snp", "A", "C", "G", "T"}:
+        xVals = [aleft, midPt, aright, midPt]
+        yVals = [height / 2, height,
+                 height / 2, 0]
+    elif shape in {"wedge", "indel", "d", "Ǎ", "Č", "Ǧ", "Ť"}:
+        xVals = [aleft, midPt, aleft, aright, midPt, aright]
+        yVals = [0, height / 2, height, height, height / 2, 0]
+    elif shape in {"box"}:
+        xVals = [aleft, aleft, aright, aright]
+        yVals = [0, height, height, 0]
+    else:
+        raise ValueError(f"Annotation shape {shape} is not allowed.")
+    return xVals, yVals
+
+
 def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
                    genomeStartX: int, genomeEndX: int, fontSize: int,
                    mini: bool) -> dict[str, COLOR_SPEC_T]:
@@ -556,11 +586,22 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
     for annot in sorted(annotations, key=lambda x: x["start"]):
         aleft = annot["start"]
         aright = annot["end"]
+        shape = annot["shape"]
         if aright < genomeStartX or aleft > genomeEndX:
             continue
         # No directly abutting annotations - at least 1 base.
         if aleft > lastR + 1:
             offset = -boxHeight * 1.3
+        # If the user demanded an offset, honor it here.
+        if "top" in annot:
+            bottom = annot["bottom"]
+            top = annot["top"]
+            height = top - bottom
+        else:
+            bottom = offset
+            height = boxHeight
+            offset -= boxHeight * 1.5
+
         lastR = max(lastR, aright)
         if offset < -1:
             # We're off the page - reset offset and deal with the overlap.
@@ -569,15 +610,15 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
             aleft = genomeStartX + 0.1
         if aright >= genomeEndX:
             aright = genomeEndX - 0.1
-        axAnnot.fill([aleft, aleft, aright, aright],
-                     [offset, boxHeight + offset, boxHeight + offset, offset],
-                     label=annot["name"], color=parseSpec(annot["color"]))
+        xVals, yVals = _getAnnotationShape(shape, aleft, aright, height)
+        yVals = [y + bottom for y in yVals]
+        axAnnot.fill(xVals, yVals, label=annot["name"],
+                     color=parseSpec(annot["color"]))
         if not mini:
-            axAnnot.text((aleft + aright) / 2, offset + boxHeight / 2, annot["name"],
+            axAnnot.text((aleft + aright) / 2, bottom + height / 2, annot["name"],
                      fontstyle="italic", fontsize=fontSize, fontfamily=FONT_FAMILY,
                      ha="center", va="center")
         usedNames[annot["name"]] = annot["color"]
-        offset -= boxHeight * 1.5
     axAnnot.set_xlim(genomeStartX, genomeEndX)
     return usedNames
 

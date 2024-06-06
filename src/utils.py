@@ -16,8 +16,8 @@ from bpreveal import logUtils
 # Public import so that old code that expects these functions to be here can still
 # find them.
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
-from bpreveal.internal.constants import ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
-    QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T
+from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
+    QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T
 from bpreveal.internal import constants
 
 
@@ -220,7 +220,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
             logUtils.error("Problem parsing nvidia-smi output.")
             logUtils.error(e.stdout.decode("utf-8"))
             logUtils.error(e.stderr.decode("utf-8"))
-            logUtils.error(e.returncode)
+            logUtils.error(str(e.returncode))
             raise
         line = ret.stdout.decode("utf-8").split("\n")[1]
         logUtils.debug(f"Memory usage limited based on {line}")
@@ -310,7 +310,7 @@ def blankChromosomeArrays(genomeFname: str | None = None,
                           chromSizes: dict[str, int] | None = None,
                           bw: pyBigWig.pyBigWig | None = None,
                           fasta: pysam.FastaFile | None = None,
-                          dtype: type = np.float32,
+                          dtype: type = PRED_T,
                           numTracks: int = 1) -> dict[str, np.ndarray]:
     """Get a set of blank numpy arrays that you can use to save genome-wide data.
 
@@ -400,7 +400,7 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
     logUtils.debug("Bigwig closed.")
 
 
-def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
+def oneHotEncode(sequence: str, allowN: bool = False, alphabet: str = "ACGT") -> ONEHOT_AR_T:
     """Convert the string sequence into a one-hot encoded numpy array.
 
     :param sequence: A DNA sequence to encode.
@@ -408,7 +408,8 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
     :param allowN: If False (the default), raise an AssertionError if
         the sequence contains letters other than ``ACGTacgt``.
         If True, any other characters will be encoded as ``[0, 0, 0, 0]``.
-    :return: An array with shape (len(sequence), 4).
+    :param alphabet: The order of the bases in the output array.
+    :return: An array with shape (len(sequence), NUM_BASES).
     :rtype: ONEHOT_AR_T
 
 
@@ -440,18 +441,18 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
         # ACGTTT
 
     """
+    assert len(alphabet) == NUM_BASES, f"Your alphabet {alphabet} has the wrong length. "\
+        f"Should be {NUM_BASES}, but got {len(alphabet)}"
     if allowN:
         initFunc = np.zeros
     else:
         # We're going to overwrite every position, so don't bother with
         # initializing the array.
         initFunc = np.empty
-    ret = initFunc((len(sequence), 4), dtype=ONEHOT_T)
+    ret = initFunc((len(sequence), len(alphabet)), dtype=ONEHOT_T)
     ordSeq = np.fromstring(sequence, np.int8)  # type:ignore
-    ret[:, 0] = (ordSeq == ord("A")) + (ordSeq == ord("a"))
-    ret[:, 1] = (ordSeq == ord("C")) + (ordSeq == ord("c"))
-    ret[:, 2] = (ordSeq == ord("G")) + (ordSeq == ord("g"))
-    ret[:, 3] = (ordSeq == ord("T")) + (ordSeq == ord("t"))
+    for i, base in enumerate(alphabet):
+        ret[:, i] = (ordSeq == ord(base)) + (ordSeq == ord(base.lower()))
     if not allowN:
         assert (np.sum(ret) == len(sequence)), \
             "Sequence contains unrecognized nucleotides. "\
@@ -459,14 +460,15 @@ def oneHotEncode(sequence: str, allowN: bool = False) -> ONEHOT_AR_T:
     return ret
 
 
-def oneHotDecode(oneHotSequence: np.ndarray) -> str:
+def oneHotDecode(oneHotSequence: np.ndarray, alphabet: str = "ACGT") -> str:
     """Take a one-hot encoded sequence and turn it back into a string.
 
-    :param oneHotSequence: An array of shape (n, 4). It may have any type that can be
+    :param oneHotSequence: An array of shape (n, NUM_BASES). It may have any type that can be
         converted into a uint8.
+    :param alphabet: The order in which the bases are encoded.
 
     Given an array representing a one-hot encoded sequence, convert it back
-    to a string. The input shall have shape (sequenceLength, 4), and the output
+    to a string. The input shall have shape (sequenceLength, NUM_BASES), and the output
     will be a Python string.
     The decoding is performed based on the following mapping::
 
@@ -478,15 +480,15 @@ def oneHotDecode(oneHotSequence: np.ndarray) -> str:
 
     See :py:func:`oneHotEncode<bpreveal.utils.oneHotEncode>` for an example.
     """
+    assert len(alphabet) == NUM_BASES, f"Your alphabet {alphabet} has the wrong length. "\
+        f"Should be {NUM_BASES}, but got {len(alphabet)}"
     # Convert to an int8 array, since if we get floating point
     # values, the chr() call will fail.
     oneHotArray = oneHotSequence.astype(ONEHOT_T)
 
-    ret = \
-        oneHotArray[:, 0] * ord("A") + \
-        oneHotArray[:, 1] * ord("C") + \
-        oneHotArray[:, 2] * ord("G") + \
-        oneHotArray[:, 3] * ord("T")
+    ret = np.zeros_like(oneHotArray[:, 0])
+    for i, base in enumerate(alphabet):
+        ret += oneHotArray[:, i] * ord(base.upper())
     # Anything that was not encoded is N.
     ret[ret == 0] = ord("N")
     return ret.tobytes().decode("ascii")
@@ -678,9 +680,9 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
 
     * If keepHypotheticals is True, then it will be structured so::
 
-            {"profile": array of shape (numSequences x inputLength x 4),
-             "counts": array of shape (numSequences x inputLength x 4),
-             "sequence": array of shape (numSequences x inputLength x 4)}
+            {"profile": array of shape (numSequences x inputLength x NUM_BASES),
+             "counts": array of shape (numSequences x inputLength x NUM_BASES),
+             "sequence": array of shape (numSequences x inputLength x NUM_BASES)}
 
       This dict has the same meaning as shap scores stored in an
       interpretFlat hdf5.
@@ -697,9 +699,9 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
 
     * For keepHypotheticals == True, you get::
 
-          {"profile": array of shape (inputLength x 4),
-           "counts": array of shape (inputLength x 4),
-           "sequence": array of shape (inputLength x 4)}
+          {"profile": array of shape (inputLength x NUM_BASES),
+           "counts": array of shape (inputLength x NUM_BASES),
+           "sequence": array of shape (inputLength x NUM_BASES)}
 
     * and if keepHypotheticals is False, you get::
 
@@ -874,7 +876,7 @@ class BatchPredictor:
     def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
         """Submit a one-hot-encoded sequence.
 
-        :param sequence: An (input-length x 4) ndarray containing the
+        :param sequence: An (input-length x NUM_BASES) ndarray containing the
             one-hot encoded sequence to predict.
         :param label: Any object; it will be returned with the prediction.
         """
@@ -923,7 +925,7 @@ class BatchPredictor:
         # I need to determine the input length, and I'll do that by looking at
         # the first sequence.
         inputLength = firstElem[0].shape[0]
-        modelInputs = np.zeros((numSamples, inputLength, 4), dtype=ONEHOT_T)
+        modelInputs = np.zeros((numSamples, inputLength, NUM_BASES), dtype=ONEHOT_T)
         modelInputs[0] = firstElem[0]
         # With that ugliness out of the way, now I just populate the rest of
         # the prediction table.
@@ -1178,7 +1180,7 @@ class ThreadedBatchPredictor:
     def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
         """Submit a one-hot-encoded sequence.
 
-        :param sequence: An (input-length x 4) ndarray containing the
+        :param sequence: An (input-length x NUM_BASES) ndarray containing the
             one-hot encoded sequence to predict.
         :param label: Any (picklable) object; it will be returned with the prediction.
         """

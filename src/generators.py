@@ -10,7 +10,7 @@ import numpy as np
 from numpy._typing import NDArray
 import tf_keras as keras
 from bpreveal import logUtils
-from bpreveal.internal.constants import MODEL_ONEHOT_T, PRED_T
+from bpreveal.internal.constants import MODEL_ONEHOT_T, NUM_BASES, ONEHOT_T, PRED_T
 from bpreveal.internal.libslide import slide, slideChar
 
 
@@ -38,8 +38,8 @@ class H5BatchGenerator(keras.utils.Sequence):
         self.maxJitter = maxJitter
         self.batchSize = batchSize
         # The shape of the sequence dataset is
-        # (numRegions x (inputLength + jitter*2 x 4))
-        self.fullSequences = np.array(dataH5["sequence"], dtype=np.uint8)
+        # (numRegions x (inputLength + jitter*2 x NUM_BASES))
+        self.fullSequences = np.array(dataH5["sequence"], dtype=ONEHOT_T)
         self.numRegions = self.fullSequences.shape[0]
         # The shape of the profile is
         # (num-heads) x (numRegions x (outputLength + jitter*2) x numTasks)
@@ -93,7 +93,7 @@ class H5BatchGenerator(keras.utils.Sequence):
 
         Called only once.
         """
-        self._allBatchSequences = np.empty((self.numRegions, self.inputLength, 4),
+        self._allBatchSequences = np.empty((self.numRegions, self.inputLength, NUM_BASES),
                                            dtype=MODEL_ONEHOT_T)
         self._allBatchValues = []
         self._allBatchCounts = []

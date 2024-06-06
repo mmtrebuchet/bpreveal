@@ -93,10 +93,10 @@ def slidingDotproduct(seqletValues: npt.NDArray, pssm: npt.NDArray) -> MOTIF_FLO
 
     Simply put, it's just a convolution.
 
-    :param seqletValues: is a ndarray of shape (numSequences 4),
-    :param pssm: the pssm, an array of shape (motifLength, 4)
+    :param seqletValues: is a ndarray of shape (numSequences NUM_BASES),
+    :param pssm: the pssm, an array of shape (motifLength, NUM_BASES)
     :return: Returns the scores of comparing the seqlets to their PSSM,
-        an array of shape (motifLength, 4)
+        an array of shape (motifLength, NUM_BASES)
 
     """
     # The funny slice here is because scipy.signal.correlate doesn't collapse the
@@ -112,18 +112,18 @@ def ppmToPwm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> MOTIF_FLOAT_AR_T
     base at each position, convert that into a position weight matrix, which gives
     the information (in bits) contained at each position.
 
-    ppm is an ndarray of shape (motifLength, 4), representing the motif.
-    backgroundProbs is an array of shape (4,), giving the background distribution of
+    ppm is an ndarray of shape (motifLength, NUM_BASES), representing the motif.
+    backgroundProbs is an array of shape (NUM_BASES,), giving the background distribution of
     bases in the genome. For a genome with 60% AT and 40% GC, this would be
     [0.3, 0.2, 0.2, 0.3]
 
-    returns the pwm, which is an array of shape (motifLength, 4)
+    returns the pwm, which is an array of shape (motifLength, NUM_BASES)
 
-    :param ppm: is a ndarray of shape (pwmlength, 4)
-    :param backgroundProbs: is an ndarray of shape (4) representing
+    :param ppm: is a ndarray of shape (pwmlength, NUM_BASES)
+    :param backgroundProbs: is an ndarray of shape (NUM_BASES) representing
         probabilities to normalize information context over occurring
         frequencies
-    :return: Returns the pwm, an array of shape (motifLength, 4)
+    :return: Returns the pwm, an array of shape (motifLength, NUM_BASES)
 
     """
     # Add a minute amount of pseudocounts just so that numpy doesn't whine about
@@ -138,15 +138,15 @@ def ppmToPssm(ppm: npt.NDArray, backgroundProbs: npt.NDArray) -> MOTIF_FLOAT_AR_
     which is a measure of the information contained by each base.
     This method adds a small (1%) pseudocount at each position.
 
-    ppm is an ndarray of shape (motifLength, 4), representing the motif.
-    backgroundProbs is an array of shape (4,), with the same meaning as in
+    ppm is an ndarray of shape (motifLength, NUM_BASES), representing the motif.
+    backgroundProbs is an array of shape (NUM_BASES,), with the same meaning as in
     ppmToPwm.
 
-    :param ppm: is a ndarray of shape (pwmlength, 4)
-    :param backgroundProbs: is an ndarray of shape (4) representing
+    :param ppm: is a ndarray of shape (pwmlength, NUM_BASES)
+    :param backgroundProbs: is an ndarray of shape (NUM_BASES) representing
         probabilities to normalize information context over occurring
         frequencies
-    :return: Returns the pssm, an array of shape (motifLength, 4)
+    :return: Returns the pssm, an array of shape (motifLength, NUM_BASES)
     """
     # Add some pseudo counts and re-normalize
     ppm = ppm + 0.01
@@ -159,7 +159,7 @@ def cwmTrimPoints(cwm: npt.NDArray,
                   trimThreshold: float, padding: int) -> tuple[int, int]:
     """Find where the motif actually is inside a CWM.
 
-    :param cwm: is a ndarray of shape (cwmlength, 4)
+    :param cwm: is a ndarray of shape (cwmlength, NUM_BASES)
     :param trimThreshold: is a floating point number. The lower this is,
         the more flanking bases will be kept.
     :param padding: The number of bases that should be added back on each
@@ -208,7 +208,7 @@ def cwmTrimPoints(cwm: npt.NDArray,
         start, stop = cwmTrimPoints(cwm, threshold)
         newCwm = cwm[start:stop,:]
 
-    (the : in the second axis is because the cwm will have shape (length, 4)
+    (the : in the second axis is because the cwm will have shape (length, NUM_BASES)
     """
     cwmSums = np.sum(np.abs(cwm), axis=1)
     cutoffValue = np.max(cwmSums) * trimThreshold
@@ -253,16 +253,16 @@ class Seqlet:
     sequence: str
     """The sequence of this seqlet, as a string"""
 
-    # The following arrays are of shape (numSeqlets, seqletLength, 4):
+    # The following arrays are of shape (numSeqlets, seqletLength, NUM_BASES):
     oneHot: npt.NDArray[ONEHOT_T]
     """The one-hot encoded sequence.
 
-    Shape (seqletLength, 4)
+    Shape (seqletLength, NUM_BASES)
     """
     contribs: IMPORTANCE_AR_T
     """The contribution scores for each base.
 
-    Shape (seqletLength, 4)
+    Shape (seqletLength, NUM_BASES)
     """
 
     seqMatch: MOTIF_FLOAT_T
@@ -354,9 +354,9 @@ class Pattern:
     shortName: str
     """The human-readable name of this pattern."""
     cwm: MOTIF_FLOAT_AR_T
-    """A (length, 4) array of the contribution weight matrix."""
+    """A (length, NUM_BASES) array of the contribution weight matrix."""
     ppm: MOTIF_FLOAT_AR_T
-    """A (length, 4) array of the probability of each base at each position in the pattern."""
+    """A (length, NUM_BASES) array of the probability of each base at each position."""
     pwm: MOTIF_FLOAT_AR_T
     """The position weight matrix for this motif, the usual motif representation in logos.
 
@@ -446,7 +446,7 @@ class Pattern:
             the more flanking bases will be kept.
         :param padding: is an integer. After trimming, pad each end of motif
             by this many flanking bases to reconstruct flank specificity.
-        :param backgroundProbs: is an ndarray of shape (4) representing
+        :param backgroundProbs: is an ndarray of shape (NUM_BASES) representing
             probabilities to normalize information context over occurring
             frequencies
 
@@ -454,7 +454,7 @@ class Pattern:
         for documentation on those parameters.
 
         backgroundProbs gives the average frequency of each base across the genome as
-        an array of shape (4,). See ppmToPwm and ppmToPssm for details on this parameter.
+        an array of shape (NUM_BASES,). See ppmToPwm and ppmToPssm for details on this parameter.
 
         After running this function, this Pattern object will contain a few arrays:
 
@@ -612,9 +612,9 @@ class Pattern:
         short-name
             Combined identifier of metacluster-name and pattern-name
         cwm
-            The CWM, an array of shape (motifLength, 4)
+            The CWM, an array of shape (motifLength, NUM_BASES)
         pssm
-            The PSSM, an array of shape (motifLength, 4)
+            The PSSM, an array of shape (motifLength, NUM_BASES)
         seq-match-cutoff
             A float designating the minimum PSSM match quantile
             threshold that a mapped hit must meet based on the distribution of seqlet
@@ -714,7 +714,7 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
     :param trimPadding: Gives the padding to be added to the flanks.
         See :func:`bpreveal.motifUtils.cwmTrimPoints` for details of these parameters.
 
-    :param backgroundProbs: An array of shape (4,) of floats that gives the background
+    :param backgroundProbs: An array of shape (NUM_BASES,) of floats that gives the background
         distribution for each base in the genome. See :func:`~ppmToPwm` and
         :func:`ppmToPssm` for details on this argument.
 
@@ -732,8 +732,8 @@ def seqletCutoffs(modiscoH5Fname: str, contribH5Fname: str,
     The returned list is structured as follows::
         [{"metacluster-name": <string>,
         "pattern-name": <string>,
-        "cwm": <array of floats of shape (length, 4)>,
-        "pssm": <array of floats of shape (length, 4)>,
+        "cwm": <array of floats of shape (length, NUM_BASES)>,
+        "pssm": <array of floats of shape (length, NUM_BASES)>,
         "seq-match-cutoff": <float-or-null>,
         "contrib-match-cutoff": <float-or-null>,
         "contrib-magnitude-cutoff": <float-or-null> },
@@ -898,13 +898,13 @@ class MiniPattern:
     short-name
         Combined identifier of metacluster-name and pattern-name
     cwm
-        The CWM, an array of shape (motifLength, 4)
+        The CWM, an array of shape (motifLength, NUM_BASES)
     rcwm
-        The reverse complement CWM, an array of shape (motifLength, 4)
+        The reverse complement CWM, an array of shape (motifLength, NUM_BASES)
     pssm
-        The PSSM, an array of shape (motifLength, 4)
+        The PSSM, an array of shape (motifLength, NUM_BASES)
     rpssm
-        The reverse complement PSSM, an array of shape (motifLength, 4)
+        The reverse complement PSSM, an array of shape (motifLength, NUM_BASES)
     seqMatchCutoff
         A float designating the minimum PSSM match quantile
         threshold that a mapped hit must meet based on the distribution of seqlet
@@ -1022,9 +1022,9 @@ class MiniPattern:
              ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Given a sequence and a contribution track, identify places where this pattern matches.
 
-        sequence is a (length, 4) one-hot encoded
+        sequence is a (length, NUM_BASES) one-hot encoded
         DNA fragment, and scores is the actual (not hypothetical) contribution score
-        data from that region. Scores is (length, 4) in shape, but all of the
+        data from that region. Scores is (length, NUM_BASES) in shape, but all of the
         bases that are not present should have zero contribution score.
         Returns a list of hits. A hit is a tuple with five elements.
         First, an integer giving the offset in the sequence where the hit starts.

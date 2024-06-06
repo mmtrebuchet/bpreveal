@@ -75,7 +75,7 @@ short-name
     The short name will be used to populate the name column in the generated
     bed and csv files.
 cwm
-    An array of shape (length, 4) that contains the cwm of
+    An array of shape (length, NUM_BASES) that contains the cwm of
     the motif.
     It is used to calculate the Jaccard similarity and the L1 score.
 pssm

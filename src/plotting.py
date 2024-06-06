@@ -144,6 +144,15 @@ things like motifs and genes.
     coordinates, along with a ``name`` giving the text to draw and a
     ``color`` giving a colorSpec to use. See
     :py:mod:`colors<bpreveal.colors>` for colorSpec documentation.
+    You may also include a ``shape`` parameter that determines the shape that
+    will be drawn, which is used to show corruptors from the GA. Options are
+    ``diamond``, ``wedge``, ``indel``, ``snp``, one of the letters
+    ``ACGTdǍČǦŤ``, or ``box``. ``indel`` or one of ``dǍČǦŤ`` create a wedge,
+    ``snp`` or one of ``ACGT`` create a diamond. The default is ``box``. You
+    can also provide a ``bottom`` an ``top`` parameter if you want to manually
+    set the coordinates of your annotation box. (This is usually not necessary,
+    as the annotation function automatically adjusts the box positions if they
+    overlap.)
     Default: No custom annotations.
 
 ``figure-section``
@@ -222,8 +231,8 @@ import matplotlib.figure
 from matplotlib.axes import Axes as AXES_T
 
 from bpreveal import logUtils
-from bpreveal.internal.constants import DNA_COLOR_SPEC_T, PRED_AR_T, ONEHOT_AR_T, \
-    FONT_FAMILY, FONT_SIZE_TICKS, FONT_SIZE_LABELS
+from bpreveal.internal.constants import DNA_COLOR_SPEC_T, ONEHOT_T, PRED_AR_T, ONEHOT_AR_T, \
+    FONT_FAMILY, FONT_SIZE_TICKS, FONT_SIZE_LABELS, NUM_BASES, PRED_T
 import bpreveal.internal.plotUtils as pu
 from bpreveal import utils
 from bpreveal import motifUtils
@@ -410,7 +419,7 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
 
     logUtils.debug("PISA graph complete.")
     return {"axes": {"pisa": axGraph, "importance": axSeq, "predictions": axProfile,
-                     "annotations": axAnnot, "cbar": axCbar},
+                     "annotations": axAnnot, "cbar": axCbar, "legend": axLegend},
             "name-colors": cfg["annotations"].get("name-colors", {}),
             "genome-start": genomeStart,
             "genome-end": genomeEnd,
@@ -624,7 +633,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-
                            0.2 - PAD, 0.8 - HIST_HEIGHT))
     hmapAr = np.zeros((len(pattern.seqlets),
                        len(pattern.seqlets[0].sequence),
-                       4), dtype=np.uint8)
+                       NUM_BASES), dtype=ONEHOT_T)
     for outIdx, seqletIdx in enumerate(sortOrder):
         hmapAr[outIdx] = utils.oneHotEncode(pattern.seqlets[seqletIdx].sequence)
     plotSequenceHeatmap(hmapAr, axHmap)
@@ -698,7 +707,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-
 def plotSequenceHeatmap(hmap: ONEHOT_AR_T, ax: AXES_T, upsamplingFactor: int = 10) -> None:
     """Show a sequence heatmap from an array of one-hot encoded sequences.
 
-    :param hmap: An array of sequences of shape (numSequences, length, 4)
+    :param hmap: An array of sequences of shape (numSequences, length, NUM_BASES)
     :param ax: A matplotlib Axes object upon which the heatmap will be drawn.
     :param upsamplingFactor: How much should the x-axis be sharpened?
         If upsamplingFactor * hmap.shape[1] >> ax.width_in_pixels then you
@@ -708,9 +717,9 @@ def plotSequenceHeatmap(hmap: ONEHOT_AR_T, ax: AXES_T, upsamplingFactor: int = 1
 
     """
     displayAr = np.zeros((hmap.shape[0], hmap.shape[1] * upsamplingFactor, 3),
-                         dtype=np.float32)
+                         dtype=PRED_T)
     for base, baseName in enumerate("ACGT"):
-        hmapBase = np.array(hmap[:, :, base], dtype=np.float32)
+        hmapBase = np.array(hmap[:, :, base], dtype=PRED_T)
         ar = hmapBase
         for colorIdx in range(3):
             color = parseSpec(bprcolors.dnaWong[baseName])[colorIdx]
@@ -727,7 +736,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
              spaceBetweenLetters: float = 0) -> None:
     """Plot an array of sequence data (like a pwm).
 
-    :param values: An (N,4) array of sequence data. This could be, for example,
+    :param values: An (N, NUM_BASES) array of sequence data. This could be, for example,
         a pwm or a one-hot encoded sequence.
     :param width: The width of the total logo, useful for aligning axis labels.
     :param ax: A matplotlib axes object on which the logo will be drawn.
@@ -890,7 +899,7 @@ def plotPisaWithFiles(pisaDats: str, cutMiddle: int, cutLengthX: int,
             "miniature": mini
         }
     }
-    logUtils.warning(cfg)
+    logUtils.warning(str(cfg))
     return cfg
 
 

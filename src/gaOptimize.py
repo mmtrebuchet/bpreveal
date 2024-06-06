@@ -918,17 +918,16 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
             case ((l, r), label, color):
                 h = boxHeight  # Just for brevity.
                 fcolor = parseSpec(color)
-                ax.fill([l, l, r, r], [-h, h, h, -h], fcolor, label=label)
+                ax.fill([l, l, r, r], [-h, h, h, -h], color=fcolor, label=label)
             case ((l, r), label, color, startFrac, stopFrac):
                 bottom = -boxHeight + (2 * boxHeight * startFrac)
                 top = -boxHeight + (2 * boxHeight * stopFrac)
                 fcolor = parseSpec(color)
                 if (color, label) not in usedLabels:
-                    ax.fill([l, l, r, r], [bottom, top, top, bottom], fcolor, label=label)
+                    ax.fill([l, l, r, r], [bottom, top, top, bottom], color=fcolor, label=label)
                     usedLabels.append((color, label))
                 else:
-                    ax.fill([l, l, r, r], [bottom, top, top, bottom], fcolor)
-
+                    ax.fill([l, l, r, r], [bottom, top, top, bottom], color=fcolor)
     for cor in corruptors:
         match cor:
             case (pos, corType):
