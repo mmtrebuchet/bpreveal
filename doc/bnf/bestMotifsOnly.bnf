@@ -19,6 +19,7 @@
 
 <unary-op-expr> ::=
     - <expression>
+  | not <expression>
 
 <compare-op-expr> ::=
     <expression> <compare-suite>

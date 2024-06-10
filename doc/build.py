@@ -47,6 +47,9 @@ filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py"]
 
 filesToolsMajor = ["addNoise.py"]
+additionalBnfs =  ["base.xx", "seqletQuantileCutoffs.xx",
+                   "plotting.xx", "colors.xx", "bestMotifsOnly.xx"]
+
 
 filesToolsApi = ["slurm.py", "addNoiseUtils.py"]
 
@@ -90,8 +93,7 @@ def makeHeader() -> None:
         for fname in filesText + filesDevelopment:
             fp.write(f"_generated/{fname}.rst: text/{fname}.rst build.py\n\t./build.py {fname}\n\n")
             allTargets.append(f"_generated/{fname}.rst")
-        for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
-                                                     "plotting.xx", "colors.xx"]:
+        for fname in filesMajor + filesToolsMajor + additionalBnfs:
             base = fname[:-3]
             fp.write(
                 f"_generated/bnf/{base}.rst: build.py\n\t./build.py bnf/{base}.rst\n\n")
@@ -154,8 +156,7 @@ def makeBase() -> None:
 def makeBnf(request: str) -> None:
     """Given an input bnf file, turn it into one with links and stuff."""
     modRequested = request[4:][:-4]  # strip bnf/ and .rst.
-    for fname in filesMajor + filesToolsMajor + ["base.xx", "seqletQuantileCutoffs.xx",
-                                                 "plotting.xx", "colors.xx"]:
+    for fname in filesMajor + filesToolsMajor + additionalBnfs:
         modName = fname[:-3]
         if modRequested == modName:
             inFname = f"bnf/{modName}.bnf"
@@ -184,6 +185,11 @@ def makeBnf(request: str) -> None:
                                     f":ref:`{curName}<{curName}>`>")
                                 inName = False
                                 curName = ""
+                            elif c == " ":
+                                # Oops, we have a space after a < character.
+                                # This is a literal < symbol.
+                                outFp.write(c)
+                                inName = False
                             else:
                                 curName = curName + c
 

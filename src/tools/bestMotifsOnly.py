@@ -139,6 +139,8 @@ def evalAst(t: ast.AST, env: dict[str, Any]) -> int | float | bool:
             match t.op:
                 case ast.USub():
                     return -evalAst(t.operand, env)
+                case ast.Not():
+                    return not evalAst(t.operand, env)
                 case _:
                     raise SyntaxError(f"Unsupported unary operator in expression: {t.op}")
         case ast.Name():
