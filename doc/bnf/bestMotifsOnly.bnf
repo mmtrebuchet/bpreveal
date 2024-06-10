@@ -1,0 +1,31 @@
+<expression> ::=
+    (<expression>)
+  | <unary-op-expr>
+  | <bin-op-expr>
+  | <compare-op-expr>
+  | <bool-op-expr>
+  | <number>
+  | <list-of-character>
+
+<bool-op-expr> ::=
+    <expression> and <expression>
+  | <expression> or <expression>
+
+<bin-op-expr> ::=
+    <expression> * <expression>
+    <expression> / <expression>
+    <expression> + <expression>
+    <expression> - <expression>
+
+<unary-op-expr> ::=
+    - <expression>
+
+<compare-op-expr> ::=
+    <expression> <compare-suite>
+
+<compare-suite> ::=
+    <compare-op> <expression> <compare-suite>
+  | <compare-op> <expression>
+
+<compare-op> ::=
+    < | > | <= | >= | == | !=

@@ -261,8 +261,9 @@ void shuffle2(char *t) {
             u->indices[u->n_indices - 1] = u->indices[u->next];
             u->indices[u->next] = j;
             permutei(u->indices, u->n_indices - 1);    /* permute the rest */
-        } else
+        } else {
             permutei(u->indices, u->n_indices);
+        }
         u->i_indices = 0;    /* reset to zero before walk */
     }
 
@@ -286,20 +287,20 @@ void shuffle(const char *s, char *t, int l, int k) {
 
 
 
-void seedRng(unsigned int seed){
+void seedRng(unsigned int seed) {
     srandom(seed);
 }
 
-void initialize(){
-    //Use the libc random function.
+void initialize() {
+    // Use the libc random function.
     set_randfunc(random);
 }
 
 void shuffleStr(const char *restrict input, char *restrict output,
-                int length, int kmerSize, int numShuffles){
+                int length, int kmerSize, int numShuffles) {
     int i;
     shuffle1(input, length, kmerSize);
-    for(i = 0; i < numShuffles; i++){
+    for (i = 0; i < numShuffles; i++) {
         shuffle2(output + length * i * sizeof(char));
     }
 }
@@ -310,36 +311,32 @@ void shuffleStr(const char *restrict input, char *restrict output,
 #define T_OHE (1<<3)
 
 void shuffleOhe(const char *restrict input, char *restrict output,
-                int alphabetSize,
-                int length, int kmerSize, int numShuffles){
-    //The array is in row-major order, so we need to pack it into a temporary string.
+                int alphabetSize, int length, int kmerSize, int numShuffles) {
+    // The array is in row-major order, so we need to pack it into a
+    // temporary string.
     char *inputString = malloc(length * sizeof(char));
     char *outputString = malloc(length * numShuffles * sizeof(char));
     int pos, outputIdx, letter;
-    for(pos = 0; pos < length; pos++){
+    for (pos = 0; pos < length; pos++) {
         inputString[pos] = 0;
-        for(letter = 0; letter < alphabetSize; letter++){
+        for (letter = 0; letter < alphabetSize; letter++) {
             char letterPresent = input[pos*alphabetSize + letter] ? 1 : 0;
             inputString[pos] += letterPresent << letter;
         }
     }
-    for(int c = 0; c < length; c++){
-    }
     shuffleStr(inputString, outputString, length, kmerSize, numShuffles);
-    //Now it's time to unpack the shuffled string to be one-hot encoded.
-    for(outputIdx = 0; outputIdx < numShuffles; outputIdx++){
+    // Now it's time to unpack the shuffled string to be one-hot encoded.
+    for (outputIdx = 0; outputIdx < numShuffles; outputIdx++) {
         int oheOffset = outputIdx * length * alphabetSize;
         int strOffset = outputIdx * length;
-        for(pos = 0; pos < length; pos++){
-            for(letter = 0; letter < alphabetSize; letter++){
-                char toWrite = (outputString[strOffset + pos] & (1 << letter)) ? 1 : 0;
+        for (pos = 0; pos < length; pos++) {
+            for (letter = 0; letter < alphabetSize; letter++) {
+                char toWrite =
+                    (outputString[strOffset + pos] & (1 << letter)) ? 1 : 0;
                 output[oheOffset + pos * alphabetSize + letter] = toWrite;
             }
-
         }
     }
     free(inputString);
     free(outputString);
 }
-
-

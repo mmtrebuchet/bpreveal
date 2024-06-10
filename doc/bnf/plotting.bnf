@@ -130,8 +130,8 @@
 
 <annotation-position> ::=
     <empty>
-  | "top": <fraction>,
-    "bottom": <fraction>,
+  | "top": <number>,
+    "bottom": <number>,
 
 <figure-base> ::=
     "bottom": <number>,

@@ -62,7 +62,14 @@ def evalAst(t: ast.AST, env: dict[str, Any]) -> int | float | bool:
 
 
     Syntax:
-        TODO add syntax
+
+    This interpreter interprets a subset of the Python programming language.
+    Since it uses the Python parser, it obeys Python's operator precedence.
+    If it encounters a name in the expression, it looks it up in the supplied environment.
+
+    .. highlight:: none
+
+    .. literalinclude:: ../../doc/bnf/bestMotifsOnly.bnf
 
     """
     match t:

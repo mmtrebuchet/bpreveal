@@ -1,5 +1,5 @@
 #include <math.h>
-#include "constants.h"
+#define FLOAT_T float
 
 /* C implementation for sliding Jaccard similarity, based on Ziga Avsec's implementation.
  * There are two functions here that are exported as Python functions through Numpy's amazing
@@ -10,23 +10,23 @@
  */
 
 
-FLOAT_T jaccardIntersection(FLOAT_T x, FLOAT_T y){
+FLOAT_T jaccardIntersection(FLOAT_T x, FLOAT_T y) {
     /* Implements
     *     x ∩ y = min(|x|, |y|) * sign(x) * sign(y)
     *  Not exported.
     */
-    FLOAT_T minVal = fmin(fabs(x),fabs(y));
+    FLOAT_T minVal = fmin(fabs(x), fabs(y));
     int sameSign = (signbit(x) == signbit(y));
-    if(sameSign){
+    if (sameSign) {
         return minVal;
-    }else{
+    } else {
         return -minVal;
     }
 }
 
-void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scaleFactor,
-                   const FLOAT_T * const restrict cwm, int length, int numBases,
-                   FLOAT_T *restrict jaccardValue){
+void jaccardRegion(const FLOAT_T * const restrict importanceScores,
+                   FLOAT_T scaleFactor, const FLOAT_T * const restrict cwm,
+                   int length, int numBases, FLOAT_T *restrict jaccardValue) {
     /*For a particular region of the importance scores, calculate the continuous
     * jaccard similarity. Returns a single number that corresponds to the formula in
     * the modisco paper, namely that
@@ -54,27 +54,26 @@ void jaccardRegion(const FLOAT_T * const restrict importanceScores, FLOAT_T scal
     */
     FLOAT_T numerator = 0;
     FLOAT_T denominator = 0;
-    for(int cwmPos = 0; cwmPos < length; cwmPos++){
-        for(int base = 0; base < numBases; base++){
+    for (int cwmPos = 0; cwmPos < length; cwmPos++) {
+        for (int base = 0; base < numBases; base++) {
             FLOAT_T x = importanceScores[cwmPos*numBases + base] * scaleFactor;
             FLOAT_T y = cwm[cwmPos * numBases + base];
-            numerator += jaccardIntersection(x,y);
+            numerator += jaccardIntersection(x, y);
             denominator += fmax(fabs(x), fabs(y));
         }
     }
     *jaccardValue = numerator / denominator;
-
 }
 
 void sumRegion(const FLOAT_T * const restrict values,
-               int length, int numBases, FLOAT_T *restrict out){
+               int length, int numBases, FLOAT_T *restrict out) {
     /*
      * For an array values of shape (length, numBases), calculates the sum of
      * the absolute values of that array. Stores the result in out.
      */
     FLOAT_T ret = 0;
-    for (int i = 0; i < length; i++){
-         for (int j = 0; j < numBases; j++){
+    for (int i = 0; i < length; i++) {
+         for (int j = 0; j < numBases; j++) {
             ret += fabs(values[i*numBases+j]);
          }
     }
@@ -82,9 +81,10 @@ void sumRegion(const FLOAT_T * const restrict values,
 }
 
 
-void slidingJaccard(const FLOAT_T * const restrict importanceScores, int importanceLength,
-                    const FLOAT_T * const restrict cwm, int cwmLength, int numBases,
-                    FLOAT_T *restrict jaccardOut, FLOAT_T *restrict sumsOut){
+void slidingJaccard(const FLOAT_T * const restrict importanceScores,
+                    int importanceLength, const FLOAT_T * const restrict cwm,
+                    int cwmLength, int numBases, FLOAT_T *restrict jaccardOut,
+                    FLOAT_T *restrict sumsOut) {
     /*
      * The meat of the implementation. Given an array importanceScores of shape
      * (importanceLength, numBases) and a cwm of shape (cwmLength, numBases), calculate the
@@ -100,13 +100,13 @@ void slidingJaccard(const FLOAT_T * const restrict importanceScores, int importa
     FLOAT_T sumOfCwm;
     sumRegion(cwm, cwmLength, numBases, &sumOfCwm);
 
-    for(int i = 0; i < importanceLength - cwmLength + 1; i++){
+    for (int i = 0; i < importanceLength - cwmLength + 1; i++) {
         sumRegion(importanceScores+i*numBases, cwmLength, numBases,
                   &sumOfImportances);
-        FLOAT_T scaleFactor = sumOfCwm / (sumOfImportances == 0 ? 0.0000001 : sumOfImportances);
-        jaccardRegion(importanceScores+i*numBases, scaleFactor, cwm, cwmLength, numBases,
-                      &jaccardValue);
-
+        FLOAT_T scaleFactor = sumOfCwm /
+            (sumOfImportances == 0 ? 0.0000001 : sumOfImportances);
+        jaccardRegion(importanceScores+i*numBases, scaleFactor, cwm,
+                      cwmLength, numBases, &jaccardValue);
 
         jaccardOut[i] = jaccardValue;
         sumsOut[i] = sumOfImportances;

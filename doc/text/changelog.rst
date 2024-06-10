@@ -45,6 +45,8 @@ ENHANCEMENTS:
     * By specifying ``"output-gui": true`` in a configuration file for
       :py:mod:`makePisaFigure<bpreveal.makePisaFigure>`, you can have
       an interactive PISA plot that supports zooming.
+    * Annotations on PISA graphs and plots can now have custom shapes.
+    * Added an interpreter for complex filter expressions to bestMotifsOnly.
 
 BUG FIXES:
     * The schema for plots can now validate numpy arrays.
