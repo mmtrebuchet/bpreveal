@@ -1,6 +1,31 @@
 """This module implements a small interpreter.
 
-The grammar is shown in evalAst, and it obeys Python semantics.
+Syntax:
+
+This interpreter interprets a subset of the Python programming language,
+with an extension to the behavior of default arguments in lambdas. Since it
+uses the Python parser, it obeys Python's operator precedence. If it
+encounters a name in the expression, it looks it up in the supplied
+environment.
+
+The extension to the lambda default parameters lets you use letrec-style
+recursive functions without needing to use the Z combinator to implement
+recursion. For example, this is valid in my interpreter but not valid
+Python::
+
+    (lambda x=5, y=(lambda q: x + q): y(7))()
+
+Note that if you use a lambda as a default parameter to a lambda,
+you cannot override any default arguments when you call it. So this::
+
+    (lambda x=5, y=(lambda q: x + q): y(7))(3)
+
+is an error because the call to the outer lambda attempted to specify ``x``.
+
+.. highlight:: none
+
+.. literalinclude:: ../../doc/bnf/interpreter.bnf
+
 """
 import ast
 import math
@@ -222,31 +247,6 @@ def evalAst(t: ast.AST, env: ENV_T, addFunctions: bool = True) -> EVAL_RET_T:
     :return: The value of the expression.
 
 
-    Syntax:
-
-    This interpreter interprets a subset of the Python programming language,
-    with an extension to the behavior of default arguments in lambdas. Since it
-    uses the Python parser, it obeys Python's operator precedence. If it
-    encounters a name in the expression, it looks it up in the supplied
-    environment.
-
-    The extension to the lambda default parameters lets you use letrec-style
-    recursive functions without needing to use the Z combinator to implement
-    recursion. For example, this is valid in my interpreter but not valid
-    Python::
-
-        (lambda x=5, y=(lambda q: x + q): y(7))()
-
-    Note that if you use a lambda as a default parameter to a lambda,
-    you cannot override any default arguments when you call it. So this::
-
-        (lambda x=5, y=(lambda q: x + q): y(7))(3)
-
-    is an error because the call to the outer lambda attempted to specify ``x``.
-
-    .. highlight:: none
-
-    .. literalinclude:: ../../doc/bnf/interpreter.bnf
 
     """
     if addFunctions:
@@ -275,7 +275,8 @@ def _testAst() -> None:
              ["1 if 3 > 2 else 0", {}, 1, None],
              ["(lambda x: x + 1)(3)", {}, 4, None],
              ["(lambda x, y: y(x - 1))(3, lambda a: a*3)", {}, 6, None],
-             ["(lambda x, y: y(x, y)) (5, lambda a, b: 1 if a <= 1 else a * b(a-1, b))", {}, 120, None],
+             ["(lambda x, y: y(x, y)) (5, lambda a, b: 1 if a <= 1 else a * b(a-1, b))",
+              {}, 120, None],
              ["((lambda x: lambda x, y: y(x, y))(0)) "
               "(5, lambda a, b: 1 if a <= 1 else a * b(a-1, b))", {}, 120, None],
              ["sqrt(4)", {}, 2, None],
@@ -286,7 +287,8 @@ def _testAst() -> None:
              ["(lambda x=5, y=(lambda n: 1 if n <= 1 else n * y(n - 1)): y(x))()", {}, 120, None],
              ["(lambda x, y=(lambda n: 1 if n <= 1 else n * y(n - 1)): y(x))(5)", {}, 120, None],
              ["(lambda n, isOdd=(lambda n: True if n == 1 else not isEven(n - 1)), "
-              "isEven=(lambda n: True if n == 0 else not isOdd(n - 1)): isOdd(n))(5)", {}, True, None],
+              "isEven=(lambda n: True if n == 0 else not isOdd(n - 1)): isOdd(n))(5)",
+              {}, True, None],
              ["(lambda n, isOdd=(lambda n: False if n == 0 else not isEven(n - 1)), "
               "isEven=(lambda n: True if n == 0 else not isOdd(n - 1)): isOdd(n))(4)",
               {}, False, None],
@@ -303,9 +305,9 @@ def _testAst() -> None:
         try:
             r = evalString(s, e)
             print(r, res)  # noqa: T201
-        except BaseException as e:
+        except BaseException as e:  # pylint: disable=broad-exception-caught
             if exType is type(e):
-                print("Successfully raised exception.")
+                print("Successfully raised exception.")  # noqa: T201
             else:
                 raise
 
