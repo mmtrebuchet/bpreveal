@@ -6,9 +6,9 @@ value in the specified score.
 """
 import ast
 import argparse
-from typing import Any
 from bpreveal import logUtils
 from bpreveal.motifAddQuantiles import readTsv, writeTsv
+from bpreveal.internal.interpreter import evalAst
 
 
 def getParser() -> argparse.ArgumentParser:
@@ -16,9 +16,10 @@ def getParser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Read in a tsv file from the motif scanner and limit each position to "
                     "only have one motif.")
-    p.add_argument("--column",
-        help="The name of the tsv column that should be used to compare two called motifs "
-             "to see which one is better. (Beds should use the score column to compare.)",
+    p.add_argument("--metric",
+        help="A python expression giving the value that should be used to compare "
+             "motif instances to see which one is better. (Beds should use the score "
+             "column to compare.)",
         default="score")
     p.add_argument("--filter",
         help="Only consider motifs that have at least this value in the given column. "
@@ -41,125 +42,37 @@ def getParser() -> argparse.ArgumentParser:
         help="(Optional) The name of the output file, in tsv format. "
              "Cannot be used with --in-bed.",
         dest="outTsv")
-    p.add_argument("--match-names",
-        help="If provided, then only compare motifs with the same name. "
-             "Overlapping motifs will only be removed if there is a better "
+    p.add_argument("--no-match-names",
+        help="If provided, then don't require motif names to match. "
+             "Default: motifs will only be removed if there is a better "
              "instance of a motif with the same name at that locus.",
         dest="matchNames",
-        action="store_true")
+        action="store_false")
+    p.add_argument("--max-offset",
+        help="Instead of removing motifs that overlap at all, only compare "
+             "motif instances that are offset by this amount or less.",
+        dest="maxOffset",
+        type=int,
+        default=99999)
     p.add_argument("--verbose",
         help="Show progress.",
         action="store_true")
     return p
 
 
-def evalAst(t: ast.AST, env: dict[str, Any]) -> int | float | bool:
-    """Evaluates the (ast.parse()d) filter string t using variables in the environment env.
-
-    :param t: The parsed AST that should be evaluated
-    :param env: The environment containing the variables used in the expression.
-    :return: The value of the expression.
-
-
-    Syntax:
-
-    This interpreter interprets a subset of the Python programming language.
-    Since it uses the Python parser, it obeys Python's operator precedence.
-    If it encounters a name in the expression, it looks it up in the supplied environment.
-
-    .. highlight:: none
-
-    .. literalinclude:: ../../doc/bnf/bestMotifsOnly.bnf
-
-    """
-    match t:
-        case ast.Module():
-            return evalAst(t.body[0], env)
-        case ast.Constant():
-            return t.value
-        case ast.Expr():
-            return evalAst(t.value, env)
-        case ast.Compare():
-            prev = evalAst(t.left, env)
-            for op, rhs in zip(t.ops, t.comparators):
-                rv = evalAst(rhs, env)
-                match op:
-                    case ast.Lt():
-                        if prev >= rv:
-                            return False
-                    case ast.Gt():
-                        if prev <= rv:
-                            return False
-                    case ast.LtE():
-                        if prev > rv:
-                            return False
-                    case ast.GtE():
-                        if prev < rv:
-                            return False
-                    case ast.NotEq():
-                        if prev == rv:
-                            return False
-                    case ast.Eq():
-                        if prev != rv:
-                            return False
-                    case _:
-                        raise SyntaxError(f"Unsupported comparison operator in expression: {op}")
-                # Go to next comparison.
-                prev = rv
-            return True
-        case ast.BinOp():
-            lhs = evalAst(t.left, env)
-            rhs = evalAst(t.right, env)
-            match t.op:
-                case ast.Add():
-                    return lhs + rhs
-                case ast.Sub():
-                    return lhs - rhs
-                case ast.Mult():
-                    return lhs * rhs
-                case ast.Div():
-                    return lhs / rhs
-                case _:
-                    raise SyntaxError(f"Unsupported binary operator in expression: {t.op}")
-        case ast.BoolOp():
-            match t.op:
-                case ast.And():
-                    for v in t.values:
-                        if not evalAst(v, env):
-                            return False
-                    return True
-                case ast.Or():
-                    for v in t.values:
-                        if evalAst(v, env):
-                            return True
-                    return False
-                case _:
-                    raise SyntaxError(f"Unsupported boolean operator in expression: {t.op}")
-        case ast.UnaryOp():
-            match t.op:
-                case ast.USub():
-                    return -evalAst(t.operand, env)
-                case ast.Not():
-                    return not evalAst(t.operand, env)
-                case _:
-                    raise SyntaxError(f"Unsupported unary operator in expression: {t.op}")
-        case ast.Name():
-            return env[t.id]
-        case _:
-            print(ast.dump(t))
-            print("no")
-            return "error"  # type: ignore
-
-
-def removeOverlaps(entries: list[dict], colName: str, nameCol: str | None) -> list[dict]:
+def removeOverlaps(entries: list[dict], metric: ast.AST, nameCol: str | None,
+                   maxOffset: int) -> list[dict]:
     """Scan over the (sorted) motif hits and keep the best ones.
 
     :param entries: A list of motif tsv (or bed) entries. This is a dict keyed
         by column name.
-    :param colName: The name of the column used to make comparisons, like ``score``.
+    :param metric: The Python expression used to make comparisons, like ``score``.
     :param nameCol: The name of the column used to check to see if motifs have the
         same name, for example ``short_name``. If ``None``, then don't compare
         motifs by name, and only return the single best hit at each locus.
+    :param maxOffset: If two entries have midpoints that are separated by more than
+        this distance, then they are considered non-overlapping.
+        The larger this value, the more aggressive the culling will be.
     :return: A list of entries, of the same type as the input entries.
     """
     outEntries = []
@@ -175,26 +88,36 @@ def removeOverlaps(entries: list[dict], colName: str, nameCol: str | None) -> li
                 and entries[scanEnd + 1]["chrom"] == e["chrom"]:
             scanEnd += 1
         recordEntry = True
+        myMetric = evalAst(metric, e)
+        assert isinstance(myMetric, (int, float))
+        myMidpoint = (e["end"] + e["start"]) / 2
         for j in range(scanStart, scanEnd + 1):
             if i != j:
                 other = entries[j]
+                theirMidpoint = (other["end"] + other["start"]) / 2
+                if abs(theirMidpoint - myMidpoint) > maxOffset:
+                    # They overlap, but by less than maxOffset.
+                    continue
                 if nameCol is not None:
                     # Only compare to records with the same name.
                     if other[nameCol] != e[nameCol]:
                         continue
-                if e[colName] < other[colName]:
+
+                theirMetric = evalAst(metric, other)
+                assert isinstance(theirMetric, (int, float))
+                if theirMetric < myMetric:
                     recordEntry = False
                     break
-                elif e[colName] == other[colName]:
+                elif e[metric] == other[metric]:
                     # We have a tie. I need to pick
                     # a winner, so I'll say the motif on the left wins.
-                    other[colName] = other[colName] - 10000
+                    other[metric] = other[metric] - 10000
         if recordEntry:
             outEntries.append(e)
     return outEntries
 
 
-def main():
+def main() -> None:
     """Run the culling algorithm."""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)
@@ -230,8 +153,8 @@ def main():
         if evalAst(filterAst, e):
             strippedEntries.append(e)
     sortEntries = strippedEntries
-
-    outs = removeOverlaps(sortEntries, args.column, nameCol)
+    metricAst = ast.parse(args.metric)
+    outs = removeOverlaps(sortEntries, metricAst, nameCol, args.maxOffset)
     if args.outTsv is not None:
         writeTsv(outs, colNames, args.outTsv)
     if args.outBed is not None:

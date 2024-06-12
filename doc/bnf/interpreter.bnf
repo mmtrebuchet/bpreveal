@@ -5,7 +5,19 @@
   | <compare-op-expr>
   | <bool-op-expr>
   | <number>
+  | lambda <formals>: <expression>
+  | <expression>(<list-of-expression>)
   | <list-of-character>
+
+<formals> ::=
+    <empty>
+  | <list-of-character>
+  | <list-of-character>, <formals>
+
+<list-of-expression> ::=
+    <empty>
+  | <expression>
+  | <expression>, <list-of-expression>
 
 <bool-op-expr> ::=
     <expression> and <expression>
