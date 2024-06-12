@@ -41,14 +41,14 @@ filesApi = ["bedUtils.py", "callbacks.py", "colors.py", "gaOptimize.py",
             "utils.py"]
 
 filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "files.py",
-                    "predictUtils.py", "plotUtils.py"]
+                    "interpreter.py", "predictUtils.py", "plotUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py"]
 
 filesToolsMajor = ["addNoise.py"]
-additionalBnfs =  ["base.xx", "seqletQuantileCutoffs.xx",
-                   "plotting.xx", "colors.xx", "bestMotifsOnly.xx"]
+additionalBnfs = ["base.xx", "seqletQuantileCutoffs.xx",
+                  "plotting.xx", "colors.xx", "interpreter.xx"]
 
 
 filesToolsApi = ["slurm.py", "addNoiseUtils.py"]

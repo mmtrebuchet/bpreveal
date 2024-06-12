@@ -13,6 +13,12 @@
     <empty>
   | <list-of-character>
   | <list-of-character>, <formals>
+  | <formals-with-defaults>
+
+<formals-with-defaults> ::=
+    <empty>
+  | <list-of-character>=<expression>
+  | <list-of-character>=<expression>, <formals-with-defaults>
 
 <list-of-expression> ::=
     <empty>
