@@ -119,7 +119,6 @@ API
 """
 # This file contains several helper functions for dealing with bed files.
 
-import json
 import random
 import re
 import jsonschema
@@ -128,6 +127,7 @@ import numpy as np
 import pybedtools
 from bpreveal import logUtils
 from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter
+from bpreveal.internal import interpreter
 random.seed(735014)
 
 
@@ -623,8 +623,8 @@ def prepareBeds(config: dict) -> None:
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r") as inFp:
-        configJson = json.load(inFp)
+    configJson = interpreter.evalFile(sys.argv[1])
+    assert isinstance(configJson, dict)
     logUtils.setVerbosity(configJson["verbosity"])
     import bpreveal.schema
     try:

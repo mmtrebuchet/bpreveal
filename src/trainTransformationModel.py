@@ -64,7 +64,6 @@ just ``input-length``.
 API
 ---
 """
-import json
 import bpreveal.schema
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
@@ -74,6 +73,7 @@ import tf_keras as keras  # pylint: disable=wrong-import-order
 from bpreveal import logUtils
 from bpreveal import models
 import bpreveal.training
+from bpreveal.internal import interpreter
 # pylint: disable=duplicate-code
 
 
@@ -105,9 +105,8 @@ def main(config: dict) -> None:
 
 if __name__ == "__main__":
     import sys
-
-    with open(sys.argv[1], "r") as configFp:
-        configJson = json.load(configFp)
+    configJson = interpreter.evalFile(sys.argv[1])
+    assert isinstance(configJson, dict)
     bpreveal.schema.trainTransformationModel.validate(configJson)
     main(configJson)
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

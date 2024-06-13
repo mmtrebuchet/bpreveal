@@ -5,6 +5,24 @@ BNF Grammars
 BPReveal specifies its inputs using a BNF grammar, since it's easier to read than
 JSON schema and also quite precise.
 
+BPReveal uses a custom interpreter to read in the configuration files, this interpreter
+implements a superset of JSON. Here are the added features:
+
+* List comprehensions, using normal Python syntax.
+* Dictionary comprehensions, using normal Python syntax.
+* Comments, which start with ``#`` and go to the end of the line.
+* Python arithmetic, boolean, and comparison operators.
+* Function calls to Python essentials like range and len
+* Lambda support, with the ability to use default arguments to define recursive
+  procedures à la ``letrec``
+* Ternary if expressions.
+
+See :py:mod:`interpreter<bpreveal.internal.interpreter>` for a full
+specification. The extension is Turing complete, but all of the functions are
+pure and IO is not possible. Therefore you can run it on untrusted code (with
+the attendant risk of stack overflows and DoS attacks from runaway processes).
+
+
 A BNF grammar consists of names and definitions that define a language.
 
 .. highlight:: none

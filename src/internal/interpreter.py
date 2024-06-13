@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """This module implements a small interpreter.
 
 Syntax:
@@ -15,6 +16,10 @@ Python::
 
     (lambda x=5, y=(lambda q: x + q): y(7))()
 
+In effect, you can think of this being translated to::
+
+    (letrec ((x 5) (y (lambda (q) (+ x q)))) (y 7))
+
 Note that if you use a lambda as a default parameter to a lambda,
 you cannot override any default arguments when you call it. So this::
 
@@ -29,11 +34,12 @@ is an error because the call to the outer lambda attempted to specify ``x``.
 """
 import ast
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from typing import Any, TypeAlias, Union
 from bpreveal import logUtils
 # pylint: disable=consider-alternative-union-syntax
-EVAL_RET_T: TypeAlias = Union[int, float, bool, str, Callable, "Closure"]
+EVAL_RET_T: TypeAlias = Union[int, float, bool, str, Callable, "Closure",
+                              dict, list, Collection, None]
 # pylint: enable=consider-alternative-union-syntax
 ENV_T: TypeAlias = dict[str, EVAL_RET_T]
 
@@ -195,6 +201,68 @@ def _evalIf(test: ast.expr, body: ast.expr, orelse: ast.expr, env: ENV_T) -> EVA
     return evalAstRaw(body, env) if evalAstRaw(test, env) else evalAstRaw(orelse, env)
 
 
+def _evalDict(keys: list[ast.expr], values: list[ast.expr],
+              env: ENV_T) -> dict[EVAL_RET_T, EVAL_RET_T]:
+    keyObjs = [evalAstRaw(x, env) for x in keys]
+    valueObjs = [evalAstRaw(x, env) for x in values]
+    ret = {}
+    for k, v in zip(keyObjs, valueObjs):
+        ret[k] = v
+    return ret
+
+
+def _evalList(elts: list[ast.expr], env: ENV_T) -> list[EVAL_RET_T]:
+    return [evalAstRaw(x, env) for x in elts]
+
+
+def _evalListComp(elt: ast.expr, generators: list[ast.comprehension],
+                  env: ENV_T) -> list[EVAL_RET_T]:
+    if len(generators) == 0:
+        return [evalAstRaw(elt, env)]
+    env = env.copy()
+    ret = []
+    gen = generators[0]
+    assert isinstance(gen.target, ast.Name)
+    target = gen.target.id
+    iterable = evalAstRaw(gen.iter, env)
+    assert isinstance(iterable, Collection)
+    for val in iterable:
+        env[target] = val
+        doInsert = True
+        for condition in gen.ifs:
+            if not evalAstRaw(condition, env):
+                doInsert = False
+        if not doInsert:
+            continue
+        ret.extend(_evalListComp(elt, generators[1:], env))
+    return ret
+
+
+def _evalDictComp(key: ast.expr, value: ast.expr, generators: list[ast.comprehension],
+                  env: ENV_T) -> dict[EVAL_RET_T, EVAL_RET_T]:
+    if len(generators) == 0:
+        return {evalAstRaw(key, env): evalAstRaw(value, env)}  # type: ignore
+    env = env.copy()
+    ret = {}
+    gen = generators[0]
+    assert isinstance(gen.target, ast.Name)
+    target = gen.target.id
+    iterable = evalAstRaw(gen.iter, env)
+    assert isinstance(iterable, Collection)
+    for val in iterable:
+        env[target] = val
+        doInsert = True
+        for condition in gen.ifs:
+            if not evalAstRaw(condition, env):
+                doInsert = False
+        if not doInsert:
+            continue
+        subComp = _evalDictComp(key, value, generators[1:], env)
+        for k, v in subComp.items():
+            ret[k] = v
+    return ret
+
+
 def evalAstRaw(t: ast.AST,  # pylint: disable=too-many-return-statements
                env: dict[str, Any]) -> EVAL_RET_T:
     """Evaluates the (ast.parse()d) filter string t using variables in the environment env.
@@ -228,13 +296,22 @@ def evalAstRaw(t: ast.AST,  # pylint: disable=too-many-return-statements
             return _evalUnary(op, operand, env)
         case ast.Name(idStr):
             return env[idStr]
+        case ast.Dict(keys, values):
+            return _evalDict(keys, values, env)  # type: ignore
+        case ast.List(elts, _):
+            return _evalList(elts, env)
+        case ast.ListComp(elt, generators):
+            return _evalListComp(elt, generators, env)
+        case ast.DictComp(key, value, generators):
+            return _evalDictComp(key, value, generators, env)
+
         case ast.IfExp(test, body, orelse):
             return _evalIf(test, body, orelse, env)
         case _:
             raise SyntaxError(f"Unable to interpret {ast.dump(t, indent=4)}, ({ast.unparse(t)})")
 
 
-def evalAst(t: ast.AST, env: ENV_T, addFunctions: bool = True) -> EVAL_RET_T:
+def evalAst(t: ast.AST, env: ENV_T | None = None, addFunctions: bool = True) -> EVAL_RET_T:
     """Evaluates the (ast.parse()d) filter string t using variables in the environment env.
 
     :param t: The parsed AST that should be evaluated
@@ -249,7 +326,11 @@ def evalAst(t: ast.AST, env: ENV_T, addFunctions: bool = True) -> EVAL_RET_T:
 
 
     """
+    if env is None:
+        env = {}
     if addFunctions:
+        env = env.copy()
+
         def toStar(f: Callable) -> Callable:
             return lambda x: f(*x)
         env["exp"] = env.get("exp", toStar(math.exp))
@@ -259,13 +340,28 @@ def evalAst(t: ast.AST, env: ENV_T, addFunctions: bool = True) -> EVAL_RET_T:
         env["e"] = env.get("e", math.e)
         env["abs"] = env.get("abs", toStar(abs))
         env["len"] = env.get("len", toStar(len))
+        env["range"] = env.get("range", toStar(range))
+        env["true"] = env.get("true", True)
+        env["false"] = env.get("false", False)
+        env["null"] = env.get("null", None)
     return evalAstRaw(t, env)
 
 
-def evalString(expr: str, env: ENV_T, addFunctions: bool = True) -> EVAL_RET_T:
+def evalString(expr: str, env: ENV_T | None = None, addFunctions: bool = True) -> EVAL_RET_T:
     """Parses the given string and then runs evalAst on it."""
+    if env is None:
+        env = {}
     t = ast.parse(expr)
     return evalAst(t, env, addFunctions)
+
+
+def evalFile(fname: str, env: ENV_T | None = None, addFunctions: bool = True) -> EVAL_RET_T:
+    """Read in the named file and evaluate it."""
+    if env is None:
+        env = {}
+    with open(fname, "r") as fp:
+        contents = fp.read()
+        return evalString(contents, env, addFunctions)
 
 
 def _testAst() -> None:
@@ -295,21 +391,44 @@ def _testAst() -> None:
              ["(lambda n, isOdd=(lambda n: False if n == 0 else not isEven(n - 1)), "
               "isEven=(lambda n: True if n == 0 else not isOdd(n - 1)): isOdd(n))(100)",
               {}, False, None],
-             ["(lambda a=5, b=(lambda: a): b)()()",
-              {}, 5, None],
-             ["(lambda a=5, b=(lambda: a): b)(6)()",
-              {}, 5, SyntaxError],
+             ["(lambda a=5, b=(lambda: a): b)()()", {}, 5, None],
+             ["(lambda a=5, b=(lambda: a): b)(6)()", {}, 5, SyntaxError],
+             ["[1, 2, 3]", {}, [1, 2, 3], None],
+             ["range(5)", {}, range(5), None],
+             ["[x for x in range(5)]", {}, [0, 1, 2, 3, 4], None],
+             ["[x + y for x in range(2) for y in range(3)]", {}, [0, 1, 2, 1, 2, 3], None],
+             ["[y for x in [[1, 2], [3, 4]] for y in x]", {}, [1, 2, 3, 4], None],
+             ["{y: x for x in [[1, 2], [3, 4]] for y in x if y > 2}",
+              {}, {3: [3, 4], 4: [3, 4]}, None],
+             ["{}", {}, {}, None],
              ]
 
     for s, e, res, exType in exprs:
+        evalRet = ""
+        r = ""
+        print(f"Test case: {s=}, {e=}, {res=}")  # noqa: T201
         try:
             r = evalString(s, e)
-            print(r, res)  # noqa: T201
-        except BaseException as e:  # pylint: disable=broad-exception-caught
-            if exType is type(e):
+        except BaseException as ex:  # pylint: disable=broad-exception-caught
+            if exType is type(ex):
                 print("Successfully raised exception.")  # noqa: T201
             else:
                 raise
+        if exType is None:
+            prefix = "    "
+            try:
+                evalRet = eval(s, e)  # pylint: disable=eval-used
+            except BaseException as ex:  # pylint: disable=broad-exception-caught  # noqa: B036
+                print(f"{prefix}    Eval exception: {ex}")  # noqa: T201
+            if r == res:
+                prefix = prefix + "  "
+            else:
+                prefix = prefix + "XX"
+            if evalRet == res:
+                prefix = prefix + "  "
+            else:
+                prefix = prefix + "OO"
+            print(f"{prefix}Returned {r=}, {res=}, {evalRet=}")  # noqa: T201
 
 
 if __name__ == "__main__":

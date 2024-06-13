@@ -126,6 +126,7 @@ API
 import json
 from bpreveal import logUtils
 from bpreveal import motifUtils
+from bpreveal.internal import interpreter
 
 
 def main(config: dict) -> None:
@@ -166,8 +167,8 @@ def main(config: dict) -> None:
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r") as configFp:
-        configJson = json.load(configFp)
+    configJson = interpreter.evalFile(sys.argv[1])
+    assert isinstance(configJson, dict)
     import bpreveal.schema
     bpreveal.schema.motifSeqletCutoffs.validate(configJson)
     main(configJson)

@@ -1,32 +1,8 @@
 #!/usr/bin/env python3
 """Builds the schema.py module."""
+# This needs to have no dependencies on the BPReveal module since this is
+# executed while BPReveal is being set up and it won't be on the path yet.
 import sys
-import json
-from typing import Any
-
-
-def stripComments(o: Any) -> Any:  # pylint: disable=too-many-return-statements
-    """Traverse the dictionary o and remove any keys named "$comment"."""
-    match o:
-        case str():
-            return o
-        case dict():
-            iret = {}
-            for k, v in o.items():
-                if k == "$comment":
-                    continue
-                iret[k] = stripComments(v)
-            return iret
-        case list():
-            return [stripComments(x) for x in o]
-        case int():
-            return o
-        case float():
-            return o
-        case None:
-            return o
-        case _:
-            return o
 
 
 SCHEMA_HEADER = '''
@@ -41,16 +17,20 @@ from referencing import Registry
 from referencing.jsonschema import DRAFT7
 from jsonschema import validators
 
+
 def _isColorMap(checker, instance):
     import matplotlib.colors as mplcolors
     return isinstance(instance, mplcolors.Colormap)
+
 
 def _isNumpyArray(checker, instance):
     import numpy as np
     return isinstance(instance, np.ndarray)
 
+
 def _isArray(checker, instance):
     return isinstance(instance, list) or isinstance(instance, tuple)
+
 
 _typeChecker = Draft7Validator.TYPE_CHECKER.redefine_many(
     {
@@ -59,8 +39,10 @@ _typeChecker = Draft7Validator.TYPE_CHECKER.redefine_many(
         "array": _isArray
     })
 
+
 CustomValidator = validators.extend(Draft7Validator,
     type_checker=_typeChecker)
+
 
 '''
 
@@ -72,14 +54,17 @@ def build() -> None:
         for schemaFname in sys.argv[2:]:
             fp.write("_" + schemaFname + 'Schema = json.loads("""')
             with open("schematools/" + schemaFname + ".schema", "r") as sfp:
-                jsonStr = json.dumps(stripComments(json.load(sfp)))
+                lines = list(sfp)
+                stripLines = [x.strip() for x in lines]
+                jsonStr = " ".join(stripLines)
+
                 fp.write(jsonStr)
             fp.write('""")  # noqa\n')
             fp.write("_" + schemaFname + "Schema['$id'] = 'https://example.com/"
                     "schema/" + schemaFname + "'\n")
         fp.write("_schemaStore = {")
         for schemaFname in sys.argv[2:]:
-            fp.write(f"_{schemaFname}Schema['$id']: _{schemaFname}Schema,")
+            fp.write(f"_{schemaFname}Schema['$id']: _{schemaFname}Schema, ")
         fp.write("}\n")
         fp.write("_storeList = [(x, DRAFT7.create_resource(_schemaStore[x])) "
                 "for x in _schemaStore.keys()]\n")

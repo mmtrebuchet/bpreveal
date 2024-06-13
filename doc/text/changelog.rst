@@ -47,6 +47,10 @@ ENHANCEMENTS:
       an interactive PISA plot that supports zooming.
     * Annotations on PISA graphs and plots can now have custom shapes.
     * Added an interpreter for complex filter expressions to bestMotifsOnly.
+    * Let the interpreter get totally out of hand. It is now Turing-complete
+      since it supports lambdas and letrec-style function definition by abusing
+      default argument notation. The interpreter is powerful enough to load a
+      superset of JSON, and so it is now used to load all configuration files.
 
 BUG FIXES:
     * The schema for plots can now validate numpy arrays.

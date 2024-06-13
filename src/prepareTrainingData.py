@@ -91,7 +91,6 @@ API
 ---
 """
 from typing import Literal
-import json
 import numpy as np
 import h5py
 import pyBigWig
@@ -102,6 +101,7 @@ from bpreveal import utils
 from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, PRED_AR_T, \
     H5_CHUNK_SIZE, PRED_T, NUM_BASES
 import bpreveal.internal.files
+from bpreveal.internal import interpreter
 
 
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
@@ -235,9 +235,8 @@ def writeH5(config: dict) -> None:
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], "r") as configFp:
-        configJson = json.load(configFp)
-
+    configJson = interpreter.evalFile(sys.argv[1])
+    assert isinstance(configJson, dict)
     import bpreveal.schema
     bpreveal.schema.prepareTrainingData.validate(configJson)
     logUtils.setVerbosity(configJson["verbosity"])

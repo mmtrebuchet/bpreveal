@@ -4,11 +4,10 @@
 Useful before you submit a big job!
 """
 # flake8: noqa: T201
-import json
 import argparse
 import jsonschema
 from bpreveal.schema import schemaMap
-
+from bpreveal.internal import interpreter
 
 def getParser():
     """Create the argument parser."""
@@ -26,8 +25,7 @@ def main():
     fnameByMatchedSchema = {}
     failedFnames = []
     for jsonFname in args.jsons:
-        with open(jsonFname, "r") as fp:
-            testJson = json.load(fp)
+        testJson = interpreter.evalFile(jsonFname, {})
         if args.schemaName is not None:
             schemaMap[args.schemaName].validate(testJson)
             print(jsonFname, "Validated.")

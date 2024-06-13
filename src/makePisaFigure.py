@@ -46,11 +46,11 @@ The configuration dictionaries for the individual plots and graphs are detailed 
 import sys
 import datetime
 import time
-import json
 import matplotlib.pyplot as plt
 from bpreveal import plotting
 from bpreveal import logUtils
 import bpreveal
+from bpreveal.internal import interpreter
 
 
 def main(cfg: dict) -> None:
@@ -89,6 +89,6 @@ def main(cfg: dict) -> None:
 
 
 if __name__ == "__main__":
-    with open(sys.argv[1], "r") as cfgFp:
-        config = json.load(cfgFp)
+    config = interpreter.evalFile(sys.argv[1])
+    assert isinstance(config, dict)
     main(config)
