@@ -63,7 +63,7 @@ root directory. If you're using the Cerebro cluster at Stowers, run
 `buildCondaCerebro.slurm`. If you're installing BPReveal on a local machine,
 run `buildCondaLocal.zsh`.
 If you're at Stowers, you can just activate one of the conda environments I
-maintain at /n/projects/cm2363/public-bpreveal/<version>/env.
+maintain at /n/projects/cm2363/public-bpreveal/(version)/env.
 
 ## License
 
