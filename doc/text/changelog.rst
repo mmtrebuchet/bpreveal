@@ -11,8 +11,8 @@ BPReveal 4.x
 BPReveal 4.3.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.3.0, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 4.3.0, 2024-06-17
+''''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * Some of the arguments were renamed in various functions in
@@ -33,6 +33,15 @@ BREAKING CHANGES:
       effect on the outputs, and if you're not poking around at internal layers
       there should be no effect.
 
+NEW FEATURES:
+    * Added an interpreter for complex filter expressions to bestMotifsOnly.
+    * Let the interpreter get totally out of hand. It is now Turing-complete
+      since it supports lambdas and letrec-style function definition by abusing
+      default argument notation. The interpreter is powerful enough to load a
+      superset of JSON, and so it is now used to load all configuration files.
+      This means that your configuration files can now contain things like list
+      comprehensions and arithmetic expressions.
+
 ENHANCEMENTS:
     * You can now specify a custom color map in
       :py:func:`plotPisa<bpreveal.plotting.plotPisa>` and
@@ -46,11 +55,6 @@ ENHANCEMENTS:
       :py:mod:`makePisaFigure<bpreveal.makePisaFigure>`, you can have
       an interactive PISA plot that supports zooming.
     * Annotations on PISA graphs and plots can now have custom shapes.
-    * Added an interpreter for complex filter expressions to bestMotifsOnly.
-    * Let the interpreter get totally out of hand. It is now Turing-complete
-      since it supports lambdas and letrec-style function definition by abusing
-      default argument notation. The interpreter is powerful enough to load a
-      superset of JSON, and so it is now used to load all configuration files.
 
 BUG FIXES:
     * The schema for plots can now validate numpy arrays.

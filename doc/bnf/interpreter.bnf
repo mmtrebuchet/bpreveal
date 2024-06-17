@@ -1,13 +1,33 @@
 <expression> ::=
     (<expression>)
+  | "<list-of-character>"
+  | [<list-of-expression>]
+  | {<list-of-dict-elems>}
+  | [<expression> <comprehension-suite>]
+  | {<dict-elem> <comprehension-suite>}
+  | <expression>[<expression>]
+  | <expression>.format(<list-of-expression>)
   | <unary-op-expr>
   | <bin-op-expr>
-  | <compare-op-expr>
+  | <expression> <compare-suite>
   | <bool-op-expr>
   | <number>
+  | <python-literal>
   | lambda <formals>: <expression>
   | <expression>(<list-of-expression>)
   | <list-of-character>
+
+<comprehension-suite> ::=
+    for <list-of-character> in <expression>
+  | for <list-of-character> in <expression> if <expression>
+  | <comprehension-suite> <comprehension-suite>
+
+<list-of-dict-elems> ::=
+    <empty>
+  | <dict-elem>, <list-of-dict-elems>
+
+<dict-elem> ::=
+    <expression>: <expression>
 
 <formals> ::=
     <empty>
@@ -30,6 +50,7 @@
   | <expression> or <expression>
 
 <bin-op-expr> ::=
+    <expression> ** <expression>
     <expression> * <expression>
     <expression> / <expression>
     <expression> + <expression>
@@ -38,9 +59,6 @@
 <unary-op-expr> ::=
     - <expression>
   | not <expression>
-
-<compare-op-expr> ::=
-    <expression> <compare-suite>
 
 <compare-suite> ::=
     <compare-op> <expression> <compare-suite>

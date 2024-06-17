@@ -9,6 +9,28 @@ uses the Python parser, it obeys Python's operator precedence. If it
 encounters a name in the expression, it looks it up in the supplied
 environment.
 
+Here are the supported operations:
+
+  * Strings (with support for the .format method)
+  * Integers and floats.
+  * ``True``, ``False``, and ``None``.
+  * Lists and list comprehensions
+  * Dictionaries and dict comprehensions
+  * Indexing for lists and dictionaries.
+  * Unary ``not``, negation.
+  * Binary multiplication, division, exponentiation, addition, subtraction.
+  * Boolean ``and`` and ``or``.
+  * Comparison with ``<``, ``>``, ``<=``, ``>=``, ``==``, and ``!=``.
+  * Chained comparison, like ``0.2 < x < 0.5``.
+  * Builtin functions: ``exp``, ``log``, ``sqrt``, ``abs``, ``any``,
+      ``all``, ``min``, ``max``, ``sum``, ``len``, ``range``.
+  * Builtin constants: ``e``, ``pi``, ``true``, ``false``, and ``null``.
+    The ``true``, ``false``, and ``null`` constants are for compatibility
+    with JSON. The Python literals ``True``, ``False``, and ``None`` are also
+    supported.
+  * User-defined functions with ``lambda`` syntax. By abusing default parameters,
+    you can even create recursive functions!
+
 The extension to the lambda default parameters lets you use letrec-style
 recursive functions without needing to use the Z combinator to implement
 recursion. For example, this is valid in my interpreter but not valid
@@ -34,9 +56,8 @@ is an error because the call to the outer lambda attempted to specify ``x``.
 """
 import ast
 import math
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, TypeAlias, Union
-from bpreveal import logUtils
 # pylint: disable=consider-alternative-union-syntax
 EVAL_RET_T: TypeAlias = Union[int, float, bool, str, Callable, "Closure",
                               dict, list, Collection, None]
@@ -65,9 +86,6 @@ class Closure:
                 self.usingLetrec = True
                 for aIdx, aVal in self.defaults.items():
                     aName = self.args.args[aIdx].arg
-                    if aName in argVal.env:
-                        logUtils.warning("Found name {aName} in environment before "
-                                         "letrec-style default lambda param.")
                     argVal.env[aName] = aVal
 
     def run(self, argList: list[EVAL_RET_T]) -> EVAL_RET_T:
@@ -75,8 +93,6 @@ class Closure:
         if len(argList) + len(self.defaults) > len(self.args.args):
             # We have defaults that are being overridden.
             if self.usingLetrec:
-                logUtils.error("You have specified a value for a default "
-                    "param when letrec-style environment management is being used.")
                 raise SyntaxError("Cannot override default params when one is a lambda.")
 
         innerEnv = self.env.copy()
@@ -201,14 +217,17 @@ def _evalIf(test: ast.expr, body: ast.expr, orelse: ast.expr, env: ENV_T) -> EVA
     return evalAstRaw(body, env) if evalAstRaw(test, env) else evalAstRaw(orelse, env)
 
 
+def _evalSubscript(value: ast.expr, sliceExpr: ast.expr, env: ENV_T) -> EVAL_RET_T:
+    theCollection = evalAstRaw(value, env)
+    theSlice = evalAstRaw(sliceExpr, env)
+    assert isinstance(theCollection, Mapping | Sequence)
+    assert not isinstance(theSlice, Closure)
+    return theCollection[theSlice]  # type: ignore
+
+
 def _evalDict(keys: list[ast.expr], values: list[ast.expr],
               env: ENV_T) -> dict[EVAL_RET_T, EVAL_RET_T]:
-    keyObjs = [evalAstRaw(x, env) for x in keys]
-    valueObjs = [evalAstRaw(x, env) for x in values]
-    ret = {}
-    for k, v in zip(keyObjs, valueObjs):
-        ret[k] = v
-    return ret
+    return {evalAstRaw(keys[i], env): evalAstRaw(values[i], env) for i in range(len(keys))}
 
 
 def _evalList(elts: list[ast.expr], env: ENV_T) -> list[EVAL_RET_T]:
@@ -263,6 +282,25 @@ def _evalDictComp(key: ast.expr, value: ast.expr, generators: list[ast.comprehen
     return ret
 
 
+def _evalAttr(value: ast.expr, attr: str, env: ENV_T) -> EVAL_RET_T:
+    evalValue = evalAstRaw(value, env)
+    match attr:
+        case "format":
+            assert isinstance(evalValue, str)
+            return lambda args: evalValue.format(*args)
+        case _:
+            raise SyntaxError(f"Attribute {attr} is not supported.")
+
+
+def _readEnv(idStr: str, env: ENV_T) -> EVAL_RET_T:
+    return env[idStr]
+
+
+def _readConstant(value: EVAL_RET_T, env: ENV_T) -> EVAL_RET_T:
+    del env  # env is unused for a constant.
+    return value
+
+
 def evalAstRaw(t: ast.AST,  # pylint: disable=too-many-return-statements
                env: dict[str, Any]) -> EVAL_RET_T:
     """Evaluates the (ast.parse()d) filter string t using variables in the environment env.
@@ -276,10 +314,12 @@ def evalAstRaw(t: ast.AST,  # pylint: disable=too-many-return-statements
 
     """
     match t:
-        case ast.Module(body, _):
-            return evalAstRaw(body[0], env)
+        case ast.Dict(keys, values):
+            return _evalDict(keys, values, env)  # type: ignore
         case ast.Constant(value):
-            return value
+            return _readConstant(value, env)
+        case ast.Name(idStr):
+            return _readEnv(idStr, env)
         case ast.Expr(value):
             return evalAstRaw(value, env)
         case ast.Compare(left, ops, comparators):
@@ -290,25 +330,61 @@ def evalAstRaw(t: ast.AST,  # pylint: disable=too-many-return-statements
             return _evalLambda(args, body, env)
         case ast.Call(func, args, _):
             return _evalCall(func, args, env)
+        case ast.Attribute(value, attr, _):
+            return _evalAttr(value, attr, env)
         case ast.BoolOp(op, values):
             return _evalBool(op, values, env)
         case ast.UnaryOp(op, operand):
             return _evalUnary(op, operand, env)
-        case ast.Name(idStr):
-            return env[idStr]
-        case ast.Dict(keys, values):
-            return _evalDict(keys, values, env)  # type: ignore
+        case ast.Subscript(value, sliceExpr, _):
+            return _evalSubscript(value, sliceExpr, env)
         case ast.List(elts, _):
             return _evalList(elts, env)
         case ast.ListComp(elt, generators):
             return _evalListComp(elt, generators, env)
         case ast.DictComp(key, value, generators):
             return _evalDictComp(key, value, generators, env)
-
         case ast.IfExp(test, body, orelse):
             return _evalIf(test, body, orelse, env)
+        case ast.Module(body, _):
+            if len(body) != 1:
+                raise SyntaxError("ast contains more than one expression.")
+            return evalAstRaw(body[0], env)
         case _:
             raise SyntaxError(f"Unable to interpret {ast.dump(t, indent=4)}, ({ast.unparse(t)})")
+
+
+_BUILTIN_DICT = {}
+
+
+def _buildFunctionDictionary() -> None:
+    global _BUILTIN_DICT  # pylint: disable=global-variable-not-assigned
+
+    def toStar(f: Callable) -> Callable:
+        return lambda x: f(*x)
+    _BUILTIN_DICT["exp"] = toStar(math.exp)
+    _BUILTIN_DICT["log"] = toStar(math.log)
+    _BUILTIN_DICT["sqrt"] = toStar(math.sqrt)
+    _BUILTIN_DICT["pi"] = math.pi
+    _BUILTIN_DICT["e"] = math.e
+    _BUILTIN_DICT["abs"] = toStar(abs)
+    _BUILTIN_DICT["any"] = toStar(any)
+    _BUILTIN_DICT["all"] = toStar(all)
+    _BUILTIN_DICT["min"] = toStar(min)
+    _BUILTIN_DICT["sum"] = toStar(sum)
+    _BUILTIN_DICT["max"] = toStar(max)
+    _BUILTIN_DICT["len"] = toStar(len)
+    _BUILTIN_DICT["range"] = toStar(range)
+    _BUILTIN_DICT["true"] = True
+    _BUILTIN_DICT["false"] = False
+    _BUILTIN_DICT["null"] = None
+
+
+_buildFunctionDictionary()
+
+
+def _addFunctionsToEnv(env: ENV_T) -> ENV_T:
+    return _BUILTIN_DICT | env
 
 
 def evalAst(t: ast.AST, env: ENV_T | None = None, addFunctions: bool = True) -> EVAL_RET_T:
@@ -322,28 +398,11 @@ def evalAst(t: ast.AST, env: ENV_T | None = None, addFunctions: bool = True) -> 
         will be shadowed by existing declarations if they have already been
         defined.)
     :return: The value of the expression.
-
-
-
     """
     if env is None:
         env = {}
     if addFunctions:
-        env = env.copy()
-
-        def toStar(f: Callable) -> Callable:
-            return lambda x: f(*x)
-        env["exp"] = env.get("exp", toStar(math.exp))
-        env["log"] = env.get("log", toStar(math.log))
-        env["sqrt"] = env.get("sqrt", toStar(math.sqrt))
-        env["pi"] = env.get("pi", math.pi)
-        env["e"] = env.get("e", math.e)
-        env["abs"] = env.get("abs", toStar(abs))
-        env["len"] = env.get("len", toStar(len))
-        env["range"] = env.get("range", toStar(range))
-        env["true"] = env.get("true", True)
-        env["false"] = env.get("false", False)
-        env["null"] = env.get("null", None)
+        env = _addFunctionsToEnv(env)
     return evalAstRaw(t, env)
 
 
@@ -400,6 +459,10 @@ def _testAst() -> None:
              ["[y for x in [[1, 2], [3, 4]] for y in x]", {}, [1, 2, 3, 4], None],
              ["{y: x for x in [[1, 2], [3, 4]] for y in x if y > 2}",
               {}, {3: [3, 4], 4: [3, 4]}, None],
+             ["[1, 2, 3][1]", {}, 2, None],
+             ["(lambda x: x)\n(1)", {}, None, SyntaxError],
+             ['"{0:s}h{0:s}".format("aoeu")', {}, "aoeuhaoeu", None],
+             ["(lambda x: [x[0.2], x['aoeu']])({0.2: 5, 'aoeu': 'htns'})", {}, [5, "htns"], None],
              ["{}", {}, {}, None],
              ]
 
@@ -409,9 +472,12 @@ def _testAst() -> None:
         print(f"Test case: {s=}, {e=}, {res=}")  # noqa: T201
         try:
             r = evalString(s, e)
+            if exType is not None:
+                raise OverflowError(
+                    f"Expected exception {exType} but it was not raised and got {r}.")
         except BaseException as ex:  # pylint: disable=broad-exception-caught
             if exType is type(ex):
-                print("Successfully raised exception.")  # noqa: T201
+                print("        Successfully raised exception.")  # noqa: T201
             else:
                 raise
         if exType is None:

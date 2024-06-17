@@ -22,7 +22,7 @@ def getParser() -> argparse.ArgumentParser:
              "column to compare.)",
         default="score")
     p.add_argument("--filter",
-        help="Only consider motifs that have at least this value in the given column. "
+        help="Only consider motifs that satisfy this filter. "
                    "Format: Any valid Python expression where the identifiers are "
                    "column names in the tsv. "
                    "(Don't forget to quote comparison operators on the shell!)",
@@ -60,13 +60,12 @@ def getParser() -> argparse.ArgumentParser:
     return p
 
 
-def removeOverlaps(entries: list[dict], metric: ast.AST, nameCol: str | None,
+def removeOverlaps(entries: list[dict], nameCol: str | None,
                    maxOffset: int) -> list[dict]:
     """Scan over the (sorted) motif hits and keep the best ones.
 
     :param entries: A list of motif tsv (or bed) entries. This is a dict keyed
         by column name.
-    :param metric: The Python expression used to make comparisons, like ``score``.
     :param nameCol: The name of the column used to check to see if motifs have the
         same name, for example ``short_name``. If ``None``, then don't compare
         motifs by name, and only return the single best hit at each locus.
@@ -88,8 +87,6 @@ def removeOverlaps(entries: list[dict], metric: ast.AST, nameCol: str | None,
                 and entries[scanEnd + 1]["chrom"] == e["chrom"]:
             scanEnd += 1
         recordEntry = True
-        myMetric = evalAst(metric, e)
-        assert isinstance(myMetric, (int, float))
         myMidpoint = (e["end"] + e["start"]) / 2
         for j in range(scanStart, scanEnd + 1):
             if i != j:
@@ -103,15 +100,13 @@ def removeOverlaps(entries: list[dict], metric: ast.AST, nameCol: str | None,
                     if other[nameCol] != e[nameCol]:
                         continue
 
-                theirMetric = evalAst(metric, other)
-                assert isinstance(theirMetric, (int, float))
-                if theirMetric < myMetric:
+                if other["metric"] < e["metric"]:
                     recordEntry = False
                     break
-                elif e[metric] == other[metric]:
+                elif e["metric"] == other["metric"]:
                     # We have a tie. I need to pick
                     # a winner, so I'll say the motif on the left wins.
-                    other[metric] = other[metric] - 10000
+                    other["metric"] = other["metric"] - 10000
         if recordEntry:
             outEntries.append(e)
     return outEntries
@@ -150,11 +145,15 @@ def main() -> None:
     strippedEntries = []
     filterAst = ast.parse(args.filter)
     for e in sortEntries:
-        if evalAst(filterAst, e):
+        if evalAst(filterAst, e, True):
             strippedEntries.append(e)
-    sortEntries = strippedEntries
     metricAst = ast.parse(args.metric)
-    outs = removeOverlaps(sortEntries, metricAst, nameCol, args.maxOffset)
+    measuredEntries = []
+    for e in strippedEntries:
+        # We don't need to add functions to the entries again, since we did that during filter.
+        e["metric"] = evalAst(metricAst, e, True)
+        measuredEntries.append(e)
+    outs = removeOverlaps(measuredEntries, nameCol, args.maxOffset)
     if args.outTsv is not None:
         writeTsv(outs, colNames, args.outTsv)
     if args.outBed is not None:

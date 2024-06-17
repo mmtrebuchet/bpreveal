@@ -165,7 +165,12 @@
                             "name": {"type": "string"},
                             "color": {"$ref": "#/definitions/color-spec"},
                             "bottom": {"$ref": "#/definitions/fraction"},
-                            "top": {"$ref": "#/definitions/fraction"}
+                            "top": {"$ref": "#/definitions/fraction"},
+                            "shape": {
+                                "type": "string",
+                                "enum": ["diamond", "wedge", "box", "indel", "snp",
+                                         "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť"]
+                            }
                         },
                         "required": ["start", "end", "name", "color"],
                         "additionalProperties": false
