@@ -11,7 +11,7 @@ BPReveal 4.x
 BPReveal 4.3.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.3.0, 2024-06-17
+BPReveal 4.3.0, 2024-06-24
 ''''''''''''''''''''''''''
 
 BREAKING CHANGES:
