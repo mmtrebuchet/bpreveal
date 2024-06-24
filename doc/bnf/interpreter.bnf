@@ -65,7 +65,7 @@
   | <compare-op> <expression>
 
 <compare-op> ::=
-    < | > | <= | >= | == | !=
+    < | > | <= | >= | == | != | in | not in
 
 <python-literal> ::=
     (Anything that is a literal in Python)

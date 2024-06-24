@@ -117,8 +117,6 @@ def _evalCompare(left: ast.expr, ops: list[ast.cmpop],  # pylint: disable=too-ma
         # Because there's a loop, and we need to go
         # over every comparison if the user supplied
         # a < b < c.
-        assert (isinstance(prev, (int, float, bool)) and isinstance(rv, (int, float, bool))) \
-            or (isinstance(prev, str) and isinstance(rv, str))
         match op:
             case ast.Lt():
                 if prev >= rv:  # type: ignore
@@ -137,6 +135,12 @@ def _evalCompare(left: ast.expr, ops: list[ast.cmpop],  # pylint: disable=too-ma
                     return False
             case ast.Eq():
                 if prev != rv:
+                    return False
+            case ast.In():
+                if prev not in rv:  # type: ignore
+                    return False
+            case ast.NotIn():
+                if prev in rv:  # type: ignore
                     return False
             case _:
                 raise SyntaxError(f"Unsupported comparison operator in expression: {op}")
@@ -160,10 +164,10 @@ def _evalBinary(left: ast.expr, op: ast.operator,  # pylint: disable=too-many-re
             return lhs * rhs  # type: ignore
         case ast.Div():
             return lhs / rhs  # type: ignore
-        case ast.Pow():
-            return lhs ** rhs  # type: ignore
         case ast.Mod():
             return lhs % rhs  # type: ignore
+        case ast.Pow():
+            return lhs ** rhs  # type: ignore
         case ast.FloorDiv():
             return lhs // rhs  # type: ignore
         case _:

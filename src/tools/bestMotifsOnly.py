@@ -18,14 +18,14 @@ def getParser() -> argparse.ArgumentParser:
                     "only have one motif.")
     p.add_argument("--metric",
         help="A python expression giving the value that should be used to compare "
-             "motif instances to see which one is better. (Beds should use the score "
+             "motif instances to see which one is better. (Beds should use the 'score' "
              "column to compare.)",
         default="score")
     p.add_argument("--filter",
         help="Only consider motifs that satisfy this filter. "
-                   "Format: Any valid Python expression where the identifiers are "
-                   "column names in the tsv. "
-                   "(Don't forget to quote comparison operators on the shell!)",
+             "Format: Any valid Python expression where the identifiers are "
+             "column names in the tsv. "
+             "(Don't forget to quote comparison operators on the shell!)",
         default="True",
         dest="filter",
         type=str)
@@ -64,6 +64,21 @@ def removeOverlaps(entries: list[dict], nameCol: str | None,
                    maxOffset: int) -> list[dict]:
     """Scan over the (sorted) motif hits and keep the best ones.
 
+    For every pair of motifs (m1, m2):
+
+    1. If they don't overlap at all, continue.
+    2. If the center of m1 is more than ``maxOffset`` bp away from the center
+       of m2, continue.
+    3. If nameCol is given (i.e., is not none) and the name of m1 is different
+       than the name of m2, continue.
+    4. We have established that m1 and m2 are competing. We must mark one of
+       them as bad.
+    5. Select the motif that has the lower metric. Mark it as bad.
+       If they have the same metric value, mark one at random.
+
+    Once all of the marking is complete, return a list of all motifs that
+    are NOT marked as bad.
+
     :param entries: A list of motif tsv (or bed) entries. This is a dict keyed
         by column name.
     :param nameCol: The name of the column used to check to see if motifs have the
@@ -73,6 +88,25 @@ def removeOverlaps(entries: list[dict], nameCol: str | None,
         this distance, then they are considered non-overlapping.
         The larger this value, the more aggressive the culling will be.
     :return: A list of entries, of the same type as the input entries.
+
+    There are some quirks with this algorithm. It works based on the order of the
+    bed file, and so the following situation gives a result you might not expect:
+
+    .. highlight:: none
+
+    ::
+
+        |---a:0.8---|     |---c:0.2---|
+                 |---b:0.7---|   |---d:0.1---|
+
+    Here we have four motif calls: a, b, c, and d. By the above algorithm,
+    the motif pairs (a, b), (b, c), and (c, d) have overlap, and so we'll mark
+    the lower-scoring motif from each pair.
+    Between a and b, b has the lower score, so b will be marked.
+    For b and c, c will be marked.
+    For c and d, d will be marked.
+    This means that ONLY motif a will be returned because every other motif instance
+    had overlap with a better instance.
     """
     outEntries = []
     for i, e in logUtils.wrapTqdm(enumerate(entries), total=len(entries)):
@@ -100,10 +134,10 @@ def removeOverlaps(entries: list[dict], nameCol: str | None,
                     if other[nameCol] != e[nameCol]:
                         continue
 
-                if other["metric"] < e["metric"]:
+                if other["metric"] > e["metric"]:
                     recordEntry = False
                     break
-                elif e["metric"] == other["metric"]:
+                if e["metric"] == other["metric"]:
                     # We have a tie. I need to pick
                     # a winner, so I'll say the motif on the left wins.
                     other["metric"] = other["metric"] - 10000
@@ -112,19 +146,28 @@ def removeOverlaps(entries: list[dict], nameCol: str | None,
     return outEntries
 
 
-def main() -> None:
-    """Run the culling algorithm."""
-    args = getParser().parse_args()
-    logUtils.setBooleanVerbosity(args.verbose)
+def loadEntries(inTsv: str | None, inBed: str | None,
+                matchNames: bool) -> tuple[list[dict], list[str], str | None]:
+    """Read in the bed or TSV file containing motif calls.
+
+    :param inTsv: The name of the input tsv file, or None if one wasn't provided.
+    :param inBed: The name of the input bed file, or None if one wasn't provided.
+    :param matchNames: Should the culling only consider motifs that have the same name?
+    :return: A tuple containing three items. The first is a list of dicts,
+        containing all of the entries from the input data file. The second is a
+        list of the field names in each entry. The third is a string giving the
+        name of the field that should be used to get the name of the motif.
+    """
     nameCol = None
-    if args.inTsv is not None:
-        inFname = args.inTsv
+    if inTsv is not None:
+        assert inBed is None, "Cannot specify both a tsv and bed input. Choose one."
+        inFname = inTsv
         colNames, entries, _ = readTsv(inFname)
-        if args.matchNames:
+        if matchNames:
             nameCol = "short_name"
     else:
-        assert args.inBed is not None, "Must provide tsv or bed!"
-        inFname = args.inBed
+        assert inBed is not None, "Must provide tsv or bed!"
+        inFname = inBed
         colNames = ["chrom", "start", "end", "name", "score", "strand"]
         convFns = [str, int, int, str, float, str]
         entries = []
@@ -135,28 +178,41 @@ def main() -> None:
                 for i, elem in enumerate(lsp):
                     curEntry[colNames[i]] = convFns[i](elem)
                 entries.append(curEntry)
-        if args.matchNames:
+        if matchNames:
             nameCol = "name"
+    return entries, colNames, nameCol
+
+
+def main() -> None:
+    """Run the culling algorithm."""
+    args = getParser().parse_args()
+    logUtils.setBooleanVerbosity(args.verbose)
+    entries, colNames, nameCol = loadEntries(args.inTsv, args.inBed, args.matchNames)
 
     def sortKey(e: dict) -> tuple[str, int]:
         return (e["chrom"], e["start"])
-    logUtils.info("Loaded input file")
+    logUtils.info(f"Loaded input file. Number of entries: {len(entries)}")
     sortEntries = sorted(entries, key=sortKey)
     strippedEntries = []
     filterAst = ast.parse(args.filter)
     for e in sortEntries:
         if evalAst(filterAst, e, True):
             strippedEntries.append(e)
+    logUtils.info(f"Filtering complete. Surviving motifs: {len(strippedEntries)}")
     metricAst = ast.parse(args.metric)
     measuredEntries = []
     for e in strippedEntries:
         # We don't need to add functions to the entries again, since we did that during filter.
         e["metric"] = evalAst(metricAst, e, True)
         measuredEntries.append(e)
+    logUtils.info("Metrics calculated. Beginning overlap removal calculation.")
     outs = removeOverlaps(measuredEntries, nameCol, args.maxOffset)
+    logUtils.info(f"Culling complete. Surviving motifs: {len(outs)}")
     if args.outTsv is not None:
+        logUtils.info("Writing output tsv.")
         writeTsv(outs, colNames, args.outTsv)
     if args.outBed is not None:
+        logUtils.info("Writing output bed.")
         with open(args.outBed, "w") as fp:
             for o in outs:
                 outElems = []
