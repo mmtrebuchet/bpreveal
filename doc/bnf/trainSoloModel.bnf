@@ -3,7 +3,7 @@
      <head-section>, <verbosity-section>}
 
 <solo-settings-section> ::=
-    "settings" : {<solo-settings-contents>}
+    "settings" : <solo-settings-contents>
 
 <data-section> ::=
     "train-data" : <file-name>,
