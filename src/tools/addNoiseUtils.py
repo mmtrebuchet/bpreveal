@@ -1,5 +1,9 @@
 """Utility functions for adding noise.
 
+.. warning::
+    This tool is deprecated and will be removed in BPReveal 6.0.
+    It turns out that it's not very useful.
+
 This program is needed for a reason that I don't quite understand - gmstar is
 not picklable if I put it inside addNoise.py.
 """

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """A little utility to add some noise to training data.
 
+.. warning::
+    This tool will be removed in BPReveal 6.0.
+    It turns out that it's not very useful.
+
 BNF
 ---
 
