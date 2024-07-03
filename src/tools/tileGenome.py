@@ -7,7 +7,7 @@ from bpreveal import logUtils
 from bpreveal import bedUtils
 
 
-def getParser():
+def getParser() -> argparse.ArgumentParser:
     """Generate the parser."""
     ap = argparse.ArgumentParser(
         description="Little tool to generate regions that tile the genome, "
@@ -40,7 +40,7 @@ def getParser():
     return ap
 
 
-def main():
+def main() -> None:
     """Actually run the tiling step."""
     args = getParser().parse_args()
     if args.verbose:

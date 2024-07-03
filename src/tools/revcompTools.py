@@ -38,7 +38,7 @@ def main():
         # We've been asked to generate the revcomp bigwig.
         inBw = pyBigWig.open(args.inputBigwigFname, "r")
         chromSizes = utils.loadChromSizes(bw=inBw)
-        logUtils.debug(chromSizes)
+        logUtils.debug(str(chromSizes))
         inBwDats = dict()
         for chromName in chromSizes.keys():
             vals = np.nan_to_num(inBw.values(chromName, 0, inBw.chroms(chromName)))

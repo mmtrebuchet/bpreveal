@@ -9,7 +9,7 @@ import pyBigWig
 import tqdm
 
 
-def scanBigwigs(bwFname1: str, bwFname2: str, outFname: str):
+def scanBigwigs(bwFname1: str, bwFname2: str, outFname: str) -> None:
     """Show a plot of the correlation between the two bigwigs, and save data to outFname."""
     bw1 = pyBigWig.open(bwFname1)
     bw2 = pyBigWig.open(bwFname2)
@@ -29,7 +29,7 @@ def scanBigwigs(bwFname1: str, bwFname2: str, outFname: str):
             fp.write(f"{xvals[i]}\t{ret[i]}\n")
 
 
-def doShift(bwFnames: list[str], shifts: list[int], outFname: str):
+def doShift(bwFnames: list[str], shifts: list[int], outFname: str) -> None:
     """Actually shift the files."""
     bws = [pyBigWig.open(x) for x in bwFnames]
     bwOut = pyBigWig.open(outFname, "w")
@@ -57,7 +57,7 @@ def doShift(bwFnames: list[str], shifts: list[int], outFname: str):
     bwOut.close()
 
 
-def getParser():
+def getParser() -> argparse.ArgumentParser:
     """Generate (but don't call parse_args()) the parser."""
     parser = argparse.ArgumentParser(
         description="Slide bigwigs to turn mnase endpoint data into midpoints."
@@ -80,7 +80,7 @@ def getParser():
     return parser
 
 
-def main():
+def main() -> None:
     """Run the program."""
     args = getParser().parse_args()
 

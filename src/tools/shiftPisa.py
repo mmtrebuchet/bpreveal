@@ -4,12 +4,12 @@ import argparse
 import numpy as np
 import numpy.typing as npt
 import h5py
-from bpreveal.internal.constants import IMPORTANCE_T, IMPORTANCE_AR_T, PRED_AR_T
+from bpreveal.internal.constants import IMPORTANCE_T, IMPORTANCE_AR_T, PRED_AR_T, PRED_T
 
 
-def shiftPisa(dats: IMPORTANCE_AR_T, offset: int):
+def shiftPisa(dats: IMPORTANCE_AR_T, offset: int) -> IMPORTANCE_AR_T:
     """Shift a (2D) PISA array."""
-    newDats = np.zeros(dats.shape)
+    newDats = np.zeros(dats.shape, dtype=IMPORTANCE_T)
     if offset >= 0:
         newDats[:-offset, offset:] = dats[offset:, :-offset]
     else:
@@ -17,9 +17,9 @@ def shiftPisa(dats: IMPORTANCE_AR_T, offset: int):
     return newDats
 
 
-def shiftPredictions(preds: PRED_AR_T, offset: int):
+def shiftPredictions(preds: PRED_AR_T, offset: int) -> PRED_AR_T:
     """Shift an array of predictions."""
-    ret = np.zeros(preds.shape)
+    ret = np.zeros(preds.shape, dtype=PRED_T)
     if offset >= 0:
         ret[:-offset] = preds[offset:]
     else:
@@ -73,7 +73,7 @@ def getMask(dats: IMPORTANCE_AR_T, offset: int,
     return mask
 
 
-def doShift(pisaFnames: list[str], shifts: list[int], outFname: str):
+def doShift(pisaFnames: list[str], shifts: list[int], outFname: str) -> None:
     """Actually apply the shift.
 
     :param pisaFnames: The names of the hdf5-format files to shift.
@@ -134,7 +134,7 @@ def doShift(pisaFnames: list[str], shifts: list[int], outFname: str):
                              dtype="f4")
 
 
-def getParser():
+def getParser() -> argparse.ArgumentParser:
     """Generate (but don't parse_args()) the argument parser."""
     parser = argparse.ArgumentParser(
         description="Slide pisa data to turn endpoint-based pisa data into midpoints."
@@ -156,9 +156,8 @@ def getParser():
     return parser
 
 
-def main():
+def main() -> None:
     """Do the shifting."""
-
     args = getParser().parse_args()
 
     if args.mnase:
