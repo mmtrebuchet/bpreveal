@@ -1,35 +1,38 @@
 #!/usr/bin/env python3
+"""A simple utility to revcomp-augment data."""
+import argparse
 import pybedtools
 import numpy as np
 import pysam
 import pyBigWig
-import argparse
 from bpreveal import logUtils
 from bpreveal import utils, bedUtils
 logUtils.setVerbosity("INFO")
 
 
-def getParser():
+def getParser() -> argparse.ArgumentParser:
+    """Build the parser (but don't parse_args())."""
     ap = argparse.ArgumentParser(description="A utility for generating "
         "reverse-complement test data.")
     ap.add_argument("--bed", help="The bed file containing regions to revcomp.")
     ap.add_argument("--input-length", help="The input length of your model.",
-                    dest='inputLength', type=int)
+                    dest="inputLength", type=int)
     ap.add_argument("--input-bigwig", help="The input bigwig for reverse complement",
-                    dest='inputBigwigFname')
+                    dest="inputBigwigFname")
     ap.add_argument("--output-bigwig", help="The output bigwig for reverse complement.",
-                    dest='outputBigwigFname')
+                    dest="outputBigwigFname")
     ap.add_argument("--revcomp", help="Should the sequences be reverse-complemented?",
-                    action='store_true')
+                    action="store_true")
     ap.add_argument("--genome", help="The genome fasta file.")
     ap.add_argument("--output-fasta", help="The name of the fasta-format file that should"
-                    "be written.", dest='outputFastaFname')
+                    "be written.", dest="outputFastaFname")
     ap.add_argument("--output-bed", help="For regions that survived resizing, save them here.",
-                    dest='outputBedFname')
+                    dest="outputBedFname")
     return ap
 
 
-def main():
+def main() -> None:
+    """Generate the augmented data."""
     args = getParser().parse_args()
 
     regions = list(pybedtools.BedTool(args.bed))
@@ -39,7 +42,7 @@ def main():
         inBw = pyBigWig.open(args.inputBigwigFname, "r")
         chromSizes = utils.loadChromSizes(bw=inBw)
         logUtils.debug(str(chromSizes))
-        inBwDats = dict()
+        inBwDats = {}
         for chromName in chromSizes.keys():
             vals = np.nan_to_num(inBw.values(chromName, 0, inBw.chroms(chromName)))
             inBwDats[chromName] = vals
@@ -60,7 +63,7 @@ def main():
         passRegions = []
         genome = pysam.FastaFile(args.genome)
         for r in regions:
-            if newRegion := bedUtils.resize(r, mode='center', width=args.inputLength,
+            if newRegion := bedUtils.resize(r, mode="center", width=args.inputLength,
                                            genome=genome):
                 resizedRegions.append(newRegion)
                 passRegions.append(r)
@@ -74,14 +77,14 @@ def main():
         if args.outputFastaFname is not None:
             with open(args.outputFastaFname, "w") as fp:
                 for r in resizedRegions:
-                    fp.write(">{0:s},{1:d},{2:d}\n".format(r.chrom, r.start, r.end))
+                    fp.write(f">{r.chrom},{r.start},{r.end}\n")
                     seq = genome.fetch(r.chrom, r.start, r.end)
                     if args.revcomp:
                         oheSeq = utils.oneHotEncode(seq)
                         flipSeq = np.flip(oheSeq)
                         seq = utils.oneHotDecode(flipSeq)
                     fp.write(seq)
-                    fp.write('\n')
+                    fp.write("\n")
 
 
 if __name__ == "__main__":

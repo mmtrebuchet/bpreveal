@@ -1,9 +1,14 @@
+"""Old plotting tools. Deprecated.
+
+    .. warning::
+        This module is deprecated and will be removed in 6.0.0.
+"""
+import math
 import numpy as np
 import h5py
 import pysam
 import pyBigWig
 import pybedtools
-import math
 
 # You must install bpreveal with conda develop in order to import bpreveal tools.
 from bpreveal.internal.constants import IMPORTANCE_AR_T, IMPORTANCE_T, PRED_AR_T, ONEHOT_AR_T

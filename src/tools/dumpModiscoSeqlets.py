@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
+"""Write out the seqlets from a modisco h5 to a fastq file, to verify recovered coordinates.
+
+    .. warning::
+        This module is deprecated and will be removed in BPReveal 6.0.0.
+        It was only used to make sure that the seqlet coordinates inferred during
+        motif scanning are correct.
+
+"""
 import argparse
 import h5py
 import numpy as np
 from bpreveal.utils import oneHotDecode
 
 
-def getParser():
+def getParser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description="Read in a modisco hdf5 file and write a "
                                  "fastq file containing the seqlets to stdout.")
     ap.add_argument("--modisco-h5", help="The modisco hdf5 file", dest="modiscoH5")
@@ -19,7 +27,7 @@ def getParser():
     return ap
 
 
-def dumpGroup(subpattern, contribFp, name, bedFp, fastqFp, width):
+def dumpGroup(subpattern, contribFp, name, bedFp, fastqFp, width) -> None:
     seqlets = np.array(subpattern["seqlets"]["sequence"])
     revcomps = np.array(subpattern["seqlets"]["is_revcomp"])
     startPoses = np.array(subpattern["seqlets"]["start"])
@@ -53,7 +61,7 @@ def dumpGroup(subpattern, contribFp, name, bedFp, fastqFp, width):
             bedFp.write(f"{chromName}\t{regionStart}\t{regionEnd}\t{seqletName}\t0\t{strandChr}\n")
 
 
-def main():
+def main() -> None:
     args = getParser().parse_args()
     with h5py.File(args.modiscoH5, "r") as fp:
         outFastq = None
