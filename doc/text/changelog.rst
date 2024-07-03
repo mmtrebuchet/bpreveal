@@ -8,8 +8,21 @@ see :doc:`breakingChanges`.
 BPReveal 4.x
 ------------
 
+BPReveal 4.4.x
+^^^^^^^^^^^^^^
+
+BPReveal 4.4.0, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+DEPRECATIONS:
+    * The addNoise tool is deprecated and will be removed in 6.0.0. It was never useful.
+
+ENHANCEMENTS:
+    * Made the formatting for bnf documentation more consistent.
+
 BPReveal 4.3.x
 ^^^^^^^^^^^^^^
+
 
 BPReveal 4.3.0, 2024-06-24
 ''''''''''''''''''''''''''

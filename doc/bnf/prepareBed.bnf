@@ -1,15 +1,17 @@
 <prepare-bed-configuration> ::=
-    {<bigwig-section>,
-     "splits" : {<split-settings>},
-     "genome" : <file-name>,
-     "output-length" : <integer>,
-     "input-length" : <integer>,
-     "max-jitter" : <integer>,
-     <output-file-name-section>,
-     "resize-mode" : <resize-mode>,
-     <overlap-section>
-     <num-threads-section>
-     <verbosity-section>}
+    {
+        <bigwig-section>,
+        "splits" : {<split-settings>},
+        "genome" : <file-name>,
+        "output-length" : <integer>,
+        "input-length" : <integer>,
+        "max-jitter" : <integer>,
+        <output-file-name-section>,
+        "resize-mode" : <resize-mode>,
+        <overlap-section>
+        <num-threads-section>
+        <verbosity-section>
+    }
 
 <bigwig-section> ::=
     "heads" : [<head-preparation-list>]
@@ -36,10 +38,11 @@
     "output-test" : <file-name>
 
 <individual-preparation-head> ::=
- { "bigwig-names" : [<list-of-bigwig-files>],
-   <max-cutoff-section>,
-   <min-cutoff-section>
-   }
+    {
+        "bigwig-names" : [<list-of-bigwig-files>],
+        <max-cutoff-section>,
+        <min-cutoff-section>
+    }
 
 <max-cutoff-section> ::=
    "max-quantile" : <number>

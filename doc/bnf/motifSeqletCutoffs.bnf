@@ -1,6 +1,8 @@
 <motif-seqlet-cutoffs-configuration> ::=
-    {<seqlet-scanning-settings>,
-    <verbosity-section>}
+    {
+        <seqlet-scanning-settings>,
+        <verbosity-section>
+    }
 
 <seqlet-scanning-settings> ::=
     <seqlet-tsv-section>
@@ -27,9 +29,11 @@
   | <pattern-spec>, <list-of-pattern-specs>
 
 <pattern-spec> ::=
-    {<optional-quantile-cutoff-section>
-     "metacluster-name" : <string>,
-     <pattern-option>}
+    {
+        <optional-quantile-cutoff-section>
+        "metacluster-name" : <string>,
+        <pattern-option>
+    }
 
 <pattern-option> ::=
      "pattern-name" : <string>

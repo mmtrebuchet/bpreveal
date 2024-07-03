@@ -1,6 +1,10 @@
 <solo-training-input-configuration> ::=
-   {<solo-settings-section> , <data-section>,
-     <head-section>, <verbosity-section>}
+    {
+        <solo-settings-section>,
+        <data-section>,
+        <head-section>,
+        <verbosity-section>
+    }
 
 <solo-settings-section> ::=
     "settings" : <solo-settings-contents>
@@ -17,10 +21,12 @@
   | <individual-head>, <head-list>
 
 <individual-head> ::=
-    { "num-tasks" : <integer>,
-      "profile-loss-weight" : <number>,
-      <counts-loss-section>,
-      "head-name" : <string>}
+    {
+        "num-tasks" : <integer>,
+        "profile-loss-weight" : <number>,
+        <counts-loss-section>,
+        "head-name" : <string>
+    }
 
 <counts-loss-section> ::=
     "counts-loss-weight" : <number>
@@ -33,25 +39,29 @@
   | "counts-loss-frac-target" : <number>
 
 <solo-settings-contents> ::=
-    {"output-prefix" : <string>,
-     "epochs" : <integer>,
-     "max-jitter" : <integer>,
-     "early-stopping-patience" : <integer>,
-     "batch-size" : <integer>,
-     "learning-rate" : <number>,
-     "learning-rate-plateau-patience" : <integer>,
-     "architecture" : <solo-architecture-specification> }
+    {
+        "output-prefix" : <string>,
+        "epochs" : <integer>,
+        "max-jitter" : <integer>,
+        "early-stopping-patience" : <integer>,
+        "batch-size" : <integer>,
+        "learning-rate" : <number>,
+        "learning-rate-plateau-patience" : <integer>,
+        "architecture" : <solo-architecture-specification>
+    }
 
 <solo-architecture-specification> ::=
     <solo-bpnet-architecture-specification>
 
 <solo-bpnet-architecture-specification> ::=
-    {"architecture-name" : "bpnet",
-    "input-length" : <integer>,
-    "output-length" : <integer>,
-    "model-name" : <string>,
-    "model-args" : <string>,
-    "filters" : <integer>,
-    "layers" : <integer>,
-    "input-filter-width" : <integer>,
-    "output-filter-width" : <integer>}
+    {
+        "architecture-name" : "bpnet",
+        "input-length" : <integer>,
+        "output-length" : <integer>,
+        "model-name" : <string>,
+        "model-args" : <string>,
+        "filters" : <integer>,
+        "layers" : <integer>,
+        "input-filter-width" : <integer>,
+        "output-filter-width" : <integer>
+    }

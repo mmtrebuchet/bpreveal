@@ -1,21 +1,26 @@
 <transformation-input-configuration> ::=
-    {"settings" : <transformation-settings-section>,
+    {
+        "settings" : <transformation-settings-section>,
         <data-section>,
-        <head-section>, <verbosity-section>}
+        <head-section>,
+        <verbosity-section>
+    }
 
 <transformation-settings-section> ::=
-     {"output-prefix" : "<string>",
-      "epochs" : <integer>,
-      "max-jitter" : <integer>,
-      "early-stopping-patience" : <integer>,
-      "batch-size" : <integer>,
-      "learning-rate" : <number>,
-      "learning-rate-plateau-patience" : <integer>
-      "solo-model-file" : <file-name>,
-      "input-length" : <integer>,
-      "output-length" : <integer>,
-      "profile-architecture" : {<transformation-architecture-specification>},
-      "counts-architecture" : {<transformation-architecture-specification>} }
+    {
+        "output-prefix" : "<string>",
+        "epochs" : <integer>,
+        "max-jitter" : <integer>,
+        "early-stopping-patience" : <integer>,
+        "batch-size" : <integer>,
+        "learning-rate" : <number>,
+        "learning-rate-plateau-patience" : <integer>
+        "solo-model-file" : <file-name>,
+        "input-length" : <integer>,
+        "output-length" : <integer>,
+        "profile-architecture" : {<transformation-architecture-specification>},
+        "counts-architecture" : {<transformation-architecture-specification>}
+    }
 
 <transformation-architecture-specification> ::=
     <simple-transformation-architecture-specification>

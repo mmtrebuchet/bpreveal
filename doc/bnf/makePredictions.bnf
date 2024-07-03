@@ -1,8 +1,10 @@
 <prediction-input-configuration> ::=
-    { <prediction-settings-section>,
-      <prediction-input-section>,
-      <prediction-threads-section>,
-      <verbosity-section> }
+    {
+        <prediction-settings-section>,
+        <prediction-input-section>,
+        <prediction-threads-section>,
+        <verbosity-section>
+    }
 
 <prediction-input-section> ::=
     <prediction-fasta-input-section>
@@ -16,9 +18,11 @@
         "architecture" : <prediction-model-settings> }
 
 <prediction-model-settings> ::=
-    {"model-file" : <file-name>,
-     "input-length" : <integer>,
-     "output-length" : <integer> }
+    {
+        "model-file" : <file-name>,
+        "input-length" : <integer>,
+        "output-length" : <integer>
+    }
 
 <prediction-bed-input-section> ::=
     "genome": <file-name>,

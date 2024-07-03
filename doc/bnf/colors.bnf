@@ -1,9 +1,10 @@
-<sequence-color-spec> ::= {
-    "A": <color-spec>,
-    "C": <color-spec>,
-    "G": <color-spec>,
-    "T": <color-spec>
-}
+<sequence-color-spec> ::=
+    {
+        "A": <color-spec>,
+        "C": <color-spec>,
+        "G": <color-spec>,
+        "T": <color-spec>
+    }
 
 <color-spec> ::=
     {"rgb": [<number>, <number>, <number>]}

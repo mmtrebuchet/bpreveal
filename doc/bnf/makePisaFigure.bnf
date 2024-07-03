@@ -1,6 +1,7 @@
-<make-figure-configuration> ::= {
-    <list-of-figure-config-parts>
-}
+<make-figure-configuration> ::= 
+    {
+        <list-of-figure-config-parts>
+    }
 
 <list-of-figure-config-parts> ::=
     <figure-config-part>

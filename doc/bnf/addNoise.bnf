@@ -1,13 +1,15 @@
 <add-noise-configuration> ::=
-   {"input-h5" : <file-name>,
-    "output-h5" : <file-name>,
-    <output-size-section>,
-    "keep-original-data" : <boolean>,
-    "sequence-fraction-mutated" : <number>,
-    "sequence-distribution-fraction" : <number>,
-    "profile-mutation-types" : [<list-of-profile-mutation-types>],
-    "num-threads" : <integer>,
-    <verbosity-section>}
+    {
+        "input-h5" : <file-name>,
+        "output-h5" : <file-name>,
+        <output-size-section>,
+        "keep-original-data" : <boolean>,
+        "sequence-fraction-mutated" : <number>,
+        "sequence-distribution-fraction" : <number>,
+        "profile-mutation-types" : [<list-of-profile-mutation-types>],
+        "num-threads" : <integer>,
+        <verbosity-section>
+    }
 
 <output-size-section> ::=
     "num-output-samples" : <integer>
@@ -23,24 +25,30 @@
   | <subtract-mutation-type>
 
 <add-mutation-type> ::=
-    {"type" : "add",
-     "maximum-reads" : <number-or-null>,
-     "minimum-reads" : <integer>,
-     "max-change" : <integer>,
-     <profile-mutation-common-parameters>}
+    {
+        "type" : "add",
+        "maximum-reads" : <number-or-null>,
+        "minimum-reads" : <integer>,
+        "max-change" : <integer>,
+        <profile-mutation-common-parameters>
+    }
 
 <shift-mutation-type> ::=
-    {"type" : "shift",
-     "shift-max-distance" : <integer>,
-     "shift-reads-independently" : <boolean>,
-     <profile-mutation-common-parameters>}
+    {
+        "type" : "shift",
+        "shift-max-distance" : <integer>,
+        "shift-reads-independently" : <boolean>,
+        <profile-mutation-common-parameters>
+    }
 
 <subtract-mutation-type> ::=
-    {"type" : "subtract",
-     "maximum-reads" : <number-or-null>,
-     "minimum-reads" : <integer>,
-     "max-change" : <integer>,
-     <profile-mutation-common-parameters>}
+    {
+        "type" : "subtract",
+        "maximum-reads" : <number-or-null>,
+        "minimum-reads" : <integer>,
+        "max-change" : <integer>,
+        <profile-mutation-common-parameters>
+    }
 
 <profile-mutation-common-parameters> ::=
      "fraction-mutated" : <number>,

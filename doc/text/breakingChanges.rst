@@ -30,6 +30,7 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
    a warning and generated invalid coordinate data since 4.1.3.
 6. The ``plots.py`` module in the tools directory will be removed. Its replacement,
    ``plotting.py``, was introduced in 4.2.0 and is part of the main repository.
+7. The ``addNoise`` tool will be removed. It turns out that it's not useful.
 
 
 BPReveal 5.x

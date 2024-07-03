@@ -1,10 +1,12 @@
 <motif-scan-config> ::=
-    {<scan-quantile-settings>
-     "scan-settings" : {
-         "scan-contrib-h5" : <string>,
-         "hits-tsv" : <string>,
-         "num-threads" : <integer>}
-     <verbosity-section>}
+    {
+        <scan-quantile-settings>
+        "scan-settings" : {
+            "scan-contrib-h5" : <string>,
+            "hits-tsv" : <string>,
+            "num-threads" : <integer>}
+        <verbosity-section>
+     }
 
 <scan-quantile-settings> ::=
     "seqlet-cutoff-json" : <string>,

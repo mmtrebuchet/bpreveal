@@ -6,14 +6,16 @@
     | <scan-pattern>, <list-of-scan-patterns>
 
 <scan-pattern> ::=
-    {"metacluster-name" : <string>,
-    "pattern-name" : <string>,
-    "short-name" : <string>
-    "cwm" : <motif-array>,
-    "pssm" : <motif-array>,
-    "seq-match-cutoff" : <number-or-null>,
-    "contrib-match-cutoff" : <number-or-null>,
-    "contrib-magnitude-cutoff" : <number-or-null>}
+    {
+        "metacluster-name" : <string>,
+        "pattern-name" : <string>,
+        "short-name" : <string>
+        "cwm" : <motif-array>,
+        "pssm" : <motif-array>,
+        "seq-match-cutoff" : <number-or-null>,
+        "contrib-match-cutoff" : <number-or-null>,
+        "contrib-magnitude-cutoff" : <number-or-null>
+    }
 
 <motif-array> ::=
     [ <list-of-base-arrays> ]
