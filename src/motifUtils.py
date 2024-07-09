@@ -1233,11 +1233,14 @@ class PatternScanner:
         # Get all the data for this index.
         chromIdx = self.contribFp["coords_chrom"][idx]
         if isinstance(chromIdx, bytes):
-            logUtils.error("Detected an importance score file from before version 4.0. "
-                           "This is an error as of BPReveal 5.0.0 "
-                           "Instructions for updating: Re-calculate importance scores.")
-            raise ValueError("Invalid importance score file format.")
-        chrom = self.chromIdxToName[chromIdx]
+            logUtils.logFirstN(logUtils.ERROR,
+                               "Detected an importance score file from before version 4.0. "
+                               "This will be an error in BPReveal 6.0. "
+                               "Instructions for updating: Re-calculate importance scores.",
+                               1)
+            chrom = chromIdx.decode("utf-8")
+        else:
+            chrom = self.chromIdxToName[chromIdx]
         regionStart = self.contribFp["coords_start"][idx]
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
         hypScores = np.array(self.contribFp["hyp_scores"][idx], dtype=MOTIF_FLOAT_T, order="C")

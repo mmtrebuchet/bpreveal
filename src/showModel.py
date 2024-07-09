@@ -49,7 +49,7 @@ def getParser() -> argparse.ArgumentParser:
 if __name__ == "__main__":
     args = getParser().parse_args()
     logUtils.setVerbosity("INFO")
-    logUtils.warning(
+    logUtils.error(
         "DEPRECATION: The showModel tool is deprecated and will be removed in BPReveal 6.0.0.\n"
         "    Instructions for updating:\n"
         "        print(model.summary(expand_nested=True, show_trainable=True))\n"

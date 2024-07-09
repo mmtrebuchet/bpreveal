@@ -73,11 +73,12 @@ def writeBigWig(inH5: h5py.File, outFname: str) -> None:  # pylint: disable=too-
     numRegions = inH5["coords_chrom"].shape[0]
     if isinstance(inH5["coords_chrom"][0], bytes):
         logUtils.error("You are using an old-style hdf5 file for importance scores. "
-            "This has been deprecated since 4.0.0 and is an error as of 5.0.0 "
+            "Support for these files will be removed in BPReveal 6.0. "
             "Instructions for updating: Re-calculate importance scores.")
-        raise ValueError("Invalid importance score file format.")
-    coordsChromIdxes = np.array(inH5["coords_chrom"])
-    coordsChrom = np.array([chromIdxToName[x] for x in coordsChromIdxes])
+        coordsChrom = np.array(inH5["coords_chrom"].asstr())
+    else:
+        coordsChromIdxes = np.array(inH5["coords_chrom"])
+        coordsChrom = np.array([chromIdxToName[x] for x in coordsChromIdxes])
     # Sort the regions.
     coordsStart = np.array(inH5["coords_start"])
     coordsEnd   = np.array(inH5["coords_end"])  # noqa

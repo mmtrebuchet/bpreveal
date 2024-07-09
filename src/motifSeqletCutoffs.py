@@ -141,11 +141,11 @@ def main(config: dict) -> None:
     if "seqlets-tsv" in config:
         tsvFname = config["seqlets-tsv"]
     if "modisco-window" not in config:
-        logUtils.warning("You have not given a modisco window size. "
-                         "Coordinate information for seqlets will not be saved. "
-                         "This will be an error in BPReveal 6.0.0. "
-                         'Instructions for fixing: Include "modisco-window": <integer> in '
-                         "your configuration json to motifSeqletCutoffs.")
+        logUtils.error("You have not given a modisco window size. "
+                       "Coordinate information for seqlets will not be saved. "
+                       "This will be an error in BPReveal 6.0.0. "
+                       'Instructions for fixing: Include "modisco-window": <integer> in '
+                       "your configuration json to motifSeqletCutoffs.")
         config["modisco-window"] = 0
     scanPatternDict = motifUtils.seqletCutoffs(config["modisco-h5"],
                                                config["modisco-contrib-h5"],

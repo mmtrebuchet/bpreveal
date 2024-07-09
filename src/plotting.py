@@ -871,8 +871,8 @@ def plotPisaWithFiles(pisaDats: str, cutMiddle: int, cutLengthX: int,
     """Deprecated way to get the new config dict. Issues a warning if used."""
     del fig
     del receptiveField
-    logUtils.warning("This function has been replaced with the new plotting config style. "
-                     "Use this config: ")
+    logUtils.error("This function has been replaced with the new plotting config style. "
+                   "Use this config: ")
     cfg = {
         "pisa": {"h5-name": pisaDats},
         "coordinates": {

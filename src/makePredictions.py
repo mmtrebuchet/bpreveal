@@ -192,12 +192,12 @@ def main(config: dict) -> None:
     if "genome" in config["settings"]:
         config["genome"] = config["settings"]["genome"]
         del config["settings"]["genome"]
-        logUtils.warning("You are using an old-format bed prediction json.")
-        logUtils.warning('The genome argument should be moved from "settings"')
-        logUtils.warning("to the root of the JSON object.")
-        logUtils.warning("This will be an error in BPReveal 6.0.0")
-        logUtils.warning("Here is a corrected version:")
-        logUtils.warning(json.dumps(config, indent=4))
+        logUtils.error("You are using an old-format bed prediction json.")
+        logUtils.error('The genome argument should be moved from "settings"')
+        logUtils.error("to the root of the JSON object.")
+        logUtils.error("This will be an error in BPReveal 6.0.0")
+        logUtils.error("Here is a corrected version:")
+        logUtils.error(json.dumps(config, indent=4))
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]
 

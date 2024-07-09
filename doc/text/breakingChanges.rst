@@ -31,6 +31,14 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
 6. The ``plots.py`` module in the tools directory will be removed. Its replacement,
    ``plotting.py``, was introduced in 4.2.0 and is part of the main repository.
 7. The ``addNoise`` tool will be removed. It turns out that it's not useful.
+8. When doing PISA interpretation on a fasta, you must call the fasta
+   ``fasta-file`` instead of ``sequence-fasta``. (Has emitted a warning
+   since 4.0.0.)
+9. :py:mod:`prepareBed<bpreveal.prepareBed>` will no longer accept a list of
+   bigwigs without head information. The program currently spits out warnings
+   when you do this, and these will become an error.
+10. Using an importance hdf5 from before version 4.0.0 will now result in an
+   error instead of a deprecation warning.
 
 
 BPReveal 5.x
@@ -39,21 +47,16 @@ BPReveal 5.x
 BPReveal 5.0.0
 ^^^^^^^^^^^^^^
 When BPReveal 5.0.0 was released, the following breaking changes occurred:
-1. :py:mod:`prepareBed<bpreveal.prepareBed>` will no longer accept a list of
-   bigwigs without head information. The program currently spits out warnings
-   when you do this, and these will become an error.
-2. Using an importance hdf5 from before version 4.0.0 will now result in an
-   error instead of a deprecation warning.
-3. When doing PISA interpretation on a fasta, you must call the fasta
-   ``fasta-file`` instead of ``sequence-fasta``. (Has emitted a warning
-   since 4.0.0.)
-4. The first argument to
+1. The first argument to
    :py:func:`models.transformationModel<bpreveal.models.transformationModel>`
    will be renamed to get rid of a name collision that pylint gets upset about.
-5. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
+2. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
    introduced in 4.1.2, will switch from being ``false`` by default to being ``true``
    by default. This fixes an off-by-one bug in how receptive field was calculated.
-6. The ``dumpModiscoSeqlets`` tool was removed, since it's not useful.
+3. The ``dumpModiscoSeqlets`` tool was removed, since it's not useful.
+4. BPReveal now uses Tensorflow 2.16 and Keras 3.0. This will cause some
+   breaking changes. Models are saved on disk now using a ``.keras`` extension
+   because Keras 3.0 enforces this.
 
 BPReveal 4.x
 ------------
