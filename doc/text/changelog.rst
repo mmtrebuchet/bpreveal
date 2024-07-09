@@ -4,25 +4,57 @@ Changelog
 This is the detailed changelog. If you're just looking for breaking changes,
 see :doc:`breakingChanges`.
 
-
-BPReveal 4.x
+BPReveal 5.x
 ------------
 
-BPReveal 4.4.x
+BPReveal 5.0.x
 ^^^^^^^^^^^^^^
 
-BPReveal 4.4.0, DATEDATEDATE
+BPReveal 5.0.0, DATEDATEDATE
 ''''''''''''''''''''''''''''
+
+BREAKING CHANGES:
+    * Old-style prepareBed configurations are now rejected.
+    * Old-style importance score hdf5 files are now rejected.
+    * Calling the fasta file for interpretPisa ``sequence-fasta`` is now
+      an error.
+    * The default value of ``correct-receptive-field`` in interpretPisa
+      is now ``true``. It still issues a warning if you don't set it.
+    * ``dumpModiscoSeqlets`` was removed.
+    * The shap code was further trimmed down. The BPReveal shap code is really
+      not intended for non-BPReveal models and you should use full-blown deepShap
+      to interpret your own models.
+    * Several breaking changes have arisen from the Keras 3.0 upgrade. For one thing,
+      the loss components now have different names since they are actually metrics and
+      not losses. I'm sure there are more gotchas waiting to be discovered.
+
+ENHANCEMENTS:
+    * The project now uses Tensorflow 2.16 with full-blown Keras 3.0. This means that
+      models are now saved using the ``.keras`` extension. Old-style models will work
+      albeit with some potential breakage.
+    * Made the formatting for the bnf documentation more consistent.
+    * Found a way to include the custom losses in the saved model, so you don't need to
+      use custom_objects to load models any more. Of course, you should be using
+      :py:func:`utils.loadModel<bpreveal.utils.loadModel>`.
+
+BUG FIXES:
+    * Keras 3.0 has a nasty race condition when multiple threads try to load models in
+      the same directory. To get around this, all programs that can load models with
+      multiple threads now acquire a lock before they do this. It is still possible to
+      have a collision if multiple separate processes are loading the same model at once
+      (say, different jobs on a cluster) and we're just going to have to live with that
+      problem until Keras fixes it.
+
 
 DEPRECATIONS:
     * The addNoise tool is deprecated and will be removed in 6.0.0. It was never useful.
 
-ENHANCEMENTS:
-    * Made the formatting for bnf documentation more consistent.
+
+BPReveal 4.x
+------------
 
 BPReveal 4.3.x
 ^^^^^^^^^^^^^^
-
 
 BPReveal 4.3.0, 2024-06-24
 ''''''''''''''''''''''''''

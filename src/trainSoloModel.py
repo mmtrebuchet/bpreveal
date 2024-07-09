@@ -152,7 +152,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-import tf_keras as keras
+from tensorflow import keras
 from bpreveal import logUtils
 from bpreveal import models
 import bpreveal.training
@@ -178,9 +178,9 @@ def main(config: dict) -> None:
     losses, lossWeights = bpreveal.training.buildLosses(config["heads"])
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
-        loss=losses, loss_weights=lossWeights)
+        loss=losses, loss_weights=lossWeights, metrics=losses)
     bpreveal.training.trainWithGenerators(model, config, inputLength, outputLength)
-    model.save(config["settings"]["output-prefix"] + ".model")
+    model.save(config["settings"]["output-prefix"] + ".keras")
     logUtils.info("Training job completed successfully.")
 
 

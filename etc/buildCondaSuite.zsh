@@ -54,11 +54,12 @@ runAndCheck ${CONDA_BIN} install --yes -c conda-forge "numpy\<2.0"
 ${PIP_BIN} install 'tensorflow[and-cuda]'
 check Installing tensorflow
 
+# tensorflow-probability needs tf-keras (at least as of tf 2.16)
+runAndCheck ${PIP_BIN} install 'tf-keras'
 runAndCheck ${PIP_BIN} install 'tensorflow-probability'
 checkPackage tensorflow
 checkPackage tensorflow_probability
 
-runAndCheck ${PIP_BIN} install 'tf-keras~=2.16'
 
 runAndCheck ${CONDA_BIN} install --yes -c conda-forge matplotlib jsonschema cmake h5py \
     tqdm gxx_linux-64 gfortran meson conda-build
@@ -154,8 +155,8 @@ EOF
 
 # Since Keras 3 has a bunch of breaking changes, force tensorflow
 # to use its internal keras version.
-echo "export TF_USE_LEGACY_KERAS=1" \
-    > ${CONDA_PREFIX}/etc/conda/activate.d/legacy_keras_activate.sh
+# echo "export TF_USE_LEGACY_KERAS=1" \
+#     > ${CONDA_PREFIX}/etc/conda/activate.d/legacy_keras_activate.sh
 
 #And add a (very hacky) deactivation command that removes bpreveal from
 #your path when you deactivate the environment.
@@ -173,8 +174,8 @@ echo "unset XLA_FLAGS" \
 # Remove bpreveal from LD_LIBRARY_PATH.
 echo '\nexport LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH | sed "s|$BPREVEAL_KILL_LD_LIB_PATH||" )'\
     >> ${CONDA_PREFIX}/etc/conda/deactivate.d/cuda_xla_deactivate.sh
-echo "unset TF_USE_LEGACY_KERAS" \
-    > ${CONDA_PREFIX}/etc/conda/deactivate.d/legacy_keras_deactivate.sh
+# echo "unset TF_USE_LEGACY_KERAS" \
+#     > ${CONDA_PREFIX}/etc/conda/deactivate.d/legacy_keras_deactivate.sh
 
 
 echo "*-----------------------------------*"

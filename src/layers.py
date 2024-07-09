@@ -1,6 +1,6 @@
 """Custom layers that are needed for the various models."""
 from collections.abc import Callable
-from tf_keras.layers import Conv1D, Reshape
+from keras.layers import Conv1D, Reshape  # type: ignore
 from bpreveal import logUtils
 
 

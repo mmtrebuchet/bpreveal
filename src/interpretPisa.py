@@ -134,6 +134,7 @@ Before BPReveal 4.0.0, this was two programs: ``interpretPisaBed`` and
 ``interpretPisaFasta``. They shared almost all of the same code, so they were
 merged into interpretPisa. The old names are still present in the bin/
 directory, where they symlink to the same python file in src.
+In BPReveal 5.0.0, support for calling the input fasta ``sequence-fasta`` was removed.
 In BPReveal 6.0.0, the old symlinks will be removed.
 
 
@@ -141,10 +142,8 @@ API
 ---
 
 """
-import os
 import bpreveal.schema
 from bpreveal import logUtils
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 from bpreveal import interpretUtils
 from bpreveal.internal import interpreter
 
@@ -160,15 +159,18 @@ def main(config: dict) -> None:
         if config["correct-receptive-field"]:
             receptiveField += 1
     else:
-        logUtils.warning(
+        logUtils.info(
             "You have not specified correct-receptive-field in your configuration. "
-            "In BPReveal 5.0.0, the default shape of the output will change to fix "
-            "an off-by-one error in the receptive field calculation."
+            "As of BPReveal 5.0.0, the default shape of the output has increased by one "
+            "to fix an off-by-one error in the receptive field calculation."
             "Instructions for updating: "
             "Add 'correct-receptive-field': false to your config to keep using the "
             "(incorrect) receptive field calculation. Or add "
-            "'correct-receptive-field': true to your config to use the new (correct) "
-            "behavior.")
+            "'correct-receptive-field': true to your config silence this message "
+            "and keep using the new (correct) behavior. "
+            "In BPReveal 6.0.0, the receptive field will automatically be corrected "
+            "without any warning and this parameter will have no effect.")
+        receptiveField += 1
 
     kmerSize = 1
     if "kmer-size" in config:

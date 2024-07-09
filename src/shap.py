@@ -13,9 +13,7 @@ from tensorflow.python.eager import execute as tf_execute
 from tensorflow.python.framework import (
     ops as tf_ops,
 )
-import tf_keras as keras
 import tensorflow as tf
-
 
 def standard_combine_mult_and_diffref(mult, orig_inp, bg_data):
     diffref_input = [orig_inp[x] - bg_data[x] for x in range(len(orig_inp))]
@@ -53,7 +51,9 @@ class TFDeepExplainer:
     ReLu units proposed in DeepLIFT.
     """
 
-    def __init__(self, model, data, combine_mult_and_diffref=standard_combine_mult_and_diffref):
+    def __init__(self, model, data,
+                 combine_mult_and_diffref=standard_combine_mult_and_diffref,
+                 useOldKeras=False):
         """An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number
@@ -66,8 +66,8 @@ class TFDeepExplainer:
 
         Parameters
         ----------
-        model : tf.keras.Model or (input : [tf.Operation], output : tf.Operation)
-            A keras model object or a pair of TensorFlow operations (or a list and an op) that
+        model : (input : [tf.Operation], output : tf.Operation)
+            A pair of TensorFlow operations (or a list and an op) that
             specifies the input and output of the model to be explained. Note that SHAP values
             are specific to a single output value, so you get an explanation for each element of
             the output tensor (which must be a flat rank one vector).
@@ -84,22 +84,24 @@ class TFDeepExplainer:
         self.between_tensors = None
         self.between_ops = None
         # determine the model inputs and outputs
-        self.model_inputs = _get_model_inputs(model)
-        self.model_output = _get_model_output(model)
-        assert not isinstance(
-            self.model_output, list), "The model output to be explained must be a single tensor!"
-        assert len(
-            self.model_output.shape) < 3, "The model output must be a vector or a single value!"
+        self.model_inputs = model[0]
+        self.model_output = model[1]
+        assert not isinstance(self.model_output, list), \
+            "The model output to be explained must be a single tensor!"
+        assert len(self.model_output.shape) < 3, \
+            "The model output must be a vector or a single value!"
 
-        if isinstance(model, (tuple, list)):
-            assert len(
-                model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
-            self.model = keras.Model(model[0], model[1])
+        assert len(model) == 2, \
+            "When a tuple is passed it must be of the form (inputs, outputs)"
+        if useOldKeras:
+            import tf_keras  # pylint: disable=import-outside-toplevel
+            self.model = tf_keras.Model(model[0], model[1])
+            self.model_inputs = [self.model_inputs]  # I have no idea why.
         else:
-            self.model = model
+            import keras  # pylint: disable=import-outside-toplevel
+            self.model = keras.Model(model[0], model[1])
 
         # check if we have multiple inputs
-        self.model_inputs = [self.model_inputs]
         self.data = data
 
         self._vinputs = {}  # used to track what op inputs depends on the model inputs
@@ -158,8 +160,6 @@ class TFDeepExplainer:
         if self.phi_symbolics[i] is None:
             @tf.function
             def grad_graph(shap_rAnD):
-                phase = keras.backend.learning_phase()
-                keras.backend.set_learning_phase(0)
 
                 with tf.GradientTape(watch_accessed_variables=False) as tape:
                     tape.watch(shap_rAnD)
@@ -167,7 +167,6 @@ class TFDeepExplainer:
 
                 self._init_between_tensors(out.op, shap_rAnD)
                 x_grad = tape.gradient(out, shap_rAnD)
-                keras.backend.set_learning_phase(phase)
                 return x_grad
 
             self.phi_symbolics[i] = grad_graph  # type: ignore
@@ -197,7 +196,6 @@ class TFDeepExplainer:
                 # we use the first sample for the current sample and the rest for the references
                 joint_input = [np.concatenate([tiled_X[idx], bg_data[idx]], 0)
                                for idx in range(len(X))]
-
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind),
@@ -642,47 +640,3 @@ op_handlers["GatherV2"] = gather
 op_handlers["ResourceGather"] = gather
 op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
-
-
-def _get_model_inputs(model):
-    """Common utility to determine the model inputs.
-
-    Parameters
-    ----------
-    model : Tensorflow Keras model or tuple
-
-        The tensorflow model or tuple.
-
-    """
-    if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
-            str(type(model)).endswith("keras.models.Sequential'>") or \
-            str(type(model)).endswith("keras.engine.training.Model'>") or \
-            isinstance(model, keras.Model):
-        return model.inputs
-    if str(type(model)).endswith("tuple'>"):
-        return model[0]
-
-    emsg = f"{type(model)} is not currently a supported model type!"
-    raise ValueError(emsg)
-
-
-def _get_model_output(model):
-    """Common utility to determine the model output.
-
-    Parameters
-    ----------
-    model : Tensorflow Keras model or tuple
-
-        The tensorflow model or tuple.
-
-    """
-    if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
-            str(type(model)).endswith("keras.models.Sequential'>") or \
-            str(type(model)).endswith("keras.engine.training.Model'>") or \
-            isinstance(model, keras.Model):
-        return model.layers[-1].output
-    if str(type(model)).endswith("tuple'>"):
-        return model[1]
-
-    emsg = f"{type(model)} is not currently a supported model type!"
-    raise ValueError(emsg)

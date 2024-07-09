@@ -2,10 +2,12 @@
 from collections.abc import Callable
 import tensorflow as tf
 import tensorflow_probability as tfp
-from tf_keras import backend
+from keras import ops  # type: ignore
 from bpreveal import logUtils
+from keras.saving import register_keras_serializable  # type: ignore
 
 
+@register_keras_serializable(package="bpreveal", name="multinomialNll")
 def multinomialNll(trueCounts: tf.Tensor, logits: tf.Tensor) -> float:
     """The heart of what makes BPNet great - the loss function for profiles.
 
@@ -47,10 +49,11 @@ def weightedMse(weightTensor: tf.Variable) -> Callable:
     """
     logUtils.debug("Creating weighted mse.")
 
+    @register_keras_serializable(package="bpreveal", name="reweightableMse")
     def reweightableMse(yTrue: tf.Tensor, yPred: tf.Tensor) -> float:
         yPred = tf.convert_to_tensor(yPred)
         yTrue = tf.cast(yTrue, yPred.dtype)
-        mse = backend.mean(tf.math.squared_difference(yPred, yTrue), axis=-1)
+        mse = ops.mean(tf.math.squared_difference(yPred, yTrue), axis=-1)
         scaledMse = mse * weightTensor
         return scaledMse
     return reweightableMse

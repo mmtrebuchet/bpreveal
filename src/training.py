@@ -3,10 +3,10 @@ import json
 from typing import Any
 import h5py
 import tensorflow as tf
-import tf_keras as keras
+from tensorflow import keras
 import numpy as np
 from bpreveal.callbacks import getCallbacks
-from tf_keras.callbacks import History
+from keras.callbacks import History  # type: ignore
 from bpreveal import logUtils
 from bpreveal import generators
 from bpreveal import losses

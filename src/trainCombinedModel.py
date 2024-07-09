@@ -49,7 +49,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-import tf_keras as keras  # pylint: disable=wrong-import-order
+from tensorflow import keras  # pylint: disable=wrong-import-order
 import bpreveal.training
 from bpreveal import models
 from bpreveal import logUtils
@@ -86,8 +86,8 @@ def main(config: dict) -> None:
 
     logUtils.debug("Models compiled.")
     bpreveal.training.trainWithGenerators(combinedModel, config, inputLength, outputLength)
-    combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".model")
-    residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".model")
+    combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".keras")
+    residualModel.save(config["settings"]["output-prefix"] + "_residual" + ".keras")
     logUtils.info("Training job completed successfully.")
 
 

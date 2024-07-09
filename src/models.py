@@ -1,9 +1,9 @@
 """Functions to build BPNet-style models."""
 import tensorflow as tf
-import tf_keras as keras
-from tf_keras.backend import int_shape
-import tf_keras.layers as klayers
-import tf_keras.models as kmodels
+from tensorflow import keras
+from tensorflow.keras.backend import int_shape  # type: ignore
+import keras.layers as klayers  # type: ignore
+import keras.models as kmodels  # type: ignore
 from bpreveal import layers as bprlayers
 from bpreveal import logUtils
 from bpreveal.internal.constants import NUM_BASES

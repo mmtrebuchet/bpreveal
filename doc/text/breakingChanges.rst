@@ -38,8 +38,7 @@ BPReveal 5.x
 
 BPReveal 5.0.0
 ^^^^^^^^^^^^^^
-When BPReveal 5.0.0 is released, the following breaking changes will occur:
-
+When BPReveal 5.0.0 was released, the following breaking changes occurred:
 1. :py:mod:`prepareBed<bpreveal.prepareBed>` will no longer accept a list of
    bigwigs without head information. The program currently spits out warnings
    when you do this, and these will become an error.
@@ -54,8 +53,7 @@ When BPReveal 5.0.0 is released, the following breaking changes will occur:
 5. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
    introduced in 4.1.2, will switch from being ``false`` by default to being ``true``
    by default. This fixes an off-by-one bug in how receptive field was calculated.
-6. If I can get Keras 3.0 working smoothly, I'll go ahead and upgrade the project
-   to that version. This will likely introduce some breaking changes.
+6. The ``dumpModiscoSeqlets`` tool was removed, since it's not useful.
 
 BPReveal 4.x
 ------------

@@ -2,8 +2,9 @@
 import re
 import time
 from collections.abc import Callable, Sequence
-from tf_keras.callbacks import ModelCheckpoint, EarlyStopping, \
-    ReduceLROnPlateau, Callback
+from keras.callbacks import ModelCheckpoint, EarlyStopping  # type: ignore
+from keras.callbacks import ReduceLROnPlateau, Callback  # type: ignore
+from keras.src import backend
 from bpreveal import logUtils
 from bpreveal import generators
 
@@ -111,10 +112,10 @@ class ApplyAdaptiveCountsLoss(Callback):
         named "profile_x", then this could get messed up.
         """
         epochLosses = self.logsHistory[epoch]
-        profileRe = fr".*profile_{headName}_loss"
-        countsRe = fr".*logcounts_{headName}_loss"
-        valProfileRe = fr"val.*profile_{headName}_loss"
-        valCountsRe = fr"val.*logcounts_{headName}_loss"
+        profileRe = fr".*profile_{headName}_multinomial_nll"
+        countsRe = fr".*logcounts_{headName}_reweightable_mse"
+        valProfileRe = fr"val.*profile_{headName}_multinomial_nll"
+        valCountsRe = fr"val.*logcounts_{headName}_reweightable_mse"
 
         valProfile = valCounts = profile = counts = None
         for lossName in epochLosses.keys():
@@ -201,8 +202,8 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
 
-    def on_epoch_end(self, epoch: int,
-                     logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+    def on_epoch_end(self, epoch: int,  # pylint: disable=invalid-name
+                     logs: dict | None = None) -> None:
         """Update the other callbacks and calculate a new λ.
 
         :param epoch: The epoch number that just finished.
@@ -359,8 +360,8 @@ class DisplayCallback(Callback):
             foundInHeads = False
             for head in self.adaptiveLossCallback.heads:
                 headName = head["head-name"]
-                profileRe = fr".*profile_{headName}_loss"
-                countsRe = fr".*logcounts_{headName}_loss"
+                profileRe = fr".*profile_{headName}_.*"
+                countsRe = fr".*logcounts_{headName}_.*"
                 if re.fullmatch(profileRe, lossName):
                     profileLosses.append(lossName)
                     profileLosses.append("val_" + lossName)
@@ -409,8 +410,8 @@ class DisplayCallback(Callback):
         if autoTotal is not None:
             self.numEpochs = autoTotal
 
-    def on_epoch_begin(self, epoch: int,
-                       logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+    def on_epoch_begin(self, epoch: int,  # pylint: disable=invalid-name
+                       logs: dict | None = None) -> None:
         """Just sets the timers up, so you can check how long an epoch took at the end."""
         del logs
         self.epochNumber = epoch
@@ -445,8 +446,8 @@ class DisplayCallback(Callback):
             case _:
                 return "     FMT_ERR"
 
-    def on_epoch_end(self, epoch: int,
-                     logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+    def on_epoch_end(self, epoch: int,  # pylint: disable=invalid-name
+                     logs: dict | None = None) -> None:
         """Writes out all the logs for this epoch and the last one at INFO logging level."""
         del epoch
         if logs is None:
@@ -550,8 +551,12 @@ class DisplayCallback(Callback):
     def _getEpochLines(self, logs: dict) -> list[list[tuple[int, int, str]]]:
         lines = []
         logs["Epoch"] = (self.epochNumber, self.numEpochs)
+        logs["lr"] = backend.convert_to_numpy(self.model.optimizer.learning_rate)
         logs["lr"] = f"{logs['lr']:10.7f}"
         for lk in logs.keys():
+            if lk == "learning_rate":
+                # We don't print this since we calculate it ourselves.
+                continue
             lines.append([(self.printLocationsEpoch[lk], 1, lk)])
 
             outStr = self.formatStr(logs[lk])
@@ -621,7 +626,7 @@ def getCallbacks(earlyStop: int, outputPrefix: str, plateauPatience: int, heads:
                                       mode="min",
                                       restore_best_weights=True)
 
-    filepath = f"{outputPrefix}.checkpoint.model"
+    filepath = f"{outputPrefix}.checkpoint.keras"
     checkpointCallback = ModelCheckpoint(filepath,
                                          monitor="val_loss",
                                          verbose=verbose,

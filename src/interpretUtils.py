@@ -11,6 +11,7 @@ Here's what you do.
 from typing import Any
 from collections.abc import Iterator, Iterable
 import multiprocessing
+from multiprocessing.synchronize import Lock as LOCK_T
 import ctypes
 import pysam
 import numpy as np
@@ -290,18 +291,18 @@ class FlatRunner:
         self._countsInQueue = multiprocessing.Queue(100)
         self._profileOutQueue = multiprocessing.Queue(100)
         self._countsOutQueue = multiprocessing.Queue(100)
-
+        lock = multiprocessing.Lock()
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._profileInQueue, self._countsInQueue], generator, 1),
             daemon=True)
 
         self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._profileInQueue, self._profileOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize),
+                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize, lock),
             daemon=True)
         self._countsBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._countsInQueue, self._countsOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize),
+                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize, lock),
             daemon=True)
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
@@ -386,13 +387,14 @@ class PisaRunner:
                 memFrac = 0.7 / numBatchers
 
         self._batchThreads = []
+        lock = multiprocessing.Lock()
         for _ in range(self.numBatchers):
             self._batchThreads.append(multiprocessing.Process(
                 target=_pisaBatcherThread,
                 args=(modelFname, batchSize,
                       self._inQueue, self._outQueue, headID,
                       taskID, numShuffles, receptiveField,
-                      kmerSize, memFrac),
+                      kmerSize, memFrac, lock),
                 daemon=True))
         self._saver = saver
 
@@ -1090,11 +1092,12 @@ class PisaBedGenerator(Generator):
 
 def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, numHeads: int,
-                       taskIDs: list[int], numShuffles: int, mode: str, kmerSize: int) -> None:
+                       taskIDs: list[int], numShuffles: int, mode: str,
+                       kmerSize: int, lock: LOCK_T) -> None:
     """The thread that spins up the batcher."""
     logUtils.debug("Starting flat batcher thread.")
     b = _FlatBatcher(modelName, batchSize, outQueue, headID,
-                     numHeads, taskIDs, numShuffles, mode, kmerSize)
+                     numHeads, taskIDs, numShuffles, mode, kmerSize, lock)
     logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=QUEUE_TIMEOUT)
@@ -1111,11 +1114,11 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, taskID: int,
                        numShuffles: int, receptiveField: int, kmerSize: int,
-                       memFrac: float) -> None:
+                       memFrac: float, lock: LOCK_T) -> None:
     """The thread that spins up the batcher."""
     logUtils.debug("Starting batcher thread.")
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
-                     receptiveField, kmerSize, memFrac)
+                     receptiveField, kmerSize, memFrac, lock)
     logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=QUEUE_TIMEOUT)
@@ -1183,15 +1186,15 @@ class _PisaBatcher:
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
-                 kmerSize: int, memFrac: float):
+                 kmerSize: int, memFrac: float, lock: LOCK_T):
         logUtils.info("Initializing batcher.")
         # pylint: disable=import-outside-toplevel
+        utils.limitMemoryUsage(memFrac, 1024)
+        self.model = utils.loadModel(modelFname, lock)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        import tensorflow as tf
+        from keras import ops
         from bpreveal import shap
         # pylint: enable=import-outside-toplevel
-        utils.limitMemoryUsage(memFrac, 1024)
-        self.model = utils.loadModel(modelFname)
         if not isShappable(self.model):
             logUtils.error(f"The model you have provided ({modelFname}) is not shappable "
                            "because it contains LinearRegression layers. Re-train the "
@@ -1215,10 +1218,11 @@ class _PisaBatcher:
         #                           All samples in the batch-,  |    |           |             |
         #                                            Current |  |    |           |             |
         #                                             head   V  V    V           |             |
-        outTarget = tf.reduce_sum(self.model.outputs[headID][:, 0, taskID], axis=0, keepdims=True)
+        outTarget = ops.sum(self.model.outputs[headID][:, 0, taskID], axis=0, keepdims=True)
         self.profileExplainer = shap.TFDeepExplainer(
             (self.model.input, outTarget),
-            self.generateShuffles)
+            self.generateShuffles,
+            useOldKeras=self.model.useOldKeras)
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, modelInputs: list) -> list:
@@ -1322,16 +1326,29 @@ class _FlatBatcher:
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
-                 kmerSize: int):
+                 kmerSize: int, lock: LOCK_T):
         logUtils.info("Initializing batcher.")
         # pylint: disable=import-outside-toplevel, unused-import
-        import bpreveal.internal.disableTensorflowLogging # noqa
-        import tensorflow as tf
-        from bpreveal import shap
-        # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(0.4, 1024)
-        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-        self.model = utils.loadModel(modelFname)
+        self.model = utils.loadModel(modelFname, lock)
+        import bpreveal.internal.disableTensorflowLogging # noqa
+        from bpreveal import shap
+        from keras import ops
+        import tensorflow as tf
+        import keras
+        # pylint: enable=import-outside-toplevel
+
+        class StopGradLayer(keras.Layer):
+            """Because the Tensorflow 2.16 upgrade wasn't painful enough...
+
+            This just wraps stop_gradient so that it can be called
+            with a KerasTensor.
+            """
+
+            def call(self, x: tf.Tensor) -> keras.KerasTensor:
+                """Actually stop the gradient."""
+                return ops.stop_gradient(x)
+
         if not isShappable(self.model):
             logUtils.error(f"The model you have provided ({modelFname}) is not shappable "
                            "because it contains LinearRegression layers. Re-train the "
@@ -1350,24 +1367,26 @@ class _FlatBatcher:
                 # Calculate the weighted meannormed logits that are used for the
                 # profile explanation.
                 profileOutput = self.model.outputs[headID]
-                stackedLogits = tf.stack([profileOutput[:, :, x] for x in taskIDs], axis=2)
+                stackedLogits = ops.stack([profileOutput[:, :, x] for x in taskIDs], axis=2)
                 inputShape = stackedLogits.shape
                 numSamples = inputShape[1] * inputShape[2]
-                logits = tf.reshape(stackedLogits, [-1, numSamples])
-                meannormedLogits = logits - tf.reduce_mean(logits, axis=1)[:, None]
-                stopgradMeannormedLogits = tf.stop_gradient(meannormedLogits)
-                softmaxOut = tf.nn.softmax(stopgradMeannormedLogits, axis=1)
-                weightedSum = tf.reduce_sum(softmaxOut * meannormedLogits, axis=1)
+                logits = ops.reshape(stackedLogits, [-1, numSamples])
+                meannormedLogits = ops.subtract(logits, ops.mean(logits, axis=1)[:, None])
+                stopgradMeannormedLogits = StopGradLayer()(meannormedLogits)
+                softmaxOut = ops.softmax(stopgradMeannormedLogits, axis=1)
+                weightedSum = ops.sum(softmaxOut * meannormedLogits, axis=1)
                 self.explainer = shap.TFDeepExplainer(
                     (self.model.input, weightedSum),
                     self.generateShuffles,
-                    combine_mult_and_diffref=combineMultAndDiffref)
+                    combine_mult_and_diffref=combineMultAndDiffref,
+                    useOldKeras=self.model.useOldKeras)
             case "counts":
                 # Now for counts - much easier!
                 countsMetric = self.model.outputs[numHeads + headID][:, 0]
                 self.explainer = shap.TFDeepExplainer((self.model.input, countsMetric),
                     self.generateShuffles,
-                    combine_mult_and_diffref=combineMultAndDiffref)
+                    combine_mult_and_diffref=combineMultAndDiffref,
+                    useOldKeras=self.model.useOldKeras)
 
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 

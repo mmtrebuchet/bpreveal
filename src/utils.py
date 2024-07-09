@@ -1,6 +1,7 @@
 """Lots of helpful utilities for working with models."""
 from collections import deque
 import multiprocessing
+import multiprocessing.synchronize
 import os
 import queue
 import re
@@ -21,14 +22,54 @@ from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHO
 from bpreveal.internal import constants
 
 
-def loadModel(modelFname: str):  # noqa: ANN201
+def _loadModelUnlocked(modelFname: str):  # noqa: ANN202
+    """Loads in a model, attempting to use the appropriate loading code based on its extension."""
+    # pylint: disable=import-outside-toplevel
+    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
+    from bpreveal.losses import multinomialNll, dummyMse
+    # pylint: enable=import-outside-toplevel
+    constants.setTensorflowLoaded()
+    if modelFname.endswith("model"):
+        try:
+            logUtils.info("You are attempting to a load a model with a '.model' extension. "
+                          "As of BPReveal 5.0.0, models are given the extension "
+                          "'.keras' because keras 3.0 requires it. "
+                          "I will attempt to load the old-style model, but be prepared for "
+                          "some janky behavior and possible bugs.")
+            import tf_keras  # pylint: disable=import-outside-toplevel
+            ret = tf_keras.models.load_model(filepath=modelFname,
+                           custom_objects={"multinomialNll": multinomialNll,
+                                           "reweightableMse": dummyMse})
+            ret.useOldKeras = True
+            return ret
+        except OSError:
+            logUtils.warning("You specified a model named {modelFname} but I couldn't find it. "
+                "Attempting to load a model with a '.keras' extension. "
+                "If this works, you should update your configuration file to use the new "
+                "extension. This automatic renaming will be removed in BPReveal 7.0.0.")
+            modelFname = modelFname[:-5] + "keras"
+    # pylint: disable=import-outside-toplevel
+    from keras.models import load_model  # type: ignore
+    # pylint: enable=import-outside-toplevel
+    model = load_model(filepath=modelFname)
+    model.useOldKeras = False
+    return model
+
+
+def loadModel(modelFname: str,
+              lock: multiprocessing.synchronize.Lock | None = None):  # noqa: ANN201
     """Load up a BPReveal model.
 
     .. note::
         Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
 
-    :param modelFname: The name of the model that Keras saved earlier, typically
-        a directory.
+    :param modelFname: The name of the model that Keras saved earlier, either a directory
+        ending in ``.model`` for models trained before BPReveal 5.0.0, or a file ending in
+        ``.keras`` for models trained with BPReveal 5.0.0 or later.
+    :param lock: There is a race condition in the Keras model loading code,
+        and it's often triggered if multiple threads are trying to load the same model.
+        By providing a lock (from the multiprocessing module), we can ensure that the model
+        will not be loaded by multiple processes at once.
     :return: A Keras Model object.
 
     The returned model does NOT support additional training, since it uses a
@@ -43,16 +84,23 @@ def loadModel(modelFname: str):  # noqa: ANN201
         preds = m.predict(myOneHotSequences)
 
     """
-    # pylint: disable=import-outside-toplevel
-    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-    from tf_keras.models import load_model
-    from bpreveal.losses import multinomialNll, dummyMse
-    # pylint: enable=import-outside-toplevel
-    model = load_model(filepath=modelFname,
-                       custom_objects={"multinomialNll": multinomialNll,
-                                       "reweightableMse": dummyMse})
-    constants.setTensorflowLoaded()
-    return model
+    if lock is not None:
+        # Since I am using a timeout, I can't use the context manager protocol.
+        couldAcquire = False
+        try:
+            logUtils.debug("Acquiring lock to load model.")
+            couldAcquire = lock.acquire(timeout=10)
+            if not couldAcquire:
+                raise OSError("Could not acquire lock to load model after 10 seconds.")
+            logUtils.debug(f"Successfully acquired lock. Loading model {modelFname}.")
+            ret = _loadModelUnlocked(modelFname)
+        finally:
+            if couldAcquire:
+                lock.release()
+    else:
+        logUtils.debug(f"Loading model {modelFname} without locking.")
+        ret = _loadModelUnlocked(modelFname)
+    return ret
 
 
 def setMemoryGrowth() -> None:
@@ -227,13 +275,15 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
         lsp = line.split(" ")
         total = float(lsp[0])
         free = float(lsp[2])
-    assert total * fraction < free, "Attempting to request more memory than is free!"
+    assert total * fraction < free, f"Attempting to request more memory ({total * fraction}) "\
+        f"than is free ({free})!"
 
     # pylint: disable=import-outside-toplevel, unused-import
     import bpreveal.internal.disableTensorflowLogging  # noqa
     import tensorflow as tf
     # pylint: enable=import-outside-toplevel, unused-import
     gpus = tf.config.list_physical_devices("GPU")
+    logUtils.debug(f"Available devices: {gpus}")
     useMem = int(total * fraction - offset)
     tf.config.set_logical_device_configuration(
         device=gpus[0],
@@ -822,10 +872,16 @@ class BatchPredictor:
     :param numThreads: Ignored, only present for compatibility with the API for
         ThreadedBatchPredictor. A (non-threaded)BachPredictor runs its calculations
         in the main thread and will block when it's actually doing calculations.
+    :param lock: Due to a race condition in Keras, you can't load the same
+        model from multiple threads. You'd think someone would have thought of
+        this, but apparently not. If you specify a lock, then this function
+        will acquire it before loading the model and release it once the
+        model is loaded.
     """
 
     def __init__(self, modelFname: str, batchSize: int, start: bool = True,
-                 numThreads: int = 0) -> None:
+                 numThreads: int = 0,
+                 lock: multiprocessing.synchronize.Lock | None = None) -> None:
         """Start up the BatchPredictor.
 
         This will load your model, and get ready to make predictions.
@@ -834,7 +890,7 @@ class BatchPredictor:
         if not constants.getTensorflowLoaded():
             # We haven't loaded Tensorflow yet.
             setMemoryGrowth()
-        self._model = loadModel(modelFname)  # type: ignore
+        self._model = loadModel(modelFname, lock=lock)  # type: ignore
         logUtils.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,
@@ -1084,6 +1140,7 @@ class ThreadedBatchPredictor:
         self._batchers = None
         self._numThreads = numThreads
         self.running = False
+        self.loadingLock = multiprocessing.Lock()
         if start:
             self.start()
 
@@ -1125,7 +1182,8 @@ class ThreadedBatchPredictor:
                 self._outQueues.append(nextOutQueue)
                 nextBatcher = multiprocessing.Process(
                     target=_batcherThread,
-                    args=(self._modelFname, self._batchSize, nextInQueue, nextOutQueue),
+                    args=(self._modelFname, self._batchSize, nextInQueue, nextOutQueue,
+                          self.loadingLock),
                     daemon=True)
                 nextBatcher.start()
                 self._batchers.append(nextBatcher)
@@ -1249,7 +1307,8 @@ class ThreadedBatchPredictor:
 
 
 def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Queue,
-                   outQueue: multiprocessing.Queue) -> None:
+                   outQueue: multiprocessing.Queue,
+                   loadingLock: multiprocessing.synchronize.Lock) -> None:
     """Run batches from the ThreadedBatchPredictor in this separate thread.
 
     .. note::
@@ -1264,7 +1323,7 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches
     # just creates a BatchPredictor.
-    batcher = BatchPredictor(modelFname, batchSize)
+    batcher = BatchPredictor(modelFname, batchSize, lock=loadingLock)
     predsInFlight = 0
     numWaits = 0
     while True:

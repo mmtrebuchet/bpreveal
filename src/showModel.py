@@ -32,7 +32,7 @@ def main(modelFname: str, pngFile: str | None) -> None:
     model = utils.loadModel(modelFname)
     print(model.summary(expand_nested=True, show_trainable=True))  # noqa: T201
     if pngFile is not None:
-        from tf_keras.utils import plot_model  # pylint: disable=import-outside-toplevel
+        from keras.utils import plot_model  # pylint: disable=import-outside-toplevel # type: ignore
         plot_model(model, pngFile, show_shapes=True, show_dtype=True,
                 show_layer_names=True, expand_nested=True, show_layer_activations=True)
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         "    Instructions for updating:\n"
         "        print(model.summary(expand_nested=True, show_trainable=True))\n"
         "    or, for a graphical output,\n"
-        "        from tf_keras.utils import plot_model\n"
+        "        from tensorflow.keras.utils import plot_model\n"
         "        plot_model(model, 'out.png', show_shapes=True, show_dtype=True,\n"
         "                   show_layer_names=True, expand_nested=True,\n"
         "                   show_layer_activations=True)")
