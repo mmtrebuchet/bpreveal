@@ -1,5 +1,6 @@
 """Types that are used throughout BPReveal."""
 from __future__ import annotations
+from multiprocessing import Lock
 from typing import TypeAlias, Literal
 from typing import TypedDict
 import numpy as np
@@ -192,6 +193,9 @@ GENOME_NUCLEOTIDE_FREQUENCY: dict[str, list[float]] = {
     "sacCer3":  [0.309806, 0.190882, 0.190596, 0.308714]  # noqa
 }
 """The frequency of A, C, G, and T (in that order) in common reference genomes."""
+
+
+MODEL_LOAD_LOCK = Lock()
 
 
 def setTensorflowLoaded() -> None:

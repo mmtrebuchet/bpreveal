@@ -2,9 +2,7 @@
 from collections import deque
 import multiprocessing
 import multiprocessing.synchronize
-import os
 import queue
-import re
 import subprocess as sp
 import typing
 from collections.abc import Iterable
@@ -22,42 +20,7 @@ from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHO
 from bpreveal.internal import constants
 
 
-def _loadModelUnlocked(modelFname: str):  # noqa: ANN202
-    """Loads in a model, attempting to use the appropriate loading code based on its extension."""
-    # pylint: disable=import-outside-toplevel
-    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-    from bpreveal.losses import multinomialNll, dummyMse
-    # pylint: enable=import-outside-toplevel
-    constants.setTensorflowLoaded()
-    if modelFname.endswith("model"):
-        try:
-            logUtils.info("You are attempting to a load a model with a '.model' extension. "
-                          "As of BPReveal 5.0.0, models are given the extension "
-                          "'.keras' because keras 3.0 requires it. "
-                          "I will attempt to load the old-style model, but be prepared for "
-                          "some janky behavior and possible bugs.")
-            import tf_keras  # pylint: disable=import-outside-toplevel
-            ret = tf_keras.models.load_model(filepath=modelFname,
-                           custom_objects={"multinomialNll": multinomialNll,
-                                           "reweightableMse": dummyMse})
-            ret.useOldKeras = True
-            return ret
-        except OSError:
-            logUtils.warning("You specified a model named {modelFname} but I couldn't find it. "
-                "Attempting to load a model with a '.keras' extension. "
-                "If this works, you should update your configuration file to use the new "
-                "extension. This automatic renaming will be removed in BPReveal 7.0.0.")
-            modelFname = modelFname[:-5] + "keras"
-    # pylint: disable=import-outside-toplevel
-    from keras.models import load_model  # type: ignore
-    # pylint: enable=import-outside-toplevel
-    model = load_model(filepath=modelFname)
-    model.useOldKeras = False
-    return model
-
-
-def loadModel(modelFname: str,
-              lock: multiprocessing.synchronize.Lock | None = None):  # noqa: ANN201
+def loadModel(modelFname: str):  # noqa: ANN201
     """Load up a BPReveal model.
 
     .. note::
@@ -66,10 +29,6 @@ def loadModel(modelFname: str,
     :param modelFname: The name of the model that Keras saved earlier, either a directory
         ending in ``.model`` for models trained before BPReveal 5.0.0, or a file ending in
         ``.keras`` for models trained with BPReveal 5.0.0 or later.
-    :param lock: There is a race condition in the Keras model loading code,
-        and it's often triggered if multiple threads are trying to load the same model.
-        By providing a lock (from the multiprocessing module), we can ensure that the model
-        will not be loaded by multiple processes at once.
     :return: A Keras Model object.
 
     The returned model does NOT support additional training, since it uses a
@@ -84,22 +43,42 @@ def loadModel(modelFname: str,
         preds = m.predict(myOneHotSequences)
 
     """
-    if lock is not None:
-        # Since I am using a timeout, I can't use the context manager protocol.
-        couldAcquire = False
-        try:
-            logUtils.debug("Acquiring lock to load model.")
-            couldAcquire = lock.acquire(timeout=10)
-            if not couldAcquire:
-                raise OSError("Could not acquire lock to load model after 10 seconds.")
-            logUtils.debug(f"Successfully acquired lock. Loading model {modelFname}.")
-            ret = _loadModelUnlocked(modelFname)
-        finally:
-            if couldAcquire:
-                lock.release()
-    else:
-        logUtils.debug(f"Loading model {modelFname} without locking.")
-        ret = _loadModelUnlocked(modelFname)
+    with constants.MODEL_LOAD_LOCK:
+        logUtils.debug(f"Acquired lock to load model {modelFname}")
+        # pylint: disable=import-outside-toplevel
+        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
+        from bpreveal.losses import multinomialNll, dummyMse
+        # pylint: enable=import-outside-toplevel
+        constants.setTensorflowLoaded()
+        ret = None
+        if modelFname.endswith("model"):
+            try:
+                logUtils.info(
+                    "You are attempting to a load a model with a '.model' extension. As of "
+                    "BPReveal 5.0.0, models are given the extension '.keras' because keras "
+                    "3.0 requires it. I will attempt to load the old-style model, but be "
+                    "prepared for some janky behavior and possible bugs.")
+                import tf_keras  # pylint: disable=import-outside-toplevel
+                ret = tf_keras.models.load_model(filepath=modelFname,
+                            custom_objects={"multinomialNll": multinomialNll,
+                                            "reweightableMse": dummyMse})
+                ret.useOldKeras = True
+                logUtils.debug(f"Loaded old-style model {modelFname}.")
+            except OSError:
+                logUtils.error(
+                    "You specified a model named {modelFname} but I couldn't find it. "
+                    "Attempting to load a model with a '.keras' extension. If this "
+                    "works, you should update your configuration file to use the new "
+                    "extension. This automatic renaming will be removed in BPReveal 7.0.0.")
+                modelFname = modelFname[:-5] + "keras"
+        if ret is None:
+            # pylint: disable=import-outside-toplevel
+            from keras.models import load_model  # type: ignore
+            # pylint: enable=import-outside-toplevel
+            ret = load_model(filepath=modelFname)
+            ret.useOldKeras = False
+            logUtils.debug(f"Loaded new-style model {modelFname}.")
+    logUtils.debug(f"Released lock to load model {modelFname}")
     return ret
 
 
@@ -197,6 +176,7 @@ def loadPisa(fname: str) -> IMPORTANCE_AR_T:
     from this function would start at position '3752 and end at 3752 + numEntries.
 
     """
+    logUtils.debug(f"Loading PISA data from {fname}")
     with h5py.File(fname, "r") as fp:
         pisaShap = np.array(fp["shap"])
     pisaVals = np.sum(pisaShap, axis=2)
@@ -242,39 +222,21 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     """
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
     free = total = 0.0
-    if "CUDA_VISIBLE_DEVICES" in os.environ:
-        # Do we have a MIG GPU? If so, I need to get its memory available from its name.
-        if len(os.environ["CUDA_VISIBLE_DEVICES"]) > 10:
-            if os.environ["CUDA_VISIBLE_DEVICES"][:3] == "MIG":
-                # Yep, it's a MIG. Grab its properties from nvidia-smi.
-                logUtils.debug("Found a MIG card, attempting to guess memory "
-                              "available based on name.")
-                cmd = ["nvidia-smi", "-L"]
-                ret = sp.run(cmd, capture_output=True, check=True)
-                lines = ret.stdout.decode("utf-8").split("\n")
-                devices = os.environ["CUDA_VISIBLE_DEVICES"]
-                matchRe = re.compile(fr".*MIG.* ([0-9]+)g\.([0-9]+)gb.*{devices}.*")
-                if (smiOut := re.match(matchRe, lines[1])):
-                    total = free = float(smiOut[2]) * 1024  # Convert to MiB
-                    logUtils.debug(f"Found {total} GB of memory.")
-                else:
-                    raise ValueError("Could not parse nvidia-smi line: " + lines[1])
-    if total == 0.0:
-        # We didn't find memory in CUDA_VISIBLE_DEVICES.
-        cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
-        try:
-            ret = sp.run(cmd, capture_output=True, check=True)
-        except sp.CalledProcessError as e:
-            logUtils.error("Problem parsing nvidia-smi output.")
-            logUtils.error(e.stdout.decode("utf-8"))
-            logUtils.error(e.stderr.decode("utf-8"))
-            logUtils.error(str(e.returncode))
-            raise
-        line = ret.stdout.decode("utf-8").split("\n")[1]
-        logUtils.debug(f"Memory usage limited based on {line}")
-        lsp = line.split(" ")
-        total = float(lsp[0])
-        free = float(lsp[2])
+    # We didn't find memory in CUDA_VISIBLE_DEVICES.
+    cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
+    try:
+        ret = sp.run(cmd, capture_output=True, check=True)
+    except sp.CalledProcessError as e:
+        logUtils.error("Problem running nvidia-smi. Did you remember to allocate a GPU?")
+        logUtils.error(e.stdout.decode("utf-8"))
+        logUtils.error(e.stderr.decode("utf-8"))
+        logUtils.error(str(e.returncode))
+        raise
+    line = ret.stdout.decode("utf-8").split("\n")[1]
+    logUtils.debug(f"Memory usage limited based on {line}")
+    lsp = line.split(" ")
+    total = float(lsp[0])
+    free = float(lsp[2])
     assert total * fraction < free, f"Attempting to request more memory ({total * fraction}) "\
         f"than is free ({free})!"
 
@@ -293,7 +255,7 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     return useMem
 
 
-def loadChromSizes(chromSizesFname: str | None = None,
+def loadChromSizes(*, chromSizesFname: str | None = None,
                    genomeFname: str | None = None,
                    bwHeader: dict[str, int] | None = None,
                    bw: pyBigWig.pyBigWig | None = None,
@@ -305,7 +267,7 @@ def loadChromSizes(chromSizesFname: str | None = None,
     :param chromSizesFname: The name of a chrom.sizes file on disk.
     :param genomeFname: The name of a genome fasta file on disk.
     :param bwHeader: A dictionary loaded from a bigwig.
-        (Using this makes this function a no-op.)
+        (Using this makes this function an identity function.)
     :param bw: An opened bigwig file.
     :param fasta: An opened genome fasta.
 
@@ -354,7 +316,7 @@ def loadChromSizes(chromSizesFname: str | None = None,
     raise ValueError("You can't ask for chrom sizes without some argument!")
 
 
-def blankChromosomeArrays(genomeFname: str | None = None,
+def blankChromosomeArrays(*, genomeFname: str | None = None,
                           chromSizesFname: str | None = None,
                           bwHeader: dict[str, int] | None = None,
                           chromSizes: dict[str, int] | None = None,
@@ -661,7 +623,7 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> \
     else:
         # In case we got some weird iterable, turn it into a list.
         sequences = list(sequences)
-
+    logUtils.debug(f"Running {len(sequences)} predictions using model {modelFname}")
     predictor = ThreadedBatchPredictor(modelFname, 64, start=False)
     ret = []
     remainingToRead = 0
@@ -768,6 +730,9 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
     if isinstance(sequences, str):
         sequences = [sequences]
         singleReturn = True
+    else:
+        sequences = list(sequences)
+    logUtils.debug(f"Running {len(sequences)} shaps using model {modelFname}")
     generator = ListGenerator(sequences)
     profileSaver = FlatListSaver(generator.numSamples, generator.inputLength)
     countsSaver = FlatListSaver(generator.numSamples, generator.inputLength)
@@ -872,25 +837,19 @@ class BatchPredictor:
     :param numThreads: Ignored, only present for compatibility with the API for
         ThreadedBatchPredictor. A (non-threaded)BachPredictor runs its calculations
         in the main thread and will block when it's actually doing calculations.
-    :param lock: Due to a race condition in Keras, you can't load the same
-        model from multiple threads. You'd think someone would have thought of
-        this, but apparently not. If you specify a lock, then this function
-        will acquire it before loading the model and release it once the
-        model is loaded.
     """
 
     def __init__(self, modelFname: str, batchSize: int, start: bool = True,
-                 numThreads: int = 0,
-                 lock: multiprocessing.synchronize.Lock | None = None) -> None:
+                 numThreads: int = 0) -> None:
         """Start up the BatchPredictor.
 
         This will load your model, and get ready to make predictions.
         """
-        logUtils.debug("Creating batch predictor.")
+        logUtils.debug(f"Creating batch predictor for model {modelFname}.")
         if not constants.getTensorflowLoaded():
             # We haven't loaded Tensorflow yet.
             setMemoryGrowth()
-        self._model = loadModel(modelFname, lock=lock)  # type: ignore
+        self._model = loadModel(modelFname)  # type: ignore
         logUtils.debug("Model loaded.")
         self._batchSize = batchSize
         # Since I'll be putting things in and taking them out often,
@@ -924,6 +883,8 @@ class BatchPredictor:
         If you've left your predictor in some weird state, you can reset it
         by calling clear(). This empties all the queues.
         """
+        logUtils.info(f"Clearing batch predictor, purging {self._inWaiting} inputs "
+                      f"and {self._outWaiting} outputs.")
         self._inQueue.clear()
         self._outQueue.clear()
         self._inWaiting = 0
@@ -1130,7 +1091,7 @@ class ThreadedBatchPredictor:
     def __init__(self, modelFname: str, batchSize: int, start: bool = False,
                  numThreads: int = 1) -> None:
         """Build the batch predictor."""
-        logUtils.debug("Creating threaded batch predictor.")
+        logUtils.debug(f"Creating threaded batch predictor for model {modelFname}.")
         self._batchSize = batchSize
         self._modelFname = modelFname
         self._batchSize = batchSize
@@ -1140,7 +1101,6 @@ class ThreadedBatchPredictor:
         self._batchers = None
         self._numThreads = numThreads
         self.running = False
-        self.loadingLock = multiprocessing.Lock()
         if start:
             self.start()
 
@@ -1182,8 +1142,8 @@ class ThreadedBatchPredictor:
                 self._outQueues.append(nextOutQueue)
                 nextBatcher = multiprocessing.Process(
                     target=_batcherThread,
-                    args=(self._modelFname, self._batchSize, nextInQueue, nextOutQueue,
-                          self.loadingLock),
+                    args=(self._modelFname, self._batchSize, nextInQueue,
+                          nextOutQueue),
                     daemon=True)
                 nextBatcher.start()
                 self._batchers.append(nextBatcher)
@@ -1231,6 +1191,7 @@ class ThreadedBatchPredictor:
 
         This also starts the batcher.
         """
+        logUtils.info(f"Clearing threaded batcher. Canceling {self._inFlight} predictions.")
         if self.running:
             self.stop()
         self.start()
@@ -1307,8 +1268,7 @@ class ThreadedBatchPredictor:
 
 
 def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Queue,
-                   outQueue: multiprocessing.Queue,
-                   loadingLock: multiprocessing.synchronize.Lock) -> None:
+                   outQueue: multiprocessing.Queue) -> None:
     """Run batches from the ThreadedBatchPredictor in this separate thread.
 
     .. note::
@@ -1323,7 +1283,7 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
     setMemoryGrowth()
     # Instead of reinventing the wheel, the thread that actually runs the batches
     # just creates a BatchPredictor.
-    batcher = BatchPredictor(modelFname, batchSize, lock=loadingLock)
+    batcher = BatchPredictor(modelFname, batchSize)
     predsInFlight = 0
     numWaits = 0
     while True:
