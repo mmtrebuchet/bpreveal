@@ -57,6 +57,10 @@ When BPReveal 5.0.0 was released, the following breaking changes occurred:
 4. BPReveal now uses Tensorflow 2.16 and Keras 3.0. This will cause some
    breaking changes. Models are saved on disk now using a ``.keras`` extension
    because Keras 3.0 enforces this.
+5. Keras 3.0 only reports a whole-model loss instead of a per-output loss, which
+   caused the names of the reported metrics to change. Instead of
+   ``solo_logcounts_nanog_loss`` and ``solo_profile_nanog_loss``, these are now
+   ``solo_logcounts_nanog_reweightable_mse`` and ``solo_profile_nanog_multinomial_nll``.
 
 BPReveal 4.x
 ------------

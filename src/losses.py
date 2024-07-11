@@ -18,19 +18,19 @@ def multinomialNll(trueCounts: tf.Tensor, logits: tf.Tensor) -> float:
     :return: A scalar representing the profile loss of this batch.
     """
     logUtils.debug("Creating multinomial NLL.")
-    inputShape = tf.shape(trueCounts)
+    inputShape = ops.shape(trueCounts)
     numBatches = inputShape[0]
     numSamples = inputShape[1] * inputShape[2]  # output length * num_tasks
 
-    flatCounts = tf.reshape(trueCounts, [numBatches, numSamples])
-    flatLogits = tf.reshape(logits, [numBatches, numSamples])
-    totalCounts = tf.reduce_sum(flatCounts, axis=1)
+    flatCounts = ops.reshape(trueCounts, [numBatches, numSamples])
+    flatLogits = ops.reshape(logits, [numBatches, numSamples])
+    totalCounts = ops.sum(flatCounts, axis=1)
     distribution = tfp.distributions.Multinomial(total_count=totalCounts,
             logits=flatLogits)
     logprobs = distribution.log_prob(flatCounts)
-    batchSize = tf.shape(trueCounts)[0]
-    sumProbs = tf.reduce_sum(logprobs)
-    curLoss = -sumProbs / tf.cast(batchSize, dtype=tf.float32)
+    batchSize = ops.shape(trueCounts)[0]
+    sumProbs = ops.sum(logprobs)
+    curLoss = -sumProbs / ops.cast(batchSize, dtype=tf.float32)
     return curLoss
 
 

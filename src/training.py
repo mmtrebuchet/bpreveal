@@ -10,8 +10,7 @@ from keras.callbacks import History  # type: ignore
 from bpreveal import logUtils
 from bpreveal import generators
 from bpreveal import losses
-import keras.config
-keras.config.disable_traceback_filtering()
+
 
 def buildLosses(heads: dict) -> tuple[list, list]:
     r"""Given the output head specification (from the configuration JSON), build losses.

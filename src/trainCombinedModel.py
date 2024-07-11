@@ -49,7 +49,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-from tensorflow import keras  # pylint: disable=wrong-import-order
+import keras  # pylint: disable=wrong-import-order
 import bpreveal.training
 from bpreveal import models
 from bpreveal import logUtils
@@ -81,7 +81,7 @@ def main(config: dict) -> None:
     residualModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
         loss=losses, loss_weights=lossWeights,
-        # metrics=losses
+        metrics=losses
     )
     residualModel.summary()
     combinedModel.compile(
@@ -90,7 +90,6 @@ def main(config: dict) -> None:
         metrics=losses
     )
     combinedModel.summary()
-    print(combinedModel.outputs)
     logUtils.debug("Models compiled.")
     bpreveal.training.trainWithGenerators(combinedModel, config, inputLength, outputLength)
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".keras")

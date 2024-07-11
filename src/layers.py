@@ -1,6 +1,7 @@
 """Custom layers that are needed for the various models."""
 from collections.abc import Callable
-from keras.layers import Conv1D, Reshape  # type: ignore
+from keras.layers import Conv1D, Reshape, Layer  # type: ignore
+from keras import ops
 from bpreveal import logUtils
 
 
@@ -44,4 +45,15 @@ def linearRegression(**kwargs) -> Callable:
         logUtils.debug(f"Built regression layer '{name}' with output shape {inputs.shape[1:]}.")
         return unreshaped
     return layer
+
+
+class CountsLogSumExp(Layer):
+    """A simple layer that wraps keras.ops.logaddexp."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def call(self, inp1, inp2):  # noqa
+        return ops.logaddexp(inp1, inp2)
+
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

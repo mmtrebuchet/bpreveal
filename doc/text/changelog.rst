@@ -14,10 +14,6 @@ BPReveal 5.0.0, DATEDATEDATE
 ''''''''''''''''''''''''''''
 
 BREAKING CHANGES:
-    * Old-style prepareBed configurations are now rejected.
-    * Old-style importance score hdf5 files are now rejected.
-    * Calling the fasta file for interpretPisa ``sequence-fasta`` is now
-      an error.
     * The default value of ``correct-receptive-field`` in interpretPisa
       is now ``true``. It still issues a warning if you don't set it.
     * ``dumpModiscoSeqlets`` was removed.
@@ -38,17 +34,20 @@ ENHANCEMENTS:
       :py:func:`utils.loadModel<bpreveal.utils.loadModel>`.
 
 BUG FIXES:
-    * Keras 3.0 has a nasty race condition when multiple threads try to load models in
-      the same directory. To get around this, all programs that can load models with
-      multiple threads now acquire a lock before they do this. It is still possible to
-      have a collision if multiple separate processes are loading the same model at once
-      (say, different jobs on a cluster) and we're just going to have to live with that
-      problem until Keras fixes it.
-
+    * Fixed an issue with how losses and metrics are calculated differently.
+      This required adding a brand new callback to make the loss functions and
+      the metrics mean the same thing.
+    * Tons and tons of stuff to deal with Keras 3.0. Ugh.
 
 DEPRECATIONS:
     * The addNoise tool is deprecated and will be removed in 6.0.0. It was never useful.
 
+KNOWN ISSUES:
+    * Keras has a bug that causes a race condition when loading models.
+      This will be patched in 3.4.2. In the meantime, I have added a lock that prevents
+      multiple processes from loading a model simultaneously, but this only works when
+      all of the readers are created by one master Python program, and not, for example,
+      when using slurm to launch multiple jobs.
 
 BPReveal 4.x
 ------------
