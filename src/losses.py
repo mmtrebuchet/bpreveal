@@ -51,9 +51,8 @@ def weightedMse(weightTensor: tf.Variable) -> Callable:
 
     @register_keras_serializable(package="bpreveal", name="reweightableMse")
     def reweightableMse(yTrue: tf.Tensor, yPred: tf.Tensor) -> float:
-        yPred = tf.convert_to_tensor(yPred)
-        yTrue = tf.cast(yTrue, yPred.dtype)
-        mse = ops.mean(tf.math.squared_difference(yPred, yTrue), axis=-1)
+        squaredDiff = ops.square(yTrue - yPred)
+        mse = ops.mean(squaredDiff, axis=-1)
         scaledMse = mse * weightTensor
         return scaledMse
     return reweightableMse

@@ -11,7 +11,6 @@ Here's what you do.
 from typing import Any
 from collections.abc import Iterator, Iterable
 import multiprocessing
-from multiprocessing.synchronize import Lock as LOCK_T
 import ctypes
 import pysam
 import numpy as np
@@ -291,18 +290,17 @@ class FlatRunner:
         self._countsInQueue = multiprocessing.Queue(100)
         self._profileOutQueue = multiprocessing.Queue(100)
         self._countsOutQueue = multiprocessing.Queue(100)
-        lock = multiprocessing.Lock()
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._profileInQueue, self._countsInQueue], generator, 1),
             daemon=True)
 
         self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._profileInQueue, self._profileOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize, lock),
+                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize),
             daemon=True)
         self._countsBatchThread = multiprocessing.Process(target=_flatBatcherThread,
             args=(modelFname, batchSize, self._countsInQueue, self._countsOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize, lock),
+                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize),
             daemon=True)
 
         self._profileSaverThread = multiprocessing.Process(target=_saverThread,
@@ -387,14 +385,13 @@ class PisaRunner:
                 memFrac = 0.7 / numBatchers
 
         self._batchThreads = []
-        lock = multiprocessing.Lock()
         for _ in range(self.numBatchers):
             self._batchThreads.append(multiprocessing.Process(
                 target=_pisaBatcherThread,
                 args=(modelFname, batchSize,
                       self._inQueue, self._outQueue, headID,
                       taskID, numShuffles, receptiveField,
-                      kmerSize, memFrac, lock),
+                      kmerSize, memFrac),
                 daemon=True))
         self._saver = saver
 
@@ -1093,11 +1090,11 @@ class PisaBedGenerator(Generator):
 def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, numHeads: int,
                        taskIDs: list[int], numShuffles: int, mode: str,
-                       kmerSize: int, lock: LOCK_T) -> None:
+                       kmerSize: int) -> None:
     """The thread that spins up the batcher."""
     logUtils.debug("Starting flat batcher thread.")
     b = _FlatBatcher(modelName, batchSize, outQueue, headID,
-                     numHeads, taskIDs, numShuffles, mode, kmerSize, lock)
+                     numHeads, taskIDs, numShuffles, mode, kmerSize)
     logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=QUEUE_TIMEOUT)
@@ -1114,11 +1111,11 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
 def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
                        outQueue: multiprocessing.Queue, headID: int, taskID: int,
                        numShuffles: int, receptiveField: int, kmerSize: int,
-                       memFrac: float, lock: LOCK_T) -> None:
+                       memFrac: float) -> None:
     """The thread that spins up the batcher."""
     logUtils.debug("Starting batcher thread.")
     b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
-                     receptiveField, kmerSize, memFrac, lock)
+                     receptiveField, kmerSize, memFrac)
     logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get(timeout=QUEUE_TIMEOUT)
@@ -1186,11 +1183,11 @@ class _PisaBatcher:
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
-                 kmerSize: int, memFrac: float, lock: LOCK_T):
+                 kmerSize: int, memFrac: float):
         logUtils.info("Initializing batcher.")
         # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(memFrac, 1024)
-        self.model = utils.loadModel(modelFname, lock)
+        self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         from keras import ops
         from bpreveal import shap
@@ -1326,11 +1323,11 @@ class _FlatBatcher:
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
-                 kmerSize: int, lock: LOCK_T):
+                 kmerSize: int):
         logUtils.info("Initializing batcher.")
         # pylint: disable=import-outside-toplevel, unused-import
         utils.limitMemoryUsage(0.4, 1024)
-        self.model = utils.loadModel(modelFname, lock)
+        self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging # noqa
         from bpreveal import shap
         from keras import ops

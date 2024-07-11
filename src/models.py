@@ -380,7 +380,10 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
             # The user doesn't want the counts value from the regression used,
             # just the profile part. This is useful when the concept of a
             # "negative peak set" is meaningless, like in MNase.
-            addCounts = residualModel.outputs[i + numHeads]  # type: ignore
+            # We use an identity layer so that I can rename it so there's not a spooky
+            # 'solo' loss component in a combined model.
+            addCounts = klayers.Identity(name=f"combined_logcounts_{headName}")\
+                (residualModel.outputs[i + numHeads])  # type: ignore  # noqa
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
     combModel = keras.Model(inputs=inputLayer,

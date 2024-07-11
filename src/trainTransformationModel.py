@@ -95,7 +95,8 @@ def main(config: dict) -> None:
     model.compile(
         optimizer=keras.optimizers.Adam(
             learning_rate=config["settings"]["learning-rate"]),
-        loss=losses, loss_weights=lossWeights)
+        loss=losses, loss_weights=lossWeights,
+        metrics=losses)
     bpreveal.training.trainWithGenerators(model, config,
                                           config["settings"]["input-length"],
                                           config["settings"]["output-length"])

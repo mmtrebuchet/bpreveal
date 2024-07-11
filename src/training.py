@@ -10,7 +10,8 @@ from keras.callbacks import History  # type: ignore
 from bpreveal import logUtils
 from bpreveal import generators
 from bpreveal import losses
-
+import keras.config
+keras.config.disable_traceback_filtering()
 
 def buildLosses(heads: dict) -> tuple[list, list]:
     r"""Given the output head specification (from the configuration JSON), build losses.
@@ -57,7 +58,7 @@ def buildLosses(heads: dict) -> tuple[list, list]:
         head["INTERNAL_λ-variable"] = λ
         # The actual loss_weights parameter will be one - weighting
         # will be done inside the loss function proper.
-        countsWeights.append(1)
+        countsWeights.append(1.0)
         countsLosses.append(losses.weightedMse(λ))
         logUtils.debug(f"Initialized head {head['head-name']} with λinit = {λInit}")
     allLosses = profileLosses + countsLosses  # + is concatenation, not addition!
@@ -168,7 +169,7 @@ def trainModel(model: keras.Model, trainBatchGen: generators.H5BatchGenerator,
                         verbose=0)  # type: ignore
     logUtils.info("Training complete! Hooray!")
     # Add the counts loss weight history to the history json.
-    lossCallback = callbacks[3]
+    lossCallback = callbacks[4]
     history.history["counts-loss-weight"] = lossCallback.λHistory
     return history
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

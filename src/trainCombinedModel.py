@@ -66,6 +66,8 @@ def main(config: dict) -> None:
     regressionModel = utils.loadModel(
         config["settings"]["transformation-model"]["transformation-model-file"])
     regressionModel.trainable = False
+    regressionModel.compile()
+    regressionModel.trainable = False
     logUtils.debug("Loaded regression model.")
     combinedModel, residualModel, _ = models.combinedModel(
         inputLength, outputLength,
@@ -78,12 +80,17 @@ def main(config: dict) -> None:
 
     residualModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
-        loss=losses, loss_weights=lossWeights)
-
+        loss=losses, loss_weights=lossWeights,
+        # metrics=losses
+    )
+    residualModel.summary()
     combinedModel.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config["settings"]["learning-rate"]),
-        loss=losses, loss_weights=lossWeights)
-
+        loss=losses, loss_weights=lossWeights,
+        metrics=losses
+    )
+    combinedModel.summary()
+    print(combinedModel.outputs)
     logUtils.debug("Models compiled.")
     bpreveal.training.trainWithGenerators(combinedModel, config, inputLength, outputLength)
     combinedModel.save(config["settings"]["output-prefix"] + "_combined" + ".keras")
