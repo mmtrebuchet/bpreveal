@@ -40,7 +40,7 @@ class FixLossCallback(Callback):
         logUtils.debug(heads)  # type: ignore
 
     def correctLosses(self, logs: dict) -> None:  # pylint: disable=redundant-returns-doc
-        """Get the corrected loss value and put it in ``logs``
+        """Get the corrected loss value and put it in ``logs``.
 
         :param logs: The logs from the current epoch or batch.
             This will be EDITED IN PLACE.

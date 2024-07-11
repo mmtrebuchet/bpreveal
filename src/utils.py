@@ -43,6 +43,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
         preds = m.predict(myOneHotSequences)
 
     """
+    # TODO: Once Keras 4.3.2 is out, remove this lock.
     with constants.MODEL_LOAD_LOCK:
         logUtils.debug(f"Acquired lock to load model {modelFname}")
         # pylint: disable=import-outside-toplevel
@@ -899,7 +900,7 @@ class BatchPredictor:
         """
         self._inQueue.appendleft((sequence, label))
         self._inWaiting += 1
-        if self._inWaiting >= self._batchSize:
+        if self._inWaiting >= self._batchSize * 16:
             # We have a ton of sequences to run, so go ahead
             # and run a batch real quick.
             self.runBatch()
