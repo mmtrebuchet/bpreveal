@@ -55,9 +55,13 @@ output-prefix
     The file name where you want your model saved. For example, if you are
     saving models in a directory called ``models``, and you want the model to
     be called ``solo``, then you'd write ``"output-prefix" : "models/solo"``.
-    In this case, you'll find the files ``models/solo.model``, which is the
+    In this case, you'll find the files ``models/solo.keras``, which is the
     Keras model, and ``models/solo.history.json``, containing the training
     history.
+
+    .. note:
+        Before BPReveal 5.0, the created file was given a ``.model`` extension
+        but this changed to ``.keras`` as of BPReveal 5.0.
 
 early-stopping-patience
     Controls how long the network should wait for an improvement in the loss

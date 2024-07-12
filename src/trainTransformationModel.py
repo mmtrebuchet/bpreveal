@@ -25,8 +25,8 @@ model, and they are described at
 :py:mod:`trainSoloModel<bpreveal.trainSoloModel>`.
 
 solo-model-file
-    The name of the file (or directory, since
-    that's how keras likes to save models) that contains the solo model.
+    The name of the file (or directory, for BPReveal versions before 5.0)
+    that contains the solo model.
 
 passthrough
     This transformation does nothing to the solo model,

@@ -21,7 +21,7 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
     """Given a string sequence, perform a shuffle that maintains the kmer distribution.
 
     This is adapted from ushuffle.
-    sequence should be a string in ASCII, but it should theoretically work
+    ``sequence`` should be a string in ASCII, but it should theoretically work
     on multi-byte encoded utf-8 characters so long as the kmerSize is at least
     as long as the longest byte sequence for a character in the input.
     (Please don't rely on this random fact!)
@@ -43,7 +43,7 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
                seed: int | None = None) -> ONEHOT_AR_T:
     """Given a one-hot sequence, perform a shuffle that maintains the kmer distribution.
 
-    sequence should have shape (length, alphabetLength) for DNA, alphabetLength = 4.
+    ``sequence`` should have shape ``(length, alphabetLength)``. For DNA, ``alphabetLength == 4``.
     It is an error to have an alphabet length of more than 8. Internally,
     this function packs the bits at each position into a character, and the
     resulting string is shuffled and then unpacked. For this reason, it is
@@ -59,7 +59,7 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
         4   0 0 0 0
 
     This is adapted from ushuffle.
-    Returns an array of shape (numShuffles, length, alphabetLength)
+    Returns an array of shape ``(numShuffles, length, alphabetLength)``
     """
     assert sequence.shape[1] <= 8, "Cannot ushuffle a one-hot encoded sequence with "\
                                    "an alphabet of more than 8 characters."

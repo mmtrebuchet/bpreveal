@@ -47,7 +47,7 @@ class Screen:
     :param statusHeight: How tall should the status box be?
     :param messageHeight: How tall should the message and debug panels be?
         Note that this is for each panel, so the message and debug panels together
-        will occupy 2 * messageHeight + colSep rows.
+        will occupy ``2 * messageHeight + colSep`` rows.
     """
 
     _epochWin = None
@@ -216,7 +216,7 @@ class Screen:
         :param col: What column should the string start at?
         :param winName: Which window? One of ``SEBλMD``.
         :param text: The text to display.
-        :param color: If provided, the output from curses.color_pair().
+        :param color: If provided, the output from ``curses.color_pair()``.
         """
         win, width, _ = self._getWindowProperties(winName)
         printWidth = width - col - 5
@@ -327,7 +327,7 @@ class Screen:
         r"""Take a line from the log and put the info in the right place.
 
         :param line: A line from a BPReveal log file.
-        :return: True if more lines are expected, False if it's time to shut down.
+        :return: ``True`` if more lines are expected, ``False`` if it's time to shut down.
 
         The return value is important because a program like tail won't know that no more
         input will be added to the logs, but we can look for a line that contains

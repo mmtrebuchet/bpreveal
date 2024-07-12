@@ -132,7 +132,6 @@ class TFDeepExplainer:
             tensor_blacklist, dependence_breakers,
             within_ops=back_ops
         )
-
         # note all the tensors that are on the path between the inputs and the output
         self.between_tensors = {}
         for op in self.between_ops:
@@ -140,7 +139,6 @@ class TFDeepExplainer:
                 self.between_tensors[t.name] = True
         for t in model_inputs:
             self.between_tensors[t.name] = True
-
         # save what types are being used
         self.used_types = {}
         for op in self.between_ops:
@@ -620,6 +618,7 @@ op_handlers["ClipByValue"] = nonlinearity_1d(0)
 op_handlers["Rsqrt"] = nonlinearity_1d(0)
 op_handlers["Square"] = nonlinearity_1d(0)
 op_handlers["Max"] = nonlinearity_1d(0)
+op_handlers["Log"] = nonlinearity_1d(0)
 
 # ops that are nonlinear and allow two inputs to vary
 op_handlers["SquaredDifference"] = nonlinearity_1d_nonlinearity_2d(

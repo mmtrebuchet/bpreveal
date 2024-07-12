@@ -29,10 +29,9 @@ def loadModel(modelFname: str):  # noqa: ANN201
     :param modelFname: The name of the model that Keras saved earlier, either a directory
         ending in ``.model`` for models trained before BPReveal 5.0.0, or a file ending in
         ``.keras`` for models trained with BPReveal 5.0.0 or later.
-    :return: A Keras Model object.
+    :return: A Keras ``Model`` object.
 
-    The returned model does NOT support additional training, since it uses a
-    dummy loss.
+    The returned model does NOT support additional training, since it uses a dummy loss.
 
     **Example:**
 
@@ -263,7 +262,7 @@ def loadChromSizes(*, chromSizesFname: str | None = None,
                    fasta: pysam.FastaFile | None = None) -> dict[str, int]:
     """Read in a chrom sizes file and return a dictionary mapping chromosome name → size.
 
-    Exactly one of the supplied parameters may be None.
+    Exactly one of the parameters may be specified, all others must be ``None``.
 
     :param chromSizesFname: The name of a chrom.sizes file on disk.
     :param genomeFname: The name of a genome fasta file on disk.
@@ -328,7 +327,8 @@ def blankChromosomeArrays(*, genomeFname: str | None = None,
     """Get a set of blank numpy arrays that you can use to save genome-wide data.
 
     Exactly one of ``chromSizesFname``, ``genomeFname``, ``bwHeader``,
-    ``chromSizes``, ``bw``, or ``fasta`` may be None.
+    ``chromSizes``, ``bw``, or ``fasta`` may be specified, all other
+    parameters must be None.
 
     :param chromSizesFname: The name of a chrom.sizes file on disk.
     :param genomeFname: The name of a genome fasta file on disk.
@@ -342,7 +342,7 @@ def blankChromosomeArrays(*, genomeFname: str | None = None,
     :return: A dict mapping chromosome name to a numpy array.
 
     The returned dict will have an element for every chromosome in the input.
-    The shape of each element of the dictionary will be (chromosome-length, numTracks).
+    The shape of each element of the dictionary will be ``(chromosome-length, numTracks)``.
 
     See :py:func:`loadChromSizes<bpreveal.utils.loadChromSizes>` for an example.
     """
@@ -373,8 +373,8 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
 
     :param bwFname: The name of the bigwig file to write.
     :param chromDict: A dict mapping chromosome names to the data for that
-        chromosome. The data should have shape (chromosome-length,).
-    :param regionList: A list of (chrom, start, end) tuples giving the
+        chromosome. The data should have shape ``(chromosome-length,)``.
+    :param regionList: A list of ``(chrom, start, end)`` tuples giving the
         locations where the data should be saved.
     :param regionData: An iterable with the same length as ``regionList``.
         The ith element of ``regionData`` will be
@@ -418,12 +418,12 @@ def oneHotEncode(sequence: str, allowN: bool = False, alphabet: str = "ACGT") ->
 
     :param sequence: A DNA sequence to encode.
         May contain uppercase and lowercase letters.
-    :param allowN: If False (the default), raise an AssertionError if
+    :param allowN: If ``False`` (the default), raise an ``AssertionError`` if
         the sequence contains letters other than ``ACGTacgt``.
-        If True, any other characters will be encoded as ``[0, 0, 0, 0]``.
+        If ``True``, any other characters will be encoded as ``[0, 0, 0, 0]``.
     :param alphabet: The order of the bases in the output array.
-    :return: An array with shape (len(sequence), NUM_BASES).
-    :rtype: ONEHOT_AR_T
+    :return: An array with shape ``(len(sequence), NUM_BASES)``.
+    :rtype: ``ONEHOT_AR_T``
 
 
     The columns are, in order, A, C, G, and T.
@@ -476,13 +476,13 @@ def oneHotEncode(sequence: str, allowN: bool = False, alphabet: str = "ACGT") ->
 def oneHotDecode(oneHotSequence: np.ndarray, alphabet: str = "ACGT") -> str:
     """Take a one-hot encoded sequence and turn it back into a string.
 
-    :param oneHotSequence: An array of shape (n, NUM_BASES). It may have any type that can be
-        converted into a uint8.
+    :param oneHotSequence: An array of shape ``(n, NUM_BASES)``. It may have any type
+        that can be converted into a uint8.
     :param alphabet: The order in which the bases are encoded.
 
     Given an array representing a one-hot encoded sequence, convert it back
-    to a string. The input shall have shape (sequenceLength, NUM_BASES), and the output
-    will be a Python string.
+    to a string. The input shall have shape ``(sequenceLength, NUM_BASES)``,
+    and the output will be a Python string.
     The decoding is performed based on the following mapping::
 
         [1, 0, 0, 0] → A
@@ -511,13 +511,13 @@ def logitsToProfile(logitsAcrossSingleRegion: LOGIT_AR_T,
                     logCountsAcrossSingleRegion: LOGCOUNT_T) -> PRED_AR_T:
     """Take logits and logcounts and turn it into a profile.
 
-    :param logitsAcrossSingleRegion: An array of shape (output-length * num-tasks)
-    :type logitsAcrossSingleRegion: LOGIT_AR_T
+    :param logitsAcrossSingleRegion: An array of shape ``(output-length * num-tasks)``
+    :type logitsAcrossSingleRegion: ``LOGIT_AR_T``
     :param logCountsAcrossSingleRegion: A single floating-point number
-    :type logCountsAcrossSingleRegion: LOGCOUNT_T
-    :return: An array of shape (output-length * num-tasks), giving the profile
+    :type logCountsAcrossSingleRegion: ``LOGCOUNT_T``
+    :return: An array of shape ``(output-length * num-tasks)``, giving the profile
         predictions.
-    :rtype: PRED_AR_T
+    :rtype: ``PRED_AR_T``
 
     **Example:**
 
@@ -569,25 +569,25 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str) -> \
     :param sequences: The DNA sequence(s) that you want to predict on.
     :param modelFname: The name of the Keras model to use.
     :return: An array of profiles or a single profile, depending on ``sequences``
-    :rtype: list[list[PRED_AR_T]] or list[PRED_AR_T]
+    :rtype: ``list[list[PRED_AR_T]]`` or ``list[PRED_AR_T]``
 
     Spawns a separate process to make a single batch of predictions,
     then shuts it down. Why make it complicated? Because it frees the
     GPU after it's done so other programs and stuff can use it.
     If ``sequences`` is a single string containing a sequence to predict
     on, that's okay, it will be treated as a length-one list of sequences
-    to predict. ``sequences`` should be as long as the input length of
+    to predict. The ``sequences`` string should be as long as the input length of
     your model.
 
     If you passed in an iterable of strings (like a list of strings),
     the shape of the returned profiles will be
-    (numSequences x numHeads x outputLength x numTasks).
+    ``(numSequences x numHeads x outputLength x numTasks)``.
     Since different heads can have different numbers of tasks, the returned object
     will be a list (one entry per sequence) of lists (one entry per head)
-    of arrays of shape (outputLength x numTasks).
+    of arrays of shape ``(outputLength x numTasks)``.
     If, instead, you passed in a single string as ``sequences``,
-    it will be (numHeads x outputLength x numTasks). As before, this will be a list
-    (one entry per head) of arrays of shape (outputLength x numTasks)
+    it will be ``(numHeads x outputLength x numTasks)``. As before, this will be a list
+    (one entry per head) of arrays of shape ``(outputLength x numTasks)``
 
     **Example:**
 
@@ -686,37 +686,37 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
         contribution scores or just the actual ones.
 
     :return: A dict containing the importance scores.
-    :rtype: dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]
+    :rtype: ``dict[str, IMPORTANCE_AR_T | ONEHOT_AR_T]``
 
     If you passed in an iterable of strings (like a list), then the output's first
-    dimension will be the number of sequences and it will depend on keepHypotheticals:
+    dimension will be the number of sequences and it will depend on ``keepHypotheticals``:
 
-    * If keepHypotheticals is True, then it will be structured so::
+    * If ``keepHypotheticals == True``, then it will be structured so::
 
             {"profile": array of shape (numSequences x inputLength x NUM_BASES),
              "counts": array of shape (numSequences x inputLength x NUM_BASES),
              "sequence": array of shape (numSequences x inputLength x NUM_BASES)}
 
       This dict has the same meaning as shap scores stored in an
-      interpretFlat hdf5.
+      :py:mod:`interpretFlat<bpreveal.interpretFlat>` hdf5.
 
-    * If keepHypotheticals is False (the default), then the
+    * If ``keepHypotheticals == False`` (the default), then the
       shap scores will be condensed down to the normal scores that we plot
       in a genome browser::
 
           {"profile": array of shape (numSequences x inputLength),
            "counts": array of shape (numSequences x inputLength)}
 
-    However, if sequences was a string instead of an iterable, then the numSequences
+    However, if ``sequences`` was a string instead of an iterable, then the ``numSequences``
     dimension will be suppressed:
 
-    * For keepHypotheticals == True, you get::
+    * For ``keepHypotheticals == True``, you get::
 
           {"profile": array of shape (inputLength x NUM_BASES),
            "counts": array of shape (inputLength x NUM_BASES),
            "sequence": array of shape (inputLength x NUM_BASES)}
 
-    * and if keepHypotheticals is False, you get::
+    * and if ``keepHypotheticals == False``, you get::
 
           {"profile": array of shape (inputLength,),
            "counts": array of shape (inputLength,)}
@@ -771,16 +771,17 @@ class BatchPredictor:
         Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
 
     It's doubly-useful if you are generating sequences dynamically. Here's how
-    it works. You first create a predictor by calling BatchPredictor(modelName,
-    batchSize). If you're not sure, a batch size of 64 is probably good.
+    it works. You first create a predictor by calling
+    ``BatchPredictor(modelName, batchSize)``.
+    If you're not sure, a batch size of 64 is probably good.
 
     Now, you submit any sequences you want predicted, using the submit methods.
 
     Once you've submitted all of your sequences, you can get your results with
-    the getOutput() method.
+    the ``getOutput()`` method.
 
-    Note that the getOutput() method returns *one* result at a time, and
-    you have to call getOutput() once for every time you called one of the
+    Note that the ``getOutput()` method returns *one* result at a time, and
+    you have to call ``getOutput()`` once for every time you called one of the
     submit methods.
 
     The typical use case for a batcher streams its input, so you'd normally check
@@ -799,7 +800,7 @@ class BatchPredictor:
             preds, outLabel = batcher.getOutput()
             processPredictions(preds, outLabel)
 
-    Using the batcher in this way (checking to see if outputReady() after every
+    Using the batcher in this way (checking to see if ``outputReady()`` after every
     query submission) has the benefit of using very little memory. Instead of
     building a huge array of queries and then predicting them in one go, the
     batcher analyzes them as you come up with them. This means you can analyze
@@ -817,7 +818,7 @@ class BatchPredictor:
             processPredictions(preds)
 
     In this example, I'm not using the labels, so I just pass in None
-    as the label for each sequence and ignore the labels from getOutput()
+    as the label for each sequence and ignore the labels from ``getOutput()``
 
     You should not, however, demand an output after every submission, since this
     will use a batch size of one and be painfully slow::
@@ -832,11 +833,11 @@ class BatchPredictor:
         the other BPReveal tools.
     :param batchSize: is the number of samples that should be run simultaneously
         through the model.
-    :param start: Ignored, but present here to give BatchPredictor the same API
-        as ThreadedBatchPredictor. Creating a BatchPredictor loads up the model
+    :param start: Ignored, but present here to give ``BatchPredictor`` the same API
+        as ``ThreadedBatchPredictor``. Creating a ``BatchPredictor`` loads up the model
         and sets memory growth right then and there.
     :param numThreads: Ignored, only present for compatibility with the API for
-        ThreadedBatchPredictor. A (non-threaded)BachPredictor runs its calculations
+        ``ThreadedBatchPredictor``. A (non-threaded)``BachPredictor`` runs its calculations
         in the main thread and will block when it's actually doing calculations.
     """
 
@@ -864,7 +865,7 @@ class BatchPredictor:
         del numThreads
 
     def __enter__(self):
-        """Do nothing; context manager is a no-op for a non-threaded BatchPredictor."""
+        """Do nothing; context manager is a no-op for a non-threaded ``BatchPredictor``."""
 
     def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):  # noqa: ANN001
         """Quit the context manager.
@@ -882,7 +883,7 @@ class BatchPredictor:
         """Reset the predictor.
 
         If you've left your predictor in some weird state, you can reset it
-        by calling clear(). This empties all the queues.
+        by calling ``clear()``. This empties all the queues.
         """
         logUtils.info(f"Clearing batch predictor, purging {self._inWaiting} inputs "
                       f"and {self._outWaiting} outputs.")
@@ -894,7 +895,7 @@ class BatchPredictor:
     def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
         """Submit a one-hot-encoded sequence.
 
-        :param sequence: An (input-length x NUM_BASES) ndarray containing the
+        :param sequence: An ``(input-length x NUM_BASES)`` ndarray containing the
             one-hot encoded sequence to predict.
         :param label: Any object; it will be returned with the prediction.
         """
@@ -908,7 +909,7 @@ class BatchPredictor:
     def submitString(self, sequence: str, label: typing.Any) -> None:
         """Submit a given sequence for prediction.
 
-        :param sequence: A string of length input-length
+        :param sequence: A string of length ``input-length``
         :param label: Any object. Label will be returned to you with the
             prediction.
         """
@@ -918,8 +919,8 @@ class BatchPredictor:
     def runBatch(self, maxSamples: int | None = None) -> None:
         """Actually run the batch.
 
-        Normally, this will be called
-        by the submit functions, and it will also be called if you ask
+        Normally, this will be called by the submit functions,
+        and it will also be called if you ask
         for output and the output queue is empty (assuming there are
         sequences waiting in the input queue.)
 
@@ -987,7 +988,7 @@ class BatchPredictor:
     def outputReady(self) -> bool:
         """Is there any output ready for you?
 
-        If output is ready, then calling getOutput will give a result immediately.
+        If output is ready, then calling ``getOutput()`` will give a result immediately.
 
         :return: True if the batcher is sitting on results, and False otherwise.
         """
@@ -996,7 +997,7 @@ class BatchPredictor:
     def empty(self) -> bool:
         """Is the batcher totally idle?
 
-        If the batcher is not empty, then you can safely call getOutput, though
+        If the batcher is not empty, then you can safely call ``getOutput()``, though
         it may block if it needs to run a calculation.
 
         :return: True if there are no predictions at all in the queue.
@@ -1010,17 +1011,17 @@ class BatchPredictor:
         the same order as they were submitted.
 
         :return: A two-tuple.
-        :rtype: tuple[list[LOGIT_AR_T, LOGIT_T], typing.Any]
+        :rtype: ``tuple[list[LOGIT_AR_T, LOGIT_T], typing.Any]``
 
-        * The first element will be a list of length numHeads*2, representing the
+        * The first element will be a list of length ``numHeads * 2``, representing the
           output from the model. Since the output of the model will always have
           a dimension representing the batch size, and this function only returns
           the result of running a single sequence, the dimension representing
           the batch size is removed. In other words, running the model on a
           single example would give a logits output of shape
-          (1 x output-length x num-tasks).
+          ``(1 x output-length x num-tasks)``.
           But this function will remove that, so you will get an array of shape
-          (output-length x numTasks)
+          ``(output-length x numTasks)``
           As with calling the model directly, the first numHeads elements are the
           logits arrays, and then come the logcounts for each head.
           You can pass the logits and logcounts values to
@@ -1200,7 +1201,7 @@ class ThreadedBatchPredictor:
     def submitOHE(self, sequence: ONEHOT_AR_T, label: typing.Any) -> None:
         """Submit a one-hot-encoded sequence.
 
-        :param sequence: An (input-length x NUM_BASES) ndarray containing the
+        :param sequence: An ``(input-length x NUM_BASES)`` ndarray containing the
             one-hot encoded sequence to predict.
         :param label: Any (picklable) object; it will be returned with the prediction.
         """
@@ -1218,7 +1219,7 @@ class ThreadedBatchPredictor:
     def submitString(self, sequence: str, label: typing.Any) -> None:
         """Submit a given sequence for prediction.
 
-        :param sequence: A string of length input-length
+        :param sequence: A string of length ``input-length``
         :param label: Any (picklable) object. Label will be returned to you with the
             prediction.
         """
@@ -1228,9 +1229,9 @@ class ThreadedBatchPredictor:
     def outputReady(self) -> bool:
         """Is there any output ready for you?
 
-        If output is ready, then calling getOutput will give a result immediately.
+        If output is ready, then calling ``getOutput()`` will give a result immediately.
 
-        :return: True if the batcher is sitting on results, and False otherwise.
+        :return: ``True`` if the batcher is sitting on results, and ``False`` otherwise.
         """
         if self._inFlight:
             outIdx = self._outQueueOrder[-1]
@@ -1240,10 +1241,10 @@ class ThreadedBatchPredictor:
     def empty(self) -> bool:
         """Is the batcher totally idle?
 
-        If the batcher is not empty, then you can call getOutput, though
+        If the batcher is not empty, then you can call ``getOutput()``, though
         it may block if it needs to run a calculation.
 
-        :return: True if there are no predictions at all in the queue.
+        :return: ``True`` if there are no predictions at all in the queue.
         """
         return self._inFlight == 0
 
@@ -1251,7 +1252,7 @@ class ThreadedBatchPredictor:
         """Get a single output.
 
         :return: The model's predictions.
-        :rtype: tuple[list[LOGIT_AR_T, LOGCOUNT_T], typing.Any]
+        :rtype: ``tuple[list[LOGIT_AR_T, LOGCOUNT_T], typing.Any]``
 
         Same semantics and blocking behavior as
         :py:meth:`BatchPredictor.getOutput<bpreveal.utils.BatchPredictor.getOutput>`.
@@ -1270,7 +1271,7 @@ class ThreadedBatchPredictor:
 
 def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Queue,
                    outQueue: multiprocessing.Queue) -> None:
-    """Run batches from the ThreadedBatchPredictor in this separate thread.
+    """Run batches from the ``ThreadedBatchPredictor`` in this separate thread.
 
     .. note::
         Sets :py:data:`bpreveal.internal.constants.GLOBAL_TENSORFLOW_LOADED`.
