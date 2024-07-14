@@ -21,8 +21,8 @@ import pybedtools
 from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal import ushuffle
-from bpreveal.internal.constants import NUM_BASES, ONEHOT_T, ONEHOT_AR_T, IMPORTANCE_T, \
-    H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_T, QUEUE_TIMEOUT
+from bpreveal.internal.constants import IMPORTANCE_AR_T, NUM_BASES, ONEHOT_T, ONEHOT_AR_T, \
+    IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_T, QUEUE_TIMEOUT
 import bpreveal.internal.files as bprfiles
 
 
@@ -1440,19 +1440,20 @@ class _FlatBatcher:
             self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
 
 
-def combineMultAndDiffref(mult, orig_inp, bg_data):  # pylint: disable=invalid-name  # noqa
+def combineMultAndDiffref(mult: IMPORTANCE_AR_T, originalInput: ONEHOT_AR_T,
+                          backgroundData: ONEHOT_AR_T) -> list:
     """Combine the shap multipliers and difference from reference to generate hypothetical scores.
 
     This is injected deep into shap and generates the hypothetical importance scores.
     """
     # This is copied from Zahoor's code.
     projectedHypotheticalContribs = \
-        np.zeros_like(bg_data[0]).astype("float")
-    assert len(orig_inp[0].shape) == 2
+        np.zeros_like(backgroundData[0]).astype("float")
+    assert len(originalInput[0].shape) == 2
     for i in range(NUM_BASES):  # We're going to go over all the base possibilities.
-        hypotheticalInput = np.zeros_like(orig_inp[0]).astype("float")
+        hypotheticalInput = np.zeros_like(originalInput[0]).astype("float")
         hypotheticalInput[:, i] = 1.0
-        hypotheticalDiffref = hypotheticalInput[None, :, :] - bg_data[0]
+        hypotheticalDiffref = hypotheticalInput[None, :, :] - backgroundData[0]
         hypotheticalContribs = hypotheticalDiffref * mult[0]
         projectedHypotheticalContribs[:, :, i] = np.sum(hypotheticalContribs, axis=-1)
     # There are no bias importances, so the np.zeros_like(orig_inp[1]) is not needed.

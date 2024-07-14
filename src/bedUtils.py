@@ -383,7 +383,8 @@ class ParallelCounter:
             target=_counterThread,
             args=(bigwigNames, self.inQueue, self.outQueue))
             for _ in range(numThreads)]
-        [x.start() for x in self.threads]  # pylint: disable=expression-not-assigned
+        for t in self.threads:
+            t.start()
 
     def addQuery(self, query: tuple[str, int, int], idx: Any) -> None:
         """Add a region (chrom, start, end) to the task list.
@@ -402,7 +403,8 @@ class ParallelCounter:
         """Wrap up the show - close the child threads."""
         for _ in range(self.numThreads):
             self.inQueue.put(None)
-        [x.join() for x in self.threads]  # pylint: disable=expression-not-assigned
+        for t in self.threads:
+            t.join()
 
     def getResult(self) -> tuple[float, int]:
         """Get the next result.
@@ -471,5 +473,6 @@ def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
     while inDeque:
         outQueue.put(outDeque[-1], timeout=constants.QUEUE_TIMEOUT)
         inDeque -= 1
-    [x.close() for x in bwFiles]  # pylint: disable=expression-not-assigned
+    for bwFp in bwFiles:
+        bwFp.close()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

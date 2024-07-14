@@ -75,8 +75,7 @@ class FixLossCallback(Callback):
         if totalValLoss != 0:
             logs["val_loss"] = totalValLoss
 
-    # pylint: disable=invalid-name
-    def on_epoch_end(self, _: int,  # pylint: disable=invalid-name
+    def on_epoch_end(self, _: int,
                      logs: dict | None = None) -> None:
         """Updates the logs."""
         assert logs is not None, "Cannot work with empty logs!"
@@ -91,7 +90,6 @@ class FixLossCallback(Callback):
         """Updates the logs."""
         assert logs is not None, "Cannot use empty logs!"
         self.correctLosses(logs)
-    # pylint: enable=invalid-name
 
 
 class ApplyAdaptiveCountsLoss(Callback):
@@ -158,7 +156,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         for head in heads:
             self.λHistory[head["head-name"]] = []
 
-    def on_train_begin(self, logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+    def on_train_begin(self, logs: dict | None = None) -> None:
         """Set up the initial guesses for λ.
 
         :param logs: Ignored.
@@ -296,7 +294,7 @@ class ApplyAdaptiveCountsLoss(Callback):
         self.earlyStopCallback.best = correctedLoss
         self.checkpointCallback.best = correctedLoss
 
-    def on_epoch_end(self, epoch: int,  # pylint: disable=invalid-name
+    def on_epoch_end(self, epoch: int,
                      logs: dict | None = None) -> None:
         """Update the other callbacks and calculate a new λ.
 
@@ -416,10 +414,14 @@ class DisplayCallback(Callback):
     """
     prevEpochLogs = None
     """The logs from last epoch"""
+    lastBatchTime: float
+    """When did the last batch happen?"""
     lastBatchEndTime = 0
-    """When did the last batch finish?"""
+    """When did the last batch that we printed finish?"""
+    lastValBatchTime: float
+    """When did the last validation batch happen?"""
     lastValBatchEndTime = 0
-    """When did the last validation batch finish?"""
+    """When did the last validation that we printed finish?"""
     lastEpochEndTime = None
     """When did the last epoch finish?"""
     lastEpochStartTime = None
@@ -437,6 +439,12 @@ class DisplayCallback(Callback):
     Used to calculate column positions."""
     trainBeginTime: float
     """When did the whole training process start?"""
+    firstBatchTime: float
+    """When did we see our first batch of this epoch?"""
+    firstValBatchTime: float
+    """When did we see our first validation batch of this epoch?"""
+    curEpochStartTime: float
+    """When did the current epoch start?"""
 
     def __init__(self, plateauCallback: ReduceLROnPlateau, earlyStopCallback: EarlyStopping,
                  adaptiveLossCallback: ApplyAdaptiveCountsLoss,
@@ -503,7 +511,7 @@ class DisplayCallback(Callback):
             self.printLocationsBatch[po] = i + 2
         self.maxLen = max((len(x) for x in printOrderEpoch))
 
-    def on_train_begin(self, logs: dict | None = None) -> None:  # pylint: disable=invalid-name
+    def on_train_begin(self, logs: dict | None = None) -> None:
         """Just loads in the total number of epochs."""
         del logs
         params = self.params.get
@@ -512,19 +520,17 @@ class DisplayCallback(Callback):
         if autoTotal is not None:
             self.numEpochs = autoTotal
 
-    def on_epoch_begin(self, epoch: int,  # pylint: disable=invalid-name
+    def on_epoch_begin(self, epoch: int,
                        logs: dict | None = None) -> None:
         """Just sets the timers up, so you can check how long an epoch took at the end."""
         del logs
         self.epochNumber = epoch
-        # pylint: disable=attribute-defined-outside-init
         self.batchNumber = 0
         self.curEpochStartTime = time.perf_counter()
         self.firstBatchTime = time.perf_counter() + 1e10
         self.firstValBatchTime = time.perf_counter() + 1e10
         if self.lastEpochEndTime is not None:
             self.curEpochWaitTime = time.perf_counter() - self.lastEpochEndTime
-        # pylint: enable=attribute-defined-outside-init
 
     def formatStr(self, val: str | int | float | tuple[int, int]) -> str:
         """Formats an object to be 10 characters wide.
@@ -548,7 +554,7 @@ class DisplayCallback(Callback):
             case _:
                 return "     FMT_ERR"
 
-    def on_epoch_end(self, epoch: int,  # pylint: disable=invalid-name
+    def on_epoch_end(self, epoch: int,
                      logs: dict | None = None) -> None:
         """Writes out all the logs for this epoch and the last one at INFO logging level."""
         del epoch
@@ -582,14 +588,12 @@ class DisplayCallback(Callback):
         self._writeLogLines(lines, logUtils.debug, "λ")
         self.prevEpochLogs = logs
 
-    def on_train_batch_end(self, batch: int,  # pylint: disable=invalid-name
+    def on_train_batch_end(self, batch: int,
                            logs: dict | None = None) -> None:
         """Write the loss info for the current batch at DEBUG level."""
-        # pylint: disable=attribute-defined-outside-init
         logs = logs or {}
         self.firstBatchTime = min(time.perf_counter(), self.firstBatchTime)
         self.lastBatchTime = time.perf_counter()
-        # pylint: enable=attribute-defined-outside-init
         if len(list(self.printLocationsEpoch.keys())) == 0:
             # We haven't calculated any print locations yet.
             self._calcPositions(logs)
@@ -604,14 +608,12 @@ class DisplayCallback(Callback):
             self._writeLogLines(self._getBatchLines(logs), logUtils.debug,
                                 "BH" if batch == 0 else "B")
 
-    def on_test_batch_end(self, batch: int,  # pylint: disable=invalid-name
+    def on_test_batch_end(self, batch: int,
                           logs: dict | None = None) -> None:
         """Just emit a counter with the batch number at DEBUG level."""
         del logs
-        # pylint: disable=attribute-defined-outside-init
         self.firstValBatchTime = min(time.perf_counter(), self.firstValBatchTime)
         self.lastValBatchTime = time.perf_counter()
-        # pylint: enable=attribute-defined-outside-init
         if (time.perf_counter() - self.lastValBatchEndTime > 1.0) \
                 or batch in [self.numValBatches - 1, 0]:
             self.lastValBatchEndTime = time.perf_counter()

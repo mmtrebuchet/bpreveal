@@ -206,7 +206,11 @@ function-naming-style=camelCase
 #function-rgx=
 
 # Good variable names which should always be accepted, separated by a comma.
-good-names=
+good-names=on_epoch_end,
+           on_train_batch_end,
+           on_test_batch_end,
+           on_train_begin,
+           on_epoch_begin
 
 
 

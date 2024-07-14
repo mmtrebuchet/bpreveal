@@ -38,7 +38,7 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
    bigwigs without head information. The program currently spits out warnings
    when you do this, and these will become an error.
 10. Using an importance hdf5 from before version 4.0.0 will now result in an
-   error instead of a deprecation warning.
+    error instead of a deprecation warning.
 
 
 BPReveal 5.x
@@ -46,12 +46,14 @@ BPReveal 5.x
 
 BPReveal 5.0.0
 ^^^^^^^^^^^^^^
+
 When BPReveal 5.0.0 was released, the following breaking changes occurred:
+
 1. The first argument to
    :py:func:`models.transformationModel<bpreveal.models.transformationModel>`
-   will be renamed to get rid of a name collision that pylint gets upset about.
+   was renamed to get rid of a name collision that pylint gets upset about.
 2. The ``correct-receptive-field`` flag in :py:mod:`interpretPisa<bpreveal.interpretPisa>`,
-   introduced in 4.1.2, will switch from being ``false`` by default to being ``true``
+   introduced in 4.1.2, switched from being ``false`` by default to being ``true``
    by default. This fixes an off-by-one bug in how receptive field was calculated.
 3. The ``dumpModiscoSeqlets`` tool was removed, since it's not useful.
 4. BPReveal now uses Tensorflow 2.16 and Keras 3.0. This will cause some
@@ -61,6 +63,10 @@ When BPReveal 5.0.0 was released, the following breaking changes occurred:
    caused the names of the reported metrics to change. Instead of
    ``solo_logcounts_nanog_loss`` and ``solo_profile_nanog_loss``, these are now
    ``solo_logcounts_nanog_reweightable_mse`` and ``solo_profile_nanog_multinomial_nll``.
+   Technically, these are now *metrics* and not *losses*, but that should make no
+   difference in practice.
+6. The shap code was further trimmed down. The names of the arguments to
+   ``combine_mult_and_diffref`` were changed to camelCase to match the style of BPReveal.
 
 BPReveal 4.x
 ------------

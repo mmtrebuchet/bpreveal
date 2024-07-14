@@ -41,7 +41,7 @@ def _soloModelHead(dilateOutput: klayers.Layer, individualHead: dict,
     return (profile, counts)
 
 
-def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-argument
+def soloModel(inputLength: int, outputLength: int,
               numFilters: int, numLayers: int, inputFilterWidth: int,
               outputFilterWidth: int, headList: list[dict],
               modelName: str) -> kmodels.Model:
@@ -71,6 +71,7 @@ def soloModel(inputLength: int, outputLength: int,  # pylint: disable=unused-arg
     It is an error to call this function with an inconsistent network structure,
     such as an input that is too long.
     """
+    del outputLength
     logUtils.debug("Building solo model")
     inputLayer = klayers.Input((inputLength, NUM_BASES), name=f"{modelName}_input")
 

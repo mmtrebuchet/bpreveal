@@ -15,10 +15,10 @@ from tensorflow.python.framework import (
 )
 import tensorflow as tf
 
-def standard_combine_mult_and_diffref(mult, orig_inp, bg_data):
-    diffref_input = [orig_inp[x] - bg_data[x] for x in range(len(orig_inp))]
+def standard_combine_mult_and_diffref(mult, originalInput, backgroundData):
+    diffref_input = [originalInput[x] - backgroundData[x] for x in range(len(originalInput))]
     to_return = [(mult[x] * (diffref_input[x])).mean(0)
-                 for x in range(len(orig_inp))]
+                 for x in range(len(originalInput))]
     return to_return
 
 
@@ -202,8 +202,8 @@ class TFDeepExplainer:
                 phis_j = self.combine_mult_and_diffref(
                     mult=[sample_phis[idx][:-bg_data[idx].shape[0]]
                           for idx in range(len(X))],
-                    orig_inp=[X[idx][j] for idx in range(len(X))],
-                    bg_data=bg_data)
+                    originalInput=[X[idx][j] for idx in range(len(X))],
+                    backgroundData=bg_data)
                 # assign the attributions to the right part of the output arrays
                 for idx in range(len(X)):
                     phis[idx][j] = phis_j[idx]
