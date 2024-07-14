@@ -9,16 +9,13 @@
   | CRITICAL
 
 <list-of-integer> ::=
-    <integer>
-  | <integer>, <list-of-integer>
+    <integer>«, <list-of-integer>»
 
 <list-of-number> ::=
-    <number>
-  | <number>, <list-of-number>
+    <number>«, <list-of-number>»
 
 <integer> ::=
-    -<nonzero-digit><list-of-digits>
-  | <nonzero-digit><list-of-digits>
+    «-»<nonzero-digit>«<list-of-digits>»
   | 0
 
 <nonzero-digit> ::=
@@ -30,20 +27,16 @@
 
 <list-of-digits> ::=
     <empty>
-  | <digit>
-  | <digit><list-of-digits>
+  | <digit>«<list-of-digits>»
 
 <number> ::=
-    <integer>
-  | <integer>.
-  | <integer>.<list-of-digits>
+    <integer>«.«<list-of-digits>»»
 
 <file-name> ::=
     <string>
 
 <list-of-string> ::=
-    <string>
-  | <string>, <list-of-string>
+    <string>«, <list-of-string>»
 
 <string> ::=
     "<list-of-character>"
@@ -58,8 +51,7 @@
 
 <list-of-character> ::=
     <empty>
-  | <character>
-  | <character><list-of-character>
+  | <character>«<list-of-character>»
 
 <character> ::=
    (any UTF-8 glyph)

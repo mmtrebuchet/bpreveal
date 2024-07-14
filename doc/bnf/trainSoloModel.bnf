@@ -17,8 +17,7 @@
   "heads" : [<head-list>]
 
 <head-list> ::=
-    <individual-head>
-  | <individual-head>, <head-list>
+    <individual-head>«, <head-list>»
 
 <individual-head> ::=
     {
@@ -33,10 +32,6 @@
   | "counts-loss-frac-target" : <number>
   | "counts-loss-weight" : <number>,
     "counts-loss-frac-target" : <number>
-
-<counts-loss-frac-target> ::=
-    <empty>
-  | "counts-loss-frac-target" : <number>
 
 <solo-settings-contents> ::=
     {

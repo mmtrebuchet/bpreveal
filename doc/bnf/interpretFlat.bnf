@@ -18,10 +18,10 @@
     "genome" : <file-name>,
     "bed-file" : <file-name>
  |  "fasta-file" : <file-name>
- |  "fasta-file" : <file-name>,
-    "coordinates": {
+  « "coordinates": {
         "genome" : <file-name>,
         "bed-file" : <file-name>}
+  »
 
 <kmer-size-section> ::=
     "kmer-size" : <integer>,

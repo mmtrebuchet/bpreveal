@@ -12,20 +12,17 @@
     }
 
 <prepare-data-heads-list> ::=
-   <prepare-data-individual-head>
- | <prepare-data-individual-head>, <prepare-data-heads-list>
+   <prepare-data-individual-head>«, <prepare-data-heads-list>»
 
 <prepare-data-individual-head> ::=
     {
-        <revcomp-head-section>
+        «<revcomp-head-section>»
         "bigwig-files" : [<list-of-bigwig-file-names>]
     }
 
 <revcomp-head-section> ::=
-    <empty>
   | "revcomp-task-order" : "auto",
   | "revcomp-task-order" : [<list-of-integer>],
 
 <list-of-bigwig-file-names> ::=
-   <file-name>
- | <file-name>, <file-name>
+   <file-name>«, <file-name>»

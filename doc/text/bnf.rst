@@ -34,27 +34,35 @@ Here is an example::
         dog
       | cat
 
+    <possibly-plural-animal> ::=
+        <animal>«s»
+
     <action> ::=
         pet
       | feed
       | play with
 
     <list-of-actions> ::=
-        <action>
-      | <action> and <list-of-actions>
+        <action>« and <list-of-actions>»
 
     <sentence> ::=
-        You should <list-of-actions> the <animal>.
+        You should <list-of-actions> the <possibly-plural-animal>.
 
-This defines four terms: ``<animal>``, ``<action>``, ``<list-of-actions>``, and ``<sentence>``.
+This defines five terms: ``<animal>``, ``<possibly-plural-animal>``,
+``<action>``, ``<list-of-actions>``, and ``<sentence>``.
 We can then use this to ask whether a string of letters is
 a valid sentence. ``feed the dog`` would not be, but
-``You should feed the cat.`` is, as is ``You should feed and pet and feed the dog``.
+``You should feed the cat.`` is, as is ``You should feed and pet and feed the dogs``.
 
 The pipe character, ``|`` indicates "or". So the term ``<animal>`` can be
 either the string ``dog`` or the string ``cat``, but not both, and nothing else.
 
-Anything that is not a pipe character or inside ``<`` angle brackets ``>`` is a literal.
+Double brackets (``«»``) indicate that whatever is inside is optional.
+So a ``<possibly-plural-animal>`` is defined to be an ``<animal>`` followed
+by an optional letter ``s``.
+
+Anything that is not a pipe character, a double bracket, or
+inside ``<`` angle brackets ``>`` is a literal.
 
 Here are the base terms that are used throughout the documentation:
 

@@ -31,8 +31,7 @@
     "types" : [<list-of-simple-transformation-types>]
 
 <list-of-simple-transformation-types> ::=
-    <simple-transformation-type>
-  | <simple-transformation-type>, <list-of-simple-transformation-types>
+    <simple-transformation-type>«, <list-of-simple-transformation-types>»
 
 <simple-transformation-type> ::=
     "linear"

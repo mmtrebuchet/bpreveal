@@ -18,32 +18,28 @@
   | <list-of-character>
 
 <comprehension-suite> ::=
-    for <list-of-character> in <expression>
-  | for <list-of-character> in <expression> if <expression>
+    for <list-of-character> in <expression> « if <expression>»
   | <comprehension-suite> <comprehension-suite>
 
 <list-of-dict-elems> ::=
     <empty>
-  | <dict-elem>, <list-of-dict-elems>
+  | <dict-elem>«, <list-of-dict-elems>»
 
 <dict-elem> ::=
     <expression>: <expression>
 
 <formals> ::=
     <empty>
-  | <list-of-character>
-  | <list-of-character>, <formals>
+  | <list-of-character>«, <formals>»
   | <formals-with-defaults>
 
 <formals-with-defaults> ::=
     <empty>
-  | <list-of-character>=<expression>
-  | <list-of-character>=<expression>, <formals-with-defaults>
+  | <list-of-character>=<expression>«, <formals-with-defaults>»
 
 <list-of-expression> ::=
     <empty>
-  | <expression>
-  | <expression>, <list-of-expression>
+  | <expression>«, <list-of-expression>»
 
 <bool-op-expr> ::=
     <expression> and <expression>
@@ -61,8 +57,7 @@
   | not <expression>
 
 <compare-suite> ::=
-    <compare-op> <expression> <compare-suite>
-  | <compare-op> <expression>
+    <compare-op> <expression> «<compare-suite>»
 
 <compare-op> ::=
     < | > | <= | >= | == | != | in | not in

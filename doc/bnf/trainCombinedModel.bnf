@@ -10,8 +10,7 @@
   "heads" : [<combined-head-list>]
 
 <combined-head-list> ::=
-    <combined-individual-head>
-  | <combined-individual-head>, <combined-head-list>
+    <combined-individual-head>«, <combined-head-list>»
 
 <combined-individual-head> ::=
     {

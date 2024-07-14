@@ -5,15 +5,15 @@
     }
 
 <seqlet-scanning-settings> ::=
-    <seqlet-tsv-section>
+   «"seqlets-tsv" : <file-name>,»
     "modisco-h5" : <file-name>,
-    <seqlet-contrib-section>
+   «<seqlet-contrib-section>»
     <pattern-spec-section>,
     <quantile-cutoff-section>,
     "trim-threshold" : <number>,
     "trim-padding" : <integer>,
-    "background-probs" : <vector-or-genome>,
-    <quantile-json-section>
+   «"quantile-json" : <file-name>,»
+    "background-probs" : <vector-or-genome>
 
 <quantile-cutoff-section> ::=
     "seq-match-quantile" : <number-or-null>,
@@ -25,41 +25,27 @@
   | "patterns" : [<list-of-pattern-specs>]
 
 <list-of-pattern-specs> ::=
-    <pattern-spec>
-  | <pattern-spec>, <list-of-pattern-specs>
+  | <pattern-spec>«, <list-of-pattern-specs>»
 
 <pattern-spec> ::=
     {
-        <optional-quantile-cutoff-section>
+       «<quantile-cutoff-section>,»
         "metacluster-name" : <string>,
         <pattern-option>
     }
 
 <pattern-option> ::=
      "pattern-name" : <string>
-  |  "pattern-name" : <string>,
-     "short-name" : <string>}
+    «"short-name" : <string>}»
   |  "pattern-names" : [<list-of-string>]
-  |  "pattern-names" : [<list-of-string>],
-     "short-names" : [<list-of-string>]
-
-<optional-quantile-cutoff-section> ::=
-    <quantile-cutoff-section>,
-  | <empty>
+    «"short-names" : [<list-of-string>]»
 
 <vector-or-genome> ::=
     "danRer11" | "hg38" | "dm6" | "mm10" | "sacCer3"
   | [<number>, <number>, <number>, <number>],
 
-<quantile-json-section> ::=
-    <empty>
-  | "quantile-json" : <file-name>,
 
 <seqlet-contrib-section> ::=
-    <empty>
-  | "modisco-contrib-h5" : <file-name>,
+    "modisco-contrib-h5" : <file-name>,
     "modisco-window": <integer>,
 
-<seqlet-tsv-section> ::=
-    <empty>
-  | "seqlets-tsv" : <file-name>,

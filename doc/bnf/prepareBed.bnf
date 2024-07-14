@@ -1,6 +1,6 @@
 <prepare-bed-configuration> ::=
     {
-        <bigwig-section>,
+        "heads" : [<head-preparation-list>]
         "splits" : {<split-settings>},
         "genome" : <file-name>,
         "output-length" : <integer>,
@@ -9,22 +9,16 @@
         <output-file-name-section>,
         "resize-mode" : <resize-mode>,
         <overlap-section>
-        <num-threads-section>
+       «"num-threads" <integer>,»
         <verbosity-section>
     }
 
-<bigwig-section> ::=
-    "heads" : [<head-preparation-list>]
-  | (DEPRECATED) "bigwigs" : [<bigwig-preparation-list>]
-
 <overlap-section> ::=
     "remove-overlaps" : true,
-    "overlap-max-distance" : <integer>,
-  | "remove-overlaps" : false,
+   «"overlap-max-distance" : <integer>,»
 
 <head-preparation-list> ::=
-    <individual-preparation-head>
-  | <individual-preparation-head>, <head-preparation-list>
+  | <individual-preparation-head>«, <head-preparation-list>»
 
 <resize-mode> ::=
     "none"
@@ -75,24 +69,7 @@
     "val-regex" : "<string>"
 
 <list-of-bigwig-files> ::=
-    <file-name>, <list-of-bigwig-files>
-  | <file-name>
+    <file-name>«, <list-of-bigwig-files>»
 
 <list-of-bed-files> ::=
-    <file-name>, <list-of-bed-files>
-  | <file-name>
-
-
-<num-threads-section> ::=
-    <empty>
-  | "num-threads" <integer>,
-
-(DEPRECATED) <bigwig-preparation-list> ::=
-(DEPRECATED)    <individual-preparation-bigwig>
-(DEPRECATED)  | <individual-preparation-bigwig>, <bigwig-preparation-list>
-
-(DEPRECATED) <individual-preparation-bigwig> ::=
-(DEPRECATED)  { "file-name" : <file-name>,
-(DEPRECATED)    <max-cutoff-section>,
-(DEPRECATED)    <min-cutoff-section>
-(DEPRECATED)    }
+    <file-name>«, <list-of-bed-files>»

@@ -2,7 +2,7 @@
     {
         <prediction-settings-section>,
         <prediction-input-section>,
-        <prediction-threads-section>,
+        «"num-threads" : <integer>,»
         <verbosity-section>
     }
 
@@ -29,16 +29,9 @@
     "bed-file": <file-name>
 
 <prediction-fasta-input-section> ::=
-    <prediction-fasta-coordinates-section>
-    "fasta-file" : <file-name>
-
-<prediction-fasta-coordinates-section> ::=
-    <empty>
-  | "coordinates" : {
+   « "coordinates" : {
         "bed-file" : <file-name>,
         "genome" : <file-name>},
-
-<prediction-threads-section> ::=
-    "num-threads" : <integer>,
-  | <empty>
+   »
+    "fasta-file" : <file-name>
 

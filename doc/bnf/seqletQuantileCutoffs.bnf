@@ -2,8 +2,7 @@
     [<list-of-scan-patterns> ]
 
 <list-of-scan-patterns> ::=
-    <scan-pattern>
-    | <scan-pattern>, <list-of-scan-patterns>
+    <scan-pattern>«, <list-of-scan-patterns>»
 
 <scan-pattern> ::=
     {
@@ -21,8 +20,7 @@
     [ <list-of-base-arrays> ]
 
 <list-of-base-arrays> ::=
-    <base-array>
-    | <base-array>, <list-of-base-arrays>
+    <base-array>«, <list-of-base-arrays>»
 
 <base-array> ::=
     [<number>, <number>, <number>, <number>]
