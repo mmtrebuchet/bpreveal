@@ -41,6 +41,7 @@ program, for example.
 * Melanie Weilert
 * Haining Jiang
 * Patrick Moeller
+* Samuel Campbell
 * Anshul Kundaje, Ph.D.
 * Julia Zeitlinger, Ph.D.
 
