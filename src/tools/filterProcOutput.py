@@ -6,16 +6,15 @@ or as a parent process as in ``filterProc trainSoloModel config.json``.
 In the second case, this program will capture both stdout and stderr.
 
 """
-import subprocess as sp
-import selectors
 import os
 import argparse
-import re
-os.environ["PYTHONUNBUFFERED"] = "True"
-import sys
+# import subprocess as sp
+# import selectors
+# import re
+# import sys
 
-
-badLineStrs = [
+'''
+_badLineStrs = [
     r"^W0000.*Skipping the delay kernel.*",
     r"^WARNING: All log messages before absl::InitializeLog\(\) is called are written to STDERR$",
     r"^I0000.*XLA service.* initialized for platform CUDA",
@@ -23,7 +22,7 @@ badLineStrs = [
     r"^I0000.*Compiled cluster using XLA!",
 ]
 
-normalLineStrs = [
+_normalLineStrs = [
     r"^DEBUG : ",
     r"^INFO : ",
     r".*         $",
@@ -41,8 +40,8 @@ normalLineStrs = [
     r"^Restoring model weights from the end of the best epoch",
 ]
 
-badLineRegexes = [re.compile(x) for x in badLineStrs]
-normalLineRegexes = [re.compile(x) for x in normalLineStrs]
+_badLineRegexes = [re.compile(x) for x in _badLineStrs]
+_normalLineRegexes = [re.compile(x) for x in _normalLineStrs]
 
 
 class Writer:
@@ -68,12 +67,12 @@ class Writer:
 
     def checkLine(self, line):
         """Should the given line be printed? Checks against the regexes."""
-        for r in badLineRegexes:
+        for r in _badLineRegexes:
             m = r.match(line)
             if m is not None:
                 return False
         if self.quiet:
-            for r in normalLineRegexes:
+            for r in _normalLineRegexes:
                 m = r.match(line)
                 if m is not None:
                     return False
@@ -118,7 +117,7 @@ def runProc(command, quiet: bool):
     if not sys.stdin.isatty():
         for line in sys.stdin:
             inBuf.add(bytes(line, encoding="utf-8"))
-
+'''
 
 def getParser():
     """Build (but don't parse_args) the parser."""
@@ -138,5 +137,6 @@ def main():
         args.command = ["true"]
     runProc(args.command, args.quiet)
 
-
-main()
+if __name__ == "__main__":
+    os.environ["PYTHONUNBUFFERED"] = "True"
+    main()
