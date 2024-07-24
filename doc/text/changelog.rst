@@ -55,6 +55,16 @@ BPReveal 4.x
 BPReveal 4.3.x
 ^^^^^^^^^^^^^^
 
+BPReveal 4.3.1, 2024-07-24
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Fixed a typo in the motifScan schema that prevented you from giving
+      cutoff parameters to ``motifScan``. Added this as a new test case
+      to the acceptance test.
+CONTRIBUTORS:
+    * Sam Campbell
+
 BPReveal 4.3.0, 2024-06-24
 ''''''''''''''''''''''''''
 
