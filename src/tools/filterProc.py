@@ -8,12 +8,11 @@ In the second case, this program will capture both stdout and stderr.
 """
 import os
 import argparse
-# import subprocess as sp
-# import selectors
-# import re
-# import sys
+import subprocess as sp
+import selectors
+import re
+import sys
 
-'''
 _badLineStrs = [
     r"^W0000.*Skipping the delay kernel.*",
     r"^WARNING: All log messages before absl::InitializeLog\(\) is called are written to STDERR$",
@@ -117,7 +116,6 @@ def runProc(command, quiet: bool):
     if not sys.stdin.isatty():
         for line in sys.stdin:
             inBuf.add(bytes(line, encoding="utf-8"))
-'''
 
 def getParser():
     """Build (but don't parse_args) the parser."""

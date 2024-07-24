@@ -40,7 +40,7 @@ man1 = ["addNoise", "bestMotifsOnly", "checkJson", "interpretFlat",
         "prepareTrainingData", "revcompTools", "shapToBigwig", "shapToNumpy",
         "shiftBigwigs", "shiftPisa", "showModel", "showTrainingProgress",
         "tileGenome", "trainSoloModel", "trainTransformationModel",
-        "trainCombinedModel"]
+        "trainCombinedModel", "filterProc"]
 man3 = ["addNoiseUtils", "bedUtils", "callbacks", "colors", "constants",
         "disableTensorflowLogging", "files", "gaOptimize", "generators",
         "interpretUtils", "jaccard", "layers", "logUtils", "losses", "models",
