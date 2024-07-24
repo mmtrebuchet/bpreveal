@@ -44,7 +44,8 @@ filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "files.py",
                     "interpreter.py", "predictUtils.py", "plotUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
-                   "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py"]
+                   "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py",
+                   "filterProc.py"]
 
 filesToolsMajor = ["addNoise.py"]
 additionalBnfs = ["base.xx", "seqletQuantileCutoffs.xx",

@@ -18,20 +18,26 @@ BREAKING CHANGES:
       is now ``true``. It still issues a warning if you don't set it.
     * ``dumpModiscoSeqlets`` was removed.
     * The shap code was further trimmed down. The BPReveal shap code is really
-      not intended for non-BPReveal models and you should use full-blown deepShap
-      to interpret your own models.
-    * Several breaking changes have arisen from the Keras 3.0 upgrade. For one thing,
-      the loss components now have different names since they are actually metrics and
-      not losses. I'm sure there are more gotchas waiting to be discovered.
+      not intended for non-BPReveal models and you should use full-blown
+      deepShap to interpret your own models.
+    * Several breaking changes have arisen from the Keras 3.0 upgrade. For one
+      thing, the loss components now have different names since they are
+      actually metrics and not losses. I'm sure there are more gotchas waiting
+      to be discovered.
+
+NEW FEATURES:
+    * A new tool was added that filters the output of other programs to get rid
+      of garbage tensorflow warnings and messages. It can wrap another
+      executable or be used as a filter on stdin.
 
 ENHANCEMENTS:
-    * The project now uses Tensorflow 2.16 with full-blown Keras 3.0. This means that
-      models are now saved using the ``.keras`` extension. Old-style models will work
-      albeit with some potential breakage.
+    * The project now uses Tensorflow 2.16 with full-blown Keras 3.0. This
+      means that models are now saved using the ``.keras`` extension. Old-style
+      models will work albeit with some potential breakage.
     * Made the formatting for the bnf documentation more consistent.
-    * Found a way to include the custom losses in the saved model, so you don't need to
-      use custom_objects to load models any more. Of course, you should be using
-      :py:func:`utils.loadModel<bpreveal.utils.loadModel>`.
+    * Found a way to include the custom losses in the saved model, so you don't
+      need to use custom_objects to load models any more. Of course, you should
+      be using :py:func:`utils.loadModel<bpreveal.utils.loadModel>`.
 
 BUG FIXES:
     * Fixed an issue with how losses and metrics are calculated differently.
@@ -40,14 +46,15 @@ BUG FIXES:
     * Tons and tons of stuff to deal with Keras 3.0. Ugh.
 
 DEPRECATIONS:
-    * The addNoise tool is deprecated and will be removed in 6.0.0. It was never useful.
+    * The addNoise tool is deprecated and will be removed in 6.0.0. It was
+      never useful.
 
 KNOWN ISSUES:
-    * Keras has a bug that causes a race condition when loading models.
-      This will be patched in 3.4.2. In the meantime, I have added a lock that prevents
-      multiple processes from loading a model simultaneously, but this only works when
-      all of the readers are created by one master Python program, and not, for example,
-      when using slurm to launch multiple jobs.
+    * Keras has a bug that causes a race condition when loading models. This
+      will be patched in 3.4.2. In the meantime, I have added a lock that
+      prevents multiple processes from loading a model simultaneously, but this
+      only works when all of the readers are created by one master Python
+      program, and not, for example, when using slurm to launch multiple jobs.
 
 BPReveal 4.x
 ------------
