@@ -8,7 +8,7 @@
             "type": "string"
         },
         "seqlet-cutoff-settings": {
-            "$ref": "/schema/motifSeqletCutoffs#definitions/seqlet-scanning-settings"
+            "$ref": "/schema/motifSeqletCutoffs#/definitions/seqlet-scanning-settings"
         },
         "scan-settings": {
             "type": "object",
