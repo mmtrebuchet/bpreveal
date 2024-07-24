@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A little script that removes unhelpful warnings from program outputs.
 
-Can be used either in a pipe, as in `cat log.out | filterProc`
-or as a parent process as in `filterProc trainSoloModel config.json`.
+Can be used either in a pipe, as in ``cat log.out | filterProc``
+or as a parent process as in ``filterProc trainSoloModel config.json``.
 In the second case, this program will capture both stdout and stderr.
 
 """
