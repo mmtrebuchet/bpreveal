@@ -1210,7 +1210,11 @@ class ThreadedBatchPredictor:
             self.start()
         q = self._inQueues[self._inQueueIdx]
         query = (sequence, label)
-        q.put(query, True, QUEUE_TIMEOUT)
+        try:
+            q.put(query, True, QUEUE_TIMEOUT)
+        except queue.Full:
+            q.cancel_join_thread()
+            raise
         self._outQueueOrder.appendleft(self._inQueueIdx)
         # Assign work in a round-robin fashion.
         self._inQueueIdx = (self._inQueueIdx + 1) % self._numThreads
@@ -1305,7 +1309,11 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
                 # Nope, go ahead and give the batcher a spin while we wait.
                 batcher.runBatch(maxSamples=batchSize)
                 while not outQueue.full() and batcher.outputReady():
-                    outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
+                    try:
+                        outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
+                    except queue.Full:
+                        outQueue.cancel_join_thread()
+                        raise
                     predsInFlight -= 1
             continue
         numWaits = 0
@@ -1319,12 +1327,20 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
                 # If there's an answer and the out queue can handle it, go ahead
                 # and send it.
                 while not outQueue.full() and batcher.outputReady():
-                    outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
+                    try:
+                        outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
+                    except queue.Full:
+                        outQueue.cancel_join_thread()
+                        raise
                     predsInFlight -= 1
             case "finishBatch":
                 while predsInFlight:
                     outPred = batcher.getOutput()
-                    outQueue.put(outPred, True, QUEUE_TIMEOUT)
+                    try:
+                        outQueue.put(outPred, True, QUEUE_TIMEOUT)
+                    except queue.Full:
+                        outQueue.cancel_join_thread()
+                        raise
                     predsInFlight -= 1
             case "shutdown":
                 # End the thread.

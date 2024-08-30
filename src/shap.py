@@ -85,6 +85,8 @@ class TFDeepExplainer:
         self.between_ops = None
         # determine the model inputs and outputs
         self.model_inputs = model[0]
+        if not isinstance(self.model_inputs, list):
+            self.model_inputs = [self.model_inputs]
         self.model_output = model[1]
         assert not isinstance(self.model_output, list), \
             "The model output to be explained must be a single tensor!"
@@ -96,7 +98,6 @@ class TFDeepExplainer:
         if useOldKeras:
             import tf_keras  # pylint: disable=import-outside-toplevel
             self.model = tf_keras.Model(model[0], model[1])
-            self.model_inputs = [self.model_inputs]  # I have no idea why.
         else:
             import keras  # pylint: disable=import-outside-toplevel
             self.model = keras.Model(model[0], model[1])

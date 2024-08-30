@@ -106,6 +106,7 @@ import argparse
 import json
 import typing
 from multiprocessing import Process, Queue
+import queue
 import sys
 from numpy._typing import NDArray
 import pyBigWig
@@ -186,7 +187,11 @@ class MetricsCalculator:
             referenceCounts = predictedCounts = np.nan
 
         ret = (regionID, mnllVal, jsd, pearsonr, spearmanr, referenceCounts, predictedCounts)
-        self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
+        try:
+            self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
+        except queue.Full:
+            self.outQueue.cancel_join_thread()
+            raise
 
     def run(self) -> None:
         """Watch the input queue and run queries until you get the stop signal."""
@@ -240,11 +245,16 @@ def regionGenThread(regionsFname: str, regionQueue: Queue,
     with open(regionsFname, "r") as fp:
         regions = [Region(x) for x in fp]
     logUtils.info(f"Number of regions: {len(regions)}")
-    numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
-    for i, r in enumerate(regions):
-        regionQueue.put((r, r, i), timeout=QUEUE_TIMEOUT)
-    for _ in range(numThreads):
-        regionQueue.put(None, timeout=QUEUE_TIMEOUT)
+    try:
+        numberQueue.put(len(regions), timeout=QUEUE_TIMEOUT)
+        for i, r in enumerate(regions):
+            regionQueue.put((r, r, i), timeout=QUEUE_TIMEOUT)
+        for _ in range(numThreads):
+            regionQueue.put(None, timeout=QUEUE_TIMEOUT)
+    except queue.Full:
+        numberQueue.cancel_join_thread()
+        regionQueue.cancel_join_thread()
+        raise
     logUtils.debug("Generator done.")
 
 

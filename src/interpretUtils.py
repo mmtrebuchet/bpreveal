@@ -11,6 +11,7 @@ Here's what you do.
 from typing import Any
 from collections.abc import Iterator, Iterable
 import multiprocessing
+import queue
 import ctypes
 import pysam
 import numpy as np
@@ -1101,7 +1102,11 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
         b.addSample(query)
     logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    outQueue.put(None, timeout=QUEUE_TIMEOUT)
+    try:
+        outQueue.put(None, timeout=QUEUE_TIMEOUT)
+    except queue.Full:
+        outQueue.cancel_join_thread()
+        raise
     outQueue.close()
     logUtils.debug("Batcher thread finished.")
 
@@ -1122,7 +1127,11 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
         b.addSample(query)
     logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    outQueue.put(None, timeout=QUEUE_TIMEOUT)
+    try:
+        outQueue.put(None, timeout=QUEUE_TIMEOUT)
+    except queue.Full:
+        outQueue.cancel_join_thread()  # Let the process crash.
+        raise
     outQueue.close()
     logUtils.debug("Batcher thread finished.")
 
@@ -1132,13 +1141,19 @@ def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator
     """The thread that spins up the generator and emits queries."""
     logUtils.debug("Starting generator thread.")
     generator.construct()
-    for elem in generator:
+    try:
+        for elem in generator:
+            for inQueue in inQueues:
+                inQueue.put(elem, timeout=QUEUE_TIMEOUT)
         for inQueue in inQueues:
-            inQueue.put(elem, timeout=QUEUE_TIMEOUT)
-    for inQueue in inQueues:
-        for _ in range(numBatchers):
-            inQueue.put(None, timeout=QUEUE_TIMEOUT)
-        inQueue.close()
+            for _ in range(numBatchers):
+                inQueue.put(None, timeout=QUEUE_TIMEOUT)
+            inQueue.close()
+    except queue.Full:
+        for inQueue in inQueues:
+            # The batcher is broken, don't worry about cleanup.
+            inQueue.cancel_join_thread()
+        raise
     logUtils.debug("Done with generator, None added to queue.")
     generator.done()
     logUtils.debug("Generator thread finished.")
@@ -1297,7 +1312,11 @@ class _PisaBatcher:
             queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
             ret = PisaResult(queryPred, queryShufPreds, querySequence,  # type: ignore
                              queryShapScores, q.passData, q.index)
-            self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
+            try:
+                self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
+            except queue.Full:
+                self.outQueue.cancel_join_thread()
+                raise
 
 
 class _FlatBatcher:
@@ -1435,7 +1454,11 @@ class _FlatBatcher:
             querySequence = oneHotBuf[i, :, :]
             queryScores = scores[i, :, :]  # type: ignore
             ret = FlatResult(querySequence, queryScores, q.passData, q.index)  # type: ignore
-            self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
+            try:
+                self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
+            except queue.Full:
+                self.outQueue.cancel_join_thread()
+                raise
 
 
 def combineMultAndDiffref(mult: IMPORTANCE_AR_T, originalInput: ONEHOT_AR_T,

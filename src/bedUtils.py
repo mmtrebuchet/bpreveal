@@ -1,6 +1,7 @@
 """Some utilities for dealing with bed files."""
 from typing import Literal, Any
 import multiprocessing
+import queue
 from collections import deque
 import os
 from bpreveal.internal.constants import QUEUE_TIMEOUT
@@ -246,7 +247,11 @@ def _metapeakThread(bwFname: str,
                 totalProfile = profile
             else:
                 totalProfile = totalProfile + profile
-        outQueue.put((totalProfile, numQueries), timeout=QUEUE_TIMEOUT)
+        try:
+            outQueue.put((totalProfile, numQueries), timeout=QUEUE_TIMEOUT)
+        except queue.Full:
+            outQueue.cancel_join_thread()
+            raise
     finally:
         bigwigFp.close()
 
@@ -298,11 +303,15 @@ def metapeak(intervals: pybedtools.BedTool,
             args=(bigwigFname, inQueue, outQueue),
             daemon=True))
         pids[i].start()
-    for interval in intervalList:
-        inQueue.put((interval.chrom, interval.start, interval.end, interval.strand),
-                    timeout=QUEUE_TIMEOUT)
-    for _ in range(numThreads):
-        inQueue.put(None, timeout=QUEUE_TIMEOUT)  # We're done, send the termination signal.
+    try:
+        for interval in intervalList:
+            inQueue.put((interval.chrom, interval.start, interval.end, interval.strand),
+                        timeout=QUEUE_TIMEOUT)
+        for _ in range(numThreads):
+            inQueue.put(None, timeout=QUEUE_TIMEOUT)  # We're done, send the termination signal.
+    except queue.Full:
+        inQueue.cancel_join_thread()
+        raise
     rets = []
     for _ in range(numThreads):
         rets.append(outQueue.get(timeout=QUEUE_TIMEOUT))
@@ -392,7 +401,11 @@ class ParallelCounter:
         :param query: A tuple of (chromosome, start, end) giving the region to look at.
         :param idx: An index that will be returned with the results.
         """
-        self.inQueue.put(query + (idx,), timeout=constants.QUEUE_TIMEOUT)
+        try:
+            self.inQueue.put(query + (idx,), timeout=constants.QUEUE_TIMEOUT)
+        except queue.Full:
+            self.inQueue.cancel_join_thread()
+            raise
         self.inFlight += 1
         while not self.outQueue.empty():
             self.outDeque.appendleft(self.outQueue.get(timeout=constants.QUEUE_TIMEOUT))
@@ -458,21 +471,25 @@ def _counterThread(bigwigFnames: list[str], inQueue: multiprocessing.Queue,
     bwFiles = [pyBigWig.open(fname) for fname in bigwigFnames]
     outDeque = deque()
     inDeque = 0
-    while True:
-        query = inQueue.get(timeout=constants.QUEUE_TIMEOUT)
-        match query:
-            case (chrom, start, end, idx):
-                r = getCounts(pybedtools.Interval(chrom, start, end), bwFiles)
-                outDeque.appendleft((r, idx))
-                inDeque += 1
-                while outQueue.empty and inDeque > 0:
-                    outQueue.put(outDeque.pop())
-                    inDeque -= 1
-            case None:
-                break
-    while inDeque:
-        outQueue.put(outDeque[-1], timeout=constants.QUEUE_TIMEOUT)
-        inDeque -= 1
+    try:
+        while True:
+            query = inQueue.get(timeout=constants.QUEUE_TIMEOUT)
+            match query:
+                case (chrom, start, end, idx):
+                    r = getCounts(pybedtools.Interval(chrom, start, end), bwFiles)
+                    outDeque.appendleft((r, idx))
+                    inDeque += 1
+                    while outQueue.empty and inDeque > 0:
+                        outQueue.put(outDeque.pop(), timeout=constants.QUEUE_TIMEOUT)
+                        inDeque -= 1
+                case None:
+                    break
+        while inDeque:
+            outQueue.put(outDeque[-1], timeout=constants.QUEUE_TIMEOUT)
+            inDeque -= 1
+    except queue.Full:
+        outQueue.cancel_join_thread()
+        raise
     for bwFp in bwFiles:
         bwFp.close()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
