@@ -66,7 +66,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
                 logUtils.debug(f"Loaded old-style model {modelFname}.")
             except OSError:
                 logUtils.error(
-                    "You specified a model named {modelFname} but I couldn't find it. "
+                    f"You specified a model named {modelFname} but I couldn't find it. "
                     "Attempting to load a model with a '.keras' extension. If this "
                     "works, you should update your configuration file to use the new "
                     "extension. This automatic renaming will be removed in BPReveal 7.0.0.")

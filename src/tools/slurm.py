@@ -38,7 +38,7 @@ def configSlurm(shellRcFiles: list[str] | str, envName: str, workingDirectory: s
         condaString += f"conda activate {envName}\n"
 
     return {"workDir": workingDirectory, "sourceShell": sourceShell, "condaString": condaString,
-            "gpuType": "a100", "maxJobs": maxJobs}
+            "gpuType": "any", "maxJobs": maxJobs}
 
 
 def configSlurmLocal(shellRcFiles: list[str] | str, envName: str, workingDirectory: str,
@@ -188,7 +188,7 @@ SLURM_HEADER_GPU = """#!/usr/bin/env zsh
 #SBATCH --time={time:s}
 #SBATCH --output={workdir:s}/logs/{jobName:s}_%A_%a.out
 #SBATCH --partition=gpu
-#SBATCH --gres gpu:{gpuType:s}:1
+#SBATCH --gres gpu{gpuStr:s}:1
 #SBATCH --array=1-{numJobs:d}%{maxJobs:d}
 
 {sourcerc:s}
@@ -214,10 +214,14 @@ def jobsGpu(config: dict, tasks: list[str], jobName: str, ntasks: int, mem: int,
     :param time: How long should the job run, in the format "hh:mm:ss"
     :return: A string giving the name of the slurm job script that was generated.
     """
+    if config["gpuType"] == "any":
+        gpuStr = ""
+    else:
+        gpuStr = f":{config['gpuType']}"
     cmd = SLURM_HEADER_GPU.format(jobName=jobName, ntasks=ntasks, mem=mem,
                                   time=time, numJobs=len(tasks), sourcerc=config["sourceShell"],
                                   workdir=config["workDir"], condastring=config["condaString"],
-                                  gpuType=config["gpuType"], maxJobs=config["maxJobs"])
+                                  gpuStr=gpuStr, maxJobs=config["maxJobs"])
     cmd += extraHeader + "\n\n"
 
     for i, task in enumerate(tasks):

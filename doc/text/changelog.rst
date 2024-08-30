@@ -31,13 +31,16 @@ NEW FEATURES:
       executable or be used as a filter on stdin.
 
 ENHANCEMENTS:
-    * The project now uses Tensorflow 2.16 with full-blown Keras 3.0. This
+    * The project now uses Tensorflow 2.17 with full-blown Keras 3.0. This
       means that models are now saved using the ``.keras`` extension. Old-style
       models will work albeit with some potential breakage.
     * Made the formatting for the bnf documentation more consistent.
     * Found a way to include the custom losses in the saved model, so you don't
       need to use custom_objects to load models any more. Of course, you should
       be using :py:func:`utils.loadModel<bpreveal.utils.loadModel>`.
+    * The slurm tool now allows you to not specify the GPU type for an
+      allocation. This is also now the default if you don't edit the
+      ``gpuType`` entry in the configuration dictionary.
 
 BUG FIXES:
     * Fixed an issue with how losses and metrics are calculated differently.

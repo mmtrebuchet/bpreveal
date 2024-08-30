@@ -806,10 +806,10 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str,
 
         [ {"metacluster-name" : <string>,
         "pattern-name" : <string>,
-        ??"short-name" : <string> ??
-        ??"seq-match-quantile": <number-or-null>??
-        ??"contrib-match-quantile": <number-or-null>??
-        ??"contrib-magnitude-quantile": <number-or-null>??
+        «"short-name" : <string> »
+        «"seq-match-quantile": <number-or-null>»
+        «"contrib-match-quantile": <number-or-null>»
+        «"contrib-magnitude-quantile": <number-or-null>»
         },
         ...
         ]
@@ -819,7 +819,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str,
 
         [ {"metacluster-name" : <string>,
         "pattern-names" : [<string>, ...],
-        ??"short-names" : [<string>,...]??
+        «"short-names" : [<string>,...]»
         },
         ...
         ]

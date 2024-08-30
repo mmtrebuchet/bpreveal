@@ -1,0 +1,308 @@
+digraph BPReveal {
+    program[shape=invhouse, label="program"];
+    file[shape=note, label="file"];
+    files[shape=folder, label="multiple files"];
+
+
+    lengthCalcSolo [shape=invhouse, label="lengthCalc"];
+    lengthCalcSolo -> length
+    allConfigs [shape=folder, label="all config files"];
+    checkJson[shape=invhouse, label="checkJson"];
+    allConfigs -> checkJson;
+    length [shape=cds, label="length (used in most config files)"]
+    prepareBedSoloConfig [shape=note, label="config"];
+    inputBedsSolo [shape=folder, label="Input bias bed files"];
+    inputBigwigsSolo [shape=folder, label="Input bias bigwig files"];
+
+    prepareBedSolo [shape=invhouse, label="prepareBed"];
+    prepareBedSoloConfig -> prepareBedSolo;
+    inputBedsSolo -> prepareBedSolo;
+    inputBigwigsSolo -> prepareBedSolo;
+
+    trainingBedSolo [shape=note, label="training bed file"];
+    validationBedSolo [shape=note, label="Validation bed file"];
+    testBedSolo [shape=note, label="Test bed file"];
+    allBedSolo [shape=note, label="All regions bed file"];
+
+    prepareBedSolo -> trainingBedSolo;
+    prepareBedSolo -> validationBedSolo;
+    prepareBedSolo -> testBedSolo;
+    prepareBedSolo -> allBedSolo;
+
+    prepareTrainingDataSoloConfig [shape=note, label="config"];
+    prepareTrainingDataSoloConfig -> prepareTrainingDataSolo;
+    prepareTrainingDataSolo [shape=invhouse, label="prepareTrainingData"];
+    inputBigwigsSolo -> prepareTrainingDataSolo;
+    trainingBedSolo -> prepareTrainingDataSolo;
+
+    prepareValidationDataSoloConfig [shape=note, label="config"];
+    prepareValidationDataSoloConfig -> prepareValidationDataSolo;
+    prepareValidationDataSolo [shape=invhouse, label="prepareTrainingData"];
+    inputBigwigsSolo -> prepareValidationDataSolo;
+    validationBedSolo -> prepareValidationDataSolo;
+
+
+    trainingH5Solo [shape=note, label="training data h5"];
+    validationH5Solo [shape=note, label="validation data h5"];
+    prepareTrainingDataSolo -> trainingH5Solo;
+    prepareValidationDataSolo -> validationH5Solo;
+
+    trainSoloConfig [shape=note, label="config"];
+    trainSolo [shape=invhouse, label="trainSoloModel"];
+    trainSoloConfig -> trainSolo;
+    trainingH5Solo -> trainSolo;
+    validationH5Solo -> trainSolo;
+    soloHistory [shape=note, label="training history"];
+    soloLogs [shape=note, label="Training output logs"];
+    showTrainingProgressSolo[shape=invhouse, label="showTrainingProgress"];
+    soloLogs -> showTrainingProgressSolo;
+    makeLossPlotsSolo [shape=invhouse, label="makeLossPlots"];
+    soloHistory -> makeLossPlotsSolo;
+
+    soloModel [shape=note, label="Solo model"];
+    trainSolo -> soloModel;
+    trainSolo -> soloLogs;
+    trainSolo -> soloHistory;
+    soloLossPlots [shape=note, label="Loss figures"];
+    makeLossPlotsSolo -> soloLossPlots;
+
+    predictSoloConfig [shape=note, label="config"];
+    predictSolo [shape=invhouse, label="makePredictions"];
+    predictSoloConfig -> predictSolo;
+    soloModel -> predictSolo;
+    allBedSolo -> predictSolo;
+
+    soloPredictionsH5 [shape=note, label="Predictions h5"];
+    predictSolo -> soloPredictionsH5;
+    predToBigwigSolo [shape=invhouse, label="predictToBigwig"];
+    soloPredictionsH5 -> predToBigwigSolo;
+    soloPreds [shape=folder, label="Prediction bigwigs"];
+    predToBigwigSolo -> soloPreds;
+
+    metricsSolo [shape=invhouse, label="metrics"];
+    soloPreds -> metricsSolo;
+    inputBigwigsSolo -> metricsSolo;
+    allBedSolo -> metricsSolo;
+
+    interpretFlatSoloConfig[shape=folder, label="config"];
+    interpretFlatSolo [shape=invhouse, label="interpretFlat"];
+    soloModel -> interpretFlatSolo;
+    interpretFlatSoloConfig -> interpretFlatSolo;
+    allBedSolo -> interpretFlatSolo;
+
+    interpretFlatSoloH5 [shape=folder, label="Importance h5 files"];
+    interpretFlatSolo -> interpretFlatSoloH5
+
+    interpretPisaSoloConfig[shape=folder, label="config"];
+    interpretPisaSolo [shape=invhouse, label="interpretPisa"];
+    soloModel -> interpretPisaSolo;
+    interpretPisaSoloConfig -> interpretPisaSolo;
+
+    interpretPisaSoloH5 [shape=folder, label="PISA h5 files"];
+    interpretPisaSolo -> interpretPisaSoloH5;
+
+    pisaFigureSoloConfig [shape=folder, label="config"];
+    makePisaSolo [shape=invhouse, label="makePisaFigure"];
+    interpretPisaSoloH5 -> makePisaSolo;
+    pisaFigureSoloConfig -> makePisaSolo;
+    pisaFiguresSolo [shape=folder, label="PISA figures"];
+    makePisaSolo -> pisaFiguresSolo;
+
+    shapToNumpySolo [shape=invhouse, label="shapToNumpy"];
+    shapToBigwigSolo [shape=invhouse, label="shapToBigwig"];
+    interpretFlatSoloH5 -> shapToNumpySolo;
+    interpretFlatSoloH5 -> shapToBigwigSolo;
+    soloShapBigwigs [shape=folder, label="importance bigwigs"];
+    shapToBigwigSolo -> soloShapBigwigs;
+    soloShapNumpys [shape=folder, label="Importance data"];
+    shapToNumpySolo -> soloShapNumpys;
+
+    modiscoSolo[shape=invhouse, label="MoDISco"];
+    soloShapNumpys -> modiscoSolo;
+    motifsSolo [shape=folder, label="Modisco motifs"];
+    modiscoSolo -> motifsSolo;
+
+    motifSeqletCutoffsSoloConfig [shape=folder, label="config"];
+    motifSeqletCutoffsSolo [shape=invhouse, label="motifSeqletCutoffs"];
+    motifsSolo -> motifSeqletCutoffsSolo;
+    motifSeqletCutoffsSoloConfig -> motifSeqletCutoffsSolo;
+    seqletTsvSolo [shape=folder, label="Seqlets"];
+    motifSeqletCutoffsSolo -> seqletTsvSolo;
+    seqletJsonSolo [shape=folder, label="Motif cutoffs"];
+    motifSeqletCutoffsSolo -> seqletJsonSolo;
+    interpretFlatSoloH5 -> motifSeqletCutoffsSolo;
+
+    motifScanSoloConfig [shape=folder, label="config"];
+    motifScanSolo [shape=invhouse, label="motifScan"];
+    seqletJsonSolo -> motifScanSolo;
+    motifScanSoloConfig -> motifScanSolo;
+    interpretFlatSoloH5 -> motifScanSolo;
+
+    motifHitsSolo [shape=folder, label="Motif instance bed"];
+    motifScanSolo -> motifHitsSolo;
+
+    motifQuantilesSolo [shape=invhouse, label="motifAddQuantiles"];
+    motifHitsSolo -> motifQuantilesSolo;
+
+    motifQuantiledHitsSolo [shape=folder, label="Motif instance bed"];
+    motifQuantilesSolo -> motifQuantiledHitsSolo;
+
+
+
+    prepareBedJointConfig [shape=note, label="config"];
+    inputBedsJoint [shape=folder, label="Input bed files"];
+    inputBigwigsJoint [shape=folder, label="Input bigwig files"];
+
+    prepareBedJoint [shape=invhouse, label="prepareBed"];
+    prepareBedJointConfig -> prepareBedJoint;
+    inputBedsJoint -> prepareBedJoint;
+    inputBigwigsJoint -> prepareBedJoint;
+
+    trainingBedJoint [shape=note, label="training bed file"];
+    validationBedJoint [shape=note, label="Validation bed file"];
+    testBedJoint [shape=note, label="Test bed file"];
+    allBedJoint [shape=note, label="All regions bed file"];
+
+    prepareBedJoint -> trainingBedJoint;
+    prepareBedJoint -> validationBedJoint;
+    prepareBedJoint -> testBedJoint;
+    prepareBedJoint -> allBedJoint;
+
+    prepareTrainingDataJointConfig [shape=note, label="config"];
+    prepareTrainingDataJointConfig -> prepareTrainingDataJoint;
+    prepareTrainingDataJoint [shape=invhouse, label="prepareTrainingData"];
+    inputBigwigsJoint -> prepareTrainingDataJoint;
+    trainingBedJoint -> prepareTrainingDataJoint;
+
+    prepareValidationDataJointConfig [shape=note, label="config"];
+    prepareValidationDataJointConfig -> prepareValidationDataJoint;
+    prepareValidationDataJoint [shape=invhouse, label="prepareTrainingData"];
+    inputBigwigsJoint -> prepareValidationDataJoint;
+    validationBedJoint -> prepareValidationDataJoint;
+
+
+    trainingH5Joint [shape=note, label="training data h5"];
+    validationH5Joint [shape=note, label="validation data h5"];
+    prepareTrainingDataJoint -> trainingH5Joint;
+    prepareValidationDataJoint -> validationH5Joint;
+
+
+    trainTransformationConfig [shape=invhouse, label="config"];
+    trainTransformation[shape=invhouse, label="trainTransformationModel"];
+    trainTransformationConfig -> trainTransformation;
+    trainingH5Joint -> trainTransformation;
+    soloModel -> trainTransformation;
+    validationH5Joint -> trainTransformation;
+    transformationModel [shape=note, label="Transformation model"];
+    trainTransformation -> transformationModel;
+    blahBlahTransformation [shape=invhouse, label="Predict, interpret, etc..."];
+    transformationModel -> blahBlahTransformation;
+    transformationHistory [shape=note, label="training history"];
+    transformationLogs [shape=note, label="Training output logs"];
+    showTrainingProgressTransformation[shape=invhouse, label="showTrainingProgress"];
+    transformationLogs -> showTrainingProgressTransformation;
+    makeLossPlotsTransformation [shape=invhouse, label="makeLossPlots"];
+    transformationHistory -> makeLossPlotsTransformation;
+    trainTransformation -> transformationLogs;
+    trainTransformation -> transformationHistory;
+
+    trainJointConfig [shape=note, label="config"];
+    trainJoint [shape=invhouse, label="trainCombinedModel"];
+    trainJointConfig -> trainJoint;
+    trainingH5Joint -> trainJoint;
+    transformationModel -> trainJoint;
+    validationH5Joint -> trainJoint;
+    jointHistory [shape=note, label="training history"];
+    jointLogs [shape=note, label="Training output logs"];
+    showTrainingProgressJoint[shape=invhouse, label="showTrainingProgress"];
+    jointLogs -> showTrainingProgressJoint;
+    makeLossPlotsJoint [shape=invhouse, label="makeLossPlots"];
+    jointHistory -> makeLossPlotsJoint;
+
+    jointModel [shape=note, label="Joint model"];
+    trainJoint -> jointModel;
+    trainJoint -> jointLogs;
+    trainJoint -> jointHistory;
+    jointLossPlots [shape=note, label="Loss figures"];
+    makeLossPlotsJoint -> jointLossPlots;
+    predictJointConfig [shape=note, label="config"];
+    predictJoint [shape=invhouse, label="makePredictions"];
+    predictJointConfig -> predictJoint;
+    jointModel -> predictJoint;
+    allBedJoint -> predictJoint;
+
+    jointPredictionsH5 [shape=note, label="Predictions h5"];
+    predictJoint -> jointPredictionsH5;
+    predToBigwigJoint [shape=invhouse, label="predictToBigwig"];
+    jointPredictionsH5 -> predToBigwigJoint;
+    jointPreds [shape=folder, label="Prediction bigwigs"];
+    predToBigwigJoint -> jointPreds;
+
+    metricsJoint [shape=invhouse, label="metrics"];
+    jointPreds -> metricsJoint;
+    inputBigwigsJoint -> metricsJoint;
+    allBedJoint -> metricsJoint;
+
+    interpretFlatJointConfig[shape=folder, label="config"];
+    interpretFlatJoint [shape=invhouse, label="interpretFlat"];
+    jointModel -> interpretFlatJoint;
+    interpretFlatJointConfig -> interpretFlatJoint;
+    allBedJoint -> interpretFlatJoint;
+
+    interpretFlatJointH5 [shape=folder, label="Importance h5 files"];
+    interpretFlatJoint -> interpretFlatJointH5
+
+    interpretPisaJointConfig[shape=folder, label="config"];
+    interpretPisaJoint [shape=invhouse, label="interpretPisa"];
+    jointModel -> interpretPisaJoint;
+    interpretPisaJointConfig -> interpretPisaJoint;
+
+    interpretPisaJointH5 [shape=folder, label="PISA h5 files"];
+    interpretPisaJoint -> interpretPisaJointH5;
+
+    pisaFigureJointConfig [shape=folder, label="config"];
+    makePisaJoint [shape=invhouse, label="makePisaFigure"];
+    interpretPisaJointH5 -> makePisaJoint;
+    pisaFigureJointConfig -> makePisaJoint;
+    pisaFiguresJoint [shape=folder, label="PISA figures"];
+    makePisaJoint -> pisaFiguresJoint;
+
+    shapToNumpyJoint [shape=invhouse, label="shapToNumpy"];
+    shapToBigwigJoint [shape=invhouse, label="shapToBigwig"];
+    interpretFlatJointH5 -> shapToNumpyJoint;
+    interpretFlatJointH5 -> shapToBigwigJoint;
+    jointShapBigwigs [shape=folder, label="importance bigwigs"];
+    shapToBigwigJoint -> jointShapBigwigs;
+    jointShapNumpys [shape=folder, label="Importance data"];
+    shapToNumpyJoint -> jointShapNumpys;
+
+    modiscoJoint[shape=invhouse, label="MoDISco"];
+    jointShapNumpys -> modiscoJoint;
+    motifsJoint [shape=folder, label="Modisco motifs"];
+    modiscoJoint -> motifsJoint;
+
+    motifSeqletCutoffsJointConfig [shape=folder, label="config"];
+    motifSeqletCutoffsJoint [shape=invhouse, label="motifSeqletCutoffs"];
+    motifsJoint -> motifSeqletCutoffsJoint;
+    motifSeqletCutoffsJointConfig -> motifSeqletCutoffsJoint;
+    seqletTsvJoint [shape=folder, label="Seqlets"];
+    motifSeqletCutoffsJoint -> seqletTsvJoint;
+    seqletJsonJoint [shape=folder, label="Motif cutoffs"];
+    motifSeqletCutoffsJoint -> seqletJsonJoint;
+    interpretFlatJointH5 -> motifSeqletCutoffsJoint;
+
+    motifScanJointConfig [shape=folder, label="config"];
+    motifScanJoint [shape=invhouse, label="motifScan"];
+    seqletJsonJoint -> motifScanJoint;
+    motifScanJointConfig -> motifScanJoint;
+    interpretFlatJointH5 -> motifScanJoint;
+
+    motifHitsJoint [shape=folder, label="Motif instance bed"];
+    motifScanJoint -> motifHitsJoint;
+
+    motifQuantilesJoint [shape=invhouse, label="motifAddQuantiles"];
+    motifHitsJoint -> motifQuantilesJoint;
+
+    motifQuantiledHitsJoint [shape=folder, label="Motif instance bed"];
+    motifQuantilesJoint -> motifQuantiledHitsJoint;
+}

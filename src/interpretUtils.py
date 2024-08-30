@@ -378,7 +378,7 @@ class PisaRunner:
             case 2:
                 memFrac = 0.4
             case 3:
-                memFrac = 0.28
+                memFrac = 0.25
             case _:
                 logUtils.error("Very high number of batchers requested. "
                                "BPReveal has not been tested with 4 batchers!")
@@ -853,6 +853,7 @@ class ListGenerator(Generator):
 
     def __init__(self, sequences: Iterable[str],
                  passDataList: list | None = None):
+        self._readHead = 0
         self._sequences = list(sequences)
         self.numSamples = len(self._sequences)
         self.inputLength = len(self._sequences[0])
@@ -879,15 +880,12 @@ class ListGenerator(Generator):
 
     def __next__(self) -> Query:
         """Get the next query, or raise StopIteration."""
-        if len(self._sequences) == 0:
+        if len(self._sequences) == self._readHead:
             raise StopIteration()
-        # Eat the first sequence, index, and passData, then return a query.
-        oneHotSequence = utils.oneHotEncode(self._sequences[0])
-        self._sequences = self._sequences[1:]
-        idx = self._indexes[0]
-        self._indexes = self._indexes[1:]
-        passData = self._passData[0]
-        self._passData = self._passData[1:]
+        oneHotSequence = utils.oneHotEncode(self._sequences[self._readHead])
+        idx = self._indexes[self._readHead]
+        passData = self._passData[self._readHead]
+        self._readHead += 1
         q = Query(oneHotSequence, passData, idx)
         return q
 

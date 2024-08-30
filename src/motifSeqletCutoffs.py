@@ -39,8 +39,7 @@ modisco-contrib-h5
     :py:mod:`interpretFlat<bpreveal.interpretFlat>`, which is necessary to
     recover the genomic coordinates of the seqlets, since the Modisco hdf5
     doesn't contain that info. The contribution scores are *not* extracted from
-    this file, just coordinates. *THIS DOES NOT CURRENTLY WORK, SINCE SEQLET
-    INDEXES ARE RESET BY MODISCO*
+    this file, just coordinates.
 
 modisco-window
     (Optional, will become mandatory in 6.0.0)
@@ -93,6 +92,8 @@ background-probs
 patterns
     May be either a pattern spec (see below) or the string "all", in which case
     every pattern will be used to scan.
+    See :py:func:`motifUtils.makePatternObjects<bpreveal.motifUtils.makePatternObjects>`
+    for more information on the pattern specs.
 
 metacluster-name
     Will be something like ``pos_patterns`` or ``neg_patterns``.
@@ -110,6 +111,7 @@ short-name
 pattern-names, short-names
     Instead of providing a pattern-spec for each pattern, you may include a
     list of patterns within one metacluster. These are lists of strings.
+
 
 Output Specification
 --------------------

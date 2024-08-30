@@ -19,6 +19,7 @@ _badLineStrs = [
     r"^I0000.*XLA service.* initialized for platform CUDA",
     r"^I0000.*StreamExecutor device \(0\):",
     r"^I0000.*Compiled cluster using XLA!",
+    r"^I0000.*successful NUMA node read from SysFS had negative value.*$",
 ]
 
 _normalLineStrs = [

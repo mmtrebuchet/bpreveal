@@ -1,0 +1,82 @@
+digraph BPReveal {
+
+    inputBedsSolo [shape=note, label="Input bed"];
+    inputBigwigsSolo [shape=note, label="Input bigwig"];
+
+    prepareBedSolo [shape=invhouse, label="prepareBed"];
+    inputBedsSolo -> prepareBedSolo;
+    inputBigwigsSolo -> prepareBedSolo;
+
+    splitsSolo [shape=note, label="bed files"];
+
+    prepareBedSolo -> splitsSolo;
+
+    prepareTrainingDataSolo [shape=invhouse, label="prepareTrainingData"];
+    splitsSolo -> prepareTrainingDataSolo;
+    inputBigwigsSolo -> prepareTrainingDataSolo;
+
+    trainingH5Solo [shape=note, label="training data h5"];
+    prepareTrainingDataSolo -> trainingH5Solo;
+
+    trainSolo [shape=invhouse, label="trainSoloModel"];
+    trainingH5Solo -> trainSolo;
+
+    soloModel [shape=note, label="Solo model"];
+    trainSolo -> soloModel;
+
+    predictSolo [shape=invhouse, label="makePredictions"];
+    soloModel -> predictSolo;
+    splitsSolo -> predictSolo;
+
+    soloPredictionsH5 [shape=note, label="Predictions h5"];
+    predictSolo -> soloPredictionsH5;
+    predToBigwigSolo [shape=invhouse, label="predictToBigwig"];
+    soloPredictionsH5 -> predToBigwigSolo;
+    soloPreds [shape=note, label="Prediction bigwig"];
+    predToBigwigSolo -> soloPreds;
+
+    metricsSolo [shape=invhouse, label="metrics"];
+    soloPreds -> metricsSolo;
+    inputBigwigsSolo -> metricsSolo;
+    splitsSolo -> metricsSolo;
+
+    interpretFlatSolo [shape=invhouse, label="interpretFlat"];
+    soloModel -> interpretFlatSolo;
+    splitsSolo -> interpretFlatSolo;
+
+    interpretFlatSoloH5 [shape=note, label="Importance h5"];
+    interpretFlatSolo -> interpretFlatSoloH5
+
+    interpretPisaSolo [shape=invhouse, label="interpretPisa"];
+    soloModel -> interpretPisaSolo;
+
+    interpretPisaSoloH5 [shape=note, label="PISA h5"];
+    interpretPisaSolo -> interpretPisaSoloH5;
+
+    makePisaSolo [shape=invhouse, label="makePisaFigure"];
+    interpretPisaSoloH5 -> makePisaSolo;
+    pisaFiguresSolo [shape=note, label="PISA figure"];
+    makePisaSolo -> pisaFiguresSolo;
+
+    shapToNumpySolo [shape=invhouse, label="shapToNumpy"];
+    shapToBigwigSolo [shape=invhouse, label="shapToBigwig"];
+    interpretFlatSoloH5 -> shapToNumpySolo;
+    interpretFlatSoloH5 -> shapToBigwigSolo;
+    soloShapBigwigs [shape=note, label="importance bigwig"];
+    shapToBigwigSolo -> soloShapBigwigs;
+    soloShapNumpys [shape=note, label="Modisco inputs"];
+    shapToNumpySolo -> soloShapNumpys;
+
+    modiscoSolo[shape=invhouse, label="MoDISco"];
+    soloShapNumpys -> modiscoSolo;
+    motifsSolo [shape=note, label="Modisco motifs"];
+    modiscoSolo -> motifsSolo;
+
+    motifScanSolo [shape=invhouse, label="motifScan"];
+    interpretFlatSoloH5 -> motifScanSolo;
+
+    motifHitsSolo [shape=note, label="Motif instance bed"];
+    motifsSolo -> motifScanSolo
+    motifScanSolo -> motifHitsSolo;
+
+}
