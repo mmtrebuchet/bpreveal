@@ -11,7 +11,6 @@ Here's what you do.
 from typing import Any
 from collections.abc import Iterator, Iterable
 import multiprocessing
-import queue
 import ctypes
 import pysam
 import numpy as np
@@ -23,8 +22,9 @@ from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal import ushuffle
 from bpreveal.internal.constants import IMPORTANCE_AR_T, NUM_BASES, ONEHOT_T, ONEHOT_AR_T, \
-    IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_T, QUEUE_TIMEOUT
+    IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_T
 import bpreveal.internal.files as bprfiles
+from bpreveal.internal.crashQueue import CrashQueue
 
 
 class Query:
@@ -287,10 +287,10 @@ class FlatRunner:
         logUtils.info("Initializing interpretation runner.")
         self._profileSaver = profileSaver
         self._countsSaver = countsSaver
-        self._profileInQueue = multiprocessing.Queue(100)
-        self._countsInQueue = multiprocessing.Queue(100)
-        self._profileOutQueue = multiprocessing.Queue(100)
-        self._countsOutQueue = multiprocessing.Queue(100)
+        self._profileInQueue = CrashQueue(maxsize=100)
+        self._countsInQueue = CrashQueue(maxsize=100)
+        self._profileOutQueue = CrashQueue(maxsize=100)
+        self._countsOutQueue = CrashQueue(maxsize=100)
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._profileInQueue, self._countsInQueue], generator, 1),
             daemon=True)
@@ -367,8 +367,8 @@ class PisaRunner:
                  receptiveField: int, kmerSize: int, numBatchers: int):
         logUtils.info("Initializing PISA runner.")
         self.numBatchers = numBatchers
-        self._inQueue = multiprocessing.Queue(100)
-        self._outQueue = multiprocessing.Queue(100)
+        self._inQueue = CrashQueue(maxsize=100)
+        self._outQueue = CrashQueue(maxsize=100)
 
         self._genThread = multiprocessing.Process(target=_generatorThread,
             args=([self._inQueue], generator, self.numBatchers),
@@ -1086,8 +1086,8 @@ class PisaBedGenerator(Generator):
         self.genome.close()
 
 
-def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
-                       outQueue: multiprocessing.Queue, headID: int, numHeads: int,
+def _flatBatcherThread(modelName: str, batchSize: int, inQueue: CrashQueue,
+                       outQueue: CrashQueue, headID: int, numHeads: int,
                        taskIDs: list[int], numShuffles: int, mode: str,
                        kmerSize: int) -> None:
     """The thread that spins up the batcher."""
@@ -1096,23 +1096,19 @@ def _flatBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                      numHeads, taskIDs, numShuffles, mode, kmerSize)
     logUtils.debug("Batcher created.")
     while True:
-        query = inQueue.get(timeout=QUEUE_TIMEOUT)
+        query = inQueue.get()
         if query is None:
             break
         b.addSample(query)
     logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    try:
-        outQueue.put(None, timeout=QUEUE_TIMEOUT)
-    except queue.Full:
-        outQueue.cancel_join_thread()
-        raise
+    outQueue.put(None)
     outQueue.close()
     logUtils.debug("Batcher thread finished.")
 
 
-def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.Queue,
-                       outQueue: multiprocessing.Queue, headID: int, taskID: int,
+def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: CrashQueue,
+                       outQueue: CrashQueue, headID: int, taskID: int,
                        numShuffles: int, receptiveField: int, kmerSize: int,
                        memFrac: float) -> None:
     """The thread that spins up the batcher."""
@@ -1121,52 +1117,42 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: multiprocessing.
                      receptiveField, kmerSize, memFrac)
     logUtils.debug("Batcher created.")
     while True:
-        query = inQueue.get(timeout=QUEUE_TIMEOUT)
+        query = inQueue.get()
         if query is None:
             break
         b.addSample(query)
     logUtils.debug("Last query received. Finishing batcher thread.")
     b.finishBatch()
-    try:
-        outQueue.put(None, timeout=QUEUE_TIMEOUT)
-    except queue.Full:
-        outQueue.cancel_join_thread()  # Let the process crash.
-        raise
+    outQueue.put(None)
     outQueue.close()
     logUtils.debug("Batcher thread finished.")
 
 
-def _generatorThread(inQueues: list[multiprocessing.Queue], generator: Generator,
+def _generatorThread(inQueues: list[CrashQueue], generator: Generator,
                      numBatchers: int) -> None:
     """The thread that spins up the generator and emits queries."""
     logUtils.debug("Starting generator thread.")
     generator.construct()
-    try:
-        for elem in generator:
-            for inQueue in inQueues:
-                inQueue.put(elem, timeout=QUEUE_TIMEOUT)
+    for elem in generator:
         for inQueue in inQueues:
-            for _ in range(numBatchers):
-                inQueue.put(None, timeout=QUEUE_TIMEOUT)
-            inQueue.close()
-    except queue.Full:
-        for inQueue in inQueues:
-            # The batcher is broken, don't worry about cleanup.
-            inQueue.cancel_join_thread()
-        raise
+            inQueue.put(elem)
+    for inQueue in inQueues:
+        for _ in range(numBatchers):
+            inQueue.put(None)
+        inQueue.close()
     logUtils.debug("Done with generator, None added to queue.")
     generator.done()
     logUtils.debug("Generator thread finished.")
 
 
-def _saverThread(outQueue: multiprocessing.Queue, saver: Saver,
+def _saverThread(outQueue: CrashQueue, saver: Saver,
                  numBatchers: int) -> None:
     """The thread that spins up the saver."""
     logUtils.debug("Saver thread started.")
     saver.construct()
     batchersLeft = numBatchers
     while True:
-        rv = outQueue.get(timeout=QUEUE_TIMEOUT)
+        rv = outQueue.get()
         if rv is None:
             batchersLeft -= 1
             if batchersLeft == 0:
@@ -1194,7 +1180,7 @@ class _PisaBatcher:
     :param memFrac: What fraction of the total GPU memory is this batcher allowed to use?
     """
 
-    def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
+    def __init__(self, modelFname: str, batchSize: int, outQueue: CrashQueue,
                  headID: int, taskID: int, numShuffles: int, receptiveField: int,
                  kmerSize: int, memFrac: float):
         logUtils.info("Initializing batcher.")
@@ -1312,11 +1298,7 @@ class _PisaBatcher:
             queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
             ret = PisaResult(queryPred, queryShufPreds, querySequence,  # type: ignore
                              queryShapScores, q.passData, q.index)
-            try:
-                self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
-            except queue.Full:
-                self.outQueue.cancel_join_thread()
-                raise
+            self.outQueue.put(ret)
 
 
 class _FlatBatcher:
@@ -1338,7 +1320,7 @@ class _FlatBatcher:
     :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
     """
 
-    def __init__(self, modelFname: str, batchSize: int, outQueue: multiprocessing.Queue,
+    def __init__(self, modelFname: str, batchSize: int, outQueue: CrashQueue,
                  headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
                  kmerSize: int):
         logUtils.info("Initializing batcher.")
@@ -1454,11 +1436,7 @@ class _FlatBatcher:
             querySequence = oneHotBuf[i, :, :]
             queryScores = scores[i, :, :]  # type: ignore
             ret = FlatResult(querySequence, queryScores, q.passData, q.index)  # type: ignore
-            try:
-                self.outQueue.put(ret, timeout=QUEUE_TIMEOUT)
-            except queue.Full:
-                self.outQueue.cancel_join_thread()
-                raise
+            self.outQueue.put(ret)
 
 
 def combineMultAndDiffref(mult: IMPORTANCE_AR_T, originalInput: ONEHOT_AR_T,

@@ -2,9 +2,9 @@
 from collections import deque
 import multiprocessing
 import multiprocessing.synchronize
-import queue
 import subprocess as sp
 import typing
+import queue
 from collections.abc import Iterable
 import h5py
 import scipy
@@ -16,8 +16,9 @@ from bpreveal import logUtils
 # find them.
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
-    QUEUE_TIMEOUT, LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T
+    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T
 from bpreveal.internal import constants
+from bpreveal.internal.crashQueue import CrashQueue
 
 
 def loadModel(modelFname: str):  # noqa: ANN201
@@ -1138,8 +1139,8 @@ class ThreadedBatchPredictor:
             self._batchers = []
 
             for _ in range(self._numThreads):
-                nextInQueue = multiprocessing.Queue(10000)
-                nextOutQueue = multiprocessing.Queue(10000)
+                nextInQueue = CrashQueue(maxsize=10000)
+                nextOutQueue = CrashQueue(maxsize=10000)
                 self._inQueues.append(nextInQueue)
                 self._outQueues.append(nextOutQueue)
                 nextBatcher = multiprocessing.Process(
@@ -1172,11 +1173,11 @@ class ThreadedBatchPredictor:
             for i in range(self._numThreads):
                 self._inQueues[i].put("shutdown")
                 self._inQueues[i].close()
-                self._batchers[i].join(QUEUE_TIMEOUT)  # Wait one second.
+                self._batchers[i].join(5)  # Wait 5 seconds.
                 if self._batchers[i].exitcode is None:
                     # The process failed to die. Kill it more forcefully.
                     self._batchers[i].terminate()
-                self._batchers[i].join(QUEUE_TIMEOUT)  # Wait one second.
+                self._batchers[i].join(5)  # Wait 5 seconds.
                 self._batchers[i].close()
                 self._outQueues[i].close()
             del self._inQueues
@@ -1210,11 +1211,7 @@ class ThreadedBatchPredictor:
             self.start()
         q = self._inQueues[self._inQueueIdx]
         query = (sequence, label)
-        try:
-            q.put(query, True, QUEUE_TIMEOUT)
-        except queue.Full:
-            q.cancel_join_thread()
-            raise
+        q.put(query)
         self._outQueueOrder.appendleft(self._inQueueIdx)
         # Assign work in a round-robin fashion.
         self._inQueueIdx = (self._inQueueIdx + 1) % self._numThreads
@@ -1268,13 +1265,13 @@ class ThreadedBatchPredictor:
                 self._inQueues[nextQueueIdx].put("finishBatch")
             else:
                 raise queue.Empty("The batcher is empty; cannot getOutput().")
-        ret = self._outQueues[nextQueueIdx].get(True, QUEUE_TIMEOUT)
+        ret = self._outQueues[nextQueueIdx].get()
         self._inFlight -= 1
         return ret
 
 
-def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Queue,
-                   outQueue: multiprocessing.Queue) -> None:
+def _batcherThread(modelFname: str, batchSize: int, inQueue: CrashQueue,
+                   outQueue: CrashQueue) -> None:
     """Run batches from the ``ThreadedBatchPredictor`` in this separate thread.
 
     .. note::
@@ -1296,7 +1293,7 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
         # No timeout because this batcher could be waiting for a very long time to get
         # inputs.
         try:
-            inVal = inQueue.get(True, 0.1)
+            inVal = inQueue.get(timeout=0.1)
         except queue.Empty:
             numWaits += 1
             # There was no input. Are we sitting on predictions that we could go ahead
@@ -1309,11 +1306,7 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
                 # Nope, go ahead and give the batcher a spin while we wait.
                 batcher.runBatch(maxSamples=batchSize)
                 while not outQueue.full() and batcher.outputReady():
-                    try:
-                        outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
-                    except queue.Full:
-                        outQueue.cancel_join_thread()
-                        raise
+                    outQueue.put(batcher.getOutput())
                     predsInFlight -= 1
             continue
         numWaits = 0
@@ -1327,20 +1320,12 @@ def _batcherThread(modelFname: str, batchSize: int, inQueue: multiprocessing.Que
                 # If there's an answer and the out queue can handle it, go ahead
                 # and send it.
                 while not outQueue.full() and batcher.outputReady():
-                    try:
-                        outQueue.put(batcher.getOutput(), True, QUEUE_TIMEOUT)
-                    except queue.Full:
-                        outQueue.cancel_join_thread()
-                        raise
+                    outQueue.put(batcher.getOutput())
                     predsInFlight -= 1
             case "finishBatch":
                 while predsInFlight:
                     outPred = batcher.getOutput()
-                    try:
-                        outQueue.put(outPred, True, QUEUE_TIMEOUT)
-                    except queue.Full:
-                        outQueue.cancel_join_thread()
-                        raise
+                    outQueue.put(outPred)
                     predsInFlight -= 1
             case "shutdown":
                 # End the thread.

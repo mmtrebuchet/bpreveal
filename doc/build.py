@@ -40,8 +40,8 @@ filesApi = ["bedUtils.py", "callbacks.py", "colors.py", "gaOptimize.py",
             "plotting.py", "schema.py", "training.py", "ushuffle.py",
             "utils.py"]
 
-filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "files.py",
-                    "interpreter.py", "predictUtils.py", "plotUtils.py"]
+filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "crashQueue.py",
+                    "files.py", "interpreter.py", "predictUtils.py", "plotUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py",

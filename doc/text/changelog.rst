@@ -47,6 +47,10 @@ BUG FIXES:
       This required adding a brand new callback to make the loss functions and
       the metrics mean the same thing.
     * Tons and tons of stuff to deal with Keras 3.0. Ugh.
+    * Fixed a deadlock where a consumer of a queue could crash and cause the
+      producer thread to hang, waiting for the queue to drain. Timeout errors
+      now cause the underlying queue to ``cancel_join_thread()``, avoiding
+      the deadlock.
 
 DEPRECATIONS:
     * The addNoise tool is deprecated and will be removed in 6.0.0. It was
@@ -54,7 +58,7 @@ DEPRECATIONS:
 
 KNOWN ISSUES:
     * Keras has a bug that causes a race condition when loading models. This
-      will be patched in 3.4.2. In the meantime, I have added a lock that
+      was patched in 3.5.0. In the meantime, I have added a lock that
       prevents multiple processes from loading a model simultaneously, but this
       only works when all of the readers are created by one master Python
       program, and not, for example, when using slurm to launch multiple jobs.
