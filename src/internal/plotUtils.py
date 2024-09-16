@@ -84,7 +84,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
             scale(sx=hstretch, sy=vstretch).\
             translate(tx=bbox.xmin, ty=bbox.ymin)
         charPath = transformation.transform_path(tmpPath)
-        patch = PathPatch(charPath, facecolor=color, lw=0.3)
+        patch = PathPatch(charPath, facecolor=color, lw=0.0)
         ax.add_patch(patch)
 
     def getColor(pos: int, base: str) -> RGB_T:
@@ -660,8 +660,8 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
     axStopY = axStartY + shearMat.shape[0]
 
     plotMat = np.array(shearMat)
-    plotMat *= math.log10(math.e) * 10
-    colorSpan *= math.log10(math.e) * 10
+    plotMat *= math.log2(math.e)
+    colorSpan *= math.log2(math.e)
     norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
     smap = ScalarMappable(norm=norm, cmap=cmap)
     extent = (genomeWindowStart, genomeWindowStart + xlen,
@@ -745,9 +745,9 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
 
     plotMat = np.array(similarityMat)
     # convert into dB
-    plotMat *= math.log10(math.e) * 10
-    colorSpan *= math.log10(math.e) * 10
-    minValue *= math.log10(math.e) * 10
+    plotMat *= math.log2(math.e)
+    colorSpan *= math.log2(math.e)
+    minValue *= math.log2(math.e)
 
     def addLine(xLower: int, xUpper: int, value: float) -> bool | tuple[float, PathPatch]:
         if abs(value) < minValue:
@@ -820,13 +820,15 @@ def addCbar(pisaCax: ScalarMappable, axCbar: AXES_T, fontSizeTicks: int,
     """
     cbar = plt.colorbar(mappable=pisaCax, cax=axCbar)
     bottom, top = axCbar.get_ylim()
-    axCbar.set_yticks(cbar.get_ticks(), [f"{x:0.1f}" for x in cbar.get_ticks()],
+    axCbar.set_yticks(cbar.get_ticks(), [f"{x:0.2f}" for x in cbar.get_ticks()],
                       fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
     axCbar.set_ylim(bottom, top)
     if mini:
-        axCbar.set_xlabel("PISA\neffect\n(dBr)", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
+        axCbar.set_xlabel("PISA\neffect\n(log₂(fc))",
+                          fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
     else:
-        axCbar.set_xlabel("PISA effect\n(dBr)", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
+        axCbar.set_xlabel("PISA effect\n(log₂(fc))",
+                          fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
 
 
 def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontSize: int) -> None:

@@ -217,6 +217,11 @@ def loadFonts() -> None:
         oldFaces = plt.rcParams["font.sans-serif"]
         plt.rcParams["font.sans-serif"] = ["Libertinus Sans"] + oldFaces
         plt.rcParams["font.family"] = "serif"
+        plt.rcParams["mathtext.fontset"] = "custom"
+        plt.rcParams["mathtext.rm"] = "Libertinus Serif"
+        plt.rcParams["mathtext.it"] = "Libertinus Serif:italic"
+        plt.rcParams["mathtext.bf"] = "Libertinus Serif:bold"
+        plt.rcParams["mathtext.cal"] = "Libertinus Serif:italic"
         logUtils.debug("Configured matplotlib default fonts.")
     except Exception as e:  # pylint: disable=broad-exception-caught
         # If it didn't work, that's okay. User will still get good enough fonts.
