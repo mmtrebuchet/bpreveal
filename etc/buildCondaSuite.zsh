@@ -91,8 +91,8 @@ fi
 if [ "$INSTALL_DEVTOOLS" = true ] ; then
     runAndCheck ${CONDA_BIN} install --yes -c conda-forge flake8 pydocstyle \
         pylint sphinx sphinx_rtd_theme sphinx-argparse sphinx-autodoc-typehints coverage
-    runAndCheck ${PIP_BIN} install --no-input flake8-bugbear flake8-mutable flake8-print \
-        flake8-eradicate flake8-annotations flake8-pep585
+    runAndCheck ${PIP_BIN} install --no-input flake8-bugbear flake8-mutable \
+        flake8-print flake8-eradicate flake8-annotations flake8-pep585
 fi
 
 if [ "$INSTALL_MISC" = true ] ; then
