@@ -10,8 +10,8 @@ BPReveal 5.x
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.0.0, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 5.0.0, 2024-09-25
+''''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * The default value of ``correct-receptive-field`` in interpretPisa
