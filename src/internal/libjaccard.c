@@ -7,6 +7,10 @@
  * and then run f2py jaccard.pyf jaccard.c -c
  * and the numpy f2py module will magically create a python module that you can import.
  *
+ * While this code is entirely my own, the arithmetic is based on the original
+ * BPNet code, which is licensed under an MIT-style license. You can find a copy
+ * at ``etc/bpnet_license.txt``.
+ *
  */
 
 

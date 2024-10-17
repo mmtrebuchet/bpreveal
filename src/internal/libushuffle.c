@@ -285,7 +285,9 @@ void shuffle(const char *s, char *t, int l, int k) {
     shuffle2(t);
 }
 
-
+/*
+ * Code below this point was added by Charles McAnany.
+ * */
 
 void seedRng(unsigned int seed) {
     srandom(seed);

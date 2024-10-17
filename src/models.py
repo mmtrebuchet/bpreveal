@@ -1,4 +1,12 @@
-"""Functions to build BPNet-style models."""
+"""Functions to build BPNet-style models.
+
+The model architectures are generally derived from the basepairmodels
+repository, which is released under an MIT-style license. You can find a copy
+at ``etc/basepairmodels_license.txt``.
+
+The arithmetic for residual models is derived from ChromBPNet, but the code is
+not derived from that project.
+"""
 from tensorflow.keras.backend import int_shape  # type: ignore
 import keras.layers as klayers  # type: ignore
 import keras.models as kmodels  # type: ignore

@@ -1,4 +1,8 @@
-"""Defines the Multinomial NLL loss and the adaptive counts loss."""
+"""Defines the Multinomial NLL loss and the adaptive counts loss.
+
+These are derived from the basepairmodels repository, which is licensed under
+an MIT license. You can find a copy at ``etc/basepairmodels_license.txt``.
+"""
 from collections.abc import Callable
 import tensorflow as tf
 import tensorflow_probability as tfp

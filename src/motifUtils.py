@@ -1,4 +1,9 @@
-"""Provides a set of classes and functions to perform CWM-scanning."""
+"""Provides a set of classes and functions to perform CWM-scanning.
+
+While there is very little shared code, the algorithm is taken from the
+original BPNet repository, which is released under an MIT-style license.
+You can find a copy it ``etc/bpnet_license.txt``.
+"""
 
 # In brief, a summary of these classes and functions are below:
 

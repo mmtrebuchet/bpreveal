@@ -2,6 +2,9 @@
 
 I modified a bit to work with TF 2.16 and trimmed some imports.
 
+The original DeepShap code is licensed under the MIT license. You can find
+a copy of this license at ``etc/shap_license.txt``.
+
 Note: I have *removed* quite a few features that BPReveal doesn't use.
 """
 # flake8: noqa: ANN001, ANN201
