@@ -531,6 +531,10 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
     genomeStartX = coords["genome-window-start"] + sliceStartX
     genomeEndX = coords["genome-window-start"] + sliceEndX
     shearMat = np.copy(cfg["pisa"]["values"][sliceStartY:sliceEndY, sliceStartX:sliceEndX])
+    if shearMat.shape != (coords["output-slice-width"], coords["input-slice-width"]):
+        logUtils.error("Your slice goes off the edge of the PISA data. Reduce your "
+                       "slice widths. Plotting will continue, but axes will be incorrect. "
+                       "This will trigger an error in BPReveal 6.0.0.")
     colorBlocks = []
     for annot in cfg["annotations"]["custom"]:
         colorBlocks.append((annot["start"] - coords["genome-window-start"],
@@ -868,7 +872,7 @@ def plotPisaWithFiles(pisaDats: str, cutMiddle: int, cutLengthX: int,
                       fig: matplotlib.figure.Figure, bbox: tuple[float, float, float, float],
                       colorSpan: float = 1.0, boxHeight: float = 0.1, fontsize: int = 5,
                       mini: bool = False) -> dict:
-    """Deprecated way to get the new config dict. Issues a warning if used."""
+    """Create a new-style config dict from the old argument sea. Issues a warning if used."""
     del fig
     del receptiveField
     logUtils.error("This function has been replaced with the new plotting config style. "

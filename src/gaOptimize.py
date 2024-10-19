@@ -1,8 +1,6 @@
 """Useful tools for creating sequences with a desired property."""
 from __future__ import annotations
 import ast
-import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "1"
 import random
 from typing import TypeAlias, Literal
 from collections.abc import Callable
@@ -13,11 +11,12 @@ import numpy.typing as npt
 import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 from bpreveal.internal.constants import ANNOTATION_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
-from bpreveal.colors import dnaWong, parseSpec
+from bpreveal.colors import dnaWong, parseSpec, wong
 
 # Types
 CORRUPTOR_LETTER_T: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Literal["T"] \
-    | Literal["d"] | Literal["Ǎ"] | Literal["Č"] | Literal["Ǧ"] | Literal["Ť"]
+    | Literal["d"] | Literal["Ǎ"] | Literal["Č"] | Literal["Ǧ"] | Literal["Ť"] \
+    | Literal["r"] | Literal["ř"]
 """Any letter that is a valid corruptor."""
 
 CORRUPTOR_T: TypeAlias = tuple[int, CORRUPTOR_LETTER_T]
@@ -26,7 +25,11 @@ CORRUPTOR_T: TypeAlias = tuple[int, CORRUPTOR_LETTER_T]
 The change is represented by a single letter. The letters `ACGT` indicate a SNP
 at that locus, the letter `d` indicates that that base should be deleted, and
 the letters `ǍČǦŤ` indicate that the corresponding base should be inserted
-immediately after the locus.
+immediately after the locus. The letter `r` indicates that a random base should be
+inserted. See the documentation for :py:class:`Organism<bpreveal.gaOptimize.Organism>`
+for how to use random bases.
+Random bases should usually NOT be used with the GA.
+
 
 Examples::
 
@@ -85,6 +88,9 @@ IN_G: CORRUPTOR_LETTER_T = "Ǧ"
 IN_T: CORRUPTOR_LETTER_T = "Ť"
 """The letter Ť represents inserting a T"""
 
+IN_R: CORRUPTOR_LETTER_T = "ř"
+"""The letter ř represents inserting a random base"""
+
 IN_L = "ǍČǦŤ"
 """The four insertion letters"""
 
@@ -94,17 +100,17 @@ IN_D = {"A": "Ǎ", "C": "Č", "G": "Ǧ", "T": "Ť"}
 CORRUPTOR_TO_IDX: dict[CORRUPTOR_LETTER_T, int] =\
     {"A": 0, "C": 1, "G": 2, "T": 3,
      "Ǎ": 4, "Č": 5, "Ǧ": 6, "Ť": 7,
-     "d": 8}
+     "d": 8, "r": 9, "ř": 10}
 """Use these to map corruptors to integers."""
 
-IDX_TO_CORRUPTOR = "ACGTǍČǦŤd"
+IDX_TO_CORRUPTOR = "ACGTǍČǦŤdrř"
 """Given an integer, which corruptor does it represent?
 This is the inverse of CORRUPTOR_TO_IDX.
 """
 
 corruptorColors = {
     "A": dnaWong["A"], "C": dnaWong["C"], "G": dnaWong["G"], "T": dnaWong["T"],
-    "d": (0, 0, 0),
+    "d": (0, 0, 0), "r": wong[7], "ř": wong[7],
     "Ǎ": dnaWong["A"], "Č": dnaWong["C"], "Ǧ": dnaWong["G"], "Ť": dnaWong["T"]}
 """BPreveal's coloring for bases. A is green, C is blue, G is yellow, and T is red.
 
@@ -188,15 +194,39 @@ class Organism:
 
     :param corruptors: A list of corruptors that this organism represents.
     :type corruptors: list[:py:data:`~CORRUPTOR_T`]
+    :param randomSequence: (Optional) The sequence to draw random bases from if the
+        corruptors include randomness.
+
+    If a random sequence is provided, then the ``getSequence`` method will use that
+    sequence to draw bases to use when a ``r`` corruptor is found. This object will
+    set its internal rng state based on the ``randomSequence`` parameter, so two
+    ``Organism``s with the same ``randomSequence`` will, if they both have random
+    corruptors at the same location, always insert the same random sequence.
+    To avoid this, you can provide a different ``randomSequence`` to each
+    organism, or you can set this objects ``_rng`` attribute to a Random object
+    (from ``random.Random()``) yourself.
     """
 
     profile: GA_RESULT_T
     score: float
     corruptors: list[CORRUPTOR_T]
+    lastSequence: str
+    """The last thing that was returned by getSequence.
 
-    def __init__(self, corruptors: list[CORRUPTOR_T]) -> None:
+    This is only relevant if you are using random corruptors, since
+    ``getSequence()`` will, by design, give you a different sequence each
+    time you call it. If you want to know what sequence it returned the
+    last time it was used, it will be cached in lastSequence for you."""
+
+    def __init__(self, corruptors: list[CORRUPTOR_T], randomSequence: str = "") -> None:
         """Construct an organism with the given corruptors."""
         self.corruptors = sorted(corruptors)
+        for c in corruptors:
+            if c[1] == "r":
+                assert len(randomSequence) > 0, \
+                    "Must provide a background sequence to use randomization."
+        self._randomSequence = randomSequence
+        self._rng = random.Random(randomSequence)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
 
     def getSequence(self, initialSequence: str, inputLength: int) -> str:
@@ -213,10 +243,34 @@ class Organism:
         inputLength + maxDeletions,
         and unless you're filtering somehow, the maximum number of deletions
         is the number of corruptors for this organism.
+
+        If this organism's corruptor list contains ``r``, the random nucleotide,
+        then this method will select a random stretch of the ``randomSequence``
+        that you provided in the constructor. Then, whenever an ``r`` corruptor
+        is encountered, the output sequence will be taken from the slice of
+        ``randomSequence`` instead of the input. In this way, multiple ``r``
+        nucleotides will always be drawn from a valid stretch of DNA.
+        If you don't want this sort of correlation, shuffle the ``randomSequence``
+        you provide to the constructor.
         """
+
+        # If we're using randomness, get a slice of the random input sequence to use
+        # for substitutions.
+        randomSubSequence = None
+        if len(self._randomSequence) > 0:
+            subSequenceLength = len(initialSequence) + len(self.corruptors)
+            # Since self.corruptors can contain insertions, we need to
+            # add len(self.corruptors) bases of padding in case we hit ř corruptors.
+            maxLen = len(self._randomSequence) - subSequenceLength
+            startPt = self._rng.randrange(0, maxLen)
+            randomSubSequence = self._randomSequence[startPt:startPt + subSequenceLength]
+
         seq = []
         readHead = 0  # The position in the input sequence where the
         # next base should be taken from.
+
+        randomInsertions = 0  # How many random insertions have we
+        # processed so far?
 
         writeHead = 0  # Our current position in the output sequence.
         # Note that writeHead will be close, but not exactly the same,
@@ -236,6 +290,12 @@ class Organism:
                 # Since the behavior of insertion depends on if I just had a SNP,
                 # store the location of the last SNP.
                 writeHead = c[0]
+            elif c[1] == "r":  # We want a random replacement.
+                assert randomSubSequence is not None, \
+                    "A random sequence was not provided, but a random corruptor was given."
+                seq.append(randomSubSequence[readHead])
+                readHead += 1
+                writeHead = c[0]
             elif c[1] in "ǍČǦŤ":  # Insertion.
                 # Put in the initial base unless we just had a SNP.
                 if writeHead < c[0]:
@@ -246,13 +306,23 @@ class Organism:
                 # No increase in readHead, but set writeHead so I don't copy
                 # over a base if I have two subsequent insertions.
                 writeHead = c[0]
+            elif c[1] == "ř":
+                if writeHead < c[0]:
+                    seq.append(initialSequence[readHead])
+                    readHead += 1
+                assert randomSubSequence is not None, \
+                    "A random sequence was not provided, but a random corruptor was given."
+                seq.append(randomSubSequence[readHead + randomInsertions])
+                randomInsertions += 1
+                writeHead = c[0]
             elif c[1] == "d":
                 # Nothing to do here. A deleted base can never have
                 # an insertion or SNP, so no need to check.
                 readHead += 1
         # Done applying corruptors.
         fullSequence = "".join(seq) + initialSequence[readHead:]
-        return fullSequence[:inputLength]
+        self.lastSequence = fullSequence[:inputLength]
+        return self.lastSequence
 
     def setScore(self, scoreFn: Callable[[GA_RESULT_T, list[CORRUPTOR_T]], float]) -> None:
         """Apply the score function to this organism's profile.
@@ -359,7 +429,7 @@ class Organism:
             candidateCorruptors = sorted(keepCorruptors + [newCor])
             if validCorruptorList(candidateCorruptors):
                 found = checkCorruptors(candidateCorruptors)
-        return Organism(candidateCorruptors)  # type: ignore
+        return Organism(candidateCorruptors, self._randomSequence)  # type: ignore
 
     def mixed(self, other: "Organism",
               checkCorruptors: Callable[[list[CORRUPTOR_T]], bool]) -> "Organism":
@@ -375,6 +445,9 @@ class Organism:
         Currently, it pools the corruptors from self and other, and then
         randomly selects numCorruptors of them. If that passes checkCorruptors,
         then it returns a NEW organism.
+
+        If you are using random corruptors (``r``), then the child Organism will
+        have its randomSequence taken from ``self``, and not ``other``.
         """
         fullCorruptorPool = sorted(self.corruptors + other.corruptors)
         corruptorPool = [fullCorruptorPool[0]]
@@ -410,7 +483,7 @@ class Organism:
             # of valid corruptors is itself valid.
             if checkCorruptors(chosens):
                 assert validCorruptorList(chosens), "Mixing gave invalid organism."
-                return Organism(chosens)
+                return Organism(chosens, self._randomSequence)
         raise ValueError("Took over 100 attempts to mix "
             "organisms " + str(self.corruptors) + str(other.corruptors))
 
@@ -441,6 +514,8 @@ class Population:
         generation, usually referred to as elitism in GA terminology.
     :param predictor: A BatchPredictor that has been set up with the model you
         want to use.
+    :param randomSequence: (Optional) The random sequence that will be used
+        to supply bases to any organisms that have random (``r``) corruptors.
 
     The initial sequence must be longer than needed for your model.
     The extra length is needed because this GA can have deletions
@@ -499,7 +574,8 @@ class Population:
                  numCorruptors: int, allowedCorruptors: list[CANDIDATE_CORRUPTOR_T],
                  checkCorruptors: Callable[[list[CORRUPTOR_T]], bool],
                  fitnessFn: Callable[[GA_RESULT_T, list[CORRUPTOR_T]], float],
-                 numSurvivingParents: int, predictor: utils.BatchPredictor):
+                 numSurvivingParents: int, predictor: utils.BatchPredictor,
+                 randomSequence: str = ""):
         """Construct a population."""
         self.initialSequence = initialSequence
         self.inputLength = inputLength
@@ -511,6 +587,7 @@ class Population:
         self.numSurvivingParents = numSurvivingParents
         self.organisms = []
         self.predictor = predictor
+        self._randomSequence = randomSequence
         self._seed()
 
     def _seed(self) -> None:
@@ -545,7 +622,7 @@ class Population:
             cors = [(x[0], random.choice(x[1])) for x in corLocations]
 
             if self.checkCorruptors(sorted(cors)):  # type: ignore
-                return Organism(cors)  # type: ignore
+                return Organism(cors, self._randomSequence)  # type: ignore
         raise ValueError("Over 100 attempts to choose corruptors for new organism.")
 
     def runCalculation(self) -> None:
@@ -792,13 +869,12 @@ def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
     * If c[n][0] == c[n+1][0]:
 
         * (c[n][1], c[n+1][1]) must be in sorted order. For stupid reasons,
-          sorted order is ``ACGTdČŤǍǦ``.
-
+          sorted order is ``ACGTdrČřŤǍǦ``.
         * Neither c[n][1] nor c[n+1][1] are ``"d"``.
 
             * (You can't delete a base and do anything else to it.)
 
-        * c[n][1] ∈ ``"ACGT"`` ⇒ c[n+1][1] ∈ ``"ǍČǦŤ"``.
+        * c[n][1] ∈ ``"ACGTr"`` ⇒ c[n+1][1] ∈ ``"ǍČǦŤř"``.
 
             * (If you have a SNP, the only other thing
               at that position must be an insertion.)
@@ -811,13 +887,13 @@ def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
     * If :math:`c_n[0] == c_{n+1}[0]`:
 
         * :math:`(c_n[1], c_{n+1}[1])` must be in sorted order. For stupid reasons,
-          sorted order is ``ACGTdČŤǍǦ``.
+          sorted order is ``ACGTdrČřŤǍǦ``.
 
         * Neither :math:`c_n[1]` nor :math:`c_{n+1}[1]` are ``"d"``.
 
             * (You can't delete a base and do anything else to it.)
 
-        * :math:`c_n[1] \in` ``"ACGT"`` :math:`\implies c_{n+1}[1] \in` ``"ǍČǦŤ"``.
+        * :math:`c_n[1] \in` ``"ACGTr"`` :math:`\implies c_{n+1}[1] \in` ``"ǍČǦŤř"``.
 
             * (If you have a SNP, the only other thing
               at that position must be an insertion.)
@@ -841,7 +917,7 @@ def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
             if ord(prev[1]) > ord(c[1]):
                 # The letters are not in order.
                 return False
-            if prev[1] in "ACGT" and c[1] not in "ǍČǦŤ":
+            if prev[1] in "ACGTr" and c[1] not in "ǍČǦŤř":
                 # We have a SNP and something that is not an insertion.
                 return False
         prev = c
@@ -940,7 +1016,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
         left = pos - 5
         right = pos + 5
         midPt = (bottom + top) / 2
-        if corType in "ACGT":
+        if corType in "ACGTr":
             # Use a diamond for SNPs.
             corXvals = [left, cor[0], right, cor[0]]
             corYvals = [midPt, top, midPt, bottom]
