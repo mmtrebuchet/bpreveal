@@ -4,6 +4,17 @@ Breaking Changes
 
 A more detailed version history can be found in the :doc:`changelog`.
 
+BPReveal 7.x
+------------
+
+BPReveal 7.0.0
+^^^^^^^^^^^^^^
+When BPReveal 7.0.0 is released, the following breaking changes will occur:
+1. Attempting to use a slice that goes beyond the limits of your PISA data will now
+    trigger an error. Has emitted a message since 5.1.0.
+2. Using an importance hdf5 from before version 4.0.0 will now result in an
+    error instead of a deprecation warning.
+
 BPReveal 6.x
 ------------
 
@@ -37,12 +48,23 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
 9. :py:mod:`prepareBed<bpreveal.prepareBed>` will no longer accept a list of
    bigwigs without head information. The program currently spits out warnings
    when you do this, and these will become an error.
-10. Using an importance hdf5 from before version 4.0.0 will now result in an
-    error instead of a deprecation warning.
 
 
 BPReveal 5.x
 ------------
+
+BPReveal 5.1.0
+^^^^^^^^^^^^^^
+
+When BPReveal 5.1.0 was released, the following breaking changes occurred.
+
+1. If you provide a sequence that is longer than a model's ``input-length`` to
+   :py:func:`easyPredict<bpreveal.utils.easyPredict>`, it used to crash with an
+   invalid input size error. It will now make enough predictions to cover the
+   whole sequence you provided and return a stitched profile. This will only be
+   an issue if you were, for some reason, causing ``easyPredict()`` to crash
+   and then catching that exception. For any sane use case, this will not cause
+   a problem.
 
 BPReveal 5.0.0
 ^^^^^^^^^^^^^^

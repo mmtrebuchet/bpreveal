@@ -742,7 +742,6 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         Rasterizing can make large pisa graphs much easier to work with downstream, but
         it makes them uneditable.
     """
-
     plotMat = np.array(similarityMat)
     # convert into dB
     plotMat *= math.log2(math.e)

@@ -10,6 +10,29 @@ BPReveal 5.x
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^
 
+BPReveal 5.1.0, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+NEW FEATURES:
+    * Added the ability to include random mutations in corruptors in
+      :py:mod:`gaOptimize<bpreveal.gaOptimize>`. This is less useful
+      for GA work but gives a nice tool for making systematic
+      mutations (say, for marginalization).
+
+ENHANCEMENTS:
+    * Added a way to completely silence all TensorFlow messages when using the batchers.
+      This should only be used after you've tested your workflow, since it will also
+      suppress all real errors. If TensorFlow 2.19 still emits megabytes of warnings,
+      I may add this as a general feature to the CLI, probably as a new verbosity level.
+
+BUG FIXES:
+    * Added a check to make sure that the slices applied to PISA plots are valid,
+      previously a partial plot could be displayed if you sliced beyond the end of the
+      PISA data. This emits an error message, but does not crash to maintain backwards
+      incompatibility. This will become a crash in 6.0.
+    * The Keras race condition when loading a model was fixed upstream, and so I have
+      removed the hacked solution from the BPReveal side.
+
 BPReveal 5.0.0, 2024-09-25
 ''''''''''''''''''''''''''
 

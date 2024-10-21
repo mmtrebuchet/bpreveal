@@ -73,7 +73,7 @@ def writeBigWig(inH5: h5py.File, outFname: str) -> None:  # pylint: disable=too-
     numRegions = inH5["coords_chrom"].shape[0]
     if isinstance(inH5["coords_chrom"][0], bytes):
         logUtils.error("You are using an old-style hdf5 file for importance scores. "
-            "Support for these files will be removed in BPReveal 6.0. "
+            "Support for these files will be removed in BPReveal 7.0. "
             "Instructions for updating: Re-calculate importance scores.")
         coordsChrom = np.array(inH5["coords_chrom"].asstr())
     else:

@@ -1241,7 +1241,7 @@ class PatternScanner:
         if isinstance(chromIdx, bytes):
             logUtils.logFirstN(logUtils.ERROR,
                                "Detected an importance score file from before version 4.0. "
-                               "This will be an error in BPReveal 6.0. "
+                               "This will be an error in BPReveal 7.0. "
                                "Instructions for updating: Re-calculate importance scores.",
                                1)
             chrom = chromIdx.decode("utf-8")

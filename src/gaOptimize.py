@@ -253,7 +253,6 @@ class Organism:
         If you don't want this sort of correlation, shuffle the ``randomSequence``
         you provide to the constructor.
         """
-
         # If we're using randomness, get a slice of the random input sequence to use
         # for substitutions.
         randomSubSequence = None

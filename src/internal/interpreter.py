@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""This module implements a small interpreter.
+"""Implements a small interpreter.
 
 Syntax:
 
@@ -71,6 +71,7 @@ class Closure:
     You do not need to use this, it's only necessary to set up letrec-style
     default parameters for lambdas.
     """
+
     def __init__(self, env: ENV_T, args: ast.arguments, body: ast.expr):
         self.env = env.copy()
         self.body = body
