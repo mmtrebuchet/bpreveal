@@ -55,7 +55,7 @@ ${PIP_BIN} install 'tensorflow[and-cuda]<2.18'
 check Installing tensorflow
 
 # tensorflow-probability needs tf-keras (at least as of tf 2.17)
-runAndCheck ${PIP_BIN} install 'tf-keras\<2.18'
+runAndCheck ${PIP_BIN} install "tf-keras\<2.18"
 runAndCheck ${PIP_BIN} install 'tensorflow-probability'
 checkPackage tensorflow
 checkPackage tensorflow_probability

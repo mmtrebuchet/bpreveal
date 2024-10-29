@@ -7,7 +7,7 @@ see :doc:`breakingChanges`.
 BPReveal 5.x
 ------------
 
-BPReveal 5.0.x
+BPReveal 5.1.x
 ^^^^^^^^^^^^^^
 
 BPReveal 5.1.0, DATEDATEDATE
@@ -29,9 +29,19 @@ BUG FIXES:
     * Added a check to make sure that the slices applied to PISA plots are valid,
       previously a partial plot could be displayed if you sliced beyond the end of the
       PISA data. This emits an error message, but does not crash to maintain backwards
-      incompatibility. This will become a crash in 6.0.
+      compatibility. This will become a crash in 6.0.
     * The Keras race condition when loading a model was fixed upstream, and so I have
       removed the hacked solution from the BPReveal side.
+
+BPReveal 5.0.x
+^^^^^^^^^^^^^^
+
+BPReveal 5.0.1, 2024-10-29
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Specified that the installer should use a tensorflow version before 2.18,
+      since 2.18 has a serious regression on my machine that makes the GPU unusable.
 
 BPReveal 5.0.0, 2024-09-25
 ''''''''''''''''''''''''''
