@@ -10,6 +10,13 @@ BPReveal 5.x
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^
 
+BPReveal 5.0.1, 2024-10-29
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Specified that the installer should use a tensorflow version before 2.18,
+      since 2.18 has a serious regression on my machine that makes the GPU unusable.
+
 BPReveal 5.0.0, 2024-09-25
 ''''''''''''''''''''''''''
 
