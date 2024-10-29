@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.axes
 import matplotlib.colors
 import numpy.typing as npt
-import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import utils
 from bpreveal.internal.constants import ANNOTATION_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
 from bpreveal.colors import dnaWong, parseSpec, wong
@@ -22,13 +21,13 @@ CORRUPTOR_LETTER_T: TypeAlias = Literal["A"] | Literal["C"] | Literal["G"] | Lit
 CORRUPTOR_T: TypeAlias = tuple[int, CORRUPTOR_LETTER_T]
 """A corruptor gives a coordinate and a change to make.
 
-The change is represented by a single letter. The letters `ACGT` indicate a SNP
-at that locus, the letter `d` indicates that that base should be deleted, and
-the letters `ǍČǦŤ` indicate that the corresponding base should be inserted
-immediately after the locus. The letter `r` indicates that a random base should be
-inserted. See the documentation for :py:class:`Organism<bpreveal.gaOptimize.Organism>`
-for how to use random bases.
-Random bases should usually NOT be used with the GA.
+The change is represented by a single letter. The letters ``ACGT`` indicate a
+SNP at that locus, the letter ``d`` indicates that that base should be deleted,
+and the letters ``ǍČǦŤ`` indicate that the corresponding base should be
+inserted immediately after the locus. The letter ``r`` indicates a SNP to a
+random base, and ``ř`` indicates that a random base should be inserted. See the
+documentation for :py:class:`Organism<bpreveal.gaOptimize.Organism>` for how to
+use random bases. Random bases should usually NOT be used with the GA.
 
 
 Examples::
@@ -203,7 +202,7 @@ class Organism:
     ``Organism``s with the same ``randomSequence`` will, if they both have random
     corruptors at the same location, always insert the same random sequence.
     To avoid this, you can provide a different ``randomSequence`` to each
-    organism, or you can set this objects ``_rng`` attribute to a Random object
+    organism, or you can set this objects ``rng`` attribute to a Random object
     (from ``random.Random()``) yourself.
     """
 
@@ -226,16 +225,29 @@ class Organism:
                 assert len(randomSequence) > 0, \
                     "Must provide a background sequence to use randomization."
         self._randomSequence = randomSequence
-        self._rng = random.Random(randomSequence)
+        self.rng = random.Random(randomSequence)
         assert validCorruptorList(self.corruptors), "Invalid corruptors in constructor."
 
-    def getSequence(self, initialSequence: str, inputLength: int) -> str:
+    def _getRandomSubsequence(self, initialLength: int) -> str:
+        subSequenceLength = initialLength + len(self.corruptors)
+        # Since self.corruptors can contain insertions, we need to
+        # add len(self.corruptors) bases of padding in case we hit ř corruptors.
+        maxLen = len(self._randomSequence) - subSequenceLength
+        startPt = self.rng.randrange(0, maxLen)
+        randomSubSequence = self._randomSequence[startPt:startPt + subSequenceLength]
+        return randomSubSequence
+
+    def getSequence(self, initialSequence: str, inputLength: int | None) -> str:
         """Apply this organism's corruptors to initialSequence, a string.
 
         :param initialSequence: A string representing the wild-type sequence that
             this organism will apply its corruptors to.
-        :param inputLength: The length of the returned sequence.
-        :return: A string of length inputLength.
+        :param inputLength: The length of the returned sequence. If None, then
+            return the whole corrupted sequence.
+        :return: A string. It will have length ``inputLength`` if ``inputLength``
+            is a number, or it will contain all of initialSequence if ``inputLength``
+            was None. In this second case, its length will be ``len(initialSequence)``
+            plus the number of insertions minus the number of deletions.
 
         Note that initialSequence will need to be longer than the inputLength
         to your model, since deletion corruptors can shorten the sequence.
@@ -257,12 +269,7 @@ class Organism:
         # for substitutions.
         randomSubSequence = None
         if len(self._randomSequence) > 0:
-            subSequenceLength = len(initialSequence) + len(self.corruptors)
-            # Since self.corruptors can contain insertions, we need to
-            # add len(self.corruptors) bases of padding in case we hit ř corruptors.
-            maxLen = len(self._randomSequence) - subSequenceLength
-            startPt = self._rng.randrange(0, maxLen)
-            randomSubSequence = self._randomSequence[startPt:startPt + subSequenceLength]
+            randomSubSequence = self._getRandomSubsequence(len(initialSequence))
 
         seq = []
         readHead = 0  # The position in the input sequence where the
@@ -277,49 +284,50 @@ class Organism:
         # but writeHead will stay the same. If we encounter
         # an insertion, writeHead will advance twice, but readHead only once.
 
-        for c in self.corruptors:
-            if readHead < c[0]:
-                seq.append(initialSequence[readHead:c[0]])
+        for pos, cor in self.corruptors:
+            if readHead < pos:
+                seq.append(initialSequence[readHead:pos])
                 # We added a bunch of bases to the output.
-                writeHead += c[0] - readHead
-                readHead = c[0]
-            if c[1] in "ACGT":  # We have a SNP.
-                seq.append(c[1])
+                writeHead += pos - readHead
+                readHead = pos
+            if cor in "ACGT":  # We have a SNP.
+                seq.append(cor)
                 readHead += 1
                 # Since the behavior of insertion depends on if I just had a SNP,
                 # store the location of the last SNP.
-                writeHead = c[0]
-            elif c[1] == "r":  # We want a random replacement.
+                writeHead = pos
+            elif cor == "r":  # We want a random replacement.
                 assert randomSubSequence is not None, \
                     "A random sequence was not provided, but a random corruptor was given."
                 seq.append(randomSubSequence[readHead])
                 readHead += 1
-                writeHead = c[0]
-            elif c[1] in "ǍČǦŤ":  # Insertion.
+                writeHead = pos
+            elif cor in "ǍČǦŤ":  # Insertion.
                 # Put in the initial base unless we just had a SNP.
-                if writeHead < c[0]:
+                if writeHead < pos:
                     seq.append(initialSequence[readHead])
                     readHead += 1
                 # And now put in the insertion.
-                seq.append({"Ǎ": "A", "Č": "C", "Ǧ": "G", "Ť": "T"}[c[1]])
+                seq.append({"Ǎ": "A", "Č": "C", "Ǧ": "G", "Ť": "T"}[cor])
                 # No increase in readHead, but set writeHead so I don't copy
                 # over a base if I have two subsequent insertions.
-                writeHead = c[0]
-            elif c[1] == "ř":
-                if writeHead < c[0]:
+                writeHead = pos
+            elif cor == "ř":
+                if writeHead < pos:
                     seq.append(initialSequence[readHead])
                     readHead += 1
                 assert randomSubSequence is not None, \
                     "A random sequence was not provided, but a random corruptor was given."
                 seq.append(randomSubSequence[readHead + randomInsertions])
                 randomInsertions += 1
-                writeHead = c[0]
-            elif c[1] == "d":
+                writeHead = pos
+            elif cor == "d":
                 # Nothing to do here. A deleted base can never have
                 # an insertion or SNP, so no need to check.
                 readHead += 1
         # Done applying corruptors.
-        fullSequence = "".join(seq) + initialSequence[readHead:]
+        seq.append(initialSequence[readHead:])
+        fullSequence = "".join(seq)
         self.lastSequence = fullSequence[:inputLength]
         return self.lastSequence
 
@@ -359,7 +367,7 @@ class Organism:
         return str(self.corruptors).__hash__()
 
     def cmp(self, other: "Organism") -> int:  # pylint: disable=too-many-return-statements
-        """A general comparator between two organisms based on their corruptors.
+        """Compare two organisms based on their corruptors.
 
         :param other: The organism to compare against.
         :return: 1 if this organism is after (alphabetically) the other
@@ -454,7 +462,7 @@ class Organism:
         for c in fullCorruptorPool[1:]:
             if corruptorPool[-1][0] == c[0]:
                 # We have a collision. How do we resolve this?
-                newIsSnpDel = c[1] in "ACGTd"
+                newIsSnpDel = c[1] in "ACGTrd"
                 # We know that the pool is sorted. So insertions will always
                 # come after SNPs and deletions.
                 # All SNPs and deletions are mutually exclusive.
@@ -634,22 +642,25 @@ class Population:
         pop.organisms[-1].
         """
         numInFlight = 0
-        for i, organism in enumerate(self.organisms):
-            self.predictor.submitString(
-                organism.getSequence(self.initialSequence, self.inputLength),
-                i)
-            numInFlight += 1
-            while self.predictor.outputReady():
+        with self.predictor:
+            # Activate the context manager for the predictor if
+            # the user hasn't already turned it on.
+            for i, organism in enumerate(self.organisms):
+                self.predictor.submitString(
+                    organism.getSequence(self.initialSequence, self.inputLength),
+                    i)
+                numInFlight += 1
+                while self.predictor.outputReady():
+                    ret = self.predictor.getOutput()
+                    self.organisms[ret[1]].profile = ret[0]
+                    self.organisms[ret[1]].setScore(self.fitnessFn)
+                    numInFlight -= 1
+
+            while numInFlight:
                 ret = self.predictor.getOutput()
                 self.organisms[ret[1]].profile = ret[0]
                 self.organisms[ret[1]].setScore(self.fitnessFn)
                 numInFlight -= 1
-
-        while numInFlight:
-            ret = self.predictor.getOutput()
-            self.organisms[ret[1]].profile = ret[0]
-            self.organisms[ret[1]].setScore(self.fitnessFn)
-            numInFlight -= 1
 
         self.organisms.sort(key=lambda x: x.score)
 

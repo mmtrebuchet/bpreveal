@@ -17,7 +17,7 @@ from bpreveal import logUtils
 # find them.
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
-    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T
+    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T, MODEL_LOAD_LOCK
 from bpreveal.internal import constants
 from bpreveal.internal.crashQueue import CrashQueue
 from bpreveal import bedUtils
@@ -46,38 +46,39 @@ def loadModel(modelFname: str):  # noqa: ANN201
 
     """
     # pylint: disable=import-outside-toplevel
-    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-    from bpreveal.losses import multinomialNll, dummyMse
-    # pylint: enable=import-outside-toplevel
-    constants.setTensorflowLoaded()
     ret = None
-    if modelFname.endswith("model"):
-        try:
-            logUtils.info(
-                "You are attempting to a load a model with a '.model' extension. As of "
-                "BPReveal 5.0.0, models are given the extension '.keras' because keras "
-                "3.0 requires it. I will attempt to load the old-style model, but be "
-                "prepared for some janky behavior and possible bugs.")
-            import tf_keras  # pylint: disable=import-outside-toplevel
-            ret = tf_keras.models.load_model(filepath=modelFname,
-                        custom_objects={"multinomialNll": multinomialNll,
-                                        "reweightableMse": dummyMse})
-            ret.useOldKeras = True
-            logUtils.debug(f"Loaded old-style model {modelFname}.")
-        except OSError:
-            logUtils.error(
-                f"You specified a model named {modelFname} but I couldn't find it. "
-                "Attempting to load a model with a '.keras' extension. If this "
-                "works, you should update your configuration file to use the new "
-                "extension. This automatic renaming will be removed in BPReveal 7.0.0.")
-            modelFname = modelFname[:-5] + "keras"
-    if ret is None:
-        # pylint: disable=import-outside-toplevel
-        from keras.models import load_model  # type: ignore
+    with MODEL_LOAD_LOCK:
+        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
+        from bpreveal.losses import multinomialNll, dummyMse
         # pylint: enable=import-outside-toplevel
-        ret = load_model(filepath=modelFname)
-        ret.useOldKeras = False
-        logUtils.debug(f"Loaded new-style model {modelFname}.")
+        constants.setTensorflowLoaded()
+        if modelFname.endswith("model"):
+            try:
+                logUtils.info(
+                    "You are attempting to a load a model with a '.model' extension. As of "
+                    "BPReveal 5.0.0, models are given the extension '.keras' because keras "
+                    "3.0 requires it. I will attempt to load the old-style model, but be "
+                    "prepared for some janky behavior and possible bugs.")
+                import tf_keras  # pylint: disable=import-outside-toplevel
+                ret = tf_keras.models.load_model(filepath=modelFname,
+                            custom_objects={"multinomialNll": multinomialNll,
+                                            "reweightableMse": dummyMse})
+                ret.useOldKeras = True
+                logUtils.debug(f"Loaded old-style model {modelFname}.")
+            except OSError:
+                logUtils.error(
+                    f"You specified a model named {modelFname} but I couldn't find it. "
+                    "Attempting to load a model with a '.keras' extension. If this "
+                    "works, you should update your configuration file to use the new "
+                    "extension. This automatic renaming will be removed in BPReveal 7.0.0.")
+                modelFname = modelFname[:-5] + "keras"
+        if ret is None:
+            # pylint: disable=import-outside-toplevel
+            from keras.models import load_model  # type: ignore
+            # pylint: enable=import-outside-toplevel
+            ret = load_model(filepath=modelFname)
+            ret.useOldKeras = False
+            logUtils.debug(f"Loaded new-style model {modelFname}.")
     return ret
 
 
@@ -105,7 +106,7 @@ def setMemoryGrowth() -> None:
 
 
 def loadPisa(fname: str) -> IMPORTANCE_AR_T:
-    """Loads up a PISA file, shears it, and crops it to a standard array.
+    """Load up a PISA file, shear it, and crop it to a standard array.
 
     :param fname: The name of the hdf5-format file on disk, containing your PISA data.
     :return: An array of shape (num-samples, num-samples) containing the sheared PISA data.
@@ -1189,6 +1190,9 @@ class ThreadedBatchPredictor:
         with predictor:
             # use as a normal BatchPredictor.
         # On leaving the context, the predictor is shut down.
+        # But you can spin it up if you need it again:
+        with predictor:
+            # use the predictor some more.
 
     The batcher guarantees that the order in which you get results is the same as
     the order you submitted them in, even though the internal calculations may
@@ -1226,6 +1230,7 @@ class ThreadedBatchPredictor:
         self._numThreads = numThreads
         self.running = False
         self._quiet = quiet
+        self._contextDepth = 0
         if start:
             self.start()
 
@@ -1234,12 +1239,27 @@ class ThreadedBatchPredictor:
 
         Used in a context manager, this is the first thing that gets called
         inside a with statement.
+
+        This context manager is reusable, meaning that it can be nested like this::
+
+            with predictor:
+                # blah, blah, blah
+                with predictor:
+                    # make predictions
+
+        In this case, the inner call will simply keep batcher alive, and it will
+        only shut down when the outermost context exits.
         """
-        self.start()
+        self._contextDepth += 1
+        if self._contextDepth == 1:
+            self.start()
 
     def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):  # noqa: ANN001
         """When leaving a context manager's with statement, shut down the batcher."""
-        self.stop()
+        self._contextDepth -= 1
+        if self._contextDepth == 0:
+            # We're out of the last context manager now.
+            self.stop()
         if exceptionType is not None:
             return False
         del exceptionValue  # Disable unused warning

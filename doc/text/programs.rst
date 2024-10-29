@@ -21,7 +21,7 @@ These are the core programs of BPReveal. Each one takes a JSON configuration fil
 
 :py:mod:`makePredictions<bpreveal.makePredictions>`
     Takes a trained model (solo, combined, residual, or even transformation
-    models work) and predicts over the given regions.
+    models work) and predicts over the given regions or sequences.
 
 :py:mod:`motifScan<bpreveal.motifScan>`
     Scan the genome for patterns of contribution scores that match motifs
@@ -111,40 +111,59 @@ to do useful things in your code.
 
 :py:mod:`bedUtils<bpreveal.bedUtils>`
     Useful functions for manipulating bed files, particularly for tiling the
-    genome with regions.
+    genome with regions and
+    :py:func:`calculating metapeaks<bpreveal.bedUtils.metapeak>` over very
+    large data sets.
 
 :py:mod:`gaOptimize<bpreveal.gaOptimize>`
-    contains tools for evolving sequences that lead to desired profiles. It
+    Tools for evolving sequences that lead to desired profiles. It
     implements a genetic algorithm that supports insertions and deletions.
+    You can also use the :py:class:`Organism<bpreveal.gaOptimize.Organism>`
+    class on its own to apply mutations to sequences. These mutations can
+    include insertions and deletions.
 
 :py:mod:`interpretUtils<bpreveal.interpretUtils>`
     Functions for getting interpretation scores. Contains a streaming system
-    for calculating PISA and flat importance scores.
+    for calculating PISA and flat importance scores. You should not normally
+    need to interact with this module. Instead, use
+    :py:mod:`interpretFlat<bpreveal.interpretFlat>`,
+    :py:mod:`interpretPisa<bpreveal.interpretPisa>`, or
+    :py:func:`easyInterpretFlat<bpreveal.utils.easyInterpretFlat>`.
 
 :py:mod:`jaccard<bpreveal.jaccard>`
     Contains wrappers around C functions that calculate the sliding Jaccard similarity
-    used to scan for motifs.
+    used to scan for motifs. You almost certainly don't need to use this.
 
 :py:mod:`logUtils<bpreveal.logUtils>`
     Functions used to log information. It's basically TensorFlow's wrapper
-    around the ``logging`` module in the standard library.
+    around the ``logging`` module in the standard library. You probably don't need
+    to use the logging functions yourself, but you may want to use the
+    :py:func:`setVerbosity<bpreveal.logUtils.setVerbosity>` and
+    :py:func:`setBooleanVerbosity<bpreveal.logUtils.setBooleanVerbosity>` functions.
+
 
 :py:mod:`motifUtils<bpreveal.motifUtils>`
-    Functions for dealing with motif scanning and modisco files.
+    Functions for dealing with motif scanning and modisco files. You probably don't need
+    to use this directly.
 
 :py:mod:`plotting<bpreveal.plotting>`
-    Utilities for making high-quality plots of your results.
+    Utilities for making high-quality plots of your results. For PISA, you will probably
+    want to use :py:func:`plotPisa<bpreveal.plotting.plotPisa>` or
+    :py:func:`plotPisaGraph<bpreveal.plotting.plotPisaGraph>`.
+    For MoDISco results, there's
+    :py:func:`plotModiscoPattern<bpreveal.plotting.plotModiscoPattern>`.
 
 :py:mod:`schema<bpreveal.schema>`
     A set of JSON schemas that validate the inputs to the BPReveal programs.
     These are used to make sure that incorrect inputs trigger errors early, and
-    that those errors are clearer to the user.
+    that those errors are clearer to the user. You do not need to use this.
 
 :py:mod:`training<bpreveal.training>`
     A very simple module that actually runs the training loop for
     :py:mod:`trainSoloModel<bpreveal.trainSoloModel>`,
     :py:mod:`trainTransformationModel<bpreveal.trainTransformationModel>`, and
     :py:mod:`trainCombinedModel<bpreveal.trainCombinedModel>`.
+    You should not need to use this directly.
 
 :py:mod:`ushuffle<bpreveal.ushuffle>`
     A wrapper around the ushuffle library, used to perform shuffles of sequences that
@@ -208,6 +227,13 @@ To efficiently convert DNA sequences to and from one-hot-encoded form, use
 :py:func:`utils.oneHotDecode<bpreveal.utils.oneHotDecode>`.
 These functions are optimized and can perform their calculations far faster than a naive
 implementation with dictionary lookups.
+
+For applying mutations to sequences, I suggest using the
+:py:class:`Organism<bpreveal.gaOptimize.Organism>` class in the
+:py:mod:`gaOptimize<bpreveal.gaOptimize>` module. While it is designed to be
+part of a genetic algorithm optimization, it can easily be used on its own to
+apply corruptors (called "corruptors" to avoid confusion with the genetic
+algorithm operation called "mutation") to a single sequence.
 
 
 Getting importance scores

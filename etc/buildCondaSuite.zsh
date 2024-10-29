@@ -47,15 +47,15 @@ runAndCheck conda activate ${ENV_NAME}
 
 #Make sure we have activated an environment with the right python.
 runAndCheck python3 --version \| grep -q "${PYTHON_VERSION}"
-# We must specifically pin to a version of numpy before 2.0 since Tensorflow 2.16
+# We must specifically pin to a version of numpy before 2.0 since Tensorflow 2.17
 # doesn't support it. (And pip can't figure this out.)
 runAndCheck ${CONDA_BIN} install --yes -c conda-forge "numpy\<2.0"
 # Tensorflow expressly advises against installing with conda.
-${PIP_BIN} install 'tensorflow[and-cuda]'
+${PIP_BIN} install 'tensorflow[and-cuda]<2.18'
 check Installing tensorflow
 
-# tensorflow-probability needs tf-keras (at least as of tf 2.16)
-runAndCheck ${PIP_BIN} install 'tf-keras'
+# tensorflow-probability needs tf-keras (at least as of tf 2.17)
+runAndCheck ${PIP_BIN} install 'tf-keras\<2.18'
 runAndCheck ${PIP_BIN} install 'tensorflow-probability'
 checkPackage tensorflow
 checkPackage tensorflow_probability

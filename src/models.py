@@ -19,7 +19,7 @@ from bpreveal.internal.constants import NUM_BASES
 def _soloModelHead(dilateOutput: klayers.Layer, individualHead: dict,
                    outputFilterWidth: int) -> \
         tuple[klayers.Layer, klayers.Layer]:
-    """A single output head for a solo model.
+    """Create a single output head for a solo model.
 
     :param dilateOutput: The last dilated convolutional layer of the model.
     :param individualHead: Taken straight from the configuration json.
