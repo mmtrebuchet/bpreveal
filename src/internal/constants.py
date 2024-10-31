@@ -146,8 +146,8 @@ class ANNOTATION_T(TypedDict):  # pylint: disable=invalid-name
 
 
 FONT_FAMILY = "serif"
-FONT_SIZE_TICKS = 8
-FONT_SIZE_LABELS = 10
+FONT_SIZE_TICKS = 6
+FONT_SIZE_LABELS = 7
 
 NUM_BASES: int = 4
 """How many DNA base types are there?"""
@@ -207,4 +207,20 @@ def setTensorflowLoaded() -> None:
 def getTensorflowLoaded() -> bool:
     """Returns true if this process has ever loaded tensorflow."""
     return GLOBAL_TENSORFLOW_LOADED
+
+
+def setDefaultFontFamily(newFamily: str) -> None:
+    """Set the default font for all of BPReveal.
+
+    You should not call this directly, but instead call
+    :py:func:`colors.loadFonts()<bpreveal.colors.loadFonts>`,
+    and that will call this with the appropriate arguments.
+
+    :param newFamily: The name of the font family to use, either ``serif``
+        or ``sans-serif``.
+    """
+    global FONT_FAMILY
+    FONT_FAMILY = newFamily
+
+
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

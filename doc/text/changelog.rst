@@ -24,6 +24,9 @@ ENHANCEMENTS:
       This should only be used after you've tested your workflow, since it will also
       suppress all real errors. If TensorFlow 2.19 still emits megabytes of warnings,
       I may add this as a general feature to the CLI, probably as a new verbosity level.
+    * Added a sans-serif option for all plots. This uses the Fira Sans font, which
+      I find pleasant.
+
 
 BUG FIXES:
     * Added a check to make sure that the slices applied to PISA plots are valid,
@@ -32,6 +35,8 @@ BUG FIXES:
       compatibility. This will become a crash in 6.0.
     * The Keras race condition when loading a model was fixed upstream, and so I have
       removed the hacked solution from the BPReveal side.
+    * Set pisa plots to always display whole pixels on the edge instead of the previous
+      axis limit algorithm that could display half-pixels.
 
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^

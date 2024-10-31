@@ -17,7 +17,8 @@ import matplotlib.colors as mplcolors
 import matplotlib.font_manager
 import matplotlib.pyplot as plt
 from bpreveal import logUtils
-from bpreveal.internal.constants import RGB_T, DNA_COLOR_SPEC_T, COLOR_SPEC_T
+from bpreveal.internal.constants import RGB_T, DNA_COLOR_SPEC_T, COLOR_SPEC_T, \
+    setDefaultFontFamily
 
 
 def _toFractions(colorList: tuple[tuple[int, int, int], ...]) -> tuple[RGB_T, ...]:
@@ -196,32 +197,50 @@ def parseSpec(  # pylint: disable=too-many-return-statements
             raise ValueError(f"Invalid color spec: {colorSpec}")
 
 
-def loadFonts() -> None:
-    """Configures the matplotlib default fonts to be in the Libertinus family.
+def loadFonts(serif: bool = True) -> None:
+    """Configure the matplotlib default fonts to be in the Libertinus family.
 
-    This places Libertinus fonts at the top of the order for serif and sans-serif
-    fontfamily, but does not overwrite the monospace family.
+    :param serif: Should a serif font be used? The default is True, and this will use the
+        Libertinus font family. If False, then instead the Fira Sans font family will be
+        used.
+
+    This places the given font (Libertinus or Fira Sans) at the top of the
+    order for serif and sans-serif fontfamily, but does not overwrite the monospace family.
     """
     try:
         cwd = pathlib.Path(__file__).parent.parent.parent.resolve()
-        fontdir = str(cwd / "doc" / "fonts" / "Libertinus-7.040" / "static/") + "/"
-        fontFiles = matplotlib.font_manager.findSystemFonts(fontpaths=[fontdir])
+        fontdirLibertinus = str(cwd / "doc" / "fonts" / "Libertinus-7.040" / "static/") + "/"
+        fontdirSans = str(cwd / "doc" / "fonts" / "Fira_Sans/") + "/"
+        fontFiles = matplotlib.font_manager.findSystemFonts(
+            fontpaths=[fontdirLibertinus, fontdirSans])
         for ff in fontFiles:  # pylint: disable=not-an-iterable
             try:
                 matplotlib.font_manager.fontManager.addfont(ff)
             except:  # pylint: disable=bare-except  # noqa
                 # Whatever happened, it's just going to alter fonts a bit.
                 pass
+
         oldFaces = plt.rcParams["font.serif"]
         plt.rcParams["font.serif"] = ["Libertinus Serif"] + oldFaces
         oldFaces = plt.rcParams["font.sans-serif"]
-        plt.rcParams["font.sans-serif"] = ["Libertinus Sans"] + oldFaces
-        plt.rcParams["font.family"] = "serif"
-        plt.rcParams["mathtext.fontset"] = "custom"
-        plt.rcParams["mathtext.rm"] = "Libertinus Serif"
-        plt.rcParams["mathtext.it"] = "Libertinus Serif:italic"
-        plt.rcParams["mathtext.bf"] = "Libertinus Serif:bold"
-        plt.rcParams["mathtext.cal"] = "Libertinus Serif:italic"
+        plt.rcParams["font.sans-serif"] = ["Fira Sans"] + oldFaces
+        if serif:
+            setDefaultFontFamily("serif")
+            plt.rcParams["font.family"] = "serif"
+            plt.rcParams["mathtext.fontset"] = "custom"
+            plt.rcParams["mathtext.rm"] = "Libertinus Serif"
+            plt.rcParams["mathtext.it"] = "Libertinus Serif:italic"
+            plt.rcParams["mathtext.bf"] = "Libertinus Serif:bold"
+            plt.rcParams["mathtext.cal"] = "Libertinus Serif:italic"
+        else:
+            setDefaultFontFamily("sans-serif")
+            plt.rcParams["font.family"] = "sans-serif"
+            plt.rcParams["mathtext.fontset"] = "custom"
+            plt.rcParams["mathtext.rm"] = "Fira Sans"
+            plt.rcParams["mathtext.it"] = "Fira Sans:italic"
+            plt.rcParams["mathtext.bf"] = "Fira Sans:bold"
+            plt.rcParams["mathtext.cal"] = "Fira Sans:italic"
+
         logUtils.debug("Configured matplotlib default fonts.")
     except Exception as e:  # pylint: disable=broad-exception-caught
         # If it didn't work, that's okay. User will still get good enough fonts.

@@ -51,11 +51,13 @@ from bpreveal import plotting
 from bpreveal import logUtils
 import bpreveal
 from bpreveal.internal import interpreter
+from bpreveal import colors
 
 
 def main(cfg: dict) -> None:
     """Actually make the plot(s)."""
     startTime = time.perf_counter()
+    colors.loadFonts()
     logUtils.setVerbosity(cfg.get("verbosity", "WARNING"))
     dpi = cfg.get("dpi", 300)
     width = cfg.get("width", 7)
