@@ -9,7 +9,7 @@ import matplotlib.axes
 import matplotlib.colors
 import numpy.typing as npt
 from bpreveal import utils
-from bpreveal.internal.constants import ANNOTATION_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
+from bpreveal.internal.constants import ANNOTATION_T, COLOR_SPEC_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
 from bpreveal.colors import dnaWong, parseSpec, wong
 
 # Types
@@ -934,8 +934,8 @@ def validCorruptorList(corruptorList: list[CORRUPTOR_T]) -> bool:
     return True
 
 
-def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
-               negTraces: list[tuple[PRED_AR_T, str, str]],
+def plotTraces(posTraces: list[tuple[PRED_AR_T, str, COLOR_SPEC_T]],
+               negTraces: list[tuple[PRED_AR_T, str, COLOR_SPEC_T]],
                xvals: npt.NDArray[np.float32],
                annotations: list[GA_ANNOTATION_T | ANNOTATION_T],
                corruptors: list[CORRUPTOR_T],
@@ -955,7 +955,7 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
         1. A one-dimensional array of values. The number of values must be the
            same as the number of points in xvals.
         2. A string that will be used as a label for the trace.
-        3. A string that will be used for the color of the trace.
+        3. A color-spec that will be used for the color of the trace.
 
     negTraces has the same structure as posTraces, but will be negated before
     being plotted. This is handy to make different conditions visually
@@ -967,12 +967,12 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
 
         1. a pair of integers, giving the start and stop points of that annotation,
         2. a string giving its label,
-        3. a string giving its color,
+        3. a color-spec giving its color,
         4. a float giving the bottom of its annotation box, and
         5. a float giving the top of its annotation box. For example::
 
             `[((431075,431089), "FKH2", "red", 0.5, 0,7),
-            ((431200, 431206), "PHO4", "blue", 0.3, 0.6)]`
+            ((431200, 431206), "PHO4", {"wong": 0}, 0.3, 0.6)]`
 
     corruptors has the same format as the corruptors in an organism, but be
     sure you shift the coordinates appropriately so that they line up with
@@ -987,9 +987,11 @@ def plotTraces(posTraces: list[tuple[PRED_AR_T, str, str]],
     maxesNeg = [max(x[0]) for x in negTraces]
     boxHeight = max(maxesPos + maxesNeg) / 20
     for posTrace in posTraces:
-        ax.plot(xvals, posTrace[0] + boxHeight, label=posTrace[1], color=posTrace[2])
+        colorVal = parseSpec(posTrace[2])
+        ax.plot(xvals, posTrace[0] + boxHeight, label=posTrace[1], color=colorVal)
     for negTrace in negTraces:
-        ax.plot(xvals, -negTrace[0] - boxHeight, label=negTrace[1], color=negTrace[2])
+        colorVal = parseSpec(negTrace[2])
+        ax.plot(xvals, -negTrace[0] - boxHeight, label=negTrace[1], color=colorVal)
     usedLabels = []
     for a in annotations:
         match a:  # Transform a new-style annotation into an old-style.

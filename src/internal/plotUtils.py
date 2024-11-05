@@ -537,7 +537,7 @@ def addResizeCallbacks(ax: AXES_T, which: Literal["both"] | Literal["x"] | Liter
 
 def _getAnnotationShape(shape: str, aleft: float, aright: float,
                         height: float) -> tuple[list[float], list[float]]:
-    """Gets a set of X and Y coordinates that will draw the given shape at the given position.
+    """Get a set of X and Y coordinates that will draw the given shape at the given position.
 
     :param shape: A valid shape string.
     :param aleft: The left edge of the shape.
@@ -708,6 +708,8 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
             pass
     if rasterize:
         axPisa.set_rasterization_zorder(0)
+    # axPisa.set_frame_on(False)
+    [x.set_linewidth(0.1) for x in axPisa.spines.values()]
     return smap
 
 
@@ -820,6 +822,7 @@ def addCbar(pisaCax: ScalarMappable, axCbar: AXES_T, fontSizeTicks: int,
     axCbar.set_yticks(cbar.get_ticks(), [f"{x:0.2f}" for x in cbar.get_ticks()],
                       fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
     axCbar.set_ylim(bottom, top)
+    axCbar.set_frame_on(False)
     if mini:
         axCbar.set_xlabel("PISA\neffect\n(log₂(fc))",
                           fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY,
@@ -855,7 +858,7 @@ def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontSize: in
 def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
                 width: float, height: float, mini: bool) -> tuple[AXES_T, AXES_T,
         AXES_T, AXES_T, AXES_T, AXES_T | None]:
-    """Generates the various axes that will be needed for a PISA plot.
+    """Generate the various axes that will be needed for a PISA plot.
 
     :param fig: The figure to draw the axes on.
     :param left: The left edge, as a fraction of the figure width, for the plots.
@@ -894,14 +897,14 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
                             cbarWidth * 3, pisaHeight * (1 - 1 / 3 - 1 / 7)))
         axLegend.set_axis_off()
     axAnnot = fig.add_axes((left,
-                            bottom + seqHeight + 2 * pisaHeight / 3,
+                            bottom + seqHeight + 0.01 * pisaHeight,
                             pisaWidth,
-                            pisaHeight / 3),
+                            pisaHeight * 0.2),
                            sharex=axPisa)
 
     axSeq.set_frame_on(False)
     axSeq.set_yticks([])
-    axAnnot.set_ylim(-1, 0)
+    axAnnot.set_ylim(0, -1)
     # We don't want to resize the y-axis of the annotation axis, even if the user
     # is zooming around. So every time a key gets released, set the ylim for the
     # annotation axis to the appropriate value.
@@ -1066,7 +1069,9 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
     :param labelXAxis: If True, then put ticks and tick labels on the x-axis, and also
         remove any labels from axGraph, if axGraph is not None.
     :param yAxisLabel: Text to display on the left side of the axis.
-    :param mini: If True, use fewer x-ticks.
+    :param mini: If True, use fewer x-ticks and don't show a label on the x-axis.
+        Note that even if ``labelXAxis`` is ``True``, the string ``Input base coordinate``
+        will not be shown if ``mini`` is ``True``.
     """
     numXTicks = 4 if mini else 10
     addResizeCallbacks(axSeq, "x", 0, numXTicks, fontSizeTicks)
@@ -1094,8 +1099,9 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
         axSeq.set_ylim(ymin, max(values))
     if labelXAxis:
         axSeq.xaxis.set_tick_params(labelbottom=True, which="major")
-        axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel,
-                         fontfamily=FONT_FAMILY)
+        if not mini:
+            axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel,
+                             fontfamily=FONT_FAMILY)
         if axGraph is not None:
             axGraph.tick_params(axis="x", which="major", length=0, labelbottom=False)
     else:

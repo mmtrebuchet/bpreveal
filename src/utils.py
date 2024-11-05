@@ -9,7 +9,6 @@ from collections.abc import Iterable
 import h5py
 import scipy
 import pyBigWig
-import pybedtools
 import pysam
 import numpy as np
 from bpreveal import logUtils
@@ -20,7 +19,6 @@ from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHO
     LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T, MODEL_LOAD_LOCK
 from bpreveal.internal import constants
 from bpreveal.internal.crashQueue import CrashQueue
-from bpreveal import bedUtils
 
 
 def loadModel(modelFname: str):  # noqa: ANN201
@@ -914,6 +912,8 @@ class BatchPredictor:
             one-hot encoded sequence to predict.
         :param label: Any object; it will be returned with the prediction.
         """
+        import pybedtools
+        from bpreveal import bedUtils
         if sequence.shape[0] > self._inputLength:
             # We need to tile.
             logUtils.logFirstN(logUtils.INFO,

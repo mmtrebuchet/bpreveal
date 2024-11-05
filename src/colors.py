@@ -206,6 +206,8 @@ def loadFonts(serif: bool = True) -> None:
 
     This places the given font (Libertinus or Fira Sans) at the top of the
     order for serif and sans-serif fontfamily, but does not overwrite the monospace family.
+    It also sets the pdf backend to save text boxes rather than individual letters so that
+    text can be easily edited later.
     """
     try:
         cwd = pathlib.Path(__file__).parent.parent.parent.resolve()
@@ -240,7 +242,9 @@ def loadFonts(serif: bool = True) -> None:
             plt.rcParams["mathtext.it"] = "Fira Sans:italic"
             plt.rcParams["mathtext.bf"] = "Fira Sans:bold"
             plt.rcParams["mathtext.cal"] = "Fira Sans:italic"
-
+        # Set the pdf output to use text boxes, rather than drawing each character
+        # as a shape on its own.
+        plt.rcParams["pdf.fonttype"] = 42
         logUtils.debug("Configured matplotlib default fonts.")
     except Exception as e:  # pylint: disable=broad-exception-caught
         # If it didn't work, that's okay. User will still get good enough fonts.

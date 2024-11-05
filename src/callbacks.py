@@ -77,17 +77,17 @@ class FixLossCallback(Callback):
 
     def on_epoch_end(self, _: int,
                      logs: dict | None = None) -> None:
-        """Updates the logs."""
+        """Update the logs."""
         assert logs is not None, "Cannot work with empty logs!"
         self.correctLosses(logs)
 
     def on_train_batch_end(self, _: int, logs: dict | None = None) -> None:
-        """Updates the logs."""
+        """Update the logs."""
         assert logs is not None, "Cannot use empty logs!"
         self.correctLosses(logs)
 
     def on_test_batch_end(self, _: int, logs: dict | None = None) -> None:
-        """Updates the logs."""
+        """Update the logs."""
         assert logs is not None, "Cannot use empty logs!"
         self.correctLosses(logs)
 
