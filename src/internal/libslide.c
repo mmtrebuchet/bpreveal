@@ -1,18 +1,18 @@
 #define FLOAT_T float
-
+#define SIZE_T long
 /*
  * C implementation of row sliding, used to prepare input data for training.
  *
  */
 
 void runRow(const FLOAT_T * const restrict source, FLOAT_T *restrict dest,
-            int numRows, int numSourceCols, int numDestCols, int depth,
+            SIZE_T numRows, SIZE_T numSourceCols, SIZE_T numDestCols, SIZE_T depth,
             const int * const restrict rowIndexes,
             const int * const restrict colIndexes,
-            int row) {
-    for (int destCol = 0; destCol < numDestCols; destCol++) {
-        for (int z = 0; z < depth; z++) {
-            int sr = rowIndexes[row];
+            SIZE_T row) {
+    for (SIZE_T destCol = 0; destCol < numDestCols; destCol++) {
+        for (SIZE_T z = 0; z < depth; z++) {
+            SIZE_T sr = rowIndexes[row];
             FLOAT_T srcVal = source[row * numSourceCols * depth
                                     + (destCol + colIndexes[row]) * depth
                                     + z];
@@ -24,13 +24,13 @@ void runRow(const FLOAT_T * const restrict source, FLOAT_T *restrict dest,
 }
 
 void runRowChar(const unsigned char * const restrict source,
-                FLOAT_T *restrict dest, int numRows, int numSourceCols,
-                int numDestCols, int depth,
+                FLOAT_T *restrict dest, SIZE_T numRows, SIZE_T numSourceCols,
+                SIZE_T numDestCols, SIZE_T depth,
                 const int * const restrict rowIndexes,
-                const int * const restrict colIndexes, int row) {
-    for (int destCol = 0; destCol < numDestCols; destCol++) {
-        for (int z = 0; z < depth; z++) {
-            int sr = rowIndexes[row];
+                const int * const restrict colIndexes, SIZE_T row) {
+    for (SIZE_T destCol = 0; destCol < numDestCols; destCol++) {
+        for (SIZE_T z = 0; z < depth; z++) {
+            SIZE_T sr = rowIndexes[row];
             FLOAT_T srcVal = source[row * numSourceCols * depth
                                     + (destCol + colIndexes[row]) * depth
                                     + z];
@@ -59,7 +59,7 @@ void slide(const FLOAT_T * const restrict source, FLOAT_T *restrict dest,
     *
     */
     #pragma omp parallel for num_threads(8)
-    for (int row = 0; row < numRows; row++) {
+    for (SIZE_T row = 0; row < numRows; row++) {
         runRow(source, dest, numRows, numSourceCols, numDestCols,
                depth, rowIndexes, colIndexes, row);
     }
@@ -84,7 +84,7 @@ void slideChar(const unsigned char * const restrict source,
     *
     */
     #pragma omp parallel for num_threads(8)
-    for (int row = 0; row < numRows; row++) {
+    for (SIZE_T row = 0; row < numRows; row++) {
         runRowChar(source, dest, numRows, numSourceCols, numDestCols,
                    depth, rowIndexes, colIndexes, row);
     }
