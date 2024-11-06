@@ -703,13 +703,14 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
     axPisa.set_xlim(extent[0], extent[1])
     match gridMode:
         case "on":
-            axPisa.grid()
+            axPisa.grid(linewidth=0.2)
         case "off":
             pass
     if rasterize:
         axPisa.set_rasterization_zorder(0)
-    # axPisa.set_frame_on(False)
-    [x.set_linewidth(0.1) for x in axPisa.spines.values()]
+    for x in axPisa.spines.values():
+        x.set_linewidth(0.1)
+    axPisa.yaxis.set_tick_params(width=0.4)
     return smap
 
 
@@ -799,6 +800,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         ax.add_patch(p[1])
     ax.set_xlim(0.5 + genomeStart, np.max(plotMat.shape) - 0.5 - 2 * trim + genomeStart)
     ax.set_ylim(0, 1)
+    ax.yaxis.set_tick_params(width=0.4)
     if rasterize:
         ax.set_rasterization_zorder(0)
     # Last quick thing to do - generate a color map.
@@ -821,6 +823,7 @@ def addCbar(pisaCax: ScalarMappable, axCbar: AXES_T, fontSizeTicks: int,
     bottom, top = axCbar.get_ylim()
     axCbar.set_yticks(cbar.get_ticks(), [f"{x:0.2f}" for x in cbar.get_ticks()],
                       fontsize=fontSizeTicks, fontfamily=FONT_FAMILY)
+    axCbar.yaxis.set_tick_params(width=0.4)
     axCbar.set_ylim(bottom, top)
     axCbar.set_frame_on(False)
     if mini:
@@ -1044,6 +1047,7 @@ def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
         axProfile.set_xticks(profileXticks, profileXticks, fontsize=fontSizeTicks,
                              fontfamily=FONT_FAMILY)
         axProfile.set_xlabel("Profile", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
+    axProfile.xaxis.set_tick_params(width=0.4)
 
 
 def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], sequence: str,
@@ -1098,14 +1102,14 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
         ymin = min(0, min(values))  # pylint: disable=W3301
         axSeq.set_ylim(ymin, max(values))
     if labelXAxis:
-        axSeq.xaxis.set_tick_params(labelbottom=True, which="major")
+        axSeq.xaxis.set_tick_params(labelbottom=True, which="major", width=0.4)
         if not mini:
             axSeq.set_xlabel("Input base coordinate", fontsize=fontSizeAxLabel,
                              fontfamily=FONT_FAMILY)
         if axGraph is not None:
             axGraph.tick_params(axis="x", which="major", length=0, labelbottom=False)
     else:
-        axSeq.xaxis.set_tick_params(labelbottom=False)
+        axSeq.xaxis.set_tick_params(labelbottom=False, width=0.4)
     axSeq.set_ylabel(yAxisLabel, fontsize=fontSizeAxLabel,
                      fontfamily=FONT_FAMILY, rotation=0, loc="bottom", labelpad=40)
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
