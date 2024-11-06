@@ -24,7 +24,7 @@ and see doc/demos/osknExample.ipynb for a demonstration notebook.
 # will not alter the environment setup, so you can just pull the new BPReveal code
 # and it will work with your current conda environment.
 
-__version__ = "5.0.1"
+__version__ = "5.0.2"
 __author__ = "Charles McAnany, Ph.D.; Melanie Weilert; Haining Jiang; "\
              "Patrick Moeller; Samuel Campbell; Anshul Kundaje, Ph.D.; "\
              "Julia Zeitlinger, Ph.D."
