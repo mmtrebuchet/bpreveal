@@ -10,7 +10,7 @@ def getParser() -> argparse.ArgumentParser:
         "length required to run BPReveal for a given configuration and output length. "
         "The required length is written to stdout.")
 
-    parser.add_argument("--output-len",
+    parser.add_argument("--output-len", "--output-length",
             help="The length of the output profile that is to be predicted. If "
                  "specified, the returned value will be the required input "
                  "sequence length. Exactly one of --input-len or --output-len "
@@ -19,7 +19,7 @@ def getParser() -> argparse.ArgumentParser:
             metavar="OL",
             type=int)
 
-    parser.add_argument("--input-len",
+    parser.add_argument("--input-len", "--input-length",
             help="The length of the input sequence for which profiles will be "
                  "predicted. If specified, the returned value is the length of "
                  "the predicted profile. If no profile can be predicted, the "
@@ -29,7 +29,7 @@ def getParser() -> argparse.ArgumentParser:
             metavar="IL",
             type=int)
 
-    parser.add_argument("--n-dil-layers",
+    parser.add_argument("--n-dil-layers", "--layers",
             help="The number of diluted convolutional layers in the network, "
                  "typically on the order of 10.",
             dest="nDilLayers",
@@ -47,14 +47,14 @@ def getParser() -> argparse.ArgumentParser:
             metavar="ICW",
             required=False)
 
-    parser.add_argument("--conv1-kernel-size",
+    parser.add_argument("--conv1-kernel-size", "--input-filter-width",
             help="The size of the first convolution in the network, typically on the order of 25",
             dest="conv1KernelSize",
             type=int,
             metavar="C1KS",
             required=False)
 
-    parser.add_argument("--profile-kernel-size",
+    parser.add_argument("--profile-kernel-size", "--output-filter-width",
             help="The width of the final convolutional filter in the output heads, "
                  "typically on the order of 75.",
             dest="profileKernelSize",
