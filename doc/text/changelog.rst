@@ -11,6 +11,13 @@ BPReveal 4.x
 BPReveal 4.2.x
 ^^^^^^^^^^^^^^
 
+BPReveal 4.2.1, 2024-11-05
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Ported the segfault fix from 4.1.5 to the 4.2 branch.
+
+
 BPReveal 4.2.0, 2024-05-20
 ''''''''''''''''''''''''''
 
@@ -40,6 +47,13 @@ BREAKING CHANGES:
 
 BPReveal 4.1.x
 ^^^^^^^^^^^^^^
+
+BPReveal 4.1.5, 2024-11-05
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Backported a fix to a rare segfault from the generator code when used with huge
+      data sets.
 
 BPReveal 4.1.4, 2024-04-24
 ''''''''''''''''''''''''''
