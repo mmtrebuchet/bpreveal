@@ -72,18 +72,18 @@ contrib_match
     The continuous Jaccard similarity
     between the motif's cwm and the contribution scores of this seqlet.
 
-seq-match-quantile
+seq_match_quantile
     Given the PSSM score of each mapped hit to the original TF-MoDISco PSSM,
     calculate the quantile value of this score, given the distribution of
     seqlets corresponding to the TF-MoDISco pattern.
 
-contrib-match-quantile
+contrib_match_quantile
     Given the CWM score (i.e. Jaccardian-similarity) of each mapped hit's
     contribution to the original TF-MoDISco CWM, calculate the quantile value
     of this score, given the distribution of seqlets corresponding to the
     TF-MoDISco pattern.
 
-contrib-magnitude-quantile
+contrib_magnitude_quantile
     Given the total L1 magnitude of contribution across a mapped hit, calculate
     the quantile value of this magnitude, given the distribution of seqlets
     corresponding to theTF-MoDISco pattern.
@@ -116,6 +116,9 @@ Unix-fu::
         tail -n +2 | \
         sort -k1,1 -k2,2n -k3,3n -k4,4 -k5,5nr | \
         awk '!_[$1,$2,$3,$4,$6]++' > scan.bed
+
+For a more general but still somewhat user-friendly tool to remove duplicates,
+see the :py:mod:`bestMotifsOnly<bpreveal.tools.bestMotifsOnly>` tool.
 
 API
 ---

@@ -3,6 +3,33 @@
 
 For each position, if there are two motifs that claim it, remove the motif with a lower
 value in the specified score.
+
+The ``metric`` and ``filter`` arguments are evaluated by the interpreter.
+These expressions are evaluated in an environment where each property of a record
+(either bed or tsv) is bound to a variable given by the column name. For example, if a
+bed file is provided, then ``chrom``, ``name``, ``start``, and the other columns are
+variables in the environment for the expression. You can see the
+:py:mod:`interpreter<bpreveal.internal.interpreter>` documentation for a list of all
+of the syntax available, but here are a few examples:
+
+``--metric score``
+    would rank motifs based on their score column, assuming bed-format input.
+``--metric 'seq_match_quantile + 2 * contrib_match_quantile'``
+    would score motifs based mostly on their contribution match, but also
+    include some weight for sequence match.
+``--filter 'contrib_match_quantile > 0.8'``
+    would only keep the top 20 percent of motifs no matter the motif name.
+``--filter '(pattern_name != "polyA") or (contrib_magnitude_quantile > 0.9)'``
+    would select all motifs not named ``polyA`` and only accept the top 10 percent of
+    ``polyA`` motifs.
+
+``filter`` should return True or False, whereas ``metric`` should return a scalar.
+
+Note that there is no support for comparing motifs as part of your metric, so there
+is no way to say
+``--metric 'motif1.contrib_magnitude if motif1.end > motif2.start else motif1.contrib_match'``.
+(The names ``motif1`` and ``motif2`` would be name errors, since they are not in scope.)
+
 """
 import ast
 import argparse
@@ -12,20 +39,21 @@ from bpreveal.internal.interpreter import evalAst
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Generates the parser, but does not call parse_args()."""
+    """Generate the parser, but do not call parse_args()."""
     p = argparse.ArgumentParser(
         description="Read in a tsv file from the motif scanner and limit each position to "
                     "only have one motif.")
     p.add_argument("--metric",
         help="A python expression giving the value that should be used to compare "
              "motif instances to see which one is better. (Beds should use the 'score' "
-             "column to compare.)",
+             "column to compare.) See man page for examples.",
         default="score")
     p.add_argument("--filter",
         help="Only consider motifs that satisfy this filter. "
              "Format: Any valid Python expression where the identifiers are "
              "column names in the tsv. "
-             "(Don't forget to quote comparison operators on the shell!)",
+             "(Don't forget to quote comparison operators on the shell!) "
+             "See the man page for examples.",
         default="True",
         dest="filter",
         type=str)
@@ -183,28 +211,42 @@ def loadEntries(inTsv: str | None, inBed: str | None,
     return entries, colNames, nameCol
 
 
+def preprocessMotifs(entries: list[dict], filterDef: str, metricDef: str) -> list[dict]:
+    """Sort, filter, and score the given motif hits.
+
+    :param entries: A list of dicts, each one representing one motif hit and
+        the fields corresponding to the columns in the data file.
+    :param filterDef: A string giving the filter to apply to each of the motifs.
+    :param metricDef: A string giving the metric to be calculated for scoring.
+    :return: A list of entries that pass the filter. Each one will have a new field
+        called ``metric`` that contains the calculated metric for that motif instance.
+    """
+    def sortKey(e: dict) -> tuple[str, int]:
+        return (e["chrom"], e["start"])
+    sortEntries = sorted(entries, key=sortKey)
+    strippedEntries = []
+    filterAst = ast.parse(filterDef)
+    for e in sortEntries:
+        if evalAst(filterAst, e, True):
+            strippedEntries.append(e)
+    logUtils.info(f"Filtering complete. Surviving motifs: {len(strippedEntries)}")
+    metricAst = ast.parse(metricDef)
+    measuredEntries = []
+    for e in strippedEntries:
+        # We don't need to add functions to the entries again, since we did that during filter.
+        e["metric"] = evalAst(metricAst, e, True)
+        measuredEntries.append(e)
+    return measuredEntries
+
+
 def main() -> None:
     """Run the culling algorithm."""
     args = getParser().parse_args()
     logUtils.setBooleanVerbosity(args.verbose)
     entries, colNames, nameCol = loadEntries(args.inTsv, args.inBed, args.matchNames)
 
-    def sortKey(e: dict) -> tuple[str, int]:
-        return (e["chrom"], e["start"])
     logUtils.info(f"Loaded input file. Number of entries: {len(entries)}")
-    sortEntries = sorted(entries, key=sortKey)
-    strippedEntries = []
-    filterAst = ast.parse(args.filter)
-    for e in sortEntries:
-        if evalAst(filterAst, e, True):
-            strippedEntries.append(e)
-    logUtils.info(f"Filtering complete. Surviving motifs: {len(strippedEntries)}")
-    metricAst = ast.parse(args.metric)
-    measuredEntries = []
-    for e in strippedEntries:
-        # We don't need to add functions to the entries again, since we did that during filter.
-        e["metric"] = evalAst(metricAst, e, True)
-        measuredEntries.append(e)
+    measuredEntries = preprocessMotifs(entries, args.filter, args.metric)
     logUtils.info("Metrics calculated. Beginning overlap removal calculation.")
     outs = removeOverlaps(measuredEntries, nameCol, args.maxOffset)
     logUtils.info(f"Culling complete. Surviving motifs: {len(outs)}")

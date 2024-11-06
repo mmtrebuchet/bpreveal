@@ -433,6 +433,15 @@ def oneHotEncode(sequence: str, allowN: bool = False, alphabet: str = "ACGT") ->
         T or t → [0, 0, 0, 1]
         Other  → [0, 0, 0, 0]
 
+    A convenient property of this mapping is that calculating a reverse-complement
+    sequence is trivial::
+
+        seq = "AAGAGGCT"
+        ohe = oneHotEncode(seq)
+        revcompOhe = np.flip(ohe)
+        revcompSeq = oneHotDecode(revcompOhe)
+        # revcompSeq is now "AGCCTCTT"
+
     **Example:**
 
     .. code-block:: python
@@ -912,8 +921,10 @@ class BatchPredictor:
             one-hot encoded sequence to predict.
         :param label: Any object; it will be returned with the prediction.
         """
+        # pylint: disable=import-outside-toplevel
         import pybedtools
         from bpreveal import bedUtils
+        # pylint: enable=import-outside-toplevel
         if sequence.shape[0] > self._inputLength:
             # We need to tile.
             logUtils.logFirstN(logUtils.INFO,

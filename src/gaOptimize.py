@@ -9,7 +9,8 @@ import matplotlib.axes
 import matplotlib.colors
 import numpy.typing as npt
 from bpreveal import utils
-from bpreveal.internal.constants import ANNOTATION_T, COLOR_SPEC_T, LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
+from bpreveal.internal.constants import ANNOTATION_T, COLOR_SPEC_T, \
+    LOGIT_AR_T, PRED_AR_T, LOGCOUNT_T
 from bpreveal.colors import dnaWong, parseSpec, wong
 
 # Types
