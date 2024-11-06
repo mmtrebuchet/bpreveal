@@ -10,6 +10,13 @@ BPReveal 5.x
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^
 
+BPReveal 5.0.2, 2024-11-06
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Fixed a rare segfault when very large input datasets are used to train.
+
+
 BPReveal 5.0.1, 2024-10-29
 ''''''''''''''''''''''''''
 
