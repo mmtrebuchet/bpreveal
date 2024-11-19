@@ -93,7 +93,7 @@ hyp_scores
 
 input_predictions
     An array of the values of the given metric for each region that was shapped.
-    This will have shape ``(num-regions,)``.
+    This will have shape ``(num-regions,)``. (Added in BPReveal 5.1.0)
 
 metadata
     A group containing the configuration used to generate the scores.
@@ -219,6 +219,8 @@ def profileMetric(headID: int, taskIDs: list[int]) -> Callable:
         # We don't want to propagate the shap calculation through this layer.
         # Note that stopgrad is meaningless when using the ism backend.
         stopgradMeannormedLogits = StopGradLayer()(meannormedLogits)
+        # The axis=1 here is because we don't want to combine samples from
+        # different batches (and batches are in axis=0).
         softmaxOut = ops.softmax(stopgradMeannormedLogits, axis=1)
         weightedSum = ops.sum(softmaxOut * meannormedLogits, axis=1)
         return weightedSum
@@ -235,6 +237,8 @@ def countsMetric(numHeads: int, headID: int) -> Callable:
     :return: A function (that takes a model as its argument) that can
         be passed into the depths of the interpretation system.
     """
+    # Note that this slice captures the whole batch, hence the colon
+    # on axis 0 of the model's output head.
     return lambda model: model.outputs[numHeads + headID][:, 0]
 
 

@@ -36,6 +36,11 @@ ENHANCEMENTS:
       I may add this as a general feature to the CLI, probably as a new verbosity level.
     * Added a sans-serif option for all plots. This uses the Fira Sans font, which
       I find pleasant.
+    * easyPredict can now use sequences that are longer than the model's input length.
+      In this case, it will make predictions across the whole range of valid output
+      and stitch them together to give you a single big output prediction.
+    * interpretFlat now includes the value of the metric at each location that was
+      interpreted in its output hdf5 file.
 
 BUG FIXES:
     * Added a check to make sure that the slices applied to PISA plots are valid,
@@ -50,6 +55,7 @@ BUG FIXES:
 CONTRIBUTORS:
     * Charles McAnany
     * Julia Zeitlinger (plot design feedback)
+    * Melanie Weilert (custom interpretation metrics feedback)
 
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^

@@ -129,7 +129,7 @@ class ISMDeepExplainer:
         """Actually run the ISM for a batch of inputs.
 
             :param batch: A list of arrays of one-hot encoded sequences of shape
-                (batch-size, input-length, alphabet-length).
+                (batch-size, input-length, NUM_BASES).
                 For consistency with the actual shap explainer, this array must be wrapped
                 in a list (and that list must have length one.)
             :return: A two-tuple. The first element is an array of the same shape as
@@ -178,7 +178,7 @@ class ISMDeepExplainer:
     def runSample(self, sample: ONEHOT_AR_T) -> tuple[IMPORTANCE_AR_T, PRED_T]:
         """Run ISM on a single sequence. You should probably use shap_values instead.
 
-        :param sample: The sequence to analyze. An array of shape (input-length, alphabet-length).
+        :param sample: The sequence to analyze. An array of shape (input-length, NUM_BASES).
         :return: A two-tuple. The first element is n array of the same shape as sample, with
             importance scores in it. The second is the value of the metric on the input sequence.
         """

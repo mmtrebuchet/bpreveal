@@ -83,10 +83,10 @@ class Result:
         returned by running predictions on the reference sequence, again evaluated
         at the position of the base that was being shapped.
 
-    :param sequence: is a ``(input-length, alphabet-length)`` numpy array of the
+    :param sequence: is a ``(input-length, NUM_BASES)`` numpy array of the
         one-hot encoded input sequence.
 
-    :param shap: is a ``(input-length, alphabet-length)`` numpy array of shap scores.
+    :param shap: is a ``(input-length, NUM_BASES)`` numpy array of shap scores.
 
     :param passData: is data that is not touched by the batcher, but added by
         the generator and necessary for creating the output file.

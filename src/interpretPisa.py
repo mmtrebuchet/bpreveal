@@ -68,7 +68,7 @@ correct-receptive-field
     (Optional) If set to ``true``, then the output array will have the correct width,
     which is input-length - output-length + 1. By default, use the (incorrect) value
     of input-length - output-length, for compatibility with old scripts. In version
-    5.0.0, default will switch from ``false`` to ``true``.
+    5.0.0, the default switched from ``False`` to ``True``.
 
 
 Output Specification
