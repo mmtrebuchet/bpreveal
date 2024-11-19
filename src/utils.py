@@ -729,7 +729,7 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
            "counts": array of shape (inputLength,)}
     """
     # pylint: disable=import-outside-toplevel
-    from bpreveal import interpretUtils
+    from bpreveal import interpretFlat
     from bpreveal.interpretUtils import ListGenerator, FlatListSaver, InterpRunner
     # pylint: enable=import-outside-toplevel
     assert not constants.getTensorflowLoaded(), \
@@ -745,8 +745,8 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
     generator = ListGenerator(sequences)
     profileSaver = FlatListSaver(generator.numSamples, generator.inputLength)
     countsSaver = FlatListSaver(generator.numSamples, generator.inputLength)
-    profileMetric = interpretUtils.profileMetric(headID, taskIDs)
-    countsMetric = interpretUtils.countsMetric(heads, headID)
+    profileMetric = interpretFlat.profileMetric(headID, taskIDs)
+    countsMetric = interpretFlat.countsMetric(heads, headID)
     batcher = InterpRunner(modelFname=modelFname, metrics=[profileMetric, countsMetric],
                            batchSize=1, generator=generator, savers=[profileSaver, countsSaver],
                            numShuffles=numShuffles, kmerSize=kmerSize, numThreads=2,
