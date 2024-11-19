@@ -75,10 +75,34 @@ kmer-size
 Output Specification
 --------------------
 
+Shap and sequence
+^^^^^^^^^^^^^^^^^
+
+Whether you gave a fasta file or a genome and bed file, the generated hdf5 file
+will contain the following datasets:
+
+input_seqs
+    A one-hot encoded array representing the input sequences. It will have
+    shape ``(num-regions x input-length x NUM_BASES)``
+
+hyp_scores
+    A table of the shap scores. It will have shape ``(num-regions x
+    input-length x NUM_BASES)``. If you want the actual contribution scores, not the
+    hypothetical ones, multiply ``hyp_scores`` by ``input_seqs`` to zero out
+    all purely hypothetical contribution scores.
+
+input_predictions
+    An array of the values of the given metric for each region that was shapped.
+    This will have shape ``(num-regions,)``.
+
+metadata
+    A group containing the configuration used to generate the scores.
+
+
 Genome and bed file
 ^^^^^^^^^^^^^^^^^^^
 If you gave a genome fasta and a bed file of regions, the output will have this
-structure:
+structure (in addition to ``input_seqs``, ``hyp_scores``, and ``metadata``):
 
 chrom_names
     A list of strings giving the name of each chromosome. ``coords_chrom``
@@ -102,30 +126,17 @@ coords_chrom
     The chromosome number on which each region is found. These are integer
     indexes into ``chrom_names``, and this dataset has shape ``(num-regions,)``
 
-input_seqs
-    A one-hot encoded array representing the input sequences. It will have
-    shape ``(num-regions x input-length x NUM_BASES)``
-
-hyp_scores
-    A table of the shap scores. It will have shape ``(num-regions x
-    input-length x NUM_BASES)``. If you want the actual contribution scores, not the
-    hypothetical ones, multiply ``hyp_scores`` by ``input_seqs`` to zero out
-    all purely hypothetical contribution scores.
-
-metadata
-    A group containing the configuration used to generate the scores.
-
 
 Fasta file
 ^^^^^^^^^^
+
+If you provided a fasta file for sequence input, then the following
+dataset will be created:
 
 descriptions
     A list of strings that are the description lines from the input fasta file
     (with the leading ``>`` removed). This list will have shape
     ``(num-regions,)``
-
-input_seqs, hyp_scores
-    These have the same meaning as in the bed-and-genome based output files.
 
 Additional Information
 ----------------------
@@ -146,20 +157,85 @@ Before BPReveal 4.0.0, the ``coords_chrom`` dataset in the generated hdf5 file
 contained strings. For consistency with every other tool in the BPReveal suite,
 it was changed to contain an integer index into the ``chrom_names`` dataset.
 
+The ``input_predictions`` field was added in BPReveal 5.1.0.
+
 API
 ---
 
 
 """
+from collections.abc import Callable
+from typing import Any
 import h5py
 import pybedtools
 import pysam
 import bpreveal.schema
 from bpreveal import interpretUtils
 from bpreveal import logUtils
-import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal.internal import predictUtils
 from bpreveal.internal import interpreter
+
+
+def profileMetric(headID: int, taskIDs: list[int]) -> Callable:
+    """A metric to extract the profile spikiness from a given head and list of tasks.
+
+    :param headID: The head number that you want counts for.
+    :param taskIDs: The tasks within this head that you want included in the metric.
+        For most uses, this would be all of the tasks. For example, a two-task head would
+        use ``taskIDs = [0,1]``.
+    :return: A function (that takes a model as its argument) that can
+        be passed into the depths of the interpretation system.
+    """
+    def metric(model: Any) -> float:  # noqa
+        # Note that keras and tensorflow must be imported INSIDE the returned function so
+        # that they haven't been imported when the interpretation machinery tries to start
+        # up. This is dumb but it's how Tensorflow works.
+        # pylint: disable=import-outside-toplevel
+        import keras
+        import tensorflow as tf
+        from keras import ops
+        # pylint: enable=import-outside-toplevel
+
+        class StopGradLayer(keras.Layer):
+            """Because the Tensorflow 2.16 upgrade wasn't painful enough...
+
+            This just wraps stop_gradient so that it can be called
+            with a KerasTensor.
+            """
+
+            def call(self, x: tf.Tensor) -> keras.KerasTensor:
+                """Actually stop the gradient."""
+                return ops.stop_gradient(x)
+        # The profile logits for the given head. Has shape (batch-size, output-length, num-tasks)
+        profileOutput = model.outputs[headID]
+        # Select only the task IDs that were selected.
+        # This has shape (batch-size, output-length, num-selected-tasks)
+        stackedLogits = ops.stack([profileOutput[:, :, x] for x in taskIDs], axis=2)
+        inputShape = stackedLogits.shape
+        # Flatten all of the logits into a vector of shape (output-length * num-selected-tasks,)
+        numSamples = inputShape[1] * inputShape[2]
+        logits = ops.reshape(stackedLogits, [-1, numSamples])
+        meannormedLogits = ops.subtract(logits, ops.mean(logits, axis=1)[:, None])
+        # We don't want to propagate the shap calculation through this layer.
+        # Note that stopgrad is meaningless when using the ism backend.
+        stopgradMeannormedLogits = StopGradLayer()(meannormedLogits)
+        softmaxOut = ops.softmax(stopgradMeannormedLogits, axis=1)
+        weightedSum = ops.sum(softmaxOut * meannormedLogits, axis=1)
+        return weightedSum
+    # We return the *function* that accepts a model and returns the
+    # metric.
+    return metric
+
+
+def countsMetric(numHeads: int, headID: int) -> Callable:
+    """A metric to extract the logcounts from the given head.
+
+    :param numHeads: The total number of heads that the model will have.
+    :param headID: The head number that you want counts for.
+    :return: A function (that takes a model as its argument) that can
+        be passed into the depths of the interpretation system.
+    """
+    return lambda model: model.outputs[numHeads + headID][:, 0]
 
 
 def main(config: dict) -> None:
@@ -197,13 +273,16 @@ def main(config: dict) -> None:
         inputLength=config["input-length"], genome=genomeFname,
         useTqdm=False,
         config=str(config))
-
-    batcher = interpretUtils.FlatRunner(
-        modelFname=config["model-file"], headID=config["head-id"],
-        numHeads=config["heads"], taskIDs=config["profile-task-ids"],
-        batchSize=10, generator=generator, profileSaver=profileWriter,
-        countsSaver=countsWriter, numShuffles=config["num-shuffles"],
-        kmerSize=kmerSize)
+    # If you want to use a custom metric, you could add that here.
+    # Remember that numThreads must be divisible by the number of metrics.
+    profileMetricFun = profileMetric(config["head-id"], config["profile-task-ids"])
+    countsMetricFun = countsMetric(config["heads"], config["head-id"])
+    batcher = interpretUtils.InterpRunner(
+        modelFname=config["model-file"], metrics=[profileMetricFun, countsMetricFun],
+        batchSize=10, generator=generator, savers=[profileWriter, countsWriter],
+        numShuffles=config["num-shuffles"], kmerSize=kmerSize, numThreads=2,
+        backend="shap",
+        useHypotheticalContribs=True)
     batcher.run()
 
     # Finishing touch - if someone gave coordinate information, load that.

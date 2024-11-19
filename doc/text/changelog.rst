@@ -13,11 +13,21 @@ BPReveal 5.1.x
 BPReveal 5.1.0, DATEDATEDATE
 ''''''''''''''''''''''''''''
 
+BREAKING CHANGES:
+    * Quite a bit of refactoring was done inside interpretUtils. While these
+      functions are not normally directly useful for end-users, any custom interpretation
+      pipeline is almost certainly going to need to be re-done. See the changes in
+      interpretFlat and interpretPisa to see how to use the new API.
+
 NEW FEATURES:
     * Added the ability to include random mutations in corruptors in
       :py:mod:`gaOptimize<bpreveal.gaOptimize>`. This is less useful
       for GA work but gives a nice tool for making systematic
       mutations (say, for marginalization).
+    * You can now provide custom metrics for shapping, instead of
+      just the built-in profile and counts metrics.
+    * You can use scanning ISM instead of shap to get importance scores
+      (though the implementation is very slow).
 
 ENHANCEMENTS:
     * Added a way to completely silence all TensorFlow messages when using the batchers.
@@ -26,7 +36,6 @@ ENHANCEMENTS:
       I may add this as a general feature to the CLI, probably as a new verbosity level.
     * Added a sans-serif option for all plots. This uses the Fira Sans font, which
       I find pleasant.
-
 
 BUG FIXES:
     * Added a check to make sure that the slices applied to PISA plots are valid,
@@ -38,6 +47,10 @@ BUG FIXES:
     * Set pisa plots to always display whole pixels on the edge instead of the previous
       axis limit algorithm that could display half-pixels.
 
+CONTRIBUTORS:
+    * Charles McAnany
+    * Julia Zeitlinger (plot design feedback)
+
 BPReveal 5.0.x
 ^^^^^^^^^^^^^^
 
@@ -46,6 +59,11 @@ BPReveal 5.0.2, 2024-11-06
 
 BUG FIXES:
     * Fixed a rare segfault when very large input datasets are used to train.
+      Thanks to Ivan for finding and helping to diagnose the bug!
+
+CONTRIBUTORS:
+    * Charles McAnany
+    * Ivan Qiu
 
 
 BPReveal 5.0.1, 2024-10-29

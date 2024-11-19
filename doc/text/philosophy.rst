@@ -37,6 +37,10 @@ Coding philosophy
 *   Use only well-established and stable dependencies.
     Don't require specific versions of libraries, and only require packages
     that are truly essential.
+*   WE DO NOT BREAK USERSPACE!
+    Do not introduce backwards-incompatible changes unless they are necessary.
+    If a configuration format changes, allow both old-style and new-style
+    configurations so that existing code continues to work correctly.
 
 
 Coding Standards
@@ -46,6 +50,15 @@ As of 4.1.0, BPReveal gets a perfect score from pylint, flake8, and pydocstyle.
 
 The integration test includes coverage testing, and new features should always
 be added to the integration test suite.
+
+BPReveal uses normal semantic versioning. Major versions may introduce
+backwards-incompatible behavior to the CLI and any part of the API. Only
+major versions can alter the structure of files on disk.
+Minor versions may introduce breaking changes only to parts of the API
+that are not intended for external use.
+Patches are only for bug fixes.
+
+
 
 ..
     Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.

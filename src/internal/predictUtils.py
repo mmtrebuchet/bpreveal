@@ -4,7 +4,6 @@ import numpy as np
 import h5py
 import pybedtools
 import pysam
-import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal.constants import LOGIT_T, LOGCOUNT_T

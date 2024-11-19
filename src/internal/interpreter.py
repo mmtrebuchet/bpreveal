@@ -23,7 +23,7 @@ Here are the supported operations:
   * Comparison with ``<``, ``>``, ``<=``, ``>=``, ``==``, and ``!=``.
   * Chained comparison, like ``0.2 < x < 0.5``.
   * Builtin functions: ``exp``, ``log``, ``sqrt``, ``abs``, ``any``,
-      ``all``, ``min``, ``max``, ``sum``, ``len``, ``range``.
+    ``all``, ``min``, ``max``, ``sum``, ``len``, ``range``.
   * Builtin constants: ``e``, ``pi``, ``true``, ``false``, and ``null``.
     The ``true``, ``false``, and ``null`` constants are for compatibility
     with JSON. The Python literals ``True``, ``False``, and ``None`` are also

@@ -8,7 +8,12 @@ a copy of this license at ``etc/shap_license.txt``.
 Note: I have *removed* quite a few features that BPReveal doesn't use.
 """
 # flake8: noqa: ANN001, ANN201
+from collections.abc import Callable
+import itertools
+from typing import Any
 import numpy as np
+from bpreveal.internal.constants import IMPORTANCE_AR_T, IMPORTANCE_T, \
+    ONEHOT_AR_T, PRED_AR_T, PRED_T
 # pylint: disable=invalid-name,missing-function-docstring
 
 from tensorflow.python.eager import backprop as tf_backprop
@@ -45,6 +50,163 @@ def custom_record_gradient(op_name, inputs, attrs, results):
         inputs[1].__dict__["_dtype"] = tf.int32
 
     return out
+
+class ISMDeepExplainer:
+    r"""Uses in-silico mutation to determine each base's importance.
+
+    :param model: The (input, output) pair to explain, same semantics as the
+        TFDeepExplainer.
+    :param shuffler: A function that takes a one-hot encoded sequence and returns
+        an array of shuffles of that sequence.
+    :param shuffleLength: How wide of a window should be given to the shuffler?
+        This must be an odd number.
+    :param useOldKeras: Is the model being interpreted from a BPReveal version
+        before 5.0.0? This is needed because the way the internal model is built
+        changed with Keras 3.0.
+
+
+    The way the shuffles are generated is probably best illustrated
+    with a diagram::
+
+        INPUTSEQUENCEABCDEFGHIJKLMNOPQRSTUVWXYZ
+        \                                     /
+         \                                   /
+          \            Model                /
+           \                               /
+            \_____________________________/
+                        |
+                     Output
+
+    First, this tool runs the model on the input sequence to get a reference output.
+    This will be subtracted from the model outputs with shuffled inputs later on.
+
+    The shuffler takes slices of the input of width ``shuffleWidth`` and offers them
+    to ``shuffler`` For example, if shuffleWidth were 5, then the shuffler would be
+    given ``INPUT``, then ``NPUTS``, then ``PUTSE`, and so on, all the way
+    to the other end of the input.
+
+    The shuffler may return as many shuffles as it likes, all of them will be applied
+    and the result will be averaged to give the importance at each position.
+    For example, if the shuffler were given ``INPUT`` and returned ``TIPUN``, ``UNTIP``,
+    and ``INPTU``, then the model would be run on three sequences::
+
+        TIPUNSEQUENCEABCDEFGHIJKLMNOPQRSTUVWXYZ
+        UNTIPSEQUENCEABCDEFGHIJKLMNOPQRSTUVWXYZ
+        INPTUSEQUENCEABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+    The output of the model (which, remember, will be a single scalar) will then
+    be averaged across the three mutated cases, and then the difference between
+    the mutated output and the reference output will be stored as a diffref::
+
+        diffref = reference - mutated
+
+    This sign convention means that a base that causes a high output in the reference sequence
+    will be assigned a positive score, just like for normal interpretation scores.
+
+    Since there are no hypothetical scores with ISM, the returned "shap" scores will
+    have zeros wherever the input sequence was zero. That is, the returned "shap"
+    scores will appear to have been multiplied by the one-hot sequence.
+
+    If a shuffler return no shuffles for a sequence at a location (for example, a shuffler
+    that preserves the distribution of bases will not be able to shuffle a sequence that
+    consists only of a single nucleotide), then the importance score will be NaN at that location.
+
+    """
+
+    def __init__(self, model: Any, shuffler: Callable,  shuffleLength: int, useOldKeras: bool):
+        assert shuffleLength % 2 == 1, "shuffleWidth must be odd."
+        assert len(model) == 2, "model must be an (input, output) pair"
+        if useOldKeras:
+            import tf_keras  # pylint: disable=import-outside-toplevel
+            self.model = tf_keras.Model(model[0], model[1])
+        else:
+            import keras  # pylint: disable=import-outside-toplevel
+            self.model = keras.Model(model[0], model[1])
+        self.shuffler = shuffler
+        self.shuffleWidth = shuffleLength
+
+    def shap_values(self, batch: ONEHOT_AR_T) -> tuple[IMPORTANCE_AR_T, PRED_AR_T]:
+        """Actually run the ISM for a batch of inputs.
+
+            :param batch: A list of arrays of one-hot encoded sequences of shape
+                (batch-size, input-length, alphabet-length).
+                For consistency with the actual shap explainer, this array must be wrapped
+                in a list (and that list must have length one.)
+            :return: A two-tuple. The first element is an array of the same shape as
+                ``batch``, but with the importance score for each base. The second
+                is an array of shape (batch.shape[0],) that contains predictions for the
+                input sequences.
+        """
+        batch = batch[0] # strip off the outer list.
+        ret = np.zeros(batch.shape, dtype=IMPORTANCE_T)
+        referencePreds = np.zeros((batch.shape[0],), dtype=PRED_T)
+
+        # Run each query in the batch independently.
+        for i in range(batch.shape[0]):
+            sampleScores, refPred = self.runSample(batch[i])
+            referencePreds[i] = refPred
+            ret[i] = sampleScores
+        return ret, referencePreds
+
+    def generateShuffles(self, sequence: ONEHOT_AR_T) -> list[tuple[int, ONEHOT_AR_T, ONEHOT_AR_T]]:
+        """Get a list of all of the shuffles that must be simulated.
+
+        :param sequence: A one-hot encoded sequence.
+        :return: A list of tuples. The first of each tuple is a position in the sequence,
+            the second is one of the shuffles at that position, and the third is the original
+            sequence at that position (for restoring the batch array at the end of each predicted
+            batch).
+            The length of this list will vary depending on how many shuffles the shuffler
+            generates. If it generates, say, five shuffles at each position, then the
+            returned list will have (input-length - shuffleWidth) * 5 shuffles.
+
+        """
+        ret = []
+        startPt = self.shuffleWidth // 2
+        endPt = sequence.shape[0] - self.shuffleWidth // 2
+        Δ = self.shuffleWidth // 2
+        for pos in range(startPt, endPt):
+            subseqStart = pos - Δ
+            subseqStop = pos + Δ + 1
+            subseq = sequence[subseqStart:subseqStop]
+            shuffles = self.shuffler(subseq)
+            for s in shuffles:
+                ret.append((pos, s, subseq))
+        return ret
+
+
+    def runSample(self, sample: ONEHOT_AR_T) -> tuple[IMPORTANCE_AR_T, PRED_T]:
+        """Run ISM on a single sequence. You should probably use shap_values instead.
+
+        :param sample: The sequence to analyze. An array of shape (input-length, alphabet-length).
+        :return: A two-tuple. The first element is n array of the same shape as sample, with
+            importance scores in it. The second is the value of the metric on the input sequence.
+        """
+        batchSize = 128
+        referenceOutput = self.model(np.array([sample]))
+        batchBuffer = np.tile(sample, (batchSize, 1, 1)) # Use a batch size of 64.
+        sumOutBuffer = np.zeros(sample.shape)
+        numShufflesBuffer = np.zeros(sample.shape)
+        shuffles = self.generateShuffles(sample)
+        batches = itertools.batched(shuffles, batchSize)
+
+        Δ = self.shuffleWidth // 2
+        for batch in batches:
+            for i, shuffle in enumerate(batch):
+                pos, shufSeq, origSeq = shuffle
+                batchBuffer[i][pos - Δ : pos + Δ + 1] = shufSeq
+            preds = self.model(batchBuffer)
+            for i, shuffle in enumerate(batch):
+                pos, shufSeq, origSeq = shuffle
+                # Restore the original (WT) sequence to the buffer.
+                batchBuffer[i][pos - Δ : pos + Δ + 1] = origSeq
+                sumOutBuffer[pos,:] += preds[i]
+                numShufflesBuffer[pos,:] += 1
+        origErrSettings = np.seterr(divide="ignore")
+        meanPred = sumOutBuffer / numShufflesBuffer
+        oneHotted = (referenceOutput - meanPred) * sample
+        np.seterr(**origErrSettings)
+        return oneHotted, referenceOutput
 
 
 class TFDeepExplainer:
@@ -114,7 +276,7 @@ class TFDeepExplainer:
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
         # only explain the top 5 it would be a waste to build graphs for the other 995
-        self.phi_symbolics = [None]
+        self.phi_symbolics = None
 
     def _init_between_tensors(self, out_op, model_inputs):
         # find all the operations in the graph between our inputs and outputs
@@ -157,9 +319,9 @@ class TFDeepExplainer:
             self._vinputs[op] = out
         return self._vinputs[op]
 
-    def phi_symbolic(self, i):
+    def phi_symbolic(self):
         """Get the SHAP value computation graph for a given model output."""
-        if self.phi_symbolics[i] is None:
+        if self.phi_symbolics is None:
             @tf.function
             def grad_graph(shap_rAnD):
 
@@ -171,15 +333,15 @@ class TFDeepExplainer:
                 x_grad = tape.gradient(out, shap_rAnD)
                 return x_grad
 
-            self.phi_symbolics[i] = grad_graph  # type: ignore
+            self.phi_symbolics = grad_graph  # type: ignore
 
-        return self.phi_symbolics[i]
+        return self.phi_symbolics
 
     def shap_values(self, X):
         # check if we have multiple inputs
         # rank and determine the model outputs that we will explain
         model_output_ranks = np.tile(
-            np.arange(len(self.phi_symbolics)), (X[0].shape[0], 1))
+            np.arange(1), (X[0].shape[0], 1))
 
         # compute the attributions
         output_phis = []
@@ -199,10 +361,8 @@ class TFDeepExplainer:
                 joint_input = [np.concatenate([tiled_X[idx], bg_data[idx]], 0)
                                for idx in range(len(X))]
                 # run attribution computation graph
-                feature_ind = model_output_ranks[j, i]
-                sample_phis = self.run(self.phi_symbolic(feature_ind),
+                sample_phis = self.run(self.phi_symbolic(),
                                        joint_input)
-
                 phis_j = self.combine_mult_and_diffref(
                     mult=[sample_phis[idx][:-bg_data[idx].shape[0]]
                           for idx in range(len(X))],

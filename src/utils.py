@@ -16,7 +16,7 @@ from bpreveal import logUtils
 # find them.
 from bpreveal.logUtils import setVerbosity, wrapTqdm  # pylint: disable=unused-import  # noqa
 from bpreveal.internal.constants import NUM_BASES, ONEHOT_AR_T, PRED_AR_T, ONEHOT_T, \
-    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T, MODEL_LOAD_LOCK
+    LOGCOUNT_T, LOGIT_AR_T, IMPORTANCE_AR_T, IMPORTANCE_T, PRED_T
 from bpreveal.internal import constants
 from bpreveal.internal.crashQueue import CrashQueue
 
@@ -32,7 +32,9 @@ def loadModel(modelFname: str):  # noqa: ANN201
         ``.keras`` for models trained with BPReveal 5.0.0 or later.
     :return: A Keras ``Model`` object.
 
-    The returned model does NOT support additional training, since it uses a dummy loss.
+    For pre-5.0.0 models, the returned model does NOT support additional training,
+    since it uses a dummy loss. New-style models remember their losses and so you can
+    continue to train them if you like.
 
     **Example:**
 
@@ -43,40 +45,39 @@ def loadModel(modelFname: str):  # noqa: ANN201
         preds = m.predict(myOneHotSequences)
 
     """
-    # pylint: disable=import-outside-toplevel
     ret = None
-    with MODEL_LOAD_LOCK:
-        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        from bpreveal.losses import multinomialNll, dummyMse
+    # pylint: disable=import-outside-toplevel
+    import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
+    from bpreveal.losses import multinomialNll, dummyMse
+    # pylint: enable=import-outside-toplevel
+    constants.setTensorflowLoaded()
+    if modelFname.endswith("model"):
+        try:
+            logUtils.info(
+                "You are attempting to a load a model with a '.model' extension. As of "
+                "BPReveal 5.0.0, models are given the extension '.keras' because keras "
+                "3.0 requires it. I will attempt to load the old-style model, but be "
+                "prepared for some janky behavior and possible bugs.")
+            import tf_keras  # pylint: disable=import-outside-toplevel
+            ret = tf_keras.models.load_model(filepath=modelFname,
+                        custom_objects={"multinomialNll": multinomialNll,
+                                        "reweightableMse": dummyMse})
+            ret.useOldKeras = True
+            logUtils.debug(f"Loaded old-style model {modelFname}.")
+        except OSError:
+            logUtils.error(
+                f"You specified a model named {modelFname} but I couldn't find it. "
+                "Attempting to load a model with a '.keras' extension. If this "
+                "works, you should update your configuration file to use the new "
+                "extension.")
+            modelFname = modelFname[:-5] + "keras"
+    if ret is None:
+        # pylint: disable=import-outside-toplevel
+        from keras.models import load_model  # type: ignore
         # pylint: enable=import-outside-toplevel
-        constants.setTensorflowLoaded()
-        if modelFname.endswith("model"):
-            try:
-                logUtils.info(
-                    "You are attempting to a load a model with a '.model' extension. As of "
-                    "BPReveal 5.0.0, models are given the extension '.keras' because keras "
-                    "3.0 requires it. I will attempt to load the old-style model, but be "
-                    "prepared for some janky behavior and possible bugs.")
-                import tf_keras  # pylint: disable=import-outside-toplevel
-                ret = tf_keras.models.load_model(filepath=modelFname,
-                            custom_objects={"multinomialNll": multinomialNll,
-                                            "reweightableMse": dummyMse})
-                ret.useOldKeras = True
-                logUtils.debug(f"Loaded old-style model {modelFname}.")
-            except OSError:
-                logUtils.error(
-                    f"You specified a model named {modelFname} but I couldn't find it. "
-                    "Attempting to load a model with a '.keras' extension. If this "
-                    "works, you should update your configuration file to use the new "
-                    "extension. This automatic renaming will be removed in BPReveal 7.0.0.")
-                modelFname = modelFname[:-5] + "keras"
-        if ret is None:
-            # pylint: disable=import-outside-toplevel
-            from keras.models import load_model  # type: ignore
-            # pylint: enable=import-outside-toplevel
-            ret = load_model(filepath=modelFname)
-            ret.useOldKeras = False
-            logUtils.debug(f"Loaded new-style model {modelFname}.")
+        ret = load_model(filepath=modelFname)
+        ret.useOldKeras = False
+        logUtils.debug(f"Loaded new-style model {modelFname}.")
     return ret
 
 
@@ -186,6 +187,8 @@ def loadPisa(fname: str) -> IMPORTANCE_AR_T:
         offset = i
         shearMat[i, offset:offset + pisaVals.shape[1]] = pisaVals[i]
     shearMat = shearMat[:, receptiveField // 2:-receptiveField // 2]
+    logUtils.debug(f"The loaded PISA data have shape {pisaVals.shape} "
+                   "and the sheared matrix has shape {shearMat.shape}.")
     return shearMat
 
 
@@ -220,7 +223,6 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     """
     assert 0.0 < fraction < 1.0, "Must give a memory fraction between 0 and 1."
     free = total = 0.0
-    # We didn't find memory in CUDA_VISIBLE_DEVICES.
     cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.free", "--format=csv"]
     try:
         ret = sp.run(cmd, capture_output=True, check=True)
@@ -326,7 +328,7 @@ def blankChromosomeArrays(*, genomeFname: str | None = None,
 
     Exactly one of ``chromSizesFname``, ``genomeFname``, ``bwHeader``,
     ``chromSizes``, ``bw``, or ``fasta`` may be specified, all other
-    parameters must be None.
+    parameters must be ``None``.
 
     :param chromSizesFname: The name of a chrom.sizes file on disk.
     :param genomeFname: The name of a genome fasta file on disk.
@@ -484,7 +486,7 @@ def oneHotDecode(oneHotSequence: np.ndarray, alphabet: str = "ACGT") -> str:
     """Take a one-hot encoded sequence and turn it back into a string.
 
     :param oneHotSequence: An array of shape ``(n, NUM_BASES)``. It may have any type
-        that can be converted into a uint8.
+        that can be converted into a ``uint8``.
     :param alphabet: The order in which the bases are encoded.
 
     Given an array representing a one-hot encoded sequence, convert it back
@@ -586,8 +588,8 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str, quiet: bool = F
     GPU after it's done so other programs and stuff can use it.
     If ``sequences`` is a single string containing a sequence to predict
     on, that's okay, it will be treated as a length-one list of sequences
-    to predict. The ``sequences`` string should be as long as the input length of
-    your model.
+    to predict. The ``sequences`` string should be at least as long as
+    the input length of your model.
 
     If you passed in an iterable of strings (like a list of strings),
     the shape of the returned profiles will be
@@ -598,6 +600,12 @@ def easyPredict(sequences: Iterable[str] | str, modelFname: str, quiet: bool = F
     If, instead, you passed in a single string as ``sequences``,
     it will be ``(numHeads x outputLength x numTasks)``. As before, this will be a list
     (one entry per head) of arrays of shape ``(outputLength x numTasks)``
+
+    As a bonus feature, if you pass in a sequence that is longer than your model's
+    input length, this function will make tiling predictions over as much of the
+    sequence as possible. For example, if my model has an input length of 3 kb
+    and an output of 1 kb, then if I provide an input sequence that is 4 kb long,
+    I will get a 2 kb output prediction.
 
     **Example:**
 
@@ -721,7 +729,8 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
            "counts": array of shape (inputLength,)}
     """
     # pylint: disable=import-outside-toplevel
-    from bpreveal.interpretUtils import ListGenerator, FlatListSaver, FlatRunner
+    from bpreveal import interpretUtils
+    from bpreveal.interpretUtils import ListGenerator, FlatListSaver, InterpRunner
     # pylint: enable=import-outside-toplevel
     assert not constants.getTensorflowLoaded(), \
         "Cannot use easy functions after loading tensorflow."
@@ -736,10 +745,12 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
     generator = ListGenerator(sequences)
     profileSaver = FlatListSaver(generator.numSamples, generator.inputLength)
     countsSaver = FlatListSaver(generator.numSamples, generator.inputLength)
-    batcher = FlatRunner(modelFname=modelFname, headID=headID, numHeads=heads,
-                         taskIDs=taskIDs, batchSize=1, generator=generator,
-                         profileSaver=profileSaver, countsSaver=countsSaver,
-                         numShuffles=numShuffles, kmerSize=kmerSize)
+    profileMetric = interpretUtils.profileMetric(headID, taskIDs)
+    countsMetric = interpretUtils.countsMetric(heads, headID)
+    batcher = InterpRunner(modelFname=modelFname, metrics=[profileMetric, countsMetric],
+                           batchSize=1, generator=generator, savers=[profileSaver, countsSaver],
+                           numShuffles=numShuffles, kmerSize=kmerSize, numThreads=2,
+                           backend="shap", useHypotheticalContribs=True, shuffler=None)
     batcher.run()
     logUtils.debug("Interpretation complete. Organizing outputs.")
     if keepHypotheticals:
@@ -776,7 +787,7 @@ class BatchPredictor:
 
     Now, you submit any sequences you want predicted, using the submit methods.
 
-    Once you've submitted all of your sequences, you can get your results with
+    Once you've submitted some or all of your sequences, you can get your results with
     the ``getOutput()`` method.
 
     Note that the ``getOutput()` method returns *one* result at a time, and
@@ -827,9 +838,9 @@ class BatchPredictor:
             preds, outLabel = batcher.getOutput()  # WRONG: Runs a whole batch for each query
             processPredictions(preds, outLabel)
 
-    :param modelFname: The name of the BPReveal model that you want to make
-        predictions from. It's the same name you give for the model in any of
-        the other BPReveal tools.
+    :param modelFname: The name of the BPReveal model on disk that you want to
+        make predictions from. It's the same name you give for the model in any
+        of the other BPReveal tools.
     :param batchSize: is the number of samples that should be run simultaneously
         through the model.
     :param start: Ignored, but present here to give ``BatchPredictor`` the same API
@@ -973,10 +984,10 @@ class BatchPredictor:
     def runBatch(self, maxSamples: int | None = None) -> None:
         """Actually run the batch.
 
-        Normally, this will be called by the submit functions,
-        and it will also be called if you ask
-        for output and the output queue is empty (assuming there are
-        sequences waiting in the input queue.)
+        Normally, this will be called by the submit functions, and it will also
+        be called if you ask for output and the output queue is empty (assuming
+        there are sequences waiting in the input queue.) In other words, you
+        don't need to call this function.
 
         :param maxSamples: (Optional) The maximum number of samples to
             run in this batch. It should probably be a multiple of the

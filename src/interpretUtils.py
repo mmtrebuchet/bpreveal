@@ -5,11 +5,11 @@ Here's what you do.
 
 1. Create a Generator.
 2. Create a Saver.
-3. Pass those to a Runner.
+3. Pass those to an InterpRunner.
 4. Call .run() on the Runner.
 """
 from typing import Any
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterator, Iterable, Callable
 import multiprocessing
 import ctypes
 import pysam
@@ -22,7 +22,7 @@ from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal import ushuffle
 from bpreveal.internal.constants import IMPORTANCE_AR_T, NUM_BASES, ONEHOT_T, ONEHOT_AR_T, \
-    IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_T
+    IMPORTANCE_T, H5_CHUNK_SIZE, MODEL_ONEHOT_T, PRED_AR_T, PRED_T
 import bpreveal.internal.files as bprfiles
 from bpreveal.internal.crashQueue import CrashQueue
 
@@ -67,9 +67,7 @@ class Query:
 
 
 class Result:
-    """The base class for results.
-
-    Subclassed by :py:class:`~PisaResult` and :py:class:`~FlatResult`.
+    """A result from doing shap.
 
     Lifetime:
 
@@ -77,13 +75,6 @@ class Result:
     2. Batcher places in outQueue.
     3. outQueue is read by saverThread
     4. saverThread calls .add() on the Saver.
-    """
-
-
-class PisaResult(Result):
-    """The output from shapping a single base.
-
-    It contains a few things.
 
     :param inputPrediction: A scalar floating point value, of the predicted logit
         from the input sequence at the base that was being shapped.
@@ -92,10 +83,10 @@ class PisaResult(Result):
         returned by running predictions on the reference sequence, again evaluated
         at the position of the base that was being shapped.
 
-    :param sequence: is a ``(receptive-field, NUM_BASES)`` numpy array of the
+    :param sequence: is a ``(input-length, alphabet-length)`` numpy array of the
         one-hot encoded input sequence.
 
-    :param shap: is a ``(receptive-field, NUM_BASES)`` numpy array of shap scores.
+    :param shap: is a ``(input-length, alphabet-length)`` numpy array of shap scores.
 
     :param passData: is data that is not touched by the batcher, but added by
         the generator and necessary for creating the output file.
@@ -122,41 +113,6 @@ class PisaResult(Result):
         self.shap = shap
         self.passData = passData
         self.index = index
-
-
-class FlatResult(Result):
-    """A Result object that is given to savers for flat interpretation analysis.
-
-    :param sequence: A one-hot encoded array of the sequence that was explained, of shape
-        ``(input-length, NUM_BASES)``
-    :param shap: An array of shape ``(input-length, NUM_BASES)``, containing the shap scores.
-
-    :param passData: is a (picklable) object that is passed through from the generator.
-        For bed-based interpretations, it will be a three-tuple of (chrom, start, end)
-        (The start and end positions correspond to the INPUT to the model, so they are inflated
-        with respect to the bed file.)
-        For fasta-based interpretations it will be a string.
-
-    :param index: Gives the position in the output hdf5 where the scores should be saved.
-    """
-
-    def __init__(self, sequence: ONEHOT_AR_T,
-                 shap: npt.NDArray[IMPORTANCE_T],
-                 passData: Any, index: int):
-        """Just store all the provided data."""
-        self.sequence = sequence
-        self.shap = shap
-        self.passData = passData
-        self.index = index
-
-    def __str__(self) -> str:
-        """Make a string with useful information."""
-        minVal = np.min(self.shap)
-        maxVal = np.max(self.shap)
-        formatStr = "index: {0:d}, sequence: {1:s}, shap: {2:s}, "\
-            "passData: {3:s}, min {4:f} max {5:f}"
-        return formatStr.format(self.index, str(self.sequence[:5]), str(self.shap[:5]),
-                                str(self.passData), minVal, maxVal)
 
 
 class Generator:
@@ -258,7 +214,7 @@ class Saver:
         logUtils.debug("Called done on the base Saver class.")
 
 
-class FlatRunner:
+class InterpRunner:
     """Runs shap scores.
 
     I try to avoid class-based wrappers around simple things, but this is not simple.
@@ -267,113 +223,43 @@ class FlatRunner:
     those out to an hdf5-format file.
 
     :param modelFname: is the name of the model on disk
-    :param headID: The head to shap.
-    :param taskIDs: The tasks to shap, obviously.
-        Typically, you'd want to interpret all of the tasks in a head, so for a two-task
-        head, taskIDs would be ``[0,1]``.
+    :param metrics: a list of functions that accept a model and return a scalar output. These
+        are the values that will be explained.
     :param batchSize: is the *shap* batch size, which should be your usual batch size divided
         by the number of shuffles. (since the original sequence and shuffles are run together)
     :param generator: is a Generator object that will be passed to _generatorThread
-    :param saver: is a Saver object that will be used to save out the data.
+    :param savers: is a list of Saver objects that will be used to save out the data.
+        There should be one saver per metric.
     :param numShuffles: is the number of reference sequences that should be generated for each
-        shap evaluation. (I recommend 20 or so)
+        shap evaluation. (I recommend 20 or so) (Only applicable when ``backend`` is ``"shap"``).
     :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
-        If kmerSize > 1, preserve the distribution of kmers of the given size.
+        If kmerSize > 1, preserve the distribution of kmers of the given size. If using the
+        ``ism`` backend, then this parameter controls the width of the shuffled region
+        (in which case it must be an odd number).
+    :param backend: If "shap", use the DeepShap backend for interpretation scores. If "ism",
+        use scanning mutagenesis instead.
+    :param useHypotheticalContribs: (Only valid with ``shap`` backend.) If True, calculate
+        hypothetical contribution scores as was done in the original paper. If False, then
+        use the normal shap algorithm. Normally, you set this to True for scores you intend
+        to feed to MoDISco and false for PISA.
+    :param shuffler: (Only valid with the ``ism`` backend.) The function to use to generate shuffles
+        of the sequences. The width of the shuffled sequence will be taken from ``kmerSize``, which
+        must be an odd number when using the ``ism`` backend.
     """
 
-    def __init__(self, modelFname: str, headID: int, numHeads: int, taskIDs: list[int],
-                 batchSize: int, generator: Generator, profileSaver: Saver,
-                 countsSaver: Saver, numShuffles: int, kmerSize: int):
+    def __init__(self, modelFname: str, metrics: list[Callable],
+                 batchSize: int, generator: Generator, savers: list[Saver],
+                 numShuffles: int, kmerSize: int, numThreads: int,
+                 backend: str,
+                 useHypotheticalContribs: bool | None = None,
+                 shuffler: Callable | None = None):
         logUtils.info("Initializing interpretation runner.")
-        self._profileSaver = profileSaver
-        self._countsSaver = countsSaver
-        self._profileInQueue = CrashQueue(maxsize=100)
-        self._countsInQueue = CrashQueue(maxsize=100)
-        self._profileOutQueue = CrashQueue(maxsize=100)
-        self._countsOutQueue = CrashQueue(maxsize=100)
-        self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._profileInQueue, self._countsInQueue], generator, 1),
-            daemon=True)
-
-        self._profileBatchThread = multiprocessing.Process(target=_flatBatcherThread,
-            args=(modelFname, batchSize, self._profileInQueue, self._profileOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "profile", kmerSize),
-            daemon=True)
-        self._countsBatchThread = multiprocessing.Process(target=_flatBatcherThread,
-            args=(modelFname, batchSize, self._countsInQueue, self._countsOutQueue,
-                  headID, numHeads, taskIDs, numShuffles, "counts", kmerSize),
-            daemon=True)
-
-        self._profileSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._profileOutQueue, profileSaver, 1),
-            daemon=True)
-        self._countsSaverThread = multiprocessing.Process(target=_saverThread,
-            args=(self._countsOutQueue, countsSaver, 1),
-            daemon=True)
-
-    def run(self) -> None:
-        """Start up the threads and waits for them to finish."""
-        logUtils.info("Beginning flat run.")
-        self._genThread.start()
-        logUtils.debug("Started generator.")
-        self._profileBatchThread.start()
-        self._countsBatchThread.start()
-        logUtils.debug("Started batchers. Starting savers.")
-        self._profileSaverThread.start()
-        self._countsSaverThread.start()
-        logUtils.info("All processes started. Beginning main loop.")
-        self._genThread.join()
-        logUtils.debug("Generator joined.")
-        self._profileBatchThread.join()
-        self._countsBatchThread.join()
-        logUtils.debug("Batchers joined.")
-        self._profileSaverThread.join()
-        self._countsSaverThread.join()
-        logUtils.debug("Savers joined.")
-        self._profileSaver.parentFinish()
-        self._countsSaver.parentFinish()
-        logUtils.info("Savers complete. Done.")
-
-
-class PisaRunner:
-    """Tool to run PISA batches.
-
-    I try to avoid class-based wrappers around simple things, but this is not simple.
-    This class creates threads to read in data, and then creates a thread that runs PISA
-    samples in batches. Finally, it takes the results from the PISA thread and saves
-    those out to an hdf5-format file.
-
-    :param modelFname: is the name of the model on disk
-    :param headID: The head to shap.
-    :param taskID: The task to shap.
-    :param batchSize: is the *shap* batch size, which should be your usual batch size divided
-        by the number of shuffles. (since the original sequence and shuffles are run together)
-    :param generator: is a Generator object that will be passed to _generatorThread
-    :param saver: is a Saver object that will be used to save out the data.
-    :param numShuffles: is the number of reference sequences that should be generated for each
-        shap evaluation. (I recommend 20 or so)
-    :param receptiveField: is the receptive field of the model. To save on writing a lot of
-        zeroes, the result objects only contain bases that are in the receptive field
-        of the base being shapped.
-    :param kmerSize: Should the shuffle preserve k-mer distribution? If kmerSize == 1, then no.
-        If kmerSize > 1, preserve the distribution of kmers of the given size.
-    :param numBatchers: How many parallel batchers should be run? I find that my GPU usage
-        is very efficient with three, but you can use just one if you're running into memory
-        issues.
-    """
-
-    def __init__(self, modelFname: str, headID: int, taskID: int, batchSize: int,
-                 generator: Generator, saver: Saver, numShuffles: int,
-                 receptiveField: int, kmerSize: int, numBatchers: int):
-        logUtils.info("Initializing PISA runner.")
-        self.numBatchers = numBatchers
-        self._inQueue = CrashQueue(maxsize=100)
-        self._outQueue = CrashQueue(maxsize=100)
-
-        self._genThread = multiprocessing.Process(target=_generatorThread,
-            args=([self._inQueue], generator, self.numBatchers),
-            daemon=True)
-        match numBatchers:
+        assert len(metrics) == len(savers), "You must supply as many savers as metrics "\
+            "you are calculating."
+        assert numThreads >= len(metrics), "You must allow for at least as many threads as metrics."
+        assert numThreads % len(metrics) == 0, "numThreads must be a multiple of the number of "\
+            "metrics."
+        match numThreads:
             case 1:
                 memFrac = 0.9
             case 2:
@@ -383,36 +269,55 @@ class PisaRunner:
             case _:
                 logUtils.error("Very high number of batchers requested. "
                                "BPReveal has not been tested with 4 batchers!")
-                memFrac = 0.7 / numBatchers
+                memFrac = 0.7 / numThreads
 
-        self._batchThreads = []
-        for _ in range(self.numBatchers):
-            self._batchThreads.append(multiprocessing.Process(
-                target=_pisaBatcherThread,
-                args=(modelFname, batchSize,
-                      self._inQueue, self._outQueue, headID,
-                      taskID, numShuffles, receptiveField,
-                      kmerSize, memFrac),
-                daemon=True))
-        self._saver = saver
+        self._savers = savers
+        self._inQueues = []
+        self._outQueues = []
+        for _ in range(len(metrics)):
+            self._inQueues.append(CrashQueue(maxsize=100))
+            self._outQueues.append(CrashQueue(maxsize=100))
+        self._genThread = multiprocessing.Process(target=_generatorThread,
+            args=(self._inQueues, generator, numThreads // len(metrics)),
+            daemon=True)
+        self._batchers = []
+        self._saverThreads = []
+        for i in range(numThreads):
+            metricIdx = i % len(metrics)
+            batcherArgs = (modelFname, batchSize, self._inQueues[metricIdx],
+                           self._outQueues[metricIdx], metrics[metricIdx],
+                           numShuffles, kmerSize, memFrac, backend, useHypotheticalContribs,
+                           shuffler)
+            self._batchers.append(multiprocessing.Process(target=_generalBatcherThread,
+                                  args=batcherArgs, daemon=True))
+        for i in range(len(metrics)):
+            saverArgs = (self._outQueues[i], savers[i], numThreads // len(metrics))
+            self._saverThreads.append(multiprocessing.Process(target=_saverThread,
+                                                        args=saverArgs,
+                                                        daemon=True))
 
     def run(self) -> None:
         """Start up the threads and waits for them to finish."""
-        logUtils.info("Beginning PISA run.")
+        logUtils.info("Beginning flat run.")
         self._genThread.start()
         logUtils.debug("Started generator.")
-        for bt in self._batchThreads:
-            bt.start()
-        logUtils.debug("Started batcher.")
-        _saverThread(self._outQueue, self._saver, self.numBatchers)
-        logUtils.info("Saver complete. Finishing.")
+        for b in self._batchers:
+            b.start()
+        logUtils.debug("Started batchers. Starting savers.")
+        for s in self._saverThreads:
+            s.start()
+        logUtils.info("All processes started. Beginning main loop.")
         self._genThread.join()
         logUtils.debug("Generator joined.")
-        for bt in self._batchThreads:
-            bt.join()
-        logUtils.debug("Batcher joined.")
-        self._saver.parentFinish()
-        logUtils.info("Done.")
+        for b in self._batchers:
+            b.join()
+        logUtils.debug("Batchers joined.")
+        for s in self._saverThreads:
+            s.join()
+        logUtils.debug("Savers joined.")
+        for s in self._savers:
+            s.parentFinish()
+        logUtils.info("Savers complete. Done.")
 
 
 class FlatListSaver(Saver):
@@ -421,11 +326,11 @@ class FlatListSaver(Saver):
     Since the Saver is created in its own thread, just storing the results
     in this object doesn't work - they get removed when the writer
     process completes.
-    So we need to create some shared memory. This Saver takes care of that
-    for sequences and shap scores, but discards passData, since we don't know
-    a priori how large passData objects will be. In a typical use case, you'd
-    use this in situations where you already know which sequence is which,
-    so saving passData doesn't really make sense anyway.
+    So we need to create some shared memory. This Saver takes care of that for
+    sequences, shap scores, and input predictions, but discards passData, since
+    we don't know a priori how large passData objects will be. In a typical use
+    case, you'd use this in situations where you already know which sequence is
+    which, so saving passData doesn't really make sense anyway.
 
     :param numSamples: The total number of samples that this saver will get.
         It has to know this during construction so it can allocate
@@ -437,6 +342,8 @@ class FlatListSaver(Saver):
     numSamples: int
     shap: npt.NDArray[IMPORTANCE_T]
     seq: ONEHOT_AR_T
+    inputPredictions: PRED_AR_T
+    _results: list[Result]
 
     def __init__(self, numSamples: int, inputLength: int):
         self.inputLength = inputLength
@@ -447,6 +354,8 @@ class FlatListSaver(Saver):
         # there's a float in ctypes, but not a float16.)
         self._outShapArray = multiprocessing.Array(ctypes.c_float,
                                                    numSamples * inputLength * NUM_BASES)
+        self._outPredArray = multiprocessing.Array(ctypes.c_float,
+                                                   numSamples)
         self._outSeqArray = multiprocessing.Array(ctypes.c_int8,
                                                   numSamples * inputLength * NUM_BASES)
         logUtils.debug("Created shared arrays for the list saver.")
@@ -474,7 +383,9 @@ class FlatListSaver(Saver):
         # self.outShapArray is float32.
         self.shap = np.zeros((self.numSamples, self.inputLength, NUM_BASES), dtype=IMPORTANCE_T)
         self.seq = np.zeros((self.numSamples, self.inputLength, NUM_BASES), dtype=ONEHOT_T)
+        self.inputPredictions = np.zeros((self.numSamples,), dtype=PRED_T)
         for idx in range(self.numSamples):
+            self.inputPredictions[idx] = self._outPredArray[idx]
             for outOffset in range(self.inputLength):
                 for k in range(NUM_BASES):
                     readHead = idx * self.inputLength * NUM_BASES + outOffset * NUM_BASES + k
@@ -496,10 +407,11 @@ class FlatListSaver(Saver):
                     writeHead = idx * self.inputLength * NUM_BASES + outOffset * NUM_BASES + k
                     self._outShapArray[writeHead] = svals[outOffset, k]
                     oneHotBase = ctypes.c_int8(int(seqvals[outOffset, k]))
-                    self._outSeqArray[writeHead] = oneHotBase
+                    self._outSeqArray[writeHead] = oneHotBase  # type: ignore
+            self._outPredArray[idx] = float(r.inputPrediction)
         logUtils.debug("Finished list saver in child thread.")
 
-    def add(self, result: FlatResult) -> None:  # type: ignore
+    def add(self, result: Result) -> None:  # type: ignore
         """Add the result to the internal list.
 
         This is called from the child process.
@@ -556,6 +468,10 @@ class FlatH5Saver(Saver):
         self._outFile.create_dataset("hyp_scores",
                                      (self.numSamples, self.inputLength, NUM_BASES),
                                      dtype=IMPORTANCE_T, chunks=self.chunkShape,
+                                     compression="gzip")
+        self._outFile.create_dataset("input_predictions",
+                                     (self.numSamples,),
+                                     dtype=PRED_T, chunks=(self.chunkShape[0],),
                                      compression="gzip")
         self._outFile.create_dataset("input_seqs",
                                      (self.numSamples, self.inputLength, NUM_BASES),
@@ -626,7 +542,7 @@ class FlatH5Saver(Saver):
             self.pbar.close()
         self._outFile.close()
 
-    def add(self, result: FlatResult) -> None:  # type: ignore
+    def add(self, result: Result) -> None:  # type: ignore
         """Add the given result to the output file.
 
         :param result: The output from the batcher.
@@ -654,6 +570,7 @@ class FlatH5Saver(Saver):
             self._chunksToWrite[chunkIdx] = {
                 "hyp_scores": np.empty(curChunkShape, dtype=IMPORTANCE_T),
                 "input_seqs": np.empty(curChunkShape, dtype=ONEHOT_T),
+                "input_predictions": np.empty((curChunkShape[0],), dtype=PRED_T),
                 "numToAdd": numToAdd,
                 "writeStart": chunkIdx * self.chunkShape[0],
                 "writeEnd": chunkIdx * self.chunkShape[0] + numToAdd}
@@ -661,12 +578,14 @@ class FlatH5Saver(Saver):
         curChunk["numToAdd"] -= 1
         curChunk["hyp_scores"][chunkOffset] = result.shap
         curChunk["input_seqs"][chunkOffset] = result.sequence
+        curChunk["input_predictions"][chunkOffset] = result.inputPrediction
         if curChunk["numToAdd"] == 0:
             # We added the last missing entry to this chunk. Write it to the file.
             start = curChunk["writeStart"]
             end = curChunk["writeEnd"]
             self._outFile["input_seqs"][start:end, :, :] = curChunk["input_seqs"]
             self._outFile["hyp_scores"][start:end, :, :] = curChunk["hyp_scores"]
+            self._outFile["input_predictions"][start:end] = curChunk["input_predictions"]
             # Free the memory held by this chunk.
             del self._chunksToWrite[chunkIdx]
 
@@ -738,7 +657,7 @@ class PisaH5Saver(Saver):
         logUtils.debug("Saver initialized, hdf5 file created.")
 
     def _loadGenome(self) -> None:
-        """Does a few things.
+        """Load up genome information into the output hdf5.
 
         1. It creates chrom_names and chrom_sizes datasets in the output hdf5.
            These two datasets just contain the (string) names and (unsigned) sizes for each one.
@@ -784,13 +703,16 @@ class PisaH5Saver(Saver):
         logUtils.debug("Genome data loaded.")
 
     def done(self) -> None:
-        """Called from the child process."""
+        """Close out any open files before the child process exits.
+
+        Called from the child process.
+        """
         logUtils.debug("Saver closing.")
         if self.pbar is not None:
             self.pbar.close()
         self._outFile.close()
 
-    def add(self, result: PisaResult) -> None:  # type: ignore
+    def add(self, result: Result) -> None:  # type: ignore
         """Add the given result to the output file.
 
         :param result: The output from the batcher.
@@ -819,8 +741,8 @@ class PisaH5Saver(Saver):
 
         curChunk = self._chunksToWrite[chunkIdx]
         curChunk["numToAdd"] -= 1
-        curChunk["shap"][chunkOffset] = result.shap
-        curChunk["sequence"][chunkOffset] = result.sequence
+        curChunk["shap"][chunkOffset] = result.shap[:self.receptiveField]
+        curChunk["sequence"][chunkOffset] = result.sequence[:self.receptiveField]
         if curChunk["numToAdd"] == 0:
             # We added the last missing entry to this chunk. Write it to the file.
             start = curChunk["writeStart"]
@@ -1086,35 +1008,25 @@ class PisaBedGenerator(Generator):
         self.genome.close()
 
 
-def _flatBatcherThread(modelName: str, batchSize: int, inQueue: CrashQueue,
-                       outQueue: CrashQueue, headID: int, numHeads: int,
-                       taskIDs: list[int], numShuffles: int, mode: str,
-                       kmerSize: int) -> None:
-    """The thread that spins up the batcher."""
+def _generalBatcherThread(modelName: str, batchSize: int, inQueue: CrashQueue,
+                          outQueue: CrashQueue, metric: Callable,
+                          numShuffles: int, kmerSize: int, memFrac: float,
+                          backend: str,
+                          useHypotheticalContribs: bool | None = None,
+                          shuffler: Callable | None = None) -> None:
+    """Spins up a batcher for the given metric."""
     logUtils.debug("Starting flat batcher thread.")
-    b = _FlatBatcher(modelName, batchSize, outQueue, headID,
-                     numHeads, taskIDs, numShuffles, mode, kmerSize)
-    logUtils.debug("Batcher created.")
-    while True:
-        query = inQueue.get()
-        if query is None:
-            break
-        b.addSample(query)
-    logUtils.debug("Last query received. Finishing batcher thread.")
-    b.finishBatch()
-    outQueue.put(None)
-    outQueue.close()
-    logUtils.debug("Batcher thread finished.")
-
-
-def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: CrashQueue,
-                       outQueue: CrashQueue, headID: int, taskID: int,
-                       numShuffles: int, receptiveField: int, kmerSize: int,
-                       memFrac: float) -> None:
-    """The thread that spins up the batcher."""
-    logUtils.debug("Starting batcher thread.")
-    b = _PisaBatcher(modelName, batchSize, outQueue, headID, taskID, numShuffles,
-                     receptiveField, kmerSize, memFrac)
+    if backend == "shap":
+        assert isinstance(useHypotheticalContribs, bool)
+        b = _ShapBatcher(modelName, batchSize, outQueue, metric,
+                         numShuffles, kmerSize, memFrac,
+                         useHypotheticalContribs)
+    elif backend == "ism":
+        assert isinstance(shuffler, Callable)
+        b = _IsmBatcher(modelName, batchSize, outQueue, metric,
+                        memFrac, kmerSize, shuffler)
+    else:
+        raise RuntimeError(f"{backend} is not a supported interpretation backend.")
     logUtils.debug("Batcher created.")
     while True:
         query = inQueue.get()
@@ -1130,7 +1042,15 @@ def _pisaBatcherThread(modelName: str, batchSize: int, inQueue: CrashQueue,
 
 def _generatorThread(inQueues: list[CrashQueue], generator: Generator,
                      numBatchers: int) -> None:
-    """The thread that spins up the generator and emits queries."""
+    """The thread that spins up the generator and emits queries.
+
+    Each query that is generated will be placed in *all* of the input queues.
+    This is so that two batchers that are working on different metrics will
+    both get all of the input queries. (Each of these batchers would have its
+    own saver) If you have two batchers working on the same metric (and
+    therefore feeding to the same saver), then you would only provide one input
+    queue and both of the batchers would pull from that queue.
+    """
     logUtils.debug("Starting generator thread.")
     generator.construct()
     for elem in generator:
@@ -1163,32 +1083,108 @@ def _saverThread(outQueue: CrashQueue, saver: Saver,
     logUtils.debug("Saver thread finished.")
 
 
-class _PisaBatcher:
+class _IsmBatcher:
     """The workhorse of this stack.
 
     Accepts queries until its internal storage is full,
-    then predicts them all at once, and runs shap.
+    then predicts them all at once, and runs ism.
 
     :param modelFname: The name of the keras model to interpret.
     :param batchSize: How many sequences should be interpreted at once?
     :param outQueue: The batcher will put its :py:class:`~Result` objects here.
-    :param headID: The head that is being interpreted.
-    :param taskID: The task within that head that is being interpreted.
-    :param numShuffles: How many shuffled samples should be run?
-    :param receptiveField: What is the receptive field of the model?
-    :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
+    :param metric: A function that accepts a model and returns the scalar tensor
+        for which attribution scores should be calculated.
     :param memFrac: What fraction of the total GPU memory is this batcher allowed to use?
+    :param shuffleLength: The length of subsequences that will be shuffled.
+    :param shuffler: A function to shuffle the bases for ISM calculations.
     """
 
     def __init__(self, modelFname: str, batchSize: int, outQueue: CrashQueue,
-                 headID: int, taskID: int, numShuffles: int, receptiveField: int,
-                 kmerSize: int, memFrac: float):
+                 metric: Callable, memFrac: float,
+                 shuffleLength: int, shuffler: Callable):
         logUtils.info("Initializing batcher.")
         # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        from keras import ops
+        from bpreveal import shap
+        # pylint: enable=import-outside-toplevel
+        del batchSize  # This makes no sense with the ISM interpreter since it does
+        # internal batching.
+        self.batchSize = 1  # TODO factor out.
+        self.outQueue = outQueue
+        self.curBatch = []
+        logUtils.debug("Batcher prepared, creating explainer.")
+        self._outTarget = metric(self.model)
+        self.profileExplainer = shap.ISMDeepExplainer(
+            (self.model.input, self._outTarget),
+            shuffler, shuffleLength, self.model.useOldKeras)
+        logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
+
+    def addSample(self, query: Query) -> None:
+        """Add a query to the batch.
+
+        Runs the batch if it has enough work accumulated.
+        """
+        self.curBatch.append(query)
+        if len(self.curBatch) >= self.batchSize:
+            self.finishBatch()
+
+    def finishBatch(self) -> None:
+        """If there's any work waiting to be done, do it."""
+        if len(self.curBatch) > 0:
+            self.runPrediction()
+            self.curBatch = []
+
+    def runPrediction(self) -> None:
+        """Actually run the batch."""
+        # Run the ism shap tool.
+        numQueries = len(self.curBatch)
+        inputLength = self.curBatch[0].sequence.shape[0]
+        oneHotBuf = np.empty((numQueries, inputLength, NUM_BASES),
+                             dtype=MODEL_ONEHOT_T)
+        for i, q in enumerate(self.curBatch):
+            oneHotBuf[i, :, :] = q.sequence
+        shapScores, inputPreds = self.profileExplainer.shap_values([oneHotBuf])  # type: ignore
+        # And now we need to run over that batch again to write the output.
+        for i, q in enumerate(self.curBatch):
+            querySequence = oneHotBuf[i, :, :]
+            queryPred = inputPreds[i]
+            queryShufPreds = [0]  # This is meaningless for the ism backend.
+            queryShapScores = shapScores[i, :, :]  # type: ignore
+            ret = Result(queryPred, queryShufPreds, querySequence,  # type: ignore
+                         queryShapScores, q.passData, q.index)
+            self.outQueue.put(ret)
+
+
+class _ShapBatcher:
+    """The workhorse of this stack.
+
+    Accepts queries until its internal storage is full, then predicts
+    them all at once, and runs shap.
+
+    :param modelFname: The name of the keras model to interpret.
+    :param batchSize: How many sequences should be interpreted at once?
+    :param outQueue: The batcher will put its :py:class:`~Result` objects here.
+    :param metric: A function that accepts a model and returns the scalar tensor
+        for which attribution scores should be calculated.
+    :param numShuffles: How many shuffled samples should be run? This is ignored for
+        the ``"ism"`` backend.
+    :param receptiveField: What is the receptive field of the model?
+    :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
+    :param memFrac: What fraction of the total GPU memory is this batcher allowed to use?
+    :param useHypotheticalContribs: Should the contribution scores use the hypothetical
+        combine_mult_and_diffref function, or the normal shap one?
+    """
+
+    def __init__(self, modelFname: str, batchSize: int, outQueue: CrashQueue,
+                 metric: Callable, numShuffles: int, kmerSize: int, memFrac: float,
+                 useHypotheticalContribs: bool):
+        logUtils.info("Initializing batcher.")
+        # pylint: disable=import-outside-toplevel
+        utils.limitMemoryUsage(memFrac, 1024)
+        self.model = utils.loadModel(modelFname)
+        import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         from bpreveal import shap
         # pylint: enable=import-outside-toplevel
         if not isShappable(self.model):
@@ -1198,31 +1194,24 @@ class _PisaBatcher:
             raise TypeError("Invalid model architecture.")
         self.batchSize = batchSize
         self.outQueue = outQueue
-        self.headID = headID
-        self.taskID = taskID
         self.curBatch = []
         self.numShuffles = numShuffles
-        self.receptiveField = receptiveField
         self.kmerSize = kmerSize
         logUtils.debug("Batcher prepared, creating explainer.")
-        # This slice....
-        # Oh, this slice is a doozy!
-        #                      Keep the first dimension, so it looks like a batch of size one--,
-        #                                          Sum the samples in this batch-,             |
-        #                                       The current task ----,           |             |
-        #                          The leftmost predicted base--,    |           |             |
-        #                           All samples in the batch-,  |    |           |             |
-        #                                            Current |  |    |           |             |
-        #                                             head   V  V    V           |             |
-        outTarget = ops.sum(self.model.outputs[headID][:, 0, taskID], axis=0, keepdims=True)
+        self._outTarget = metric(self.model)
+        if useHypotheticalContribs:
+            combiner = combineMultAndDiffref
+        else:
+            combiner = shap.standard_combine_mult_and_diffref
         self.profileExplainer = shap.TFDeepExplainer(
-            (self.model.input, outTarget),
+            (self.model.input, self._outTarget),
             self.generateShuffles,
-            useOldKeras=self.model.useOldKeras)
+            useOldKeras=self.model.useOldKeras,
+            combine_mult_and_diffref=combiner)
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, modelInputs: list) -> list:
-        """Callback for shap."""
+        """Take the input tensor and generate shuffled reference sequences."""
         if self.kmerSize == 1:
             rng = np.random.default_rng(seed=355687)
             shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
@@ -1284,158 +1273,19 @@ class _PisaBatcher:
             oneHotBuf[shuffleInsertHead:shuffleInsertHead + self.numShuffles, :, :] = shuffles
             shuffleInsertHead += self.numShuffles
         # Okay, now the data structures are set up.
-        fullPred = self.model.predict(oneHotBuf, verbose=0)
-        outBasePreds = fullPred[self.headID][:, 0, self.taskID]
+        inputPred = self.profileExplainer.model.predict(oneHotBuf, verbose=0)
         # (We'll deconvolve that in a minute...)
         shapScores = self.profileExplainer.shap_values([oneHotBuf[:numQueries, :, :]])
         # And now we need to run over that batch again to write the output.
         shuffleReadHead = numQueries
         for i, q in enumerate(self.curBatch):
-            querySequence = oneHotBuf[i, :self.receptiveField, :]
-            queryPred = outBasePreds[i]
-            queryShufPreds = outBasePreds[shuffleReadHead:shuffleReadHead + self.numShuffles]
-            shuffleReadHead += self.numShuffles
-            queryShapScores = shapScores[i, 0:self.receptiveField, :]  # type: ignore
-            ret = PisaResult(queryPred, queryShufPreds, querySequence,  # type: ignore
-                             queryShapScores, q.passData, q.index)
-            self.outQueue.put(ret)
-
-
-class _FlatBatcher:
-    """The workhorse of this stack.
-
-    Accepts queries until its internal storage is full,
-    then predicts them all at once, and runs shap.
-
-    :param modelFname: The name of the keras model to interpret.
-    :param batchSize: How many sequences should be interpreted at once?
-    :param outQueue: The batcher will put its :py:class:`~Result` objects here.
-    :param headID: The head that is being interpreted.
-    :param numHeads: How many heads does this model have, in total?
-    :param taskIDs: Within the given head, what tasks should be considered?
-    :param numShuffles: How many shuffled samples should be run?
-    :param mode: What type of importance score is being generated? Options are
-        ``profile`` or ``counts``.
-    :param receptiveField: What is the receptive field of the model?
-    :param kmerSize: What length of kmer should have its distribution preserved in the shuffles?
-    """
-
-    def __init__(self, modelFname: str, batchSize: int, outQueue: CrashQueue,
-                 headID: int, numHeads: int, taskIDs: list[int], numShuffles: int, mode: str,
-                 kmerSize: int):
-        logUtils.info("Initializing batcher.")
-        # pylint: disable=import-outside-toplevel, unused-import
-        utils.limitMemoryUsage(0.4, 1024)
-        self.model = utils.loadModel(modelFname)
-        import bpreveal.internal.disableTensorflowLogging # noqa
-        from bpreveal import shap
-        from keras import ops
-        import tensorflow as tf
-        import keras
-        # pylint: enable=import-outside-toplevel
-
-        class StopGradLayer(keras.Layer):
-            """Because the Tensorflow 2.16 upgrade wasn't painful enough...
-
-            This just wraps stop_gradient so that it can be called
-            with a KerasTensor.
-            """
-
-            def call(self, x: tf.Tensor) -> keras.KerasTensor:
-                """Actually stop the gradient."""
-                return ops.stop_gradient(x)
-
-        if not isShappable(self.model):
-            logUtils.error(f"The model you have provided ({modelFname}) is not shappable "
-                           "because it contains LinearRegression layers. Re-train the "
-                           "model with BPReveal > 4.3.0 and then re-run interpretation.")
-            raise TypeError("Invalid model architecture.")
-        self.batchSize = batchSize
-        self.outQueue = outQueue
-        self.kmerSize = kmerSize
-        self.headID = headID
-        self.taskIDs = taskIDs
-        self.curBatch = []
-        self.numShuffles = numShuffles
-        logUtils.debug("Batcher prepared, creating explainer.")
-        match mode:
-            case "profile":
-                # Calculate the weighted meannormed logits that are used for the
-                # profile explanation.
-                profileOutput = self.model.outputs[headID]
-                stackedLogits = ops.stack([profileOutput[:, :, x] for x in taskIDs], axis=2)
-                inputShape = stackedLogits.shape
-                numSamples = inputShape[1] * inputShape[2]
-                logits = ops.reshape(stackedLogits, [-1, numSamples])
-                meannormedLogits = ops.subtract(logits, ops.mean(logits, axis=1)[:, None])
-                stopgradMeannormedLogits = StopGradLayer()(meannormedLogits)
-                softmaxOut = ops.softmax(stopgradMeannormedLogits, axis=1)
-                weightedSum = ops.sum(softmaxOut * meannormedLogits, axis=1)
-                self.explainer = shap.TFDeepExplainer(
-                    (self.model.input, weightedSum),
-                    self.generateShuffles,
-                    combine_mult_and_diffref=combineMultAndDiffref,
-                    useOldKeras=self.model.useOldKeras)
-            case "counts":
-                # Now for counts - much easier!
-                countsMetric = self.model.outputs[numHeads + headID][:, 0]
-                self.explainer = shap.TFDeepExplainer((self.model.input, countsMetric),
-                    self.generateShuffles,
-                    combine_mult_and_diffref=combineMultAndDiffref,
-                    useOldKeras=self.model.useOldKeras)
-
-        logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
-
-    def generateShuffles(self, modelInputs: list) -> list:
-        """Callback for shap."""
-        if self.kmerSize == 1:
-            rng = np.random.default_rng(seed=355687)
-            shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
-            shuffles = np.array(shuffles)
-            return [shuffles]
-        shuffles = ushuffle.shuffleOHE(modelInputs[0], self.kmerSize, self.numShuffles,
-                                       seed=355687)
-        return [shuffles]
-
-    def addSample(self, query: Query) -> None:
-        """Append the sample to the work queue."""
-        self.curBatch.append(query)
-        if len(self.curBatch) >= self.batchSize:
-            self.finishBatch()
-
-    def finishBatch(self) -> None:
-        """If there's any work to do, finish it."""
-        if len(self.curBatch) > 0:
-            self.runPrediction()
-            self.curBatch = []
-
-    def runPrediction(self) -> None:
-        """Actually run the calculation."""
-        # Now for the meat of all this boilerplate. Take the query sequences and
-        # run them through the model, then run the shuffles, then run shap.
-        # Finally, put all the results in the output queue.
-        # This needs more optimization, but for this initial pass, I'm not actually batching -
-        # instead, I'm running all the samples individually. But I can change this later,
-        # and that's what counts.
-        # First, build up an array of sequences to test.
-        numQueries = len(self.curBatch)
-        inputLength = self.curBatch[0].sequence.shape[0]
-        oneHotBuf = np.empty((numQueries, inputLength, NUM_BASES), dtype=MODEL_ONEHOT_T)
-        # To predict on as large a batch as possible, I put all of the sequences
-        # to explain in this array, like this:
-        # REAL_SEQUENCE_1_REAL_SEQUENCE_1_REAL_SEQUENCE_1
-        # REAL_SEQUENCE_2_REAL_SEQUENCE_2_REAL_SEQUENCE_2
-
-        for i, q in enumerate(self.curBatch):
-            oneHotBuf[i, :, :] = q.sequence
-        # Okay, now the data structures are set up.
-        # (We'll deconvolve that in a minute...)
-        scores = self.explainer.shap_values([oneHotBuf])
-        # And now we need to run over that batch again to write the output.
-        for i, q in enumerate(self.curBatch):
             querySequence = oneHotBuf[i, :, :]
-            queryScores = scores[i, :, :]  # type: ignore
-            ret = FlatResult(querySequence, queryScores, q.passData, q.index)  # type: ignore
+            queryPred = inputPred[i]
+            queryShufPreds = inputPred[shuffleReadHead:shuffleReadHead + self.numShuffles]
+            shuffleReadHead += self.numShuffles
+            queryShapScores = shapScores[i, :, :]  # type: ignore
+            ret = Result(queryPred, queryShufPreds, querySequence,  # type: ignore
+                         queryShapScores, q.passData, q.index)
             self.outQueue.put(ret)
 
 
@@ -1460,7 +1310,7 @@ def combineMultAndDiffref(mult: IMPORTANCE_AR_T, originalInput: ONEHOT_AR_T,
 
 
 def isShappable(model) -> bool:  # noqa: ANN001
-    """Checks to see if the model can be shapped.
+    """Check to see if the model can be shapped.
 
     Early versions of BPReveal created combined and transformation models that
     were incompatible with DeepShap.
@@ -1483,4 +1333,5 @@ def isShappable(model) -> bool:  # noqa: ANN001
         if not isShappableLayer(layer):
             return False
     return True
+
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

@@ -143,10 +143,27 @@ API
 ---
 
 """
+from collections.abc import Callable
 import bpreveal.schema
 from bpreveal import logUtils
 from bpreveal import interpretUtils
 from bpreveal.internal import interpreter
+
+
+def pisaMetric(headID: int, taskID: int) -> Callable:
+    """A metric to extract the leftmost output logit of a model.
+
+    :param headID: The head number that you want counts for.
+    :param taskID: The task within this head that you want shap values for.
+    :return: A function (that takes a model as its argument) that can
+        be passed into the depths of the interpretation system.
+    """
+    #             Extract the output from the given task.
+    #                Use the leftmost output logit.     |
+    #             Use all samples in this batch.  |     |
+    #           Use the given output head.     |  |     |
+    #                                    ↓     ↓  ↓     ↓
+    return lambda model: model.outputs[headID][:, 0, taskID]
 
 
 def main(config: dict) -> None:
@@ -211,16 +228,20 @@ def main(config: dict) -> None:
                                         genome=genome,
                                         useTqdm=logUtils.getVerbosity() <= logUtils.INFO,
                                         config=str(config))
-    batcher = interpretUtils.PisaRunner(modelFname=config["model-file"],
-                                        headID=config["head-id"],
-                                        taskID=config["task-id"],
-                                        batchSize=10,
-                                        generator=generator,
-                                        saver=writer,
-                                        numShuffles=config["num-shuffles"],
-                                        receptiveField=receptiveField,
-                                        kmerSize=kmerSize,
-                                        numBatchers=numThreads)
+    # If you want to use a custom metric, you could add that here.
+    # I can't think of a good reason to use anything other than the PISA
+    # metric for PISA calculations, though.
+    metric = pisaMetric(config["head-id"], config["task-id"])
+    batcher = interpretUtils.InterpRunner(modelFname=config["model-file"],
+                                          metrics=[metric],
+                                          batchSize=10,
+                                          generator=generator,
+                                          savers=[writer],
+                                          numShuffles=config["num-shuffles"],
+                                          kmerSize=kmerSize,
+                                          numThreads=numThreads,
+                                          backend="shap",
+                                          useHypotheticalContribs=False)
     batcher.run()
 
 

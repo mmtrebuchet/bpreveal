@@ -67,6 +67,9 @@ When BPReveal 5.1.0 was released, the following breaking changes occurred.
    an issue if you were, for some reason, causing ``easyPredict()`` to crash
    and then catching that exception. For any sane use case, this will not cause
    a problem.
+2. Quite a lot of refactoring was done inside interpretUtils. Importantly,
+   FlatRunner and PisaRunner are now gone, they have been unified into a
+   new class called InterpRunner that lets you use your own metric for shapping.
 
 BPReveal 5.0.0
 ^^^^^^^^^^^^^^
