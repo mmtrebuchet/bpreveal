@@ -59,9 +59,10 @@ def loadModel(modelFname: str):  # noqa: ANN201
                 "3.0 requires it. I will attempt to load the old-style model, but be "
                 "prepared for some janky behavior and possible bugs.")
             import tf_keras  # pylint: disable=import-outside-toplevel
-            ret = tf_keras.models.load_model(filepath=modelFname,
-                        custom_objects={"multinomialNll": multinomialNll,
-                                        "reweightableMse": dummyMse})
+            ret = tf_keras.models.load_model(
+                filepath=modelFname,
+                custom_objects={"multinomialNll": multinomialNll,
+                                "reweightableMse": dummyMse})
             ret.useOldKeras = True
             logUtils.debug(f"Loaded old-style model {modelFname}.")
         except OSError:
@@ -389,7 +390,7 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
         assert chromSizes is not None \
                and regionList is not None \
                and regionData is not None, \
-            "Must provide chromSizes, regionList, and regionData if chromDict is None."
+               "Must provide chromSizes, regionList, and regionData if chromDict is None."
         chromDict = blankChromosomeArrays(bwHeader=chromSizes)
         for i, r in enumerate(regionList):
             chrom, start, end = r
@@ -938,7 +939,8 @@ class BatchPredictor:
         # pylint: enable=import-outside-toplevel
         if sequence.shape[0] > self._inputLength:
             # We need to tile.
-            logUtils.logFirstN(logUtils.INFO,
+            logUtils.logFirstN(
+                logUtils.INFO,
                 f"Found an input with length {sequence.shape[0]} but "
                 f"the model has input length {self._inputLength}. Automatic "
                 "tiling of input window enabled. This may incur a performance cost.",
@@ -1333,7 +1335,7 @@ class ThreadedBatchPredictor:
                 logUtils.debug("Shutting down threaded batcher.")
             if self._batchers is None:
                 raise ValueError("Attempting to shut down a running ThreadedBatchPredictor"
-                    "When its _batchers is None.")
+                                 "When its _batchers is None.")
             for i in range(self._numThreads):
                 self._inQueues[i].put("shutdown")
                 self._inQueues[i].close()

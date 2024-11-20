@@ -30,7 +30,7 @@ def multinomialNll(trueCounts: tf.Tensor, logits: tf.Tensor) -> float:
     flatLogits = ops.reshape(logits, [numBatches, numSamples])
     totalCounts = ops.sum(flatCounts, axis=1)
     distribution = tfp.distributions.Multinomial(total_count=totalCounts,
-            logits=flatLogits)
+                                                 logits=flatLogits)
     logprobs = distribution.log_prob(flatCounts)
     batchSize = ops.shape(trueCounts)[0]
     sumProbs = ops.sum(logprobs)

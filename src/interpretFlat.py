@@ -150,6 +150,14 @@ h5 to a bigwig, since it doesn't contain coordinate information. You can get
 around this limitation by providing a bed file and a genome in a ``coordinates``
 section.
 
+Using custom metrics or the ISM backend
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This script is hard-wired to use the normal profile and counts metric, and it calculates
+shap scores. If you want to use the flexibility of the interpretation machinery for your
+own purposes, you can check out a sample script that uses a custom metric as well as the
+ISM backend, located at ``doc/demos/testIsm.py``.
+
 History
 -------
 
@@ -186,7 +194,7 @@ def profileMetric(headID: int, taskIDs: list[int]) -> Callable:
     :return: A function (that takes a model as its argument) that can
         be passed into the depths of the interpretation system.
     """
-    def metric(model: Any) -> float:  # noqa
+    def metric(model: Any) -> Any:
         # Note that keras and tensorflow must be imported INSIDE the returned function so
         # that they haven't been imported when the interpretation machinery tries to start
         # up. This is dumb but it's how Tensorflow works.
@@ -254,7 +262,7 @@ def main(config: dict) -> None:
         kmerSize = config["kmer-size"]
     else:
         logUtils.info("Did not find a kmer-size property in config. "
-                     "Using default value of 1.")
+                      "Using default value of 1.")
 
     if "bed-file" in config:
         logUtils.debug("Configuration specifies a bed file.")

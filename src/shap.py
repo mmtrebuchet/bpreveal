@@ -56,13 +56,16 @@ class ISMDeepExplainer:
 
     :param model: The (input, output) pair to explain, same semantics as the
         TFDeepExplainer.
-    :param shuffler: A function that takes a one-hot encoded sequence and returns
+    :param shuffler: A function that takes a one-hot encoded sequence and
+        the location of the shuffle in the input and returns
         an array of shuffles of that sequence.
     :param shuffleLength: How wide of a window should be given to the shuffler?
         This must be an odd number.
     :param useOldKeras: Is the model being interpreted from a BPReveal version
         before 5.0.0? This is needed because the way the internal model is built
         changed with Keras 3.0.
+    :param batchSize: How large of a batch of sequences should be run at once
+        through the model? I recommend 32 or so.
 
 
     The way the shuffles are generated is probably best illustrated
@@ -80,15 +83,16 @@ class ISMDeepExplainer:
     First, this tool runs the model on the input sequence to get a reference output.
     This will be subtracted from the model outputs with shuffled inputs later on.
 
-    The shuffler takes slices of the input of width ``shuffleWidth`` and offers them
+    The algorithm takes slices of the input of width ``shuffleWidth`` and offers them
     to ``shuffler`` For example, if shuffleWidth were 5, then the shuffler would be
-    given ``INPUT``, then ``NPUTS``, then ``PUTSE`, and so on, all the way
-    to the other end of the input.
+    given ``("INPUT", 2)``, then ``("NPUTS", 3)``, then ``("PUTSE", 4)`, and so on,
+    all the way to the other end of the input. (For this example, I'm using strings
+    to represent the shuffler inputs, but they will actually be one-hot encoded sequences.)
 
     The shuffler may return as many shuffles as it likes, all of them will be applied
     and the result will be averaged to give the importance at each position.
-    For example, if the shuffler were given ``INPUT`` and returned ``TIPUN``, ``UNTIP``,
-    and ``INPTU``, then the model would be run on three sequences::
+    For example, if the shuffler were given ``("INPUT", 2)`` and returned
+    ``["TIPUN", "UNTIP", "INPTU"]``, then the model would be run on three sequences::
 
         TIPUNSEQUENCEABCDEFGHIJKLMNOPQRSTUVWXYZ
         UNTIPSEQUENCEABCDEFGHIJKLMNOPQRSTUVWXYZ
@@ -110,10 +114,13 @@ class ISMDeepExplainer:
     If a shuffler return no shuffles for a sequence at a location (for example, a shuffler
     that preserves the distribution of bases will not be able to shuffle a sequence that
     consists only of a single nucleotide), then the importance score will be NaN at that location.
+    You can use the position argument given to ``shuffler`` to avoid calculating scores for regions
+    that you are not interested in. (Just return an empty list in that case.)
 
     """
 
-    def __init__(self, model: Any, shuffler: Callable,  shuffleLength: int, useOldKeras: bool):
+    def __init__(self, model: Any, shuffler: Callable,  shuffleLength: int, useOldKeras: bool,
+                 batchSize: int):
         assert shuffleLength % 2 == 1, "shuffleWidth must be odd."
         assert len(model) == 2, "model must be an (input, output) pair"
         if useOldKeras:
@@ -122,6 +129,7 @@ class ISMDeepExplainer:
         else:
             import keras  # pylint: disable=import-outside-toplevel
             self.model = keras.Model(model[0], model[1])
+        self.batchSize = batchSize
         self.shuffler = shuffler
         self.shuffleWidth = shuffleLength
 
@@ -169,7 +177,7 @@ class ISMDeepExplainer:
             subseqStart = pos - Δ
             subseqStop = pos + Δ + 1
             subseq = sequence[subseqStart:subseqStop]
-            shuffles = self.shuffler(subseq)
+            shuffles = self.shuffler(subseq, pos)
             for s in shuffles:
                 ret.append((pos, s, subseq))
         return ret
@@ -182,13 +190,12 @@ class ISMDeepExplainer:
         :return: A two-tuple. The first element is n array of the same shape as sample, with
             importance scores in it. The second is the value of the metric on the input sequence.
         """
-        batchSize = 128
         referenceOutput = self.model(np.array([sample]))
-        batchBuffer = np.tile(sample, (batchSize, 1, 1)) # Use a batch size of 64.
+        batchBuffer = np.tile(sample, (self.batchSize, 1, 1)) # Use a batch size of 64.
         sumOutBuffer = np.zeros(sample.shape)
         numShufflesBuffer = np.zeros(sample.shape)
         shuffles = self.generateShuffles(sample)
-        batches = itertools.batched(shuffles, batchSize)
+        batches = itertools.batched(shuffles, self.batchSize)
 
         Δ = self.shuffleWidth // 2
         for batch in batches:

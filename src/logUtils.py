@@ -287,7 +287,7 @@ def _getThreadId() -> int:
 
 
 def wrapTqdm(iterable: Iterable | int, logLevel: str | int = _logging.INFO,
-             **tqdmKwargs) -> tqdm.tqdm:
+             **tqdmKwargs: dict) -> tqdm.tqdm:
     """Create a tqdm logger or a dummy, based on current logging level.
 
     :param iterable: The thing to be wrapped, or the number to be counted to.

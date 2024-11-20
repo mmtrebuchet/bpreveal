@@ -496,9 +496,9 @@ class DisplayCallback(Callback):
         printOrderEpoch.extend(profileLosses)
         printOrderEpoch.extend(countsLosses)
         printOrderEpoch.extend(["Best epoch", "Best loss", "Epochs until earlystop",
-                           "lr", "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
-                           "Training time", "Validation time",
-                           "Seconds / epoch", "Minutes to earlystop", "Minutes elapsed"])
+                                "lr", "Epochs until LR plateau", "EPOCH_SPACER", "Setup time",
+                                "Training time", "Validation time",
+                                "Seconds / epoch", "Minutes to earlystop", "Minutes elapsed"])
 
         printOrderBatch = ["batch", "loss", "EPOCH_SPACER"]
         printOrderBatch.extend(profileLosses)

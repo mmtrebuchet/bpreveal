@@ -249,9 +249,9 @@ if __name__ == "__main__":
     import sys
     if sys.argv[0] in {"interpretPisaBed", "interpretPisaFasta"}:
         logUtils.error("DEPRECATION: You are calling the program " + sys.argv[0] + ". "
-            "It is now just called interpretPisa and automatically detects if you're "
-            "using a bed or fasta file. Instructions for updating: Call the program "
-            "interpretPisa. These old program names will be removed in BPReveal 6.0.0.")
+                       "It is now just called interpretPisa and automatically detects if you're "
+                       "using a bed or fasta file. Instructions for updating: Call the program "
+                       "interpretPisa. These old program names will be removed in BPReveal 6.0.0.")
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
     bpreveal.schema.interpretPisa.validate(configJson)

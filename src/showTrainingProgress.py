@@ -138,31 +138,31 @@ class Screen:
 
         self._statWin = curses.newwin(3, width - 2 * border, border, border)
         self._epochWin = curses.newwin(tableTotalHeight,
-                                      epochWidth,
-                                      border + colSep + statusHeight,
-                                      border)
+                                       epochWidth,
+                                       border + colSep + statusHeight,
+                                       border)
         self._batchWin = curses.newwin(batchHeight,
-                                      batchWidth,
-                                      border + colSep + statusHeight,
-                                      border + epochWidth + colSep)
+                                       batchWidth,
+                                       border + colSep + statusHeight,
+                                       border + epochWidth + colSep)
         self._λWin = curses.newwin(tableTotalHeight - batchHeight - colSep,
-                                  batchWidth,
-                                  border + statusHeight + colSep * 2 + batchHeight,
-                                  border + epochWidth + colSep)
+                                   batchWidth,
+                                   border + statusHeight + colSep * 2 + batchHeight,
+                                   border + epochWidth + colSep)
         if self.joinMessages:
             self._mesgWin = curses.newwin(messageHeight,
-                                        width - 2 * border,
-                                        height - messageHeight - border,
-                                        border)
+                                          width - 2 * border,
+                                          height - messageHeight - border,
+                                          border)
         else:
             self._mesgWin = curses.newwin(messageHeight,
-                                        width - 2 * border,
-                                        height - messageHeight * 2 - border - colSep,
-                                        border)
+                                          width - 2 * border,
+                                          height - messageHeight * 2 - border - colSep,
+                                          border)
             self._debugWin = curses.newwin(messageHeight,
-                                        width - 2 * border,
-                                        height - messageHeight - border,
-                                        border)
+                                           width - 2 * border,
+                                           height - messageHeight - border,
+                                           border)
 
         for winName in "BλESMD":
             self.printString(1, 1, winName, " ")

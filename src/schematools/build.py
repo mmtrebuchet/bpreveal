@@ -61,13 +61,13 @@ def build() -> None:
                 fp.write(jsonStr)
             fp.write('""")  # noqa\n')
             fp.write("_" + schemaFname + "Schema['$id'] = 'https://example.com/"
-                    "schema/" + schemaFname + "'\n")
+                     "schema/" + schemaFname + "'\n")
         fp.write("_schemaStore = {")
         for schemaFname in sys.argv[2:]:
             fp.write(f"_{schemaFname}Schema['$id']: _{schemaFname}Schema, ")
         fp.write("}\n")
         fp.write("_storeList = [(x, DRAFT7.create_resource(_schemaStore[x])) "
-                "for x in _schemaStore.keys()]\n")
+                 "for x in _schemaStore.keys()]\n")
         fp.write("_registry = Registry().with_resources(_storeList)\n")
         fp.write("\n\n")
         for schemaFname in sys.argv[2:]:
@@ -101,8 +101,8 @@ def build() -> None:
             fp.write(f'"{schemaFname}": {schemaFname},')
         fp.write("}\n")
         fp.write('"""A mapping from a string naming a BPReveal program to '
-            "the corresponding schema.\n\n"
-            'Usage::\n\n    schemaMap["prepareBed"](configJson)\n\n:meta hide-value:"""\n')
+                 "the corresponding schema.\n\n"
+                 'Usage::\n\n    schemaMap["prepareBed"](configJson)\n\n:meta hide-value:"""\n')
 
 
 if __name__ == "__main__":

@@ -19,31 +19,38 @@ def getParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Takes in a model history file (json format) "
                                                  "and generates plots of all the components of "
                                                  "the loss during training.")
-    parser.add_argument("--json",
-            help="The name of the json-format model history file.")
-    parser.add_argument("--output",
-            help="The name of the png-format image file that should be written.")
-    parser.add_argument("--dpi",
-            help="(optional) The resolution of the image that should be saved.",
-            default=300,
-            type=int)
-    parser.add_argument("--exclude",
-            help="(optional) Don't include loss plots from these components of the loss. "
-                "Specified as a regex, may be specified multiple times.",
-            nargs="+",
-            type=str)
-    parser.add_argument("--start-from",
-            help="(optional) Instead of starting at epoch 0, start at epoch N",
-            type=int,
-            default=0,
-            dest="startFrom")
-    parser.add_argument("--verbose",
-            help="Display extra information as the losses are being processed.",
-            action="store_true")
-    parser.add_argument("--total-only",
-            help="(optional) Instead of plotting all the loss components, "
-                 "just show the total loss.",
-            action="store_true")
+    parser.add_argument(
+        "--json",
+        help="The name of the json-format model history file.")
+    parser.add_argument(
+        "--output",
+        help="The name of the png-format image file that should be written.")
+    parser.add_argument(
+        "--dpi",
+        help="(optional) The resolution of the image that should be saved.",
+        default=300,
+        type=int)
+    parser.add_argument(
+        "--exclude",
+        help="(optional) Don't include loss plots from these components of the loss. "
+             "Specified as a regex, may be specified multiple times.",
+        nargs="+",
+        type=str)
+    parser.add_argument(
+        "--start-from",
+        help="(optional) Instead of starting at epoch 0, start at epoch N",
+        type=int,
+        default=0,
+        dest="startFrom")
+    parser.add_argument(
+        "--verbose",
+        help="Display extra information as the losses are being processed.",
+        action="store_true")
+    parser.add_argument(
+        "--total-only",
+        help="(optional) Instead of plotting all the loss components, "
+             "just show the total loss.",
+        action="store_true")
     return parser
 
 

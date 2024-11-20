@@ -235,7 +235,7 @@ def main(config: dict) -> None:
 if __name__ == "__main__":
     import sys
     if sys.argv[0].split("/")[-1] in {"makePredictionsBed", "makePredictionsFasta",
-                       "makePredictionsBed.py", "makePredictionsFasta.py"}:
+                                      "makePredictionsBed.py", "makePredictionsFasta.py"}:
         logUtils.warning(
             "DEPRECATION: You are calling a program named " + sys.argv[0] + ". "
             "It is now just called makePredictions and automatically detects if you're "

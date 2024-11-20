@@ -245,6 +245,9 @@ class InterpRunner:
     :param shuffler: (Only valid with the ``ism`` backend.) The function to use to generate shuffles
         of the sequences. The width of the shuffled sequence will be taken from ``kmerSize``, which
         must be an odd number when using the ``ism`` backend.
+        This function will take two arguments. First, a one-hot encoded sequence to generate
+        shuffles from, and second, an integer giving the position in the overall input where
+        this shuffle is being performed. It should return a list of one-hot encoded sequences.
     """
 
     def __init__(self, modelFname: str, metrics: list[Callable],
@@ -277,7 +280,8 @@ class InterpRunner:
         for _ in range(len(metrics)):
             self._inQueues.append(CrashQueue(maxsize=100))
             self._outQueues.append(CrashQueue(maxsize=100))
-        self._genThread = multiprocessing.Process(target=_generatorThread,
+        self._genThread = multiprocessing.Process(
+            target=_generatorThread,
             args=(self._inQueues, generator, numThreads // len(metrics)),
             daemon=True)
         self._batchers = []
@@ -289,12 +293,12 @@ class InterpRunner:
                            numShuffles, kmerSize, memFrac, backend, useHypotheticalContribs,
                            shuffler)
             self._batchers.append(multiprocessing.Process(target=_generalBatcherThread,
-                                  args=batcherArgs, daemon=True))
+                                                          args=batcherArgs, daemon=True))
         for i in range(len(metrics)):
             saverArgs = (self._outQueues[i], savers[i], numThreads // len(metrics))
             self._saverThreads.append(multiprocessing.Process(target=_saverThread,
-                                                        args=saverArgs,
-                                                        daemon=True))
+                                                              args=saverArgs,
+                                                              daemon=True))
 
     def run(self) -> None:
         """Start up the threads and waits for them to finish."""
@@ -1109,16 +1113,16 @@ class _IsmBatcher:
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         from bpreveal import shap
         # pylint: enable=import-outside-toplevel
-        del batchSize  # This makes no sense with the ISM interpreter since it does
-        # internal batching.
-        self.batchSize = 1  # TODO factor out.
+        self.batchSize = 1  # We use a single-sequence batch for this batcher,
+        # because the ISMDeepExplainer does its own internal batching.
         self.outQueue = outQueue
         self.curBatch = []
         logUtils.debug("Batcher prepared, creating explainer.")
         self._outTarget = metric(self.model)
         self.profileExplainer = shap.ISMDeepExplainer(
             (self.model.input, self._outTarget),
-            shuffler, shuffleLength, self.model.useOldKeras)
+            shuffler, shuffleLength, self.model.useOldKeras,
+            batchSize)
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def addSample(self, query: Query) -> None:

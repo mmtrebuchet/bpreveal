@@ -124,7 +124,8 @@ def trainWithGenerators(model: keras.Model, config: dict, inputLength: int,
         config["heads"], valH5, inputLength, outputLength,
         config["settings"]["max-jitter"], config["settings"]["batch-size"])
     logUtils.info("Generators initialized. Training.")
-    history = trainModel(model, trainGenerator,
+    history = trainModel(
+        model, trainGenerator,
         valGenerator, config["settings"]["epochs"],
         config["settings"]["early-stopping-patience"],
         config["settings"]["output-prefix"],

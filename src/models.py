@@ -109,8 +109,8 @@ def soloModel(inputLength: int, outputLength: int,
         countsOutputs.append(h[1])
         profileOutputs.append(h[0])
     m = kmodels.Model(inputs=inputLayer,
-                    outputs=profileOutputs + countsOutputs,
-                    name=f"{modelName}_model")
+                      outputs=profileOutputs + countsOutputs,
+                      name=f"{modelName}_model")
     return m
 
 
@@ -259,8 +259,8 @@ def transformationModel(soloModelIn: kmodels.Model,
         profileOutputs.append(profileHead)
         countsOutputs.append(countsHead)
     m = kmodels.Model(inputs=soloModelIn.input,
-                    outputs=profileOutputs + countsOutputs,
-                    name="transformation_model")
+                      outputs=profileOutputs + countsOutputs,
+                      name="transformation_model")
     return m
 
 
@@ -380,8 +380,8 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
     combModel = kmodels.Model(inputs=inputLayer,
-                            outputs=combinedProfileHeads + combinedCountsHeads,
-                            name="combined_model")
+                              outputs=combinedProfileHeads + combinedCountsHeads,
+                              name="combined_model")
     logUtils.debug("Model built")
     return (combModel, residualModel, readyBiasHeads)
     # pylint: enable=unsubscriptable-object

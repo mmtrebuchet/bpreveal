@@ -689,7 +689,7 @@ def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-
         tickPoses = np.linspace(0, len(pattern.seqlets), 11, endpoint=True)
         tickLabels = np.arange(0, 110, 10)[::-1]
         axCurStat.tick_params(axis="y", labelleft=False, labelright=rightTicks,
-                            left=False, right=rightTicks)
+                              left=False, right=rightTicks)
         axCurStat.set_yticks(tickPoses, tickLabels, fontsize=FONT_SIZE_TICKS,
                              fontfamily=FONT_FAMILY)
         axCurStat.grid()

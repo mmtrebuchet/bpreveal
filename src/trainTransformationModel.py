@@ -86,7 +86,8 @@ def main(config: dict) -> None:
     # We're in the regression phase, no training the bias model!
     soloModel.trainable = False
 
-    model = models.transformationModel(soloModel,
+    model = models.transformationModel(
+        soloModel,
         config["settings"]["profile-architecture"],
         config["settings"]["counts-architecture"],
         config["heads"])

@@ -17,10 +17,10 @@
 """
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 from bpreveal import logUtils
 from bpreveal import utils
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 
 
 if __name__ == "__main__":
@@ -34,7 +34,7 @@ def main(modelFname: str, pngFile: str | None) -> None:
     if pngFile is not None:
         from keras.utils import plot_model  # pylint: disable=import-outside-toplevel # type: ignore
         plot_model(model, pngFile, show_shapes=True, show_dtype=True,
-                show_layer_names=True, expand_nested=True, show_layer_activations=True)
+                   show_layer_names=True, expand_nested=True, show_layer_activations=True)
 
 
 def getParser() -> argparse.ArgumentParser:

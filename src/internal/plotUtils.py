@@ -113,7 +113,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
             left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2 + origin[0]
             right = left + width / values.shape[0] - spaceBetweenLetters
             _drawLetter(nl[0], left=left, right=right, bottom=base, top=top,
-                       color=getColor(predIdx, nl[0]), ax=ax, flip=True)
+                        color=getColor(predIdx, nl[0]), ax=ax, flip=True)
             top = base
 
         # Draw the positive letters.
@@ -123,7 +123,7 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
             left = predIdx * width / values.shape[0] + spaceBetweenLetters / 2 + origin[0]
             right = left + width / values.shape[0] - spaceBetweenLetters
             _drawLetter(pl[0], left=left, right=right, bottom=base, top=top,
-                       color=getColor(predIdx, pl[0]), ax=ax)
+                        color=getColor(predIdx, pl[0]), ax=ax)
             base = top
 
 
@@ -616,8 +616,8 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
                      color=parseSpec(annot["color"]))
         if not mini:
             axAnnot.text((aleft + aright) / 2, bottom + height / 2, annot["name"],
-                     fontstyle="italic", fontsize=fontSize, fontfamily=FONT_FAMILY,
-                     ha="center", va="center")
+                         fontstyle="italic", fontsize=fontSize, fontfamily=FONT_FAMILY,
+                         ha="center", va="center")
         usedNames[annot["name"]] = annot["color"]
     logUtils.debug("Done applying annotations, scaling axes.")
     axAnnot.set_xlim(genomeStartX, genomeEndX)
@@ -696,7 +696,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
                         [xEnd - xlen * 0.02, xEnd], "k-", lw=2.0)
     if not mini:
         axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
-                      fontfamily=FONT_FAMILY, labelpad=-5)
+                          fontfamily=FONT_FAMILY, labelpad=-5)
     numYTicks = 4 if mini else 10
     addResizeCallbacks(axPisa, "both", numYTicks, numYTicks, fontSizeTicks)
     axPisa.set_ylim(extent[2], extent[3])
@@ -860,7 +860,8 @@ def addLegend(usedNames: dict[str, COLOR_SPEC_T], axLegend: AXES_T, fontSize: in
 
 def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
                 width: float, height: float, mini: bool) -> tuple[AXES_T, AXES_T,
-        AXES_T, AXES_T, AXES_T, AXES_T | None]:
+                                                                  AXES_T, AXES_T,
+                                                                  AXES_T, AXES_T | None]:
     """Generate the various axes that will be needed for a PISA plot.
 
     :param fig: The figure to draw the axes on.
@@ -896,8 +897,8 @@ def getPisaAxes(fig: matplotlib.figure.Figure, left: float, bottom: float,
     axLegend = None
     if mini:
         axLegend = fig.add_axes((left + pisaWidth + profileWidth + cbarSpaceWidth,
-                            bottom + seqHeight + pisaHeight * (1 / 3 + 1 / 7),
-                            cbarWidth * 3, pisaHeight * (1 - 1 / 3 - 1 / 7)))
+                                 bottom + seqHeight + pisaHeight * (1 / 3 + 1 / 7),
+                                 cbarWidth * 3, pisaHeight * (1 - 1 / 3 - 1 / 7)))
         axLegend.set_axis_off()
     axAnnot = fig.add_axes((left,
                             bottom + seqHeight + 0.01 * pisaHeight,
@@ -982,7 +983,7 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     axImportance = fig.add_axes((left, bottom + seqBase, graphWidth, seqHeight),
                                 sharex=axGraph)
     axPredictions = fig.add_axes((left, bottom + profileBase,
-                              graphWidth, profileHeight),
+                                  graphWidth, profileHeight),
                                  sharex=axGraph)
 
     axCbar = fig.add_axes((left + width - cbarWidth,
@@ -992,8 +993,8 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     axLegend = None
     if mini:
         axLegend = fig.add_axes((left + width - cbarWidth,
-                            bottom + graphBase + graphHeight * (1 / 3 + 1 / 7),
-                            cbarWidth * 3, graphHeight * (1 - 1 / 3 - 1 / 7)))
+                                 bottom + graphBase + graphHeight * (1 / 3 + 1 / 7),
+                                 cbarWidth * 3, graphHeight * (1 - 1 / 3 - 1 / 7)))
         axLegend.set_axis_off()
     axAnnot = fig.add_axes((left, bottom + annotBase, graphWidth, annotHeight),
                            sharex=axGraph)

@@ -493,7 +493,7 @@ class Organism:
                 assert validCorruptorList(chosens), "Mixing gave invalid organism."
                 return Organism(chosens, self._randomSequence)
         raise ValueError("Took over 100 attempts to mix "
-            "organisms " + str(self.corruptors) + str(other.corruptors))
+                         "organisms " + str(self.corruptors) + str(other.corruptors))
 
 
 class Population:
