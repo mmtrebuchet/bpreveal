@@ -20,26 +20,27 @@ def minmaxMetric(headID: int, taskID: int) -> Callable:
         return Δ
     return metric
 
-
-def shuffler(seq: ONEHOT_AR_T, pos: int) -> list[ONEHOT_AR_T]:
-    if pos < 1500 or pos > 3500:
-        # Don't bother explaining bases that are way far away from the output.
-        return []
-    seqs = [np.copy(seq) for _ in range(4)]
-    [np.random.shuffle(s) for s in seqs]
-    ret = []
-    retStrs = [utils.oneHotDecode(seq)]
-    for shuffleSeq in seqs:
-        shufStr = utils.oneHotDecode(shuffleSeq)
-        if shufStr not in retStrs:
-            # We haven't seen this shuffle yet.
-            retStrs.append(shufStr)
-            ret.append(shuffleSeq)
-    return ret
-    # Another shuffler: This one is for a kmerSize of 1 base,
-    # and it returns all bases except the one passed in.
-    # possibleRets = utils.oneHotEncode("ACGT")
-    # return possibleRets[base[0] == 0]
+def makeShuffler(startPt, stopPt):
+    def shuffler(seq: ONEHOT_AR_T, pos: int) -> list[ONEHOT_AR_T]:
+        if pos < startPt or pos > stopPt:
+            # Don't bother explaining bases that are way far away from the output.
+            return []
+        seqs = [np.copy(seq) for _ in range(4)]
+        [np.random.shuffle(s) for s in seqs]
+        ret = []
+        retStrs = [utils.oneHotDecode(seq)]
+        for shuffleSeq in seqs:
+            shufStr = utils.oneHotDecode(shuffleSeq)
+            if shufStr not in retStrs:
+                # We haven't seen this shuffle yet.
+                retStrs.append(shufStr)
+                ret.append(shuffleSeq)
+        return ret
+        # Another shuffler: This one is for a kmerSize of 1 base,
+        # and it returns all bases except the one passed in.
+        # possibleRets = utils.oneHotEncode("ACGT")
+        # return possibleRets[base[0] == 0]
+    return shuffler
 
 
 def main(config: dict) -> None:
@@ -68,14 +69,15 @@ def main(config: dict) -> None:
         config=str(config))
     metric = minmaxMetric(
         config["head-id"], config["profile-task-ids"][0])
-
+    buffer = (config["output-length"] - config["input-length"]) // 2
     # numShuffles is irrelevant for the ism backend, so I've set it to zero here.
     batcher = interpretUtils.InterpRunner(
         modelFname=config["model-file"], metrics=[metric],
         batchSize=16, generator=generator, savers=[saver],
         numShuffles=0, kmerSize=kmerSize,
         numThreads=3, backend="ism",
-        shuffler=shuffler)
+        shuffler=makeShuffler(buffer, config["output-length"] - buffer)
+    )
     batcher.run()
 
 
