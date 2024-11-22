@@ -34,8 +34,8 @@ to make PISA plots.
 
 ``color-map``
     Either ``"clip"``, ``"noclip"``, or a ``matplotlib.colors.Colormap``.
-    ``clip`` maps to :py:data:`pisaClip<bpreveal.colors.pisaClip`, and
-    ``noclip`` maps to :py:data:`pisaClip<bpreveal.colors.pisaNoClip`.
+    ``"clip"`` maps to :py:data:`pisaClip<bpreveal.colors.pisaClip`, and
+    ``"noclip"`` maps to :py:data:`pisaClip<bpreveal.colors.pisaNoClip`.
     Default: ``"clip"``.
 
 ``rasterize``

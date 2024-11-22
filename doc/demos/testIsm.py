@@ -16,7 +16,6 @@ def minmaxMetric(headID: int, taskID: int) -> Callable:
         minValue = ops.min(profileOutput, axis=1)
         maxValue = ops.max(profileOutput, axis=1)
         Δ = ops.subtract(maxValue, minValue)
-        print(Δ)
         return Δ
     return metric
 
