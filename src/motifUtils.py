@@ -521,19 +521,19 @@ class Pattern:
         if self.quantileSeqMatch is not None:
             seqMatches = np.array([x.seqMatch for x in self.seqlets])
             self.cutoffSeqMatch =\
-                np.quantile(seqMatches, self.quantileSeqMatch)  # type: ignore
+                float(np.quantile(seqMatches, self.quantileSeqMatch))
         else:
             self.cutoffSeqMatch = None
         if self.quantileContribMatch is not None:
             contribMatches = np.array([x.contribMatch for x in self.seqlets])
             self.cutoffContribMatch =\
-                np.quantile(contribMatches, self.quantileContribMatch)  # type: ignore
+                float(np.quantile(contribMatches, self.quantileContribMatch))
         else:
             self.cutoffContribMatch = None
         if self.quantileContribMagnitude is not None:
             contribMagnitudes = np.array([x.contribMagnitude for x in self.seqlets])
             self.cutoffContribMagnitude =\
-                np.quantile(contribMagnitudes, self.quantileContribMagnitude)  # type: ignore
+                float(np.quantile(contribMagnitudes, self.quantileContribMagnitude))
         else:
             self.cutoffContribMagnitude = None
 
