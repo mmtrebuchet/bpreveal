@@ -18,6 +18,7 @@ BREAKING CHANGES:
       functions are not normally directly useful for end-users, any custom interpretation
       pipeline is almost certainly going to need to be re-done. See the changes in
       interpretFlat and interpretPisa to see how to use the new API.
+    * ``shap.py`` and ``interpretUtils.py`` have moved to the ``internal/`` directory.
 
 NEW FEATURES:
     * Added the ability to include random mutations in corruptors in
@@ -51,6 +52,8 @@ BUG FIXES:
       removed the hacked solution from the BPReveal side.
     * Set pisa plots to always display whole pixels on the edge instead of the previous
       axis limit algorithm that could display half-pixels.
+    * The addition of interactive plotting had broken ``use-annotation-colors`` in PISA
+      graph generation. It now correctly colors the relevant lines again.
 
 CONTRIBUTORS:
     * Charles McAnany

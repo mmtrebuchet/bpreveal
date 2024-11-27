@@ -70,6 +70,8 @@ When BPReveal 5.1.0 was released, the following breaking changes occurred.
 2. Quite a lot of refactoring was done inside interpretUtils. Importantly,
    FlatRunner and PisaRunner are now gone, they have been unified into a
    new class called InterpRunner that lets you use your own metric for shapping.
+3. ``interpretUtils.py`` and ``shap.py`` were moved to the ``internal/`` directory
+   since that's really where they belong.
 
 BPReveal 5.0.0
 ^^^^^^^^^^^^^^

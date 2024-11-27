@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from collections.abc import Callable
 from typing import Any
-from bpreveal import interpretUtils
+from bpreveal.internal import interpretUtils
 from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal.internal import interpreter

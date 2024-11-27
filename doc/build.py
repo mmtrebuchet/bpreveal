@@ -35,13 +35,14 @@ filesMinor = ["checkJson.py", "lengthCalc.py", "makeLossPlots.py", "metrics.py",
 
 # Libraries that can't be executed on their own
 filesApi = ["bedUtils.py", "callbacks.py", "colors.py", "gaOptimize.py",
-            "generators.py", "interpretUtils.py", "jaccard.py", "layers.py",
+            "generators.py", "jaccard.py", "layers.py",
             "logUtils.py", "losses.py", "models.py", "motifUtils.py",
             "plotting.py", "schema.py", "training.py", "ushuffle.py",
             "utils.py"]
 
 filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "crashQueue.py",
-                    "files.py", "interpreter.py", "predictUtils.py", "plotUtils.py"]
+                    "files.py", "interpreter.py", "interpretUtils.py", "predictUtils.py",
+                    "plotUtils.py"]
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py",

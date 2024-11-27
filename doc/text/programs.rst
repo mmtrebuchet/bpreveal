@@ -122,7 +122,7 @@ to do useful things in your code.
     class on its own to apply mutations to sequences. These mutations can
     include insertions and deletions.
 
-:py:mod:`interpretUtils<bpreveal.interpretUtils>`
+:py:mod:`interpretUtils<bpreveal.internal.interpretUtils>`
     Functions for getting interpretation scores. Contains a streaming system
     for calculating PISA and flat importance scores. You should not normally
     need to interact with this module. Instead, use
@@ -244,7 +244,8 @@ you can use
 :py:func:`utils.easyInterpretFlat<bpreveal.utils.easyInterpretFlat>` to get
 importance scores.
 If you need something even more custom, you'll have to wade through the arcane and
-complex :py:mod:`interpretUtils<bpreveal.interpretUtils>` module and I'm sorry for you.
+complex :py:mod:`interpretUtils<bpreveal.internal.interpretUtils>` module and
+I'm sorry for you.
 
 Working with motifs
 '''''''''''''''''''
