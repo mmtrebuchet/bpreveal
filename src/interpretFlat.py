@@ -178,7 +178,7 @@ import h5py
 import pybedtools
 import pysam
 import bpreveal.schema
-from bpreveal import interpretUtils
+from bpreveal.internal import interpretUtils
 from bpreveal import logUtils
 from bpreveal.internal import predictUtils
 from bpreveal.internal import interpreter

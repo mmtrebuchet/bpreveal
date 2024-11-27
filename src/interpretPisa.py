@@ -146,7 +146,7 @@ API
 from collections.abc import Callable
 import bpreveal.schema
 from bpreveal import logUtils
-from bpreveal import interpretUtils
+from bpreveal.internal import interpretUtils
 from bpreveal.internal import interpreter
 
 

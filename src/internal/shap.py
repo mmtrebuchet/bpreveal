@@ -1,4 +1,4 @@
-"""This is the DeepTfExplainer from the deepShap repository.
+"""A copy of the DeepTfExplainer from the deepShap repository.
 
 I modified a bit to work with TF 2.16 and trimmed some imports.
 
@@ -31,7 +31,7 @@ def standard_combine_mult_and_diffref(mult, originalInput, backgroundData):
 
 
 def custom_record_gradient(op_name, inputs, attrs, results):
-    """This overrides tensorflow.python.eager.backprop._record_gradient.
+    """Override tensorflow.python.eager.backprop._record_gradient.
 
     We need to override _record_gradient in order to get gradient backprop to
     get called for ResourceGather operations. In order to make this work we
@@ -714,13 +714,14 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
 
 
 def passthrough(explainer, op, *grads):
+    """Do nothing with gradients."""
     if op.type.startswith("shap_"):
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
 
 
 def break_dependence(explainer, op, *grads):
-    """This function name is used to break attribution dependence in the graph traversal.
+    """Break attribution dependence in the graph traversal.
 
     These operation types may be connected above input data values in the graph but their outputs
     don't depend on the input values (for example they just depend on the shape).

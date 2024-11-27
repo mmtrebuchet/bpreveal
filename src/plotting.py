@@ -351,8 +351,8 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
     colorBlocks = []
     if cfg["use-annotation-colors"]:
         for annot in cfg["annotations"]["custom"]:
-            colorBlocks.append((annot["start"] - genomeStart,
-                                annot["end"] - genomeStart,
+            colorBlocks.append((annot["start"],
+                                annot["end"],
                                 annot["color"]))
     logUtils.debug("Axes set. Drawing graph.")
     Δ = coords["output-slice-width"] - coords["input-slice-width"]

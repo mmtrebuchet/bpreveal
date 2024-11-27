@@ -14,7 +14,6 @@ import multiprocessing
 import ctypes
 import pysam
 import numpy as np
-import numpy.typing as npt
 import tqdm
 import h5py
 import pybedtools
@@ -76,12 +75,11 @@ class Result:
     3. outQueue is read by saverThread
     4. saverThread calls .add() on the Saver.
 
-    :param inputPrediction: A scalar floating point value, of the predicted logit
-        from the input sequence at the base that was being shapped.
+    :param inputPrediction: A scalar floating point value, the value of the metric on the
+        given input window.
 
-    :param shufflePredictions: A ``(numShuffles,)`` numpy array of the logits
-        returned by running predictions on the reference sequence, again evaluated
-        at the position of the base that was being shapped.
+    :param shufflePredictions: A ``(numShuffles,)`` numpy array of the values of the metric
+        on each of the shuffled sequences.
 
     :param sequence: is a ``(input-length, NUM_BASES)`` numpy array of the
         one-hot encoded input sequence.
@@ -97,13 +95,14 @@ class Result:
 
     :param index: Indicates which address the data should be stored at in the output hdf5.
         Since there's no order guarantee when you're receiving data, we have to keep track
-        of the order in the original input.
+        of the order in the original input. It is up to the Saver to re-organize the Results
+        that it gets if the Saver wants to make an order guarantee.
     """
 
-    def __init__(self, inputPrediction: npt.NDArray[np.float32],
-                 shufflePredictions: npt.NDArray[np.float32],
+    def __init__(self, inputPrediction: PRED_AR_T,
+                 shufflePredictions: PRED_AR_T,
                  sequence: ONEHOT_AR_T,
-                 shap: npt.NDArray[IMPORTANCE_T],
+                 shap: IMPORTANCE_AR_T,
                  passData: Any,
                  index: int):
         """Just store all the provided data."""
@@ -344,7 +343,7 @@ class FlatListSaver(Saver):
 
     inputLength: int
     numSamples: int
-    shap: npt.NDArray[IMPORTANCE_T]
+    shap: IMPORTANCE_AR_T
     seq: ONEHOT_AR_T
     inputPredictions: PRED_AR_T
     _results: list[Result]
@@ -1111,7 +1110,7 @@ class _IsmBatcher:
         utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        from bpreveal import shap
+        from bpreveal.internal import shap
         # pylint: enable=import-outside-toplevel
         self.batchSize = 1  # We use a single-sequence batch for this batcher,
         # because the ISMDeepExplainer does its own internal batching.
@@ -1189,7 +1188,7 @@ class _ShapBatcher:
         utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
-        from bpreveal import shap
+        from bpreveal.internal import shap
         # pylint: enable=import-outside-toplevel
         if not isShappable(self.model):
             logUtils.error(f"The model you have provided ({modelFname}) is not shappable "

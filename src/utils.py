@@ -76,7 +76,10 @@ def loadModel(modelFname: str):  # noqa: ANN201
         # pylint: disable=import-outside-toplevel
         from keras.models import load_model  # type: ignore
         # pylint: enable=import-outside-toplevel
-        ret = load_model(filepath=modelFname)
+        ret = load_model(
+            filepath=modelFname,
+            custom_objects={"multinomialNll": multinomialNll,
+                            "reweightableMse": dummyMse})
         ret.useOldKeras = False
         logUtils.debug(f"Loaded new-style model {modelFname}.")
     return ret
@@ -731,7 +734,7 @@ def easyInterpretFlat(sequences: Iterable[str] | str, modelFname: str,
     """
     # pylint: disable=import-outside-toplevel
     from bpreveal import interpretFlat
-    from bpreveal.interpretUtils import ListGenerator, FlatListSaver, InterpRunner
+    from bpreveal.internal.interpretUtils import ListGenerator, FlatListSaver, InterpRunner
     # pylint: enable=import-outside-toplevel
     assert not constants.getTensorflowLoaded(), \
         "Cannot use easy functions after loading tensorflow."
