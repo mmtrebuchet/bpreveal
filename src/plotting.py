@@ -869,8 +869,9 @@ def deleteTick(ax: AXES_T, which: Literal["x"] | Literal["y"] | Literal["both"],
         ax.set_yticklabels(newYLabels)
 
 
-def plotPisaWithFiles(pisaDats: str, cutMiddle: int, cutLengthX: int,
-                      cutLengthY: int, receptiveField: int, genomeWindowStart: int,
+def plotPisaWithFiles(pisaDats: str,  # pylint: disable=too-many-positional-arguments
+                      cutMiddle: int, cutLengthX: int, cutLengthY: int, receptiveField: int,
+                      genomeWindowStart: int,
                       genomeWindowChrom: str, genomeFastaFname: str, importanceBwFname: str,
                       motifScanBedFname: str, profileDats: str,
                       nameColors: dict[str, tuple[float, float, float]],

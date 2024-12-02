@@ -10,14 +10,15 @@ BPReveal 5.x
 BPReveal 5.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.1.0, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 5.1.0, 2024-12-02
+''''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * Quite a bit of refactoring was done inside interpretUtils. While these
       functions are not normally directly useful for end-users, any custom interpretation
       pipeline is almost certainly going to need to be re-done. See the changes in
-      interpretFlat and interpretPisa to see how to use the new API.
+      interpretFlat and interpretPisa to see how to use the new API. There's also a demo
+      of the new interpretation pipeline for custom metrics in ``doc/demos/testIsm.py``
     * ``shap.py`` and ``interpretUtils.py`` have moved to the ``internal/`` directory.
 
 NEW FEATURES:
