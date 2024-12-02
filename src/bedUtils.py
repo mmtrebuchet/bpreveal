@@ -138,7 +138,7 @@ def tileSegments(inputLength: int, outputLength: int,
     # Phase 3. Generate tiling regions.
     logUtils.debug("Creating regions.")
     regions = []
-    for s in wrapTqdm(shrunkSegments, "INFO"):
+    for s in wrapTqdm(shrunkSegments, "DEBUG"):
         startPos = s.start
         endPos = startPos + outputLength
         while endPos < s.end:
