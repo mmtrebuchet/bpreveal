@@ -1,5 +1,6 @@
 """Custom layers that are needed for the various models."""
 from collections.abc import Callable
+from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from keras.layers import Conv1D, Reshape, Layer  # type: ignore
 from keras.ops import convert_to_tensor
 import tensorflow as tf

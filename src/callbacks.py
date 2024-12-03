@@ -2,6 +2,7 @@
 import re
 import time
 from collections.abc import Callable, Sequence
+from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from keras.callbacks import ModelCheckpoint, EarlyStopping  # type: ignore
 from keras.callbacks import ReduceLROnPlateau, Callback  # type: ignore
 from keras.src import backend

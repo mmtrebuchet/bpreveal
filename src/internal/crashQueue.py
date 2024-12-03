@@ -3,6 +3,7 @@ import multiprocessing as mp
 from typing import Any
 import queue
 from bpreveal.internal.constants import QUEUE_TIMEOUT
+from bpreveal import logUtils
 
 
 class CrashQueue:
@@ -53,6 +54,7 @@ class CrashQueue:
         try:
             self.q.put(obj, timeout=timeout)
         except queue.Full:
+            logUtils.error("Queue was full, cancelling join thread.")
             self.q.cancel_join_thread()
             raise
 

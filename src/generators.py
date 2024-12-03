@@ -8,6 +8,7 @@ import time
 import h5py
 import numpy as np
 from numpy._typing import NDArray
+from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 import keras
 from bpreveal import logUtils
 from bpreveal.internal.constants import MODEL_ONEHOT_T, NUM_BASES, ONEHOT_T, PRED_T

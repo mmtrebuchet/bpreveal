@@ -14,11 +14,8 @@ import sys
 import warnings
 import tempfile
 import bpreveal.logUtils
+from bpreveal.internal.constants import setTensorflowLoaded
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-import tensorflow as tf
-tf.get_logger().setLevel("ERROR")
-warnings.simplefilter("ignore")
-bpreveal.logUtils.debug("Tensorflow logging successfully disabled.")
 
 
 class LeaveStderrAlone:
@@ -82,5 +79,18 @@ class SuppressStderr:
         self.output = self.tempFile.read().decode()
         self.tempFile.close()
 
+
+_suppressor = SuppressStderr()
+try:
+    with _suppressor:
+        setTensorflowLoaded()
+        import tensorflow as tf
+        tf.get_logger().setLevel("ERROR")
+except:  # noqa
+    bpreveal.logUtils.error("Error importing tensorflow. Error text:")
+    bpreveal.logUtils.error(str(_suppressor.output))
+    raise
+warnings.simplefilter("ignore")
+bpreveal.logUtils.debug("Tensorflow logging successfully disabled.")
 
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

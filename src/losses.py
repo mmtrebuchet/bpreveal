@@ -4,6 +4,7 @@ These are derived from the basepairmodels repository, which is licensed under
 an MIT license. You can find a copy at ``etc/basepairmodels_license.txt``.
 """
 from collections.abc import Callable
+from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 import tensorflow as tf
 import tensorflow_probability as tfp
 from keras import ops  # type: ignore

@@ -7,6 +7,7 @@ at ``etc/basepairmodels_license.txt``.
 The arithmetic for residual models is derived from ChromBPNet, but the code is
 not derived from that project.
 """
+from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from tensorflow.keras.backend import int_shape  # type: ignore
 import keras.layers as klayers  # type: ignore
 import keras.models as kmodels  # type: ignore
