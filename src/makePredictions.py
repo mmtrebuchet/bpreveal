@@ -130,7 +130,6 @@ import json
 import pybedtools  # pylint: disable=unused-import # noqa
 import bpreveal.schema
 from bpreveal import utils
-import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from bpreveal import logUtils
 from bpreveal.logUtils import wrapTqdm
 from bpreveal.internal import predictUtils
