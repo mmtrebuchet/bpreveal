@@ -10,7 +10,7 @@ BPReveal 5.x
 BPReveal 5.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.1.0, 2024-12-02
+BPReveal 5.1.0, 2024-12-03
 ''''''''''''''''''''''''''
 
 BREAKING CHANGES:
