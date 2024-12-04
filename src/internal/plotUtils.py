@@ -752,7 +752,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     plotMat *= math.log2(math.e)
     colorSpan *= math.log2(math.e)
     minValue *= math.log2(math.e)
-
+    zeroedCmap = bprcolors.getGraphCmap(minValue, colorSpan, cmap)
     def addLine(xLower: int, xUpper: int, value: float) -> bool | tuple[float, PathPatch]:
         if abs(value) < minValue:
             return False
@@ -776,7 +776,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         normValue = (value + colorSpan) / (2 * colorSpan)
         normα = abs(value / colorSpan)
 
-        color = cmap(normValue, alpha=normα)
+        color = zeroedCmap(normValue, alpha=normα)
         for colorBlock in colorBlocks:
             start, end, colorSpec = colorBlock
             r, g, b = parseSpec(colorSpec)[:3]
@@ -805,7 +805,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         ax.set_rasterization_zorder(0)
     # Last quick thing to do - generate a color map.
     norm = mplcolors.Normalize(vmin=-colorSpan, vmax=colorSpan)
-    smap = ScalarMappable(norm=norm, cmap=cmap)
+    smap = ScalarMappable(norm=norm, cmap=zeroedCmap)
     return smap
 
 

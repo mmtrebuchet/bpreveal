@@ -43,6 +43,9 @@ ENHANCEMENTS:
       and stitch them together to give you a single big output prediction.
     * interpretFlat now includes the value of the metric at each location that was
       interpreted in its output hdf5 file.
+    * Since PISA graphs don't show any lines for low-importance connections,
+      the color bar has been updated to be pure white within the region where
+      no lines are drawn.
 
 BUG FIXES:
     * Added a check to make sure that the slices applied to PISA plots are valid,

@@ -208,6 +208,7 @@ Specific parameters
     I recommend keeping this at about the 95th percentile
     of your PISA data, as otherwise an absolutely enormous number of
     splines will be drawn.
+    The color bar will be drawn as white within this range.
 
 ``use-annotation-colors``
     Only applicable to PISA graphs.

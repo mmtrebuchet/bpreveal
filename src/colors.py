@@ -141,6 +141,29 @@ pisaNoClip = mplcolors.ListedColormap(_oldPisaCmap(np.linspace(0, 1, 256)))
 """
 
 
+def getGraphCmap(minValue, colorSpan, baseCmap):
+    sampledCmap = baseCmap.resampled(256)
+    colorList = sampledCmap(np.linspace(0, 1, 256))
+    # The range for a color map must be from 0 to 1
+    # but the minValue and color span parameters will be centered
+    # at zero, not 1/2.
+    # If the resampled color map is:
+    #         a b c d e f g h i j k l m o p q r s t u v w x y z
+    #         |                 |     |     |                 |
+    #     -colorSpan       -minValue  0  +minValue         +colorSpan
+    #         0                      0.5                      1
+    # where the top line of labels is in the zero-centered space we think in
+    # then the bottom line is the points on the 0 to 1 cmap object.
+    #
+    lowerBound = (colorSpan - minValue) / (2 * colorSpan)
+    upperBound = (colorSpan + minValue) / (2 * colorSpan)
+    white = np.array([1, 1, 1, 1])
+    sliceStart = int(lowerBound * 256)
+    sliceEnd = int(upperBound * 256)
+    colorList[sliceStart:sliceEnd] = white
+    return mplcolors.ListedColormap(colorList)
+
+
 def parseSpec(  # pylint: disable=too-many-return-statements
         colorSpec: COLOR_SPEC_T | str) -> RGB_T:
     """Given a color-spec (See the BNF), convert it into an rgb or rgba tuple.

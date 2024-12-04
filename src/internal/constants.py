@@ -163,7 +163,7 @@ if you read out whole chunks at a time and buffer them. See, for example,
 reader.
 """
 
-QUEUE_TIMEOUT: int = 240  # (seconds)
+QUEUE_TIMEOUT: int = 600  # (seconds)
 """How long should a queue wait before crashing?
 
 In parallel code, if something goes wrong, a queue could stay stuck forever.

@@ -46,8 +46,10 @@ def doShift(bwFnames: list[str], shifts: list[int], outFname: str) -> None:
                 datOut[s:] += d[:-s]
             else:
                 datOut[:s] += d[-s:]
-        datOut[:np.max(shifts)] = 0
-        datOut[min(shifts):] = 0
+        if np.max(shifts) > 0:
+            datOut[:np.max(shifts)] = 0
+        if np.min(shifts) < 0:
+            datOut[min(shifts):] = 0
         chromDats[chromName] = datOut
         bwOut.addEntries(chromName,
                          0,
