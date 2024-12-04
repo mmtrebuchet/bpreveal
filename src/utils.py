@@ -875,11 +875,8 @@ class BatchPredictor:
             self.suppress = disableTfLogging.SuppressStderr
         else:
             self.suppress = disableTfLogging.LeaveStderrAlone
-        if not constants.getTensorflowLoaded():
-            # We haven't loaded Tensorflow yet.
-            with self.suppress():
-                setMemoryGrowth()
         with self.suppress():
+            setMemoryGrowth()
             self._model = loadModel(modelFname)  # type: ignore
         self._inputLength = self._model.input.shape[1]
         self._outputLength = self._model.output[0].shape[1]
