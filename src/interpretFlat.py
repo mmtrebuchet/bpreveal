@@ -258,6 +258,8 @@ def main(config: dict) -> None:
     logUtils.setVerbosity(config["verbosity"])
     genomeFname = None
     kmerSize = 1
+    logUtils.info(f"InterpretFlat starting with model file {config["model-file"]}")
+    logUtils.info(f"Using head ID {config["head-id"]}")
     if "kmer-size" in config:
         kmerSize = config["kmer-size"]
     else:
@@ -271,9 +273,11 @@ def main(config: dict) -> None:
                                                     genomeFname=genomeFname,
                                                     inputLength=config["input-length"],
                                                     outputLength=config["output-length"])
+        logUtils.info(f"Created a reader for bed file {config["bed-file"]}")
     else:
         logUtils.debug("Configuration specifies a fasta file.")
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
+        logUtils.info(f"Created a reader for fasta file {config["fasta-file"]}")
 
     profileWriter = interpretUtils.FlatH5Saver(
         outputFname=config["profile-h5"], numSamples=generator.numRegions,
@@ -305,6 +309,7 @@ def main(config: dict) -> None:
                 bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
                 predictUtils.addCoordsInfo(regions=bedFp, outFile=h5fp,
                                            genome=genome, stopName="coords_end")
+    logUtils.info("interpretFlat complete, exiting.")
 
 
 if __name__ == "__main__":

@@ -753,6 +753,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     colorSpan *= math.log2(math.e)
     minValue *= math.log2(math.e)
     zeroedCmap = bprcolors.getGraphCmap(minValue, colorSpan, cmap)
+
     def addLine(xLower: int, xUpper: int, value: float) -> bool | tuple[float, PathPatch]:
         if abs(value) < minValue:
             return False

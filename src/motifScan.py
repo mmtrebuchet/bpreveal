@@ -155,7 +155,7 @@ def main(config: dict) -> None:
             cutoffConfig["modisco-window"],
             tsvFname
         )
-        logUtils.info("Analysis complete.")
+        logUtils.info("Seqlet cutoffs determined.")
         if "quantile-json" in cutoffConfig:
             # You specified a quantile-json inside the cutoffs config.
             # Even though it isn't necessary since we just pass scanPatternDict

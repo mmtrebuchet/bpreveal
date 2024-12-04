@@ -618,7 +618,7 @@ def prepareBeds(config: dict) -> None:
             .cat(rejectTest, postmerge=False)\
             .sort()
         allRejects.saveas(outputRejectFname)
-    logUtils.info("Regions saved.")
+    logUtils.info("Bed preparation complete. Exiting.")
 
 
 if __name__ == "__main__":

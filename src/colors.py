@@ -141,7 +141,21 @@ pisaNoClip = mplcolors.ListedColormap(_oldPisaCmap(np.linspace(0, 1, 256)))
 """
 
 
-def getGraphCmap(minValue, colorSpan, baseCmap):
+def getGraphCmap(minValue: float, colorSpan: float,
+                 baseCmap: mplcolors.Colormap) -> mplcolors.Colormap:
+    """Remove the central portion of a color map for PISA graphs.
+
+    :param minValue: The value (in logit space) below which no lines will
+        be drawn in the PISA graph. This is the region of the returned color
+        map that will be white.
+    :param colorSpan: The total range of the color map. Lines with higher PISA
+        scores than colorSpan will be clipped to the extreme values of the color
+        map.
+    :param baseCmap: The colormap to modify. This will be either ``pisaClip`` or
+        ``pisaNoClip``, or you may provide your own Colormap object.
+    :return: A new color map that can be used to color lines in a PISA
+        graph.
+    """
     sampledCmap = baseCmap.resampled(256)
     colorList = sampledCmap(np.linspace(0, 1, 256))
     # The range for a color map must be from 0 to 1
@@ -154,7 +168,7 @@ def getGraphCmap(minValue, colorSpan, baseCmap):
     #         0                      0.5                      1
     # where the top line of labels is in the zero-centered space we think in
     # then the bottom line is the points on the 0 to 1 cmap object.
-    #
+
     lowerBound = (colorSpan - minValue) / (2 * colorSpan)
     upperBound = (colorSpan + minValue) / (2 * colorSpan)
     white = np.array([1, 1, 1, 1])

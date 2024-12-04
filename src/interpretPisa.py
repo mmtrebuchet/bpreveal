@@ -213,6 +213,7 @@ def main(config: dict) -> None:
                            "error in BPReveal 6.0.0.")
             config["fasta-file"] = config["sequence-fasta"]
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
+        logUtils.info(f"Initialized generator for {config["fasta-file"]}")
         genome = None
     else:
         generator = interpretUtils.PisaBedGenerator(bedFname=config["bed-file"],
@@ -220,6 +221,7 @@ def main(config: dict) -> None:
                                                     inputLength=config["input-length"],
                                                     outputLength=config["output-length"])
         genome = config["genome"]
+        logUtils.info(f"Initialized generator for {config["bed-file"]}")
 
     writer = interpretUtils.PisaH5Saver(outputFname=config["output-h5"],
                                         numSamples=generator.numRegions,
@@ -228,10 +230,12 @@ def main(config: dict) -> None:
                                         genome=genome,
                                         useTqdm=logUtils.getVerbosity() <= logUtils.INFO,
                                         config=str(config))
+    logUtils.info(f"Initialized saver with output file {config["output-h5"]}")
     # If you want to use a custom metric, you could add that here.
     # I can't think of a good reason to use anything other than the PISA
     # metric for PISA calculations, though.
     metric = pisaMetric(config["head-id"], config["task-id"])
+    logUtils.info(f"Constructed metric for head {config["head-id"]} and task {config["task-id"]}.")
     batcher = interpretUtils.InterpRunner(modelFname=config["model-file"],
                                           metrics=[metric],
                                           batchSize=10,
@@ -243,6 +247,7 @@ def main(config: dict) -> None:
                                           backend="shap",
                                           useHypotheticalContribs=False)
     batcher.run()
+    logUtils.info("PISA interpretation complete, exiting.")
 
 
 if __name__ == "__main__":

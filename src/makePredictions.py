@@ -147,9 +147,11 @@ def getReader(config: dict) -> predictUtils.BedReader | predictUtils.FastaReader
         bedFname = config["bed-file"]
         genomeFname = config["genome"]
         reader = predictUtils.BedReader(bedFname, genomeFname, padding)
+        logUtils.info(f"Initialized reader for bed file {bedFname}")
     elif "fasta-file" in config:
         fastaFname = config["fasta-file"]
         reader = predictUtils.FastaReader(fastaFname)
+        logUtils.info(f"Initialized reader for fasta file {fastaFname}")
     else:
         raise ValueError("Could not find an input source in your config.")
     return reader
@@ -165,7 +167,7 @@ def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
         writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
                                        numPredictions=numPredictions, bedFname=bedFname,
                                        genomeFname=genomeFname, config=str(config))
-        logUtils.debug("Initialized writer from a bed reader.")
+        logUtils.debug(f"Initialized writer for {outFname} from a bed reader.")
     elif "fasta-file" in config:
         bedFname = config["coordinates"]["bed-file"]
         genomeFname = config["coordinates"]["genome"]
@@ -173,10 +175,10 @@ def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
             writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
                                            numPredictions=numPredictions, bedFname=bedFname,
                                            genomeFname=genomeFname, config=str(config))
-            logUtils.debug("Initialized writer from a fasta reader with coordinates.")
+            logUtils.debug(f"Initialized writer for {outFname} from fasta reader with coordinates.")
         else:
             writer = predictUtils.H5Writer(outFname, numHeads, numPredictions)
-            logUtils.debug("Initialized writer from a fasta reader without coordinates.")
+            logUtils.debug(f"Initialized writer for {outFname} from a fasta without coordinates.")
     else:
         raise ValueError("Could not construct a writer.")
     return writer
@@ -199,7 +201,7 @@ def main(config: dict) -> None:
         logUtils.error(json.dumps(config, indent=4))
     batchSize = config["settings"]["batch-size"]
     modelFname = config["settings"]["architecture"]["model-file"]
-
+    logUtils.info(f"Beginning to make predictions for model {modelFname}")
     # Before we can build the output dataset in the hdf5 file, we need to
     # know how many regions we will be asked to predict.
     reader = getReader(config)
@@ -229,6 +231,7 @@ def main(config: dict) -> None:
             pbar.update()
             writer.addEntry(ret)
     writer.close()
+    logUtils.info("Done making predictions, exiting.")
 
 
 if __name__ == "__main__":
