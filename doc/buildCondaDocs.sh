@@ -46,7 +46,9 @@ runAndCheck ${CONDA_BIN} install --yes -c conda-forge \
     sphinx-argparse conda-build numpy matplotlib h5py scipy \
     gfortran gxx_linux-64 meson
 
-runAndCheck pip install pybedtools pysam pyBigWig
+runAndCheck ${CONDA_BIN} install --yes -c bioconda pybedtools
+
+runAndCheck pip install pysam pyBigWig
 
 runAndCheck cd ${BPREVEAL_DIR}/src \&\& make schemas
 
