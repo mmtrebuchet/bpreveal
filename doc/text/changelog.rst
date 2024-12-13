@@ -10,7 +10,7 @@ BPReveal 5.x
 BPReveal 5.1.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.1.0, 2024-12-03
+BPReveal 5.1.0, 2024-12-13
 ''''''''''''''''''''''''''
 
 BREAKING CHANGES:
@@ -58,6 +58,9 @@ BUG FIXES:
       axis limit algorithm that could display half-pixels.
     * The addition of interactive plotting had broken ``use-annotation-colors`` in PISA
       graph generation. It now correctly colors the relevant lines again.
+    * The switch to keras 3 caused losses to be logged twice during training,
+      which filled up the window in showTrainingProgress. The extraneous losses
+      have been silenced.
 
 CONTRIBUTORS:
     * Charles McAnany

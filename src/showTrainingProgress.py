@@ -21,8 +21,12 @@ _NORMAL_REGEXES = [
     re.compile(".*is called are written to STDERR.*"),
     re.compile(".*ReduceLROnPlateau reducing.*"),
     re.compile(".*does not guarantee that XLA will be used.*"),
+    re.compile("^DEBUG.*"),
     re.compile("^I0000 00:00.*StreamExecutor device.*"),
-    re.compile("^DEBUG.*")]
+    re.compile("^I0000 00:00.*Loaded cuDNN version.*"),
+    re.compile("^I0000 00:00.*Created device.*"),
+    re.compile("^AttributeError: module .ml_dtypes.*")
+]
 
 
 def isNormalMessage(msg: str) -> bool:

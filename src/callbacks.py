@@ -447,6 +447,9 @@ class DisplayCallback(Callback):
     curEpochStartTime: float
     """When did the current epoch start?"""
 
+    ignoreMetrics: list[str]
+    """Names of metrics (i.e., loss terms) that we don't want to print."""
+
     def __init__(self, plateauCallback: ReduceLROnPlateau, earlyStopCallback: EarlyStopping,
                  adaptiveLossCallback: ApplyAdaptiveCountsLoss,
                  trainBatchGen: generators.H5BatchGenerator,
@@ -457,6 +460,7 @@ class DisplayCallback(Callback):
         self.adaptiveLossCallback = adaptiveLossCallback
         self.numBatches = len(trainBatchGen)
         self.numValBatches = len(valBatchGen)
+        self.ignoreMetrics = []
 
     def _calcPositions(self, initialLogs: dict) -> None:
         """Assign rows and columns to all log types.
@@ -471,8 +475,10 @@ class DisplayCallback(Callback):
             foundInHeads = False
             for head in self.adaptiveLossCallback.heads:
                 headName = head["head-name"]
-                profileRe = fr".*profile_{headName}_.*"
-                countsRe = fr".*logcounts_{headName}_.*"
+                profileRe = fr".*profile_{headName}_.*multinomial_nll"
+                countsRe = fr".*logcounts_{headName}_.*reweightable_mse"
+                lossProfileRe = fr".*profile_{headName}_.*loss"
+                lossCountsRe = fr".*logcounts_{headName}_.*loss"
                 if re.fullmatch(profileRe, lossName):
                     profileLosses.append(lossName)
                     profileLosses.append("val_" + lossName)
@@ -486,6 +492,19 @@ class DisplayCallback(Callback):
                     countsLosses.append("val_" + lossName)
                     countsLosses.append("EPOCH_SPACER")
                     foundInHeads = True
+                    break
+                if re.fullmatch(lossProfileRe, lossName):
+                    foundInHeads = True
+                    # We have two terms for each loss. Only display the one that has a
+                    # descriptive name, not the one called "loss"
+                    self.ignoreMetrics.append(lossName)
+                    self.ignoreMetrics.append("val_" + lossName)
+                    break
+                if re.fullmatch(lossCountsRe, lossName):
+                    foundInHeads = True
+                    # Ditto.
+                    self.ignoreMetrics.append(lossName)
+                    self.ignoreMetrics.append("val_" + lossName)
                     break
             if not foundInHeads:
                 if lossName not in ["lr", "epoch", "batch", "loss"]:
@@ -534,7 +553,7 @@ class DisplayCallback(Callback):
             self.curEpochWaitTime = time.perf_counter() - self.lastEpochEndTime
 
     def formatStr(self, val: str | int | float | tuple[int, int]) -> str:
-        """Formats an object to be 10 characters wide.
+        """Formats an object to be 11 characters wide.
 
         If a second object is provided, format as a ratio.
 
@@ -654,11 +673,14 @@ class DisplayCallback(Callback):
         return lines
 
     def _getEpochLines(self, logs: dict) -> list[list[tuple[int, int, str]]]:
+        """At the end of an epoch, build a list of all of the log lines that should be emitted."""
         lines = []
         logs["Epoch"] = (self.epochNumber, self.numEpochs)
         logs["lr"] = backend.convert_to_numpy(self.model.optimizer.learning_rate)
         logs["lr"] = f"{logs['lr']:10.7f}"
         for lk in logs.keys():
+            if lk in self.ignoreMetrics:
+                continue
             if lk == "learning_rate":
                 # We don't print this since we calculate it ourselves.
                 continue
@@ -680,6 +702,8 @@ class DisplayCallback(Callback):
 
         lines = []
         for lk in logs.keys():
+            if lk in self.ignoreMetrics:
+                continue
             lines.append([(self.printLocationsBatch[lk], 1, lk)])
             outStr = self.formatStr(logs[lk])
             lines[-1].append((self.printLocationsBatch[lk], self.maxLen + 2, outStr))
