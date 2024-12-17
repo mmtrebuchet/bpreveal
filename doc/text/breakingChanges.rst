@@ -55,6 +55,12 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
 BPReveal 5.x
 ------------
 
+BPReveal 5.2.0
+^^^^^^^^^^^^^^
+
+When BPReveal 5.2.0 was released, the following breaking changes occurred.
+
+
 BPReveal 5.1.0
 ^^^^^^^^^^^^^^
 

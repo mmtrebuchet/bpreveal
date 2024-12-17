@@ -7,6 +7,15 @@ see :doc:`breakingChanges`.
 BPReveal 5.x
 ------------
 
+BPReveal 5.2.x
+^^^^^^^^^^^^^^
+
+BPReveal 5.2.0, DATEDATEDATE
+''''''''''''''''''''''''''''
+
+CONTRIBUTORS:
+    * Charles McAnany
+
 BPReveal 5.1.x
 ^^^^^^^^^^^^^^
 
