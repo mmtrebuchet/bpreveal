@@ -156,7 +156,7 @@ import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-impo
 from bpreveal import utils
 if __name__ == "__main__":
     utils.setMemoryGrowth()
-from tensorflow import keras
+import keras
 from bpreveal import logUtils
 from bpreveal import models
 import bpreveal.training

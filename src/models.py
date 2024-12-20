@@ -8,7 +8,6 @@ The arithmetic for residual models is derived from ChromBPNet, but the code is
 not derived from that project.
 """
 from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
-from tensorflow.keras.backend import int_shape  # type: ignore
 import keras.layers as klayers  # type: ignore
 import keras.models as kmodels  # type: ignore
 from keras import activations
@@ -94,8 +93,8 @@ def soloModel(inputLength: int, outputLength: int,
                 filters=numFilters, kernel_size=3, padding="valid", activation="relu",  # noqa
                 dilation_rate=2 ** (i + 1), name=f"{modelName}_conv_{i}")\
             (prevLayer)  # noqa
-        prevLength = int_shape(prevLayer)[1]
-        newLength = int_shape(newConv)[1]
+        prevLength = prevLayer.shape[1]
+        newLength = newConv.shape[1]
         newCrop = klayers.Cropping1D(
                 cropping=(prevLength - newLength) // 2,  # noqa
                 name=f"{modelName}_crop{i}")\
