@@ -67,11 +67,10 @@ checkPackage jsonschema
 checkPackage h5py
 checkPackage tqdm
 
-runAndCheck ${CONDA_BIN} install --yes -c bioconda bedtools
+runAndCheck ${CONDA_BIN} install --yes -c bioconda bedtools pybedtools pybigwig pysam
 
 # pysam, pybigwig, and pybedtools don't have (as of 2024-02-01) Python 3.11
 # versions in the conda repositories. So install them through pip.
-runAndCheck ${PIP_BIN} install --no-input pysam pybedtools pybigwig
 checkPackage pybedtools
 checkPackage pyBigWig
 checkPackage pysam
