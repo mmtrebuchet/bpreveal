@@ -41,6 +41,7 @@ program, for example.
 * Charles McAnany, Ph.D.
 * Melanie Weilert
 * Haining Jiang
+* Giorgio Ravanelli
 * Patrick Moeller
 * Samuel Campbell
 * Anshul Kundaje, Ph.D.

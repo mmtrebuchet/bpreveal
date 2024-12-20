@@ -10,6 +10,24 @@ BPReveal 5.x
 BPReveal 5.1.x
 ^^^^^^^^^^^^^^
 
+BPReveal 5.1.1, 2024-12-20
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * trainSoloModel imported keras from tensorflow instead of directly, which caused
+      the wrong version of the optimizer to be used when legacy keras support was enabled
+      by an environment variable. (Bug reported by Giorgio.)
+    * tensorflow-probability doesn't understand versions and can happily install a
+      version with an incompatible tensorflow version. Releasing the version lock
+      on tensorflow has fixed this for now. (Bug reported by Giorgio.)
+    * pysam, pybedtools, and pybigwig are now installed through conda instead of pip.
+      This makes the install quite a bit less painful in cases where pip would need to
+      build a wheel. (Bug reported by Giorgio.)
+
+CONTRIBUTORS:
+    * Giorgion Ravanelli, for reporting the three bugs above and providing fixes.
+    * Charles McAnany
+
 BPReveal 5.1.0, 2024-12-13
 ''''''''''''''''''''''''''
 
