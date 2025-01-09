@@ -4,7 +4,7 @@ from typing import Any
 import h5py
 from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 import tensorflow as tf
-from tensorflow import keras
+import keras
 import numpy as np
 from bpreveal.callbacks import getCallbacks
 from keras.callbacks import History  # type: ignore
