@@ -432,7 +432,7 @@ def getParser() -> argparse.ArgumentParser:
         default=1,
         type=int)
     parser.add_argument(
-        "--skip-zeroes",
+        "--skip-zeroes", "--skip-zeros",
         help="When a region has zero counts, the default behavior is to poison the results"
              "with NaN, to indicate that a problem has occurred. If this flag is set,"
              "then regions with zero counts in either bigwig will be silently skipped.",

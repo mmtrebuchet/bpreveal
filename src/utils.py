@@ -46,6 +46,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
 
     """
     ret = None
+    renamedModel = False
     # pylint: disable=import-outside-toplevel
     import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
     from bpreveal.losses import multinomialNll, dummyMse
@@ -72,6 +73,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
                 "works, you should update your configuration file to use the new "
                 "extension.")
             modelFname = modelFname[:-5] + "keras"
+            renamedModel = True
     if ret is None:
         # pylint: disable=import-outside-toplevel
         from keras.models import load_model  # type: ignore
@@ -82,6 +84,11 @@ def loadModel(modelFname: str):  # noqa: ANN201
                             "reweightableMse": dummyMse})
         ret.useOldKeras = False
         logUtils.debug(f"Loaded new-style model {modelFname}.")
+        if renamedModel:
+            logUtils.error("I was able to load your model by renaming it from "
+                           "'.model' to '.keras'. You should update your config "
+                           "file to use the new extension.")
+
     return ret
 
 
@@ -93,6 +100,8 @@ def setMemoryGrowth() -> None:
 
     All of the main programs in BPReveal do this, so that you can
     use your GPU for other stuff as you work with models.
+
+    If a GPU is not found, this function will emit a warning and do nothing else.
     """
     # pylint: disable=import-outside-toplevel, unused-import
     import bpreveal.internal.disableTensorflowLogging  # noqa
@@ -220,6 +229,9 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
 
     And now each process will use (1024 MB less than) half the total GPU memory.
 
+    If this function can't find a GPU (because nvidia-smi gives an error or cannot be found)
+    it will emit an error message but won't crash.
+
     :param fraction: How much of the memory on the GPU can I have?
     :param offset: How much memory (in MB) should be reserved when
         I carve out my fraction?
@@ -231,11 +243,25 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     try:
         ret = sp.run(cmd, capture_output=True, check=True)
     except sp.CalledProcessError as e:
-        logUtils.error("Problem running nvidia-smi. Did you remember to allocate a GPU?")
-        logUtils.error(e.stdout.decode("utf-8"))
-        logUtils.error(e.stderr.decode("utf-8"))
-        logUtils.error(str(e.returncode))
-        raise
+        logUtils.warning("Problem running nvidia-smi. Did you remember to allocate a GPU?")
+        logUtils.warning(e.stdout.decode("utf-8"))
+        logUtils.warning(e.stderr.decode("utf-8"))
+        logUtils.warning(str(e.returncode))
+        logUtils.warning("I couldn't find nvidia-smi, so I won't limit memory. If you meant "
+                         "to allocate a GPU, check your configuration because I don't "
+                         "think one is available! If you are intentionally running on "
+                         "CPU, you can ignore this warning.")
+        return 0
+        # raise
+    except FileNotFoundError as e:
+        logUtils.warning("Problem running nvidia-smi. Did you remember to allocate a GPU?")
+        logUtils.warning(str(e))
+        logUtils.warning("I couldn't find nvidia-smi, so I won't limit memory. If you meant "
+                         "to allocate a GPU, check your configuration because I don't "
+                         "think one is available! If you are intentionally running on "
+                         "CPU, you can ignore this warning.")
+        return 0
+
     line = ret.stdout.decode("utf-8").split("\n")[1]
     logUtils.debug(f"Memory usage limited based on {line}")
     lsp = line.split(" ")

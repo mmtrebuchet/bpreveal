@@ -13,6 +13,20 @@ BPReveal 5.2.x
 BPReveal 5.2.0, DATEDATEDATE
 ''''''''''''''''''''''''''''
 
+ENHANCEMENTS:
+    * The interpret tools (interpretFlat, interpretPisa, and easyInterpretFlat) no longer
+      require a GPU. They will work on CPU, at the cost of a major loss in performance.
+      (Moving from an A100 node to one with 36 CPU cores allocated, I see a drop from
+      20 regions / second on the GPU to 3 regions/second on CPU.)
+      This means you can now do quick interpret jobs (like easyInterpretFlat) on a
+      host that doesn't have a GPU. BPReveal will still give an error message if you
+      attempt interpretation on a CPU-only machine since it's usually a terrible idea.
+
+BUG FIXES:
+    * metrics used a flag called ``--skip-zeroes``, which is not correctly spelled.
+      You can now spell the argument ``--skip-zeros``. The old behavior will remain
+      forever.
+
 CONTRIBUTORS:
     * Charles McAnany
 
@@ -34,7 +48,7 @@ BUG FIXES:
       build a wheel. (Bug reported by Giorgio.)
 
 CONTRIBUTORS:
-    * Giorgion Ravanelli, for reporting the three bugs above and providing fixes.
+    * Giorgio Ravanelli, for reporting the three bugs above and providing fixes.
     * Charles McAnany
 
 BPReveal 5.1.0, 2024-12-13
