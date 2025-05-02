@@ -1,5 +1,6 @@
 **/.ipynb*
 tmp
+dist
 test
 scratch
 .snakemake

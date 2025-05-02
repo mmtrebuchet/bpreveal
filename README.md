@@ -43,32 +43,35 @@ BPReveal follows a traditional Unix-style directory structure:
 
 ## Documentation
 
-The readthedocs documentation is kept current, but you can easily get
-your own local copy.
-The BPReveal project uses Sphinx to generate documentation. If you want to build
-the documentation, make sure that `INSTALL_DEVTOOLS=true` in the install script,
-then run `make html`, `make man`, or `make latexpdf` in the doc directory.
-Documentation will be in
-`doc/_build/html/index.html`, `doc/_build/man`, or `doc/_build/latex/bpreveal.pdf`.
-If you use the buildConda scripts, then it will put the man pages on `MANPATH`
-but you need to `make man` in the `doc/` directory to generate the pages.
+The readthedocs documentation is kept current, but you can easily get your own
+local copy. The BPReveal project uses Sphinx to generate documentation. If you
+want to build the documentation, make sure that `INSTALL_DEVTOOLS=true` in the
+conda install script, then run `make html`, `make man`, or `make latexpdf` in
+the doc directory. Documentation will be in `doc/_build/html/index.html`,
+`doc/_build/man`, or `doc/_build/latex/bpreveal.pdf`. If you use the buildConda
+scripts, then it will put the man pages on `MANPATH` but you need to `make man`
+in the `doc/` directory to generate the pages.
 
 If you're at Stowers, then the documentation will be included in the
 repositories that I maintain at /n/projects/cm2363/public-bpreveal/<version>/doc.
 You can use `man bpreveal` to get a list of the available man pages.
 
 ## Installing
-There are two ways to install BPReveal: pip or conda.
+There are two ways to install BPReveal: `pip` or `conda`. For most users, `pip` will
+be easier, but the `conda` install offers more flexibility and is better if
+you're working on the BPReveal source code.
 
 To install BPReveal with pip, download the wheel file from one of the releases on
-GitHub, and 
+GitHub, and run `pip install bpreveal-x.y.z-cp312-cp312-linux_x86_64.whl`.
+I would recommend setting up a conda environment or other virtual environment,
+because BPReveal pulls in a lot of other dependencies.
 
-To install BPReveal, EDIT and then run one of the `buildConda` scripts in the
-root directory. If you're using the Cerebro cluster at Stowers, run
-`buildCondaCerebro.slurm`. If you're installing BPReveal on a local machine,
-run `buildCondaLocal.zsh`.
-If you're at Stowers, you can just activate one of the conda environments I
-maintain at /n/projects/cm2363/public-bpreveal/(version)/env.
+To install BPReveal as a conda environment, EDIT and then run one of the
+`buildConda` scripts in the root directory. If you're using the Cerebro cluster
+at Stowers, run `buildCondaCerebro.slurm`. If you're installing BPReveal on a
+local machine, run `buildCondaLocal.zsh`. If you're at Stowers, you can just
+activate one of the conda environments I maintain at
+/n/projects/cm2363/public-bpreveal/(version)/env.
 
 ## License
 
