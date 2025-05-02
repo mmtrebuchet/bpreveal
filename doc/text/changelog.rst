@@ -21,13 +21,20 @@ ENHANCEMENTS:
       This means you can now do quick interpret jobs (like easyInterpretFlat) on a
       host that doesn't have a GPU. BPReveal will still give an error message if you
       attempt interpretation on a CPU-only machine since it's usually a terrible idea.
+    * Jonathon Russell set up the tooling necessary to build BPReveal into a pip wheel.
+      The wheel will probably become the recommended way to install BPReveal, but the
+      old conda-based installer will stay around presumably forever.
 
 BUG FIXES:
     * metrics used a flag called ``--skip-zeroes``, which is not correctly spelled.
       You can now spell the argument ``--skip-zeros``. The old behavior will remain
       forever.
+    * The function :py:func:`metapeak<bpreveal.bedUtils.metapeak>` incorrectly ignored a
+      lot of the regions being considered. It now considers all of the regions and works
+      correctly.
 
 CONTRIBUTORS:
+    * Jonathon Russell
     * Charles McAnany
 
 BPReveal 5.1.x

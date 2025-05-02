@@ -58,6 +58,11 @@ repositories that I maintain at /n/projects/cm2363/public-bpreveal/<version>/doc
 You can use `man bpreveal` to get a list of the available man pages.
 
 ## Installing
+There are two ways to install BPReveal: pip or conda.
+
+To install BPReveal with pip, download the wheel file from one of the releases on
+GitHub, and 
+
 To install BPReveal, EDIT and then run one of the `buildConda` scripts in the
 root directory. If you're using the Cerebro cluster at Stowers, run
 `buildCondaCerebro.slurm`. If you're installing BPReveal on a local machine,

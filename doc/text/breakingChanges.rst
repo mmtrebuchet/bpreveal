@@ -59,7 +59,8 @@ BPReveal 5.2.0
 ^^^^^^^^^^^^^^
 
 When BPReveal 5.2.0 was released, the following breaking changes occurred.
-
+1. A bug was fixed in :py:func:`metapeak<bpreveal.bedUtils.metapeak>`, which
+   will cause the results to be different (and correct) now.
 
 BPReveal 5.1.0
 ^^^^^^^^^^^^^^
