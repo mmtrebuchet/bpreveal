@@ -41,34 +41,35 @@ setup = [
     "-Dc_link_args=-lgomp",
     "-Dfortran_link_args=-lgomp"
 ]
-compile = ["-j4"] 
-dist = ["--allow-dirty"] 
+compile = ["-j4"]
+dist = ["--allow-dirty"]
 
 [project.scripts]
 
-addNoise = "bpreveal.tools.addNoise:main"
-addNoiseUtils = "bpreveal.tools.addNoiseUtils:main"
-bestMotifsOnly = "bpreveal.tools.bestMotifsOnly:main"
+interpretFlat = "bpreveal.interpretFlat:wrapMain"
 checkJson = "bpreveal.checkJson:main"
-filterProc = "bpreveal.tools.filterProc:main"
-interpretFlat = "bpreveal.interpretFlat:main"
-interpretPisa = "bpreveal.interpretPisa:main"
-lossWeights = "bpreveal.tools.lossWeights:main"
+interpretPisa = "bpreveal.interpretPisa:wrapMain"
+lengthCalc = "bpreveal.lengthCalc.lengthCalcMain"
+makeLossPlots = "bpreveal.makeLossPlots.main"
+makePisaFigure = "bpreveal.makePisaFigure.wrapMain"
+makePredictions = "bpreveal.makePredictions.wrapMain"
 metrics = "bpreveal.metrics:main"
 motifAddQuantiles = "bpreveal.motifAddQuantiles:main"
-motifScan = "bpreveal.motifScan:main"
-motifSeqletCutoffs = "bpreveal.motifSeqletCutoffs:main"
-plots = "bpreveal.tools.plots:main"
+motifScan = "bpreveal.motifScan:wrapMain"
+motifSeqletCutoffs = "bpreveal.motifSeqletCutoffs:wrapMain"
 predictToBigwig = "bpreveal.predictToBigwig:main"
-prepareBed = "bpreveal.prepareBed:main"
-prepareTrainingData = "bpreveal.prepareTrainingData:main"
-revcompTools = "bpreveal.tools.revcompTools:main"
+prepareBed = "bpreveal.prepareBed:wrapMain"
+prepareTrainingData = "bpreveal.prepareTrainingData:wrapMain"
 shapToBigwig = "bpreveal.shapToBigwig:main"
 shapToNumpy = "bpreveal.shapToNumpy:main"
-shiftPisa = "bpreveal.tools.shiftPisa:main"
-showModel = "bpreveal.showModel:main"
 showTrainingProgress = "bpreveal.showTrainingProgress:main"
-tileGenome = "bpreveal.tools.tileGenome:main"
 trainCombinedModel = "bpreveal.trainCombinedModel:main"
 trainSoloModel = "bpreveal.trainSoloModel:main"
 trainTransformationModel = "bpreveal.trainTransformationModel:main"
+
+
+bestMotifsOnly = "bpreveal.tools.bestMotifsOnly:main"
+lossWeights = "bpreveal.tools.lossWeights:wrapMain"
+shiftPisa = "bpreveal.tools.shiftPisa:main"
+shiftBigwigs = "bpreveal.tools.shiftBigwigs:main"
+tileGenome = "bpreveal.tools.tileGenome:main"
