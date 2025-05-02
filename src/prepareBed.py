@@ -119,12 +119,14 @@ API
 """
 # This file contains several helper functions for dealing with bed files.
 
+import sys
 import random
 import re
 import jsonschema
 import pysam
 import numpy as np
 import pybedtools
+import bpreveal.schema
 from bpreveal import logUtils
 from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter
 from bpreveal.internal import interpreter
@@ -621,12 +623,11 @@ def prepareBeds(config: dict) -> None:
     logUtils.info("Bed preparation complete. Exiting.")
 
 
-if __name__ == "__main__":
-    import sys
+def wrapMain() -> None:
+    """A zero-argument wrapper around the main function."""
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
     logUtils.setVerbosity(configJson["verbosity"])
-    import bpreveal.schema
     try:
         bpreveal.schema.prepareBed_old.validate(configJson)
         logUtils.error("Json validated against the old prepareBed format."
@@ -634,4 +635,8 @@ if __name__ == "__main__":
     except jsonschema.ValidationError:
         bpreveal.schema.prepareBed.validate(configJson)
     prepareBeds(configJson)
+
+
+if __name__ == "__main__":
+    wrapMain()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

@@ -90,12 +90,14 @@ History
 API
 ---
 """
+import sys
 from typing import Literal
 import numpy as np
 import h5py
 import pyBigWig
 import pysam
 import pybedtools
+import bpreveal.schema
 from bpreveal import logUtils
 from bpreveal import utils
 from bpreveal.internal.constants import ONEHOT_T, ONEHOT_AR_T, PRED_AR_T, \
@@ -233,12 +235,15 @@ def writeH5(config: dict) -> None:
     logUtils.info("File created; closing.")
 
 
-if __name__ == "__main__":
-    import sys
+def wrapMain() -> None:
+    """A zero-argument wrapper around the main function."""
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
-    import bpreveal.schema
     bpreveal.schema.prepareTrainingData.validate(configJson)
     logUtils.setVerbosity(configJson["verbosity"])
     writeH5(configJson)
+
+
+if __name__ == "__main__":
+    wrapMain()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

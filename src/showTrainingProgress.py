@@ -449,11 +449,16 @@ def runScreen(stdscr: Any, args: argparse.Namespace) -> None:
         printer.updateStatus("F")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """A zero-argument wrapper for CLI use."""
     parsedArgs = getParser().parse_args()
     if sys.stdin.isatty() and not parsedArgs.readTTY:
         logUtils.error("Refusing to read from tty. This program expects input"
                        " to be piped in over stdin.")
     else:
         curses.wrapper(runScreen, parsedArgs)
+
+
+if __name__ == "__main__":
+    main()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
