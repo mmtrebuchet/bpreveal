@@ -63,9 +63,9 @@ prepareTrainingData = "bpreveal.prepareTrainingData:wrapMain"
 shapToBigwig = "bpreveal.shapToBigwig:main"
 shapToNumpy = "bpreveal.shapToNumpy:main"
 showTrainingProgress = "bpreveal.showTrainingProgress:main"
-trainCombinedModel = "bpreveal.trainCombinedModel:main"
-trainSoloModel = "bpreveal.trainSoloModel:main"
-trainTransformationModel = "bpreveal.trainTransformationModel:main"
+trainCombinedModel = "bpreveal.trainCombinedModel:wrapMain"
+trainSoloModel = "bpreveal.trainSoloModel:wrapMain"
+trainTransformationModel = "bpreveal.trainTransformationModel:wrapMain"
 
 
 bestMotifsOnly = "bpreveal.tools.bestMotifsOnly:main"
