@@ -430,17 +430,22 @@ def writeBigwig(bwFname: str, chromDict: dict[str, np.ndarray] | None = None,
             chromSizes[c] = len(chromDict[c])
     # Now we just write the chrom dict.
     outBw = pyBigWig.open(bwFname, "w")
-    logUtils.debug("Starting to write data to bigwig.")
+    logUtils.debug(f"Starting to write data to bigwig {bwFname}.")
     header = [(x, chromSizes[x]) for x in sorted(list(chromSizes.keys()))]
     outBw.addHeader(header)
 
     for chromName in sorted(list(chromDict.keys())):
-        vals = [float(x) for x in chromDict[chromName]]
+        if isinstance(chromDict[chromName], np.ndarray):
+            flatItems = chromDict[chromName].reshape((chromDict[chromName].shape[0],))
+            vals = flatItems.tolist()
+        else:
+            vals = [float(x) for x in chromDict[chromName]]
+        logUtils.debug(f"Adding data for chromosome {chromName}.")
         outBw.addEntries(chromName, 0, values=vals,
                          span=1, step=1)
-    logUtils.debug("Data written. Closing bigwig.")
+    logUtils.debug(f"Data written. Closing bigwig {bwFname}.")
     outBw.close()
-    logUtils.debug("Bigwig closed.")
+    logUtils.debug(f"Bigwig {bwFname} closed.")
 
 
 def oneHotEncode(sequence: str, allowN: bool = False, alphabet: str = "ACGT") -> ONEHOT_AR_T:

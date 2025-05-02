@@ -754,6 +754,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     minValue *= math.log2(math.e)
     zeroedCmap = bprcolors.getGraphCmap(minValue, colorSpan, cmap)
     maxAlpha = [0.]
+
     def addLine(xLower: int, xUpper: int, value: float) -> bool | tuple[float, PathPatch]:
         if abs(value) < minValue:
             return False
@@ -784,7 +785,6 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
             if start <= xLower < end:
                 # Convert the alpha so that lines totally fade
                 # by the point you reach minValue.
-                # normα = (abs(value) - minValue) / (colorSpan - minValue)
                 maxAlpha[0] = max(normα, maxAlpha[0])
                 color = (r, g, b, normα)
                 break

@@ -1,0 +1,74 @@
+[project]
+name = "bpreveal"
+version = "3.12.7"
+description = "BPReveal test env"
+readme = "README.md"
+requires-python = ">=3.12, <3.13"
+dependencies = [
+    "h5py>=3.13.0",
+    "jsonschema>=4.23.0",
+    "matplotlib>=3.10.1",
+    "meson>=1.7.2",
+    "modisco-lite>=2.3.2",
+    "numpy<2.1",
+    "pybedtools>=0.12.0",
+    "pybigwig>=0.3.24",
+    "pysam>=0.23.0",
+    "tensorflow-probability>=0.25.0",
+    "tensorflow[and-cuda]>=2.18.1",
+    "tf-keras>=2.18.0",
+    "tqdm>=4.67.1",
+]
+
+[build-system]
+requires = ["meson-python", "numpy<2.1"]
+build-backend = "mesonpy"
+
+[tool.setuptools]
+packages = ["bpreveal", "bpreveal.tools", "bpreveal.internal"]
+
+[tool.setuptools.package-dir]
+"bpreveal" = "src"
+"bpreveal.tools" = "src/tools"
+"bpreveal.internal" = "src/internal"
+
+[tool.meson-python.args]
+setup = [
+    "-Dbuildtype=release", # Keeps things tidy, handles optimization/debug flags
+    "-Doptimization=3", # This is technically redundant with buildtype=release but ok
+    "-Dc_args=-Ofast -fexpensive-optimizations -ffast-math -fopenmp",
+    "-Dfortran_args=-Ofast -fexpensive-optimizations -ffast-math -fopenmp",
+    "-Dc_link_args=-lgomp",
+    "-Dfortran_link_args=-lgomp"
+]
+compile = ["-j4"] 
+dist = ["--allow-dirty"] 
+
+[project.scripts]
+
+addNoise = "bpreveal.tools.addNoise:main"
+addNoiseUtils = "bpreveal.tools.addNoiseUtils:main"
+bestMotifsOnly = "bpreveal.tools.bestMotifsOnly:main"
+checkJson = "bpreveal.checkJson:main"
+filterProc = "bpreveal.tools.filterProc:main"
+interpretFlat = "bpreveal.interpretFlat:main"
+interpretPisa = "bpreveal.interpretPisa:main"
+lossWeights = "bpreveal.tools.lossWeights:main"
+metrics = "bpreveal.metrics:main"
+motifAddQuantiles = "bpreveal.motifAddQuantiles:main"
+motifScan = "bpreveal.motifScan:main"
+motifSeqletCutoffs = "bpreveal.motifSeqletCutoffs:main"
+plots = "bpreveal.tools.plots:main"
+predictToBigwig = "bpreveal.predictToBigwig:main"
+prepareBed = "bpreveal.prepareBed:main"
+prepareTrainingData = "bpreveal.prepareTrainingData:main"
+revcompTools = "bpreveal.tools.revcompTools:main"
+shapToBigwig = "bpreveal.shapToBigwig:main"
+shapToNumpy = "bpreveal.shapToNumpy:main"
+shiftPisa = "bpreveal.tools.shiftPisa:main"
+showModel = "bpreveal.showModel:main"
+showTrainingProgress = "bpreveal.showTrainingProgress:main"
+tileGenome = "bpreveal.tools.tileGenome:main"
+trainCombinedModel = "bpreveal.trainCombinedModel:main"
+trainSoloModel = "bpreveal.trainSoloModel:main"
+trainTransformationModel = "bpreveal.trainTransformationModel:main"

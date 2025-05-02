@@ -245,7 +245,7 @@ def _metapeakThread(bwFname: str,
             totalProfile = profile
         else:
             totalProfile = totalProfile + profile
-        outQueue.put((totalProfile, numQueries))
+    outQueue.put((totalProfile, numQueries))
     bigwigFp.close()
 
 
@@ -308,7 +308,10 @@ def metapeak(intervals: pybedtools.BedTool,
     totalProfile = rets[0][0]
     totalCounts = rets[0][1]
     for p, c in rets[1:]:
-        totalProfile += p
+        if totalProfile is None:
+            totalProfile = p
+        elif p is not None:
+            totalProfile += p
         totalCounts += c
     totalProfile /= totalCounts
     return totalProfile
