@@ -32,7 +32,7 @@ custom_target('libjaccard',
 custom_target('libslide',
   output: 'libslide' + ext_suffix,
   input: ['src/internal/libslide.c', 'src/internal/libslide.pyf'],
-  command: [f2py, '-c', '@INPUT@', '-m', 'libslide', '--quiet'],
+  command: [f2py, '-c', '-lgomp', '@INPUT@', '-m', 'libslide', '--quiet'],
   install: true,
   install_dir: internal_install_dir,
   env: {'CFLAGS': '-fopenmp -fexpensive-optimizations -ffast-math -Ofast'}
