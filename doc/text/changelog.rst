@@ -32,10 +32,14 @@ BUG FIXES:
     * The function :py:func:`metapeak<bpreveal.bedUtils.metapeak>` incorrectly ignored a
       lot of the regions being considered. It now considers all of the regions and works
       correctly.
+    * The early stopping was busted if you had "profile-loss-weight" != 1 as of 5.0.0.
+      This was due to a bug in they way I re-calculated losses to work with the adaptive
+      loss system. Thanks to Fahad for reporting the bug and doing initial diagnostics.
 
 CONTRIBUTORS:
     * Jonathon Russell
     * Charles McAnany
+    * Fahad Kamulegeya
 
 BPReveal 5.1.x
 ^^^^^^^^^^^^^^
