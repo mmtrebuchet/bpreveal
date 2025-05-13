@@ -1,6 +1,6 @@
 [project]
 name = "bpreveal"
-# version = "5.2.0"
+version = "5.2.0"
 description = "BPReveal is a suite of tools for deep learning on genomics data."
 readme = "README.md"
 requires-python = ">=3.12, <3.13"
