@@ -1,5 +1,5 @@
 project('bpreveal', 'c', 'fortran',
-  version: '5.2.0',
+  # version: '5.2.0',
   default_options: ['buildtype=release'])
 
 py = import('python').find_installation('python3')
