@@ -64,11 +64,11 @@ class FixLossCallback(Callback):
                 # non-validation losses are just missing the characters
                 # 'val', and so they'd also match validation losses.
                 if re.fullmatch(valProfileRe, lossName):
-                    totalValLoss += logs[lossName]
+                    totalValLoss += head["profile-loss-weight"] * logs[lossName]
                 elif re.fullmatch(valCountsRe, lossName):
                     totalValLoss += logs[lossName]
                 elif re.fullmatch(profileRe, lossName):
-                    totalLoss += logs[lossName]
+                    totalLoss += head["profile-loss-weight"] * logs[lossName]
                 elif re.fullmatch(countsRe, lossName):
                     totalLoss += logs[lossName]
         if totalLoss != 0:
