@@ -36,7 +36,7 @@ packages = ["bpreveal", "bpreveal.tools", "bpreveal.internal"]
 setup = [
     "-Dbuildtype=release", # Keeps things tidy, handles optimization/debug flags
     "-Doptimization=3", # This is technically redundant with buildtype=release but ok
-    "-Dc_args=-fopenmp",
+    "-Dc_args=-Ofast -fexpensive-optimizations -ffast-math -fopenmp",
     "-Dfortran_args=-Ofast -fexpensive-optimizations -ffast-math -fopenmp",
     "-Dc_link_args=-lgomp",
     "-Dfortran_link_args=-lgomp"

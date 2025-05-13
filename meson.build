@@ -33,7 +33,8 @@ custom_target('libslide',
   input: ['src/internal/libslide.c', 'src/internal/libslide.pyf'],
   command: [f2py, '-c', '@INPUT@', '-m', 'libslide', '--quiet'],
   install: true,
-  install_dir: internal_install_dir
+  install_dir: internal_install_dir,
+  env: {'CFLAGS': '-fopenmp'}
 )
 
 custom_target('libushuffle',
