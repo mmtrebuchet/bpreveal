@@ -128,7 +128,7 @@ import numpy as np
 import pybedtools
 import bpreveal.schema
 from bpreveal import logUtils
-from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter
+from bpreveal.bedUtils import resize, sequenceChecker, lineToInterval, ParallelCounter, sortBed
 from bpreveal.internal import interpreter
 random.seed(735014)
 
@@ -308,7 +308,7 @@ def removeOverlaps(config: dict, regions: pybedtools.BedTool,
                                   config["resize-mode"],
                                   config["overlap-max-distance"], genome).saveas()
     # The algorithm here requires that the regions be sorted.
-    sortedRegions = resizedRegions.sort()
+    sortedRegions = sortBed(resizedRegions)
     piles = []
     curPile = [sortedRegions[0]]
     for r in sortedRegions:
@@ -611,14 +611,14 @@ def prepareBed(config: dict) -> None:
     validTrain.saveas(outputTrainFname)
     validVal.saveas(outputValFname)
     validTest.saveas(outputTestFname)
-    validAll = validTrain.cat(validVal, postmerge=False).cat(validTest, postmerge=False).sort()
+    validAll = sortBed(validTrain.cat(validVal, postmerge=False).cat(validTest, postmerge=False))
     validAll.saveas(outputAllFname)
     if outputRejectFname:
         allRejects = rejectRegions\
             .cat(rejectTrain, postmerge=False)\
             .cat(rejectVal, postmerge=False)\
-            .cat(rejectTest, postmerge=False)\
-            .sort()
+            .cat(rejectTest, postmerge=False)
+        allRejects = sortBed(allRejects)
         allRejects.saveas(outputRejectFname)
     logUtils.info("Bed preparation complete. Exiting.")
 

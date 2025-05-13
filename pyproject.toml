@@ -1,7 +1,7 @@
 [project]
 name = "bpreveal"
-version = "3.12.7"
-description = "BPReveal test env"
+version = "5.2.0"
+description = "BPReveal is a suite of tools for deep learning on genomics data."
 readme = "README.md"
 requires-python = ">=3.12, <3.13"
 dependencies = [
