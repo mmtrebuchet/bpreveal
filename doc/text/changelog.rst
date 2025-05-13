@@ -13,6 +13,13 @@ BPReveal 5.2.x
 BPReveal 5.2.0, DATEDATEDATE
 ''''''''''''''''''''''''''''
 
+BREAKING CHANGES:
+    * The entry points of most of the programs were renamed, which will only be a problem
+      if you were directly invoking the ``main`` functions of the CLI tools. ``main`` is
+      now always a zero-argument entry point, and the actual functionality of each module
+      is now in a function that shares the module name. This will make it much easier to
+      manually invoke the CLI tools programmatically.
+
 ENHANCEMENTS:
     * The interpret tools (interpretFlat, interpretPisa, and easyInterpretFlat) no longer
       require a GPU. They will work on CPU, at the cost of a major loss in performance.

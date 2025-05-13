@@ -165,7 +165,7 @@ from bpreveal.internal import interpreter
 # pylint: disable=duplicate-code
 
 
-def main(config: dict) -> None:
+def trainSoloModel(config: dict) -> None:
     """Build and train a model."""
     logUtils.setVerbosity(config["verbosity"])
     logUtils.debug("Initializing")
@@ -189,14 +189,14 @@ def main(config: dict) -> None:
     logUtils.info("Training job completed successfully.")
 
 
-def wrapMain() -> None:
+def main() -> None:
     """A zero-argument wrapper around the main function."""
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
     bpreveal.schema.trainSoloModel.validate(configJson)
-    main(configJson)
+    trainSoloModel(configJson)
 
 
 if __name__ == "__main__":
-    wrapMain()
+    main()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

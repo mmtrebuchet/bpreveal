@@ -559,7 +559,7 @@ def rewriteOldBigwigsFormat(config: dict) -> None:
     config["heads"] = headsConfig
 
 
-def prepareBeds(config: dict) -> None:
+def prepareBed(config: dict) -> None:
     """The main function of this script.
 
     :param config: A JSON object matching the prepareBed specification.
@@ -623,7 +623,7 @@ def prepareBeds(config: dict) -> None:
     logUtils.info("Bed preparation complete. Exiting.")
 
 
-def wrapMain() -> None:
+def main() -> None:
     """A zero-argument wrapper around the main function."""
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
@@ -634,9 +634,9 @@ def wrapMain() -> None:
                        "This will be an error in BPReveal 6.0")
     except jsonschema.ValidationError:
         bpreveal.schema.prepareBed.validate(configJson)
-    prepareBeds(configJson)
+    prepareBed(configJson)
 
 
 if __name__ == "__main__":
-    wrapMain()
+    main()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

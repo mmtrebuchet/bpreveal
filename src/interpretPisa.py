@@ -167,7 +167,7 @@ def pisaMetric(headID: int, taskID: int) -> Callable:
     return lambda model: model.outputs[headID][:, 0, taskID]
 
 
-def main(config: dict) -> None:
+def interpretPisa(config: dict) -> None:
     """Run the calculation.
 
     :param config: A JSON object matching the interpretPisa specification.
@@ -251,7 +251,7 @@ def main(config: dict) -> None:
     logUtils.info("PISA interpretation complete, exiting.")
 
 
-def wrapMain() -> None:
+def main() -> None:
     """A zero-argument wrapper around the main function."""
     if sys.argv[0] in {"interpretPisaBed", "interpretPisaFasta"}:
         logUtils.error("DEPRECATION: You are calling the program " + sys.argv[0] + ". "
@@ -261,9 +261,9 @@ def wrapMain() -> None:
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
     bpreveal.schema.interpretPisa.validate(configJson)
-    main(configJson)
+    interpretPisa(configJson)
 
 
 if __name__ == "__main__":
-    wrapMain()
+    main()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

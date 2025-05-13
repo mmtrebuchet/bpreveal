@@ -122,7 +122,7 @@ from bpreveal import motifUtils
 from bpreveal.internal import interpreter
 
 
-def main(config: dict) -> None:
+def motifScan(config: dict) -> None:
     """Run the scan.
 
     :param config: A JSON object matching the motifScan specification.
@@ -181,14 +181,14 @@ def main(config: dict) -> None:
                             scanConfig["num-threads"])
 
 
-def wrapMain() -> None:
+def main() -> None:
     """A zero-argument wrapper around the main function."""
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
     bpreveal.schema.motifScan.validate(configJson)
-    main(configJson)
+    motifScan(configJson)
 
 
 if __name__ == "__main__":
-    wrapMain()
+    main()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

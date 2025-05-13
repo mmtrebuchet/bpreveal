@@ -61,6 +61,9 @@ BPReveal 5.2.0
 When BPReveal 5.2.0 was released, the following breaking changes occurred.
 1. A bug was fixed in :py:func:`metapeak<bpreveal.bedUtils.metapeak>`, which
    will cause the results to be different (and correct) now.
+2. The names of the entry points to several of the CLI tools were changed to
+   make them more consistent. Unless you were directly calling the entry
+   points in your Python code, this will have no effect on you.
 
 BPReveal 5.1.0
 ^^^^^^^^^^^^^^

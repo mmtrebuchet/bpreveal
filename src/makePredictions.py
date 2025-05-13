@@ -185,7 +185,7 @@ def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
     return writer
 
 
-def main(config: dict) -> None:
+def makePredictions(config: dict) -> None:
     """Run the predictions.
 
     :param config: is taken straight from the json specification.
@@ -235,7 +235,7 @@ def main(config: dict) -> None:
     logUtils.info("Done making predictions, exiting.")
 
 
-def wrapMain() -> None:
+def main() -> None:
     """A zero-argument wrapper around the main function."""
     if sys.argv[0].split("/")[-1] in {"makePredictionsBed", "makePredictionsFasta",
                                       "makePredictionsBed.py", "makePredictionsFasta.py"}:
@@ -247,9 +247,9 @@ def wrapMain() -> None:
     configJson = interpreter.evalFile(sys.argv[1])
     assert isinstance(configJson, dict)
     bpreveal.schema.makePredictions.validate(configJson)
-    main(configJson)
+    makePredictions(configJson)
 
 
 if __name__ == "__main__":
-    wrapMain()
+    main()
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
