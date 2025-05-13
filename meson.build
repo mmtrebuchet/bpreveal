@@ -25,7 +25,8 @@ custom_target('libjaccard',
   input: ['src/internal/libjaccard.c', 'src/internal/libjaccard.pyf'],
   command: [f2py, '-c', '@INPUT@', '-m', 'libjaccard', '--quiet'],
   install: true,
-  install_dir: internal_install_dir
+  install_dir: internal_install_dir,
+  env: {'CFLAGS': '-fopenmp -fexpensive-optimizations -ffast-math -Ofast'}
 )
 
 custom_target('libslide',
@@ -34,7 +35,7 @@ custom_target('libslide',
   command: [f2py, '-c', '@INPUT@', '-m', 'libslide', '--quiet'],
   install: true,
   install_dir: internal_install_dir,
-  env: {'CFLAGS': '-fopenmp'}
+  env: {'CFLAGS': '-fopenmp -fexpensive-optimizations -ffast-math -Ofast'}
 )
 
 custom_target('libushuffle',
@@ -42,6 +43,7 @@ custom_target('libushuffle',
   input: ['src/internal/libushuffle.c', 'src/internal/libushuffle.pyf'],
   command: [f2py, '-c', '@INPUT@', '-m', 'libushuffle', '--quiet'],
   install: true,
-  install_dir: internal_install_dir
+  install_dir: internal_install_dir,
+  env: {'CFLAGS': '-fopenmp -fexpensive-optimizations -ffast-math -Ofast'}
 )
 
