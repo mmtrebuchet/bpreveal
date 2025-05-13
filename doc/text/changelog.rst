@@ -31,6 +31,7 @@ ENHANCEMENTS:
     * Jonathon Russell set up the tooling necessary to build BPReveal into a pip wheel.
       The wheel will probably become the recommended way to install BPReveal, but the
       old conda-based installer will stay around presumably forever.
+    * The dependency on ``bedtools`` has been removed. (``pybedtools`` is still required.)
 
 BUG FIXES:
     * metrics used a flag called ``--skip-zeroes``, which is not correctly spelled.
