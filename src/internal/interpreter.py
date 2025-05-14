@@ -363,7 +363,7 @@ _BUILTIN_DICT = {}
 
 
 def _buildFunctionDictionary() -> None:
-    global _BUILTIN_DICT  # pylint: disable=global-variable-not-assigned
+    global _BUILTIN_DICT  # pylint: disable=global-variable-not-assigned  # noqa
 
     def toStar(f: Callable) -> Callable:
         return lambda x: f(*x)

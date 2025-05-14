@@ -220,7 +220,7 @@ def logFirstN(level: int, msg: str, n: int, *args: list) -> None:
     :param args: The args to be substituted into the msg.
     """
     token = msg % args
-    global _log_counter_per_token  # pylint: disable=global-variable-not-assigned
+    global _log_counter_per_token  # pylint: disable=global-variable-not-assigned  # noqa
     _log_counter_per_token[token] = 1 + _log_counter_per_token.get(token, -1)
     count = _log_counter_per_token[token]
     logIf(level, msg, count < n, *args)

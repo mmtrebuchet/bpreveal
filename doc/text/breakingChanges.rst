@@ -13,9 +13,9 @@ BPReveal 7.0.0
 When BPReveal 7.0.0 is released, the following breaking changes will occur:
 
 1. Attempting to use a slice that goes beyond the limits of your PISA data will now
-    trigger an error. Has emitted a message since 5.1.0.
+   trigger an error. Has emitted a message since 5.1.0.
 2. Using an importance hdf5 from before version 4.0.0 will now result in an
-    error instead of a deprecation warning.
+   error instead of a deprecation warning.
 
 BPReveal 6.x
 ------------
@@ -58,7 +58,8 @@ BPReveal 5.x
 BPReveal 5.2.0
 ^^^^^^^^^^^^^^
 
-When BPReveal 5.2.0 was released, the following breaking changes occurred.
+When BPReveal 5.2.0 was released, the following breaking changes occurred:
+
 1. A bug was fixed in :py:func:`metapeak<bpreveal.bedUtils.metapeak>`, which
    will cause the results to be different (and correct) now.
 2. The names of the entry points to several of the CLI tools were changed to
