@@ -3,6 +3,7 @@ from collections.abc import Callable
 from bpreveal.internal import disableTensorflowLogging  # pylint: disable=unused-import # noqa
 from keras.layers import Conv1D, Reshape, Layer  # type: ignore
 from keras.ops import convert_to_tensor
+import keras.saving
 import tensorflow as tf
 from bpreveal import logUtils
 
@@ -49,6 +50,7 @@ def linearRegression(**kwargs) -> Callable:
     return layer
 
 
+@keras.saving.register_keras_serializable()
 class CountsLogSumExp(Layer):
     """A simple layer that wraps keras.ops.logaddexp."""
 
@@ -73,5 +75,10 @@ class CountsLogSumExp(Layer):
         sumexp = expx1 + expx2
         logsumexp = tf.math.log(sumexp)
         return tf.cast(logsumexp, inp1.dtype)
+
+    def get_config(self) -> dict:
+        base = super().get_config()
+        config = {}
+        return {**base, **config}
 
 # Copyright 2022, 2023, 2024 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa
