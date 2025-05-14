@@ -50,6 +50,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
     # pylint: disable=import-outside-toplevel
     import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
     from bpreveal.losses import multinomialNll, dummyMse
+    from bpreveal.layers import CountsLogSumExp
     # pylint: enable=import-outside-toplevel
     constants.setTensorflowLoaded()
     if modelFname.endswith("model"):
@@ -81,7 +82,8 @@ def loadModel(modelFname: str):  # noqa: ANN201
         ret = load_model(
             filepath=modelFname,
             custom_objects={"multinomialNll": multinomialNll,
-                            "reweightableMse": dummyMse})
+                            "reweightableMse": dummyMse,
+                            "CountsLogSumExp": CountsLogSumExp})
         ret.useOldKeras = False
         logUtils.debug(f"Loaded new-style model {modelFname}.")
         if renamedModel:
