@@ -10,8 +10,8 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.2.0, DATEDATEDATE
-''''''''''''''''''''''''''''
+BPReveal 5.2.0, 2025-05-25
+''''''''''''''''''''''''''
 
 BREAKING CHANGES:
     * The entry points of most of the programs were renamed, which will only be a problem
