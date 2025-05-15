@@ -10,7 +10,7 @@ import bpreveal
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # pylint: disable=invalid-name, redefined-builtin
 project = "BPReveal"
-copyright = "2024, Charles McAnany. " \
+copyright = "2022-2025, Charles McAnany. " \
     "License: GPLv2+: GNU GPL version 2 or later " \
     "<https://gnu.org/licenses/gpl.html>. " \
     "This is free software: you are free to change and redistribute it. " \
