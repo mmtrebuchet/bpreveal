@@ -1,7 +1,10 @@
 [project]
 name = "bpreveal"
+authors = [ {name = "Charles McAnany, Ph.D.", email="bpreveal@charlesmcanany.com"} ]
 version = "5.2.0"
 description = "BPReveal is a suite of tools for deep learning on genomics data."
+license = "GPL-2.0--or-later"
+license-files = ["COPYING"]
 readme = "README.md"
 requires-python = ">=3.12, <3.13"
 dependencies = [
@@ -19,6 +22,21 @@ dependencies = [
     "tf-keras>=2.18.0",
     "tqdm>=4.67.1",
 ]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: POSIX :: Linux"
+    ]
+
+[project.urls]
+Homepage = "https://github.com/mmtrebuchet/bpreveal"
+
 
 [build-system]
 requires = ["meson-python", "numpy<2.1"]

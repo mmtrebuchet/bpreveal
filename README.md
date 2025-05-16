@@ -65,6 +65,8 @@ To install BPReveal with pip, download the wheel file from one of the releases o
 GitHub, and run `pip install bpreveal-x.y.z-cp312-cp312-linux_x86_64.whl`.
 I would recommend setting up a conda environment or other virtual environment,
 because BPReveal pulls in a lot of other dependencies.
+You will need Python 3.12 in this environment, which you can specify when you
+create it: `conda create -n bpreveal python=3.12`
 
 To install BPReveal as a conda environment, EDIT and then run one of the
 `buildConda` scripts in the root directory. If you're using the Cerebro cluster
