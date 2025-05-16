@@ -1,5 +1,5 @@
 [project]
-name = "bpreveal"
+name = "bpreveal-mmtrebuchet-test"
 authors = [ {name = "Charles McAnany, Ph.D.", email="bpreveal@charlesmcanany.com"} ]
 version = "5.2.0"
 description = "BPReveal is a suite of tools for deep learning on genomics data."
@@ -26,7 +26,6 @@ dependencies = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: C",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
