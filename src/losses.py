@@ -63,11 +63,13 @@ def weightedMse(weightTensor: tf.Variable) -> Callable:
     return reweightableMse
 
 
+# pylint: disable=duplicate-code
 try:
     import sphinx
     SPHINX_BUILD = hasattr(sphinx, "application")
 except ImportError:
     SPHINX_BUILD = False
+# pylint: enable=duplicate-code
 
 if SPHINX_BUILD:
     dummyMse: Callable
