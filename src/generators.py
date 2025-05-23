@@ -118,7 +118,8 @@ class H5BatchGenerator(keras.utils.Sequence):
         startTime = time.perf_counter()
         self.rng.shuffle(self.regionIndexes)
         sliceCols = self.rng.integers(0,
-                                      self.maxJitter * 2, size=(self.numRegions,),
+                                      self.maxJitter * 2 + 1,
+                                      size=(self.numRegions,),
                                       dtype=np.int32)
         self._shiftSequence(self.regionIndexes, sliceCols)
         self._shiftData(self.regionIndexes, sliceCols)

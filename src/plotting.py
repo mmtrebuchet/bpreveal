@@ -263,7 +263,8 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
                   "importance": matplotlib.axes,
                   "predictions": matplotlib.axes,
                   "annotations": matplotlib.axes,
-                  "cbar": matplotlib.axes}
+                  "cbar": matplotlib.axes,
+                  "legend": matplotlib.axes}
             "name-colors": Same structure as the config dict, but with missing entries added.
             "genome-start": int,
             "genome-end": int,
@@ -446,7 +447,8 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
                   "importance": matplotlib.axes,
                   "predictions": matplotlib.axes,
                   "annotations": matplotlib.axes,
-                  "cbar": matplotlib.axes}
+                  "cbar": matplotlib.axes,
+                  "legend": matplotlib.axes}
             "name-colors": Same structure as the config dict, but with missing entries added.
             "genome-start": int,
             "genome-end": int,
@@ -594,8 +596,12 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
                fontSizeAxLabel=cfg["figure"]["label-font-size"],
                mini=mini)
     logUtils.debug("Finished making PISA plot.")
+    # I return axes called colorbar and cbar. They are the same thing, but plotPisa
+    # originally called it 'colorbar', while plotPisaGraph has always called it 'cbar'.
+    # I return both to be more compatible. The documentation only calls it 'cbar'.
+    # (Changed in 5.2.0)
     return {"axes": {"pisa": axPisa, "importance": axSeq, "predictions": axProfile,
-                     "annotations": axAnnot, "colorbar": axCbar,
+                     "annotations": axAnnot, "colorbar": axCbar, "cbar": axCbar,
                      "legend": axLegend},
             "name-colors": cfg["annotations"].get("name-colors", {}),
             "genome-start": genomeStartX,

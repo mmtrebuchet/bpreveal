@@ -210,6 +210,15 @@ class Organism:
     profile: GA_RESULT_T
     score: float
     corruptors: list[CORRUPTOR_T]
+
+    lastCorruptors: list[CORRUPTOR_T]
+    """The corruptors most recently used by getSequence.
+
+    This is only relevant if you are using random corruptors, since
+    ``getSequence()`` will, by design, give you a different sequence each
+    time you call it. These are the corruptors that were applied to
+    generate ``lastSequence``."""
+
     lastSequence: str
     """The last thing that was returned by getSequence.
 
@@ -238,17 +247,26 @@ class Organism:
         randomSubSequence = self._randomSequence[startPt:startPt + subSequenceLength]
         return randomSubSequence
 
-    def getSequence(self, initialSequence: str, inputLength: int | None) -> str:
+    def getSequence(self, initialSequence: str, inputLength: int | None,
+                    returnCorruptors: bool = False) -> \
+            str | tuple[str, list[CORRUPTOR_T]]:
         """Apply this organism's corruptors to initialSequence, a string.
 
         :param initialSequence: A string representing the wild-type sequence that
             this organism will apply its corruptors to.
         :param inputLength: The length of the returned sequence. If None, then
             return the whole corrupted sequence.
+        :param returnCorruptors: In addition to returning the sequence corresponding
+            to this organism, also return the corruptors that were applied. If random
+            corruptors were used, this will return the actual mutations that were
+            introduced in this call to getSequence.
         :return: A string. It will have length ``inputLength`` if ``inputLength``
             is a number, or it will contain all of initialSequence if ``inputLength``
             was None. In this second case, its length will be ``len(initialSequence)``
             plus the number of insertions minus the number of deletions.
+            If ``returnCorruptors`` is ``True``, then this will return a 2-tuple.
+            The first element will be the mutated sequence, and the second will
+            be the actual corruptors that were applied.
 
         Note that initialSequence will need to be longer than the inputLength
         to your model, since deletion corruptors can shorten the sequence.
@@ -284,6 +302,7 @@ class Organism:
         # as readHead. If we encounter a deletion, readHead will advance,
         # but writeHead will stay the same. If we encounter
         # an insertion, writeHead will advance twice, but readHead only once.
+        appliedCorruptors = []
 
         for pos, cor in self.corruptors:
             if readHead < pos:
@@ -297,12 +316,14 @@ class Organism:
                 # Since the behavior of insertion depends on if I just had a SNP,
                 # store the location of the last SNP.
                 writeHead = pos
+                appliedCorruptors.append([pos, cor])
             elif cor == "r":  # We want a random replacement.
                 assert randomSubSequence is not None, \
                     "A random sequence was not provided, but a random corruptor was given."
                 seq.append(randomSubSequence[readHead])
                 readHead += 1
                 writeHead = pos
+                appliedCorruptors.append([pos, seq[-1]])
             elif cor in "ǍČǦŤ":  # Insertion.
                 # Put in the initial base unless we just had a SNP.
                 if writeHead < pos:
@@ -313,6 +334,7 @@ class Organism:
                 # No increase in readHead, but set writeHead so I don't copy
                 # over a base if I have two subsequent insertions.
                 writeHead = pos
+                appliedCorruptors.append([pos, cor])
             elif cor == "ř":
                 if writeHead < pos:
                     seq.append(initialSequence[readHead])
@@ -322,14 +344,19 @@ class Organism:
                 seq.append(randomSubSequence[readHead + randomInsertions])
                 randomInsertions += 1
                 writeHead = pos
+                appliedCorruptors.append([pos, IN_D[seq[-1]]])
             elif cor == "d":
                 # Nothing to do here. A deleted base can never have
                 # an insertion or SNP, so no need to check.
                 readHead += 1
+                appliedCorruptors.append([pos, cor])
         # Done applying corruptors.
         seq.append(initialSequence[readHead:])
         fullSequence = "".join(seq)
         self.lastSequence = fullSequence[:inputLength]
+        self.lastCorruptors = appliedCorruptors
+        if returnCorruptors:
+            return self.lastSequence, appliedCorruptors
         return self.lastSequence
 
     def setScore(self, scoreFn: Callable[[GA_RESULT_T, list[CORRUPTOR_T]], float]) -> None:

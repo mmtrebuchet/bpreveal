@@ -104,10 +104,18 @@ tolLight: tuple[RGB_T, ...] = _toFractions(tolLightRgb)
 """
 
 dnaWong: DNA_COLOR_SPEC_T = {"A": {"wong": 3}, "C": {"wong": 5},
-                             "G": {"wong": 4}, "T": {"wong": 6}}
+                             "G": {"wong": 4}, "T": {"wong": 6},
+                             "Ǎ": {"tol-light": 1}, "Č": {"tol-light": 0},
+                             "Ǧ": {"tol-light": 3}, "Ť": {"tol-light": 4},
+                             "d": {"wong": 0}, "r": {"wong": 7},
+                             "ř": {"tol-light": 5}}
 """The default color map for DNA bases.
 
 A is green, C is blue, G is yellow, and T is red.
+Deletions are black.
+Insertions are lighter shades of the corresponding base.
+Random mutations are pink.
+
 """
 
 defaultProfile: COLOR_SPEC_T = {"tol": 0}

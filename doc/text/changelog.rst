@@ -10,7 +10,7 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.2.0, 2025-05-25
+BPReveal 5.2.0, 2025-05-23
 ''''''''''''''''''''''''''
 
 BREAKING CHANGES:
@@ -32,6 +32,12 @@ ENHANCEMENTS:
       The wheel will probably become the recommended way to install BPReveal, but the
       old conda-based installer will stay around presumably forever.
     * The dependency on ``bedtools`` has been removed. (``pybedtools`` is still required.)
+    * When you're using random corruptors in the GA, sometimes it's nice to know what
+      mutations were applied Now
+      :py:meth:`organism.getSequence<bpreveal.gaOptimize.Organism.getSequence>` has an
+      option to return the corruptors that were applied in making the sequence.
+    * The :py:mod:`colors<bpreveal.colors>` module now includes color definitions for
+      indels and random bases in :py:data:`dnaWong<bpreveal.colors.dnaWong>`.
 
 BUG FIXES:
     * metrics used a flag called ``--skip-zeroes``, which is not correctly spelled.
@@ -43,6 +49,9 @@ BUG FIXES:
     * The early stopping was busted if you had "profile-loss-weight" != 1 as of 5.0.0.
       This was due to a bug in they way I re-calculated losses to work with the adaptive
       loss system. Thanks to Fahad for reporting the bug and doing initial diagnostics.
+    * The documentation for plotPisa and plotPisaGraph didn't mention that the axes for
+      the legends would be returned. This has been fixed.
+    * Fixed a bug with the jittering algorithm that crashed on a jitter value of 0.
 
 CONTRIBUTORS:
     * Jonathon Russell
