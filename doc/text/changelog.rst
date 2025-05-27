@@ -10,7 +10,7 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.2.0, 2025-05-23
+BPReveal 5.2.0, 2025-05-27
 ''''''''''''''''''''''''''
 
 BREAKING CHANGES:
@@ -52,6 +52,8 @@ BUG FIXES:
     * The documentation for plotPisa and plotPisaGraph didn't mention that the axes for
       the legends would be returned. This has been fixed.
     * Fixed a bug with the jittering algorithm that crashed on a jitter value of 0.
+    * Keras 3.10.0 represents model inputs as lists rather than tensors. This broke the
+      batchers, since they look at the shape of model.input. This has been fixed.
 
 CONTRIBUTORS:
     * Jonathon Russell
