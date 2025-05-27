@@ -911,7 +911,12 @@ class BatchPredictor:
         with self.suppress():
             setMemoryGrowth()
             self._model = loadModel(modelFname)  # type: ignore
-        self._inputLength = self._model.input.shape[1]
+        if isinstance(self._model.input, list):
+            # Workaround for a bug in Keras 3.10.0 where inputs to loaded
+            # models are lists instead of tensors.
+            self._inputLength = self._model.input[0].shape[1]
+        else:
+            self._inputLength = self._model.input.shape[1]
         self._outputLength = self._model.output[0].shape[1]
         self._tasksPerHead = []
         outputs = self._model.output
