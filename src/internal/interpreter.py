@@ -430,7 +430,7 @@ def evalFile(fname: str, env: ENV_T | None = None, addFunctions: bool = True) ->
 
 def _testAst() -> None:
 
-    exprs = [["2 + 2", {}, 2, None],
+    exprs = [["2 + 2", {}, 4, None],
              ["x - 1", {"x": 3}, 2, None],
              ["1 if 3 > 2 else 0", {}, 1, None],
              ["(lambda x: x + 1)(3)", {}, 4, None],

@@ -140,7 +140,15 @@
                 "A": {"$ref": "#/definitions/color-spec"},
                 "C": {"$ref": "#/definitions/color-spec"},
                 "G": {"$ref": "#/definitions/color-spec"},
-                "T": {"$ref": "#/definitions/color-spec"}
+                "T": {"$ref": "#/definitions/color-spec"},
+                "r": {"$ref": "#/definitions/color-spec"},
+                "ř": {"$ref": "#/definitions/color-spec"},
+                "Ǎ": {"$ref": "#/definitions/color-spec"},
+                "Č": {"$ref": "#/definitions/color-spec"},
+                "Ǧ": {"$ref": "#/definitions/color-spec"},
+                "Ť": {"$ref": "#/definitions/color-spec"},
+                "d": {"$ref": "#/definitions/color-spec"}
+
             },
             "required": ["A", "C", "G", "T"],
             "additionalProperties": false
@@ -169,7 +177,7 @@
                             "shape": {
                                 "type": "string",
                                 "enum": ["diamond", "wedge", "box", "indel", "snp",
-                                         "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť"]
+                                         "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť", "r", "ř"]
                             }
                         },
                         "required": ["start", "end", "name", "color"],
