@@ -99,7 +99,7 @@ def tileSegments(inputLength: int, outputLength: int,
     :param outputLength: The output-length of your model, and also the length of the
         intervals in the returned ``BedTool``.
     :param segments: The regions of the genome that you'd like tiled.
-    :param spacing: The distance *between* the windows.
+    :param spacing: The distance *between* the output windows.
     :return: A BedTool containing Intervals of length ``outputLength``.
 
 

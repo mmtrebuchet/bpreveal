@@ -26,6 +26,10 @@ then
     cd dist/
     runAndCheck auditwheel repair --plat manylinux_2_17_x86_64 bpreveal-${BPREVEAL_VERSION}-cp312-cp312-linux_x86_64.whl
 
+    cp bpreveal-${BPREVEAL_VERSION}.tar.gz wheelhouse
+
+    echo "twine upload --verbose --repository testpypi dist/wheelhouse/*"
 else
     echo "Git has unstaged changes."
 fi
+

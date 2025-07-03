@@ -50,12 +50,14 @@ def getMask(dats: IMPORTANCE_AR_T, offset: int,
     else:
         mask[:, Δ:] = 0
     if coords is not None and chroms is not None:
-        for i in range(len(coords)):  # pylint: disable=consider-using-enumerate
+        coords_internal = np.zeros(coords.shape, dtype=np.int32)
+        coords_internal += coords
+        for i in range(len(coords_internal)):  # pylint: disable=consider-using-enumerate
             if Δ >= 0:
-                if i + Δ >= len(coords):
+                if i + Δ >= len(coords_internal):
                     # Off the end of the picture, invalid data here.
                     mask[i, :] = 0
-                elif coords[i] + Δ != coords[i + Δ]:
+                elif coords_internal[i] + Δ != coords_internal[i + Δ]:
                     # There was a coordinate shift. Data here are invalid.
                     mask[i, :] = 0
                 elif chroms[i] != chroms[i + Δ]:
@@ -66,7 +68,7 @@ def getMask(dats: IMPORTANCE_AR_T, offset: int,
                 if i + Δ < 0:
                     # Off the top of the picture.
                     mask[i, :] = 0
-                elif coords[i] + Δ != coords[i + Δ]:
+                elif coords_internal[i] + Δ != coords_internal[i + Δ]:
                     mask[i, :] = 0
                 elif chroms[i] != chroms[i + Δ]:
                     mask[i, :] = 0

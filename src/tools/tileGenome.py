@@ -31,7 +31,8 @@ def getParser() -> argparse.ArgumentParser:
         help="How far from the chromosome edges should the tiled regions start?",
         type=int,
         dest="chromEdgeBoundary")
-    ap.add_argument("--spacing", help="The space between regions.", type=int)
+    ap.add_argument("--spacing", help="The space between regions (based on output-length).",
+        type=int)
     ap.add_argument("--output-bed", help="The bed file that will be written.", dest="outputBed")
     ap.add_argument("--blacklist",
         help="A bed file of regions to exclude. May be given multiple times.",
