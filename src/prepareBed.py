@@ -36,6 +36,28 @@ max-counts, min-counts
     Similarly, if max and min counts are given, all regions having more
     (or fewer) reads than the given number will be excluded.
 
+negative-set-quantile
+    Sometimes, you have a lot of low-occupancy regions, so you set ``min-quantile``
+    to reject the boring stuff. But you still want
+    a few low-occupancy examples left so that the model can have enough examples to learn
+    what boring regions look like.
+    While ``min-quantile`` is a hard cutoff, `negative-set-quantile` will allow
+    a few regions to slip through. (The fraction that make it is given by
+    ``negative-set-include-fraction``.)
+    You still need to include either ``min-quantile`` or ``min-counts`` in your
+    config, and ``negative-set-quantile`` needs to be larger than ``min-quantile``.
+    Only regions that are above ``min-quantile`` and below ``negative-set-quantile``
+    will be considered for the negative set.
+
+negative-set-include-fraction
+    In the regions that are below ``negative-set-quantile``, what fraction
+    of them should wind up in the training data anyway? For example, if you
+    want 10 percent of your samples to be negative regions, and you have
+    ``min-quantile`` = 0.1 and ``negative-set-quantile`` = 0.3, then
+    you'd set ``negative-set-include-fraction`` to 0.5, since 20 percent
+    of the reads will fall between the 0.1 and 0.3 quantile and you want
+    half of them.
+
 output-prefix
     Specifies the base name for the output bed files. You can use either
     output-prefix OR list all three output-train, output-val, and output-test.
@@ -108,10 +130,13 @@ it check to see if you have flipped some columns in your input file.
 History
 -------
 
-The old ``bigwigs`` format was deprecated in BPReveal 4.0.0 and will be
-removed in BPReveal 5.0.0
+The old ``bigwigs`` format was deprecated in BPReveal 4.0.0 and was
+removed in BPReveal 6.0.0
 
 The ``remove-overlaps`` field became mandatory in BPReveal 3.0.0.
+
+The ``negative-set-quantile`` and ``negative-set-include-fraction`` fields were introduced in
+BPReveal 5.2.1
 
 API
 ---
@@ -393,6 +418,10 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
                       numThreads: int) -> None:
     """Filters the regions in smallRegionList based on the min-quantile or min-counts in the config.
 
+    Rejects all regions having fewer than min-counts, or being below the min-quantile cutoff.
+    If negative-set-quantile is set, then it will also reject a fraction of the reads below
+    that cutoff.
+
     :param config: Straight from the configuration JSON.
     :param bigRegionsList: A list of intervals that have already been inflated to account for jitter
     :param smallRegionsList: A list of intervals that have already been inflated to
@@ -402,12 +431,16 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
         corresponding to region i in bigRegionsList, if region k is rejected,
         then validRegions[i] will be 0 when this function exits.
     :param numThreads: How many parallel workers should be used?
+
+    :return: None, but does mutate validRegions. (By setting the selected entries to zero.)
     """
     pbar = logUtils.wrapTqdm(len(smallRegionsList) * len(config["heads"]) * 2, logUtils.INFO)
     for i, headSpec in enumerate(config["heads"]):
+        if "negative-set-quantile" not in headSpec:
+            headSpec["negative-set-quantile"] = 0
         # Since this is a slow step, check to see if min counts is zero. If so, no need to filter.
         if "min-quantile" in headSpec:
-            if headSpec["min-quantile"] == 0:
+            if headSpec["min-quantile"] == 0 and headSpec["negative-set-quantile"] == 0:
                 continue
         smallCounts = np.zeros((len(smallRegionsList),))
         counter = ParallelCounter(bigwigLists[i], numThreads)
@@ -423,7 +456,9 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
             minCounts = headSpec["min-counts"]
         else:
             minCounts = np.quantile(smallCounts, [headSpec["min-quantile"]])[0]
+        negativeSetCounts = np.quantile(smallCounts, [headSpec["negative-set-quantile"]])[0]
         logUtils.debug(f"    Min counts: {minCounts}, file {headSpec['bigwig-names']}")
+        logUtils.debug(f"    Negative set counts: {negativeSetCounts}")
         numReject = 0
         for regionIdx in range(len(bigRegionsList)):
             # within len(bigRegions) in case a region was lost during the resize - we want that to
@@ -431,6 +466,10 @@ def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
             if smallCounts[regionIdx] < minCounts:
                 numReject += 1
                 validRegions[regionIdx] = 0
+            elif smallCounts[regionIdx] < negativeSetCounts:
+                if random.random() > headSpec["negative-set-include-fraction"]:
+                    numReject += 1
+                    validRegions[regionIdx] = 0
         fracReject = numReject * 100 / len(bigRegionsList)
         logUtils.debug(f"    Rejected {fracReject}% of small regions.")
     pbar.close()

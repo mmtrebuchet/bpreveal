@@ -34,9 +34,14 @@
 <individual-preparation-head> ::=
     {
         "bigwig-names" : [<list-of-bigwig-files>],
+        «<negative-set-section>,»
         <max-cutoff-section>,
         <min-cutoff-section>
     }
+
+<negative-set-section> ::=
+    "negative-set-include-fraction" : <number>,
+    "negative-set-quantile" : <number>
 
 <max-cutoff-section> ::=
    "max-quantile" : <number>

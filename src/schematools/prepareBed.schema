@@ -24,6 +24,12 @@
                     },
                     "min-quantile":{
                         "$ref": "/schema/base#/definitions/fraction"
+                    },
+                    "negative-set-include-fraction":{
+                        "$ref": "/schema/base#/definitions/fraction"
+                    },
+                    "negative-set-quantile":{
+                        "$ref": "/schema/base#/definitions/fraction"
                     }
                 },
                 "required": ["bigwig-names"],

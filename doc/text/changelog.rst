@@ -10,6 +10,13 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
+BPReveal 5.2.1, DATEDATEDATE
+
+NEW FEATURES:
+    * Added an option to prepareBed to let you include a few regions that fall
+      below the counts cutoff. This lets your model see a few low-counts
+      regions without being swamped by them.
+
 BPReveal 5.2.0, 2025-05-27
 ''''''''''''''''''''''''''
 
@@ -31,7 +38,8 @@ ENHANCEMENTS:
     * Jonathon Russell set up the tooling necessary to build BPReveal into a pip wheel.
       The wheel will probably become the recommended way to install BPReveal, but the
       old conda-based installer will stay around presumably forever.
-    * The dependency on ``bedtools`` has been removed. (``pybedtools`` is still required.)
+    * The dependency on ``bedtools`` has been removed. (``pybedtools`` is still
+      required.)
     * When you're using random corruptors in the GA, sometimes it's nice to know what
       mutations were applied Now
       :py:meth:`organism.getSequence<bpreveal.gaOptimize.Organism.getSequence>` has an
