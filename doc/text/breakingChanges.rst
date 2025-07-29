@@ -55,6 +55,14 @@ When BPReveal 6.0.0 is released, the following breaking changes will occur:
 BPReveal 5.x
 ------------
 
+BPReveal 5.2.1
+^^^^^^^^^^^^^^
+When BPReveal 5.2.1 was released, the following breaking changes occurred:
+
+1. The :py:mod:`slurm<bpreveal.tools.slurm>` module will no longer let you
+   set the environment name to `ml`, since the BPReveal module on Cerebro
+   is way old.
+
 BPReveal 5.2.0
 ^^^^^^^^^^^^^^
 

@@ -16,6 +16,9 @@ NEW FEATURES:
     * Added an option to prepareBed to let you include a few regions that fall
       below the counts cutoff. This lets your model see a few low-counts
       regions without being swamped by them.
+    * Added a tool to match the GC content between peaks and bias regions à la
+      ChromBPNet.
+    * Added a demo notebook going through training an atac-seq sample.
 
 BPReveal 5.2.0, 2025-05-27
 ''''''''''''''''''''''''''

@@ -412,7 +412,8 @@ def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
     return bigRegionsBed
 
 
-def filterByMinCounts(config: dict, smallRegionsList: list[pybedtools.Interval],
+def filterByMinCounts(config: dict,  # pylint: disable=redundant-returns-doc
+                      smallRegionsList: list[pybedtools.Interval],
                       bigRegionsList: list[pybedtools.Interval],
                       bigwigLists: list[list[str]], validRegions: np.ndarray,
                       numThreads: int) -> None:
