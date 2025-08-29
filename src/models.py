@@ -14,6 +14,7 @@ from keras import activations
 from bpreveal import layers as bprlayers
 from bpreveal import logUtils
 from bpreveal.internal.constants import NUM_BASES
+from bpreveal.lengthCalc import getInputLength
 
 
 def _soloModelHead(dilateOutput: klayers.Layer, individualHead: dict,
@@ -76,17 +77,40 @@ def soloModel(inputLength: int, outputLength: int,
     countsPreds is a tensor of shape (batch x numTasks) containing the log counts for
     each task.
 
-    It is an error to call this function with an inconsistent network structure,
-    such as an input that is too long.
+    If you call this with an inputLength that is too long for the model, it will automatically
+    crop the input window down to the correct size. Since this could be an indication that your
+    architecture is inconsistent, this will emit a warning. It is an error to call this with an
+    inputLength that is too short to satisfy the model.
     """
-    del outputLength
+    # Calculate the theoretical input length for this model architecture.
+    neededInputLength = getInputLength(outputLength, numLayers,
+                                       [inputFilterWidth], outputFilterWidth, False)
+    assert inputLength >= neededInputLength, f"Model needs at least {neededInputLength} " \
+        f"input length but config only gives {inputLength}."
     logUtils.debug("Building solo model")
     inputLayer = klayers.Input((inputLength, NUM_BASES), name=f"{modelName}_input")
+    if inputLength > neededInputLength:
+        logUtils.warning(f"Config gives an input length of {inputLength} but the model needs "
+                         f"{neededInputLength}. Applying auto-cropdown of input.")
+        logUtils.warning("If you don't expect this message, you have probably supplied the wrong "
+                         "lengths in your configuration. Run lengthCalc to get the right "
+                         "input sizes.")
+        cropDiff = inputLength - neededInputLength
+        assert cropDiff % 2 == 0, f"The number of bases to be cropped, {cropDiff}, must be even."
+        cropFlankSize = int(cropDiff / 2)
+        logUtils.info(f"Auto cropdown will trim {cropFlankSize} bases from the model input.")
+        croppedInputLayer = klayers.Cropping1D(cropFlankSize,
+                                               name=f"{modelName}_input_cropdown")\
+                                        (inputLayer)  # noqa
+    else:
+        # We don't need to crop down the input, so the cropdown step is a no-op.
+        croppedInputLayer = inputLayer
+        logUtils.debug("Not applying input crop since inputLength is perfect for the model.")
 
     initialConv = klayers.Conv1D(
             filters=numFilters, kernel_size=inputFilterWidth, padding="valid",  # noqa
             activation="relu", name=f"{modelName}_initial_conv")\
-        (inputLayer)  # noqa
+        (croppedInputLayer)  # noqa
     prevLayer = initialConv
     for i in range(numLayers):
         newConv = klayers.Conv1D(
@@ -322,7 +346,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
         * The final model is the solo model, just in case you need it.
 
     It is an error to call this function with an inconsistent network structure,
-    such as an input that is too long.
+    such as an input that is too short.
     """
     # pylint: disable=unsubscriptable-object
     logUtils.debug("Building combined model.")

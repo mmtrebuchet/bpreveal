@@ -170,9 +170,9 @@ def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
                                        genomeFname=genomeFname, config=str(config))
         logUtils.debug(f"Initialized writer for {outFname} from a bed reader.")
     elif "fasta-file" in config:
-        bedFname = config["coordinates"]["bed-file"]
-        genomeFname = config["coordinates"]["genome"]
         if "coordinates" in config:
+            bedFname = config["coordinates"]["bed-file"]
+            genomeFname = config["coordinates"]["genome"]
             writer = predictUtils.H5Writer(fname=outFname, numHeads=numHeads,
                                            numPredictions=numPredictions, bedFname=bedFname,
                                            genomeFname=genomeFname, config=str(config))
