@@ -1,7 +1,7 @@
 """Types that are used throughout BPReveal."""
 from __future__ import annotations
 from multiprocessing import Lock
-from typing import TypeAlias, Literal
+from typing import NotRequired, TypeAlias, Literal
 from typing import TypedDict
 import numpy as np
 import numpy.typing as npt
@@ -107,6 +107,14 @@ class DNA_COLOR_SPEC_T(TypedDict):
     C: COLOR_SPEC_T
     G: COLOR_SPEC_T
     T: COLOR_SPEC_T
+    Ǎ: NotRequired[COLOR_SPEC_T]
+    Č: NotRequired[COLOR_SPEC_T]
+    Ǧ: NotRequired[COLOR_SPEC_T]
+    Ť: NotRequired[COLOR_SPEC_T]
+    r: NotRequired[COLOR_SPEC_T]
+    ř: NotRequired[COLOR_SPEC_T]
+    d: NotRequired[COLOR_SPEC_T]
+
 # pylint: enable=invalid-name
 
 

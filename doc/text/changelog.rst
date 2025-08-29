@@ -19,6 +19,44 @@ NEW FEATURES:
     * Added a tool to match the GC content between peaks and bias regions à la
       ChromBPNet.
     * Added a demo notebook going through training an atac-seq sample.
+    * If you specify an input-length that is too large for a model, BPReveal will
+      now automatically crop the input down to the correct width for you. This makes
+      it easier to use bias models that have fewer layers than the residual model.
+      (Note that this is in addition to the existing cropdown feature, which kicks
+      in when you're using a bias model with a too-small input length for a
+      residual model.)
+      Since this change means that the training code will work if you give a
+      too-large input length, this feature emits a warning when it is triggered.
+    * You can specify the precise axis limits for pisa graphs and plots, which is
+      handy for making animations.
+
+ENHANCEMENTS:
+    * You can now omit the profile or counts hdf5 file with interpretFlat. If you don't
+      provide ``profile-h5`` in the configuration json, then no profile scores will be
+      calculated. (and vice-versa for ``counts-h5``).
+    * You can now manually set the data range for profiles on PISA plots and graphs,
+      using the new ``data-range`` feature.
+    * For graphs, you can manually set the positive and negative colors for lines based
+      on annotations. Introduced a new ``force-color-positive`` and ``force-color-negative``
+      parameters to custom annotations. BPReveal will construct a gradient from
+      the negative color, to white, and then to the positive color and use that gradient
+      for drawing the lines.
+    * Added four new shapes for annotations: ``ORFLeft``, ``ORFRight``, ``PromoterLeft``,
+      and ``PromoterRight`` that will show the direction of an ORF and draw the classic
+      promoter arrows.
+
+BUG FIXES:
+    * Fixed a crash when interpreting from a fasta but not providing a coordinates
+      section in the config file.
+    * Fixed a spacing issue on pisa graphs where the legend was placed too far to
+      the right. This will cause pisa graphs to render a bit differently if they are
+      regenerated.
+    * If you call py:func:`plotUtils.addAnnotations<bpreveal.internal.plotUtils.addAnnotations>`
+      manually, you don't have to specify the shape, it will default to ``box``.
+    * The annotation shapes previously had thick lines drawn around them, which caused
+      them to be the wrong size. The offending lines have been removed. Your annotation boxes
+      will look thinner, because they always should have been that thin.
+
 
 BPReveal 5.2.0, 2025-05-27
 ''''''''''''''''''''''''''

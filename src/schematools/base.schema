@@ -87,7 +87,16 @@
                     {"type": "array", "items": {"$ref": "#/definitions/color-spec"}},
                     {"type": "array", "items": {"$ref": "#/definitions/sequence-color-spec"}}]
                 },
-                "label": {"type": "string"}
+                "label": {"type": "string"},
+                "data-range": {"oneOf": [
+                    {"type" : "null"},
+                    {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {"type": "number"}
+                    }
+                ]}
             },
             "oneOf": [
                 {"required": ["bigwig-name"]},
@@ -177,10 +186,18 @@
                             "shape": {
                                 "type": "string",
                                 "enum": ["diamond", "wedge", "box", "indel", "snp",
-                                         "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť", "r", "ř"]
-                            }
+                                         "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť", "r", "ř",
+                                         "ORFLeft", "ORFRight", "PromoterLeft", "PromoterRight"]
+                            },
+                            "force-color-positive": {"$ref": "#/definitions/color-spec"},
+                            "force-color-negative": {"$ref": "#/definitions/color-spec"}
                         },
                         "required": ["start", "end", "name", "color"],
+                        "not": {
+                            "oneOf": [
+                                {"required": ["force-color-positive"]},
+                                {"required": ["force-color-negative"]}
+                            ]},
                         "additionalProperties": false
                     }
                 }

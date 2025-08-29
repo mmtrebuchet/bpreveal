@@ -6,6 +6,7 @@ import os
 import argparse
 import jsonschema
 import bpreveal.schema as schemas
+from bpreveal.internal import interpreter
 p = argparse.ArgumentParser(description="Check the test cases for schemas.")
 p.add_argument("--show-correct", help="Show a note when a test is successful.",
                action="store_true", dest="showCorrect")
@@ -21,8 +22,7 @@ def runTest(schema, jsonFname, good):
     If good is True, then it is an error if it fails to pass.
     If good is False, then it is an error if it passes.
     """
-    with open("testcases/" + jsonFname, "r") as fp:
-        dats = json.load(fp)
+    dats = interpreter.evalFile("testcases/" + jsonFname)
     try:
         schemas.schemaMap[schema].validate(dats)
         if good:

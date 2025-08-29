@@ -118,6 +118,12 @@ or prediction tracks. The format for both tracks is identical.
     Default: If ``show-sequence`` is ``true``, then the default Wong color map
     for bases. If ``show-sequence`` is ``false``, then Tol color 0.
 
+``data-range``
+    If provided, gives the axis limits for this track. This is handy when making
+    animations, since otherwise the axis can jump all over the place.
+    If ``None`` (the default), then the axis limits will be determined by
+    the data being shown.
+
 ``annotation-section``
 ''''''''''''''''''''''
 
@@ -140,19 +146,43 @@ things like motifs and genes.
 
 ``custom``
     A list of annotations that you provide that do not come from the bed file.
-    An annotation is a simple dict mapping ``start`` and ``end`` to (genomic)
-    coordinates, along with a ``name`` giving the text to draw and a
-    ``color`` giving a colorSpec to use. See
-    :py:mod:`colors<bpreveal.colors>` for colorSpec documentation.
-    You may also include a ``shape`` parameter that determines the shape that
-    will be drawn, which is used to show corruptors from the GA. Options are
-    ``diamond``, ``wedge``, ``indel``, ``snp``, one of the letters
-    ``ACGTdǍČǦŤ``, or ``box``. ``indel`` or one of ``dǍČǦŤ`` create a wedge,
-    ``snp`` or one of ``ACGT`` create a diamond. The default is ``box``. You
-    can also provide a ``bottom`` an ``top`` parameter if you want to manually
-    set the coordinates of your annotation box. (This is usually not necessary,
-    as the annotation function automatically adjusts the box positions if they
-    overlap.)
+    An annotation contains the following properties:
+
+    ``start``
+        The *genomic* start coordinate of the annotation.
+
+    ``end``
+        The *genomic* end coordinate of the annotation.
+
+    ``name``
+        The name of the thing being annotated. This will be drawn
+        over the box (if ``mini`` is False) or on the right-hand legend
+        (if ``mini`` is True)
+
+    ``color``
+        A color-spec that defines the color of the annotation. See
+        :py:mod:`colors<bpreveal.colors>` for colorSpec documentation.
+
+    ``shape``
+        An optional parameter that determines the shape that
+        will be drawn, which is used to show corruptors from the GA. Options are
+        ``diamond``, ``wedge``, ``indel``, ``snp``, one of the letters
+        ``ACGTdǍČǦŤ``, or ``box``. ``indel`` or one of ``dǍČǦŤ`` create a wedge,
+        ``snp`` or one of ``ACGT`` create a diamond. The default is ``box``.
+
+    ``bottom`` and ``top``
+        (Optional) Explicitly set the bottom and top coordinate of the annotation box.
+        (This is usually not necessary, as the annotation function automatically
+        adjusts the box positions if they
+        overlap.)
+
+    ``force-color-positive`` and ``force-color-negative``
+        (Optional) Instead of using the normal PISA color map for this area, use these colors.
+        Each is a color-spec. Values below zero will be shown as the negative color,
+        and values above zero will be shown using the positive color. This is only valid
+        for pisa graphs (AKA squid plots) and has no effect on PISA heatmaps.
+        ``force-color-positive`` and ``force-color-negative`` override ``use-annotation-colors``.
+
     Default: No custom annotations.
 
 ``figure-section``
@@ -218,6 +248,9 @@ Specific parameters
     for showing the effects of different motifs, for example.
     If ``false``, then all splines will use the default color map
     based on the PISA value between the bases they connect.
+    Note that if you specify ``force-color-positive`` and
+    ``force-color-negative`` on one of your annotations, those
+    colors will be used even if ``use-annotation-colors`` is ``False``.
     Default: ``false``.
 
 Module contents
@@ -353,9 +386,20 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
     colorBlocks = []
     if cfg["use-annotation-colors"]:
         for annot in cfg["annotations"]["custom"]:
+            if "force-color-positive" not in annot:
+                # We don't have a custom color scale,
+                # so just use the color of the annotation for
+                # the color scale.
+                colorBlocks.append((annot["start"],
+                                    annot["end"],
+                                    annot["color"], annot["color"]))
+    for annot in cfg["annotations"]["custom"]:
+        if "force-color-positive" in annot:
             colorBlocks.append((annot["start"],
                                 annot["end"],
-                                annot["color"]))
+                                annot["force-color-positive"],
+                                annot["force-color-negative"]))
+
     logUtils.debug("Axes set. Drawing graph.")
     Δ = coords["output-slice-width"] - coords["input-slice-width"]
     shearMat = cfg["pisa"]["values"][sliceStart - Δ:sliceEnd + Δ,
@@ -384,8 +428,8 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
         showSequence=cfg["importance"]["show-sequence"],
         labelXAxis=True,
         yAxisLabel="" if mini else "Contrib.\nscore",
+        dataRange=cfg["importance"]["data-range"],
         mini=mini)
-
     usedNames = pu.addAnnotations(
         axAnnot=axAnnot, annotations=cfg["annotations"]["custom"],
         boxHeight=cfg["figure"]["annotation-height"],
@@ -405,6 +449,7 @@ def plotPisaGraph(config: dict, fig: matplotlib.figure.Figure, validate: bool = 
         showSequence=cfg["predictions"]["show-sequence"],
         labelXAxis=False,
         yAxisLabel="" if mini else "Pred.\nprofile",
+        dataRange=cfg["predictions"]["data-range"],
         mini=mini)
 
     pu.addCbar(
@@ -567,6 +612,7 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
         fontSizeAxLabel=cfg["figure"]["label-font-size"],
         showSequence=cfg["importance"]["show-sequence"],
         labelXAxis=True, yAxisLabel="" if mini else "Contrib.\nscore",
+        dataRange=cfg["importance"]["data-range"],
         mini=mini)
 
     logUtils.debug("Adding annotations.")
@@ -585,6 +631,7 @@ def plotPisa(config: dict, fig: matplotlib.figure.Figure, validate: bool = True)
         genomeWindowStart=coords["genome-window-start"] + sliceStartY,
         fontSizeTicks=cfg["figure"]["tick-font-size"],
         fontSizeAxLabel=cfg["figure"]["label-font-size"],
+        dataRange=cfg["predictions"]["data-range"],
         mini=mini)
     if axLegend is not None:
         logUtils.debug("Adding legend.")

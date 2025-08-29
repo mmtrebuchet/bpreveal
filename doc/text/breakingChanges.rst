@@ -62,6 +62,10 @@ When BPReveal 5.2.1 was released, the following breaking changes occurred:
 1. The :py:mod:`slurm<bpreveal.tools.slurm>` module will no longer let you
    set the environment name to `ml`, since the BPReveal module on Cerebro
    is way old.
+2. Specifying an input-length that is too long for a model used to cause
+   a crash, but now causes the input to be automatically cropped to the
+   correct size. Since this could cause invalid configurations to accidentally
+   train successfully, the code emits a warning if this feature is triggered.
 
 BPReveal 5.2.0
 ^^^^^^^^^^^^^^

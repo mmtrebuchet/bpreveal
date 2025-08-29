@@ -1,0 +1,60 @@
+
+(lambda workdir="/n/projects/cm2363/bpreveal/test/acceptance/oskn-5.0.0-rc2", 
+        tf="klf4",
+        strand="positive",
+        mode="graph":
+    (lambda pisaConfig = lambda model: {"h5-name": workdir + "/shap/pisa_" + model + "_" + tf + "_" + strand + ".h5"},
+            coordsConfig = lambda model: {
+                "genome-fasta": "/n/data1/genomes/indexes/mm10/mm10.fa",
+                "midpoint-offset": 1150,
+                "input-slice-width": 300,
+                "output-slice-width": 500,
+                "genome-window-start": 180923752,
+                "genome-window-chrom": "chr1"},
+            importanceConfig= lambda model: {
+                "bigwig-name": workdir + "/shap/" + tf + "_" + model + "_profile.bw",
+                "show-sequence": True},
+            predictionsConfig=lambda model: {
+                "bigwig-name": workdir + "/pred/" + tf + "_" + model + "_" + strand + ".bw"},
+            annotationsConfig=lambda model: {
+                "bed-name": workdir + "/scan/" + tf + "_" + model + "_profile_filt.bed",
+                "custom": [
+                    {"start": 1234, "end": 5678,
+                     "name": "custAnnot", "color": {"tol": 3},
+                     "shape": "diamond",
+                    "force-color-positive": {"tol": 7},
+                    "force-color-negative": {"tol": 4}}]
+                },
+            figureConfig=lambda model:{
+                "left": {"combined": 0.1, "residual": 0.6, "solo": 0.1, "transformation": 0.6}[model],
+                "bottom": {"combined": 0.1, "residual": 0.1, "solo": 0.6, "transformation": 0.6}[model],
+                "width": 0.35,
+                "height": 0.35,
+                "color-span": 0.5,
+                "miniature": True}:
+        {
+            "graph-configs": [] if mode == "plot" else [{
+                    "pisa": pisaConfig(model),
+                    "coordinates":  coordsConfig(model),
+                    "importance":  importanceConfig(model),
+                    "predictions": predictionsConfig(model),
+                    "annotations": annotationsConfig(model),
+                    "figure": figureConfig(model),
+                    "min-value": 0.1
+                }
+                for model in ["solo", "transformation", "combined", "residual"]
+                ],
+            "plot-configs": [] if mode == "graph" else [{
+                    "pisa": pisaConfig(model),
+                    "coordinates":  coordsConfig(model),
+                    "importance":  importanceConfig(model),
+                    "predictions": predictionsConfig(model),
+                    "annotations": annotationsConfig(model),
+                    "figure": figureConfig(model)
+                }
+                for model in ["solo", "transformation", "combined", "residual"]
+                ],
+            "width": 7,
+            "height": 6,
+            "output-png": workdir + "/shap/pisa_" + tf + "_" + strand + "_" + mode + ".png"})
+    ())()

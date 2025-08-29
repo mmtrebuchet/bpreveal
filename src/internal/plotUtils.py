@@ -398,7 +398,10 @@ def normalizeProfileSection(oldConfig: dict, newConfig: dict, group: str) -> Non
         backupColor = bprcolors.dnaWong
     else:
         backupColor = bprcolors.defaultProfile
-
+    if "data-range" in oldConfig[group]:
+        newConfig[group]["data-range"] = oldConfig[group]["data-range"]
+    else:
+        newConfig[group]["data-range"] = None
     newConfig[group]["color"] = normalizeProfileColor(
         oldConfig[group].get("color", backupColor),
         len(newConfig[group]["values"]))
@@ -547,6 +550,8 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
     :return: Two lists, the first giving X coordinates and the second giving Y coordinates.
     """
     midPt = (aleft + aright) / 2
+    width = aright - aleft
+    arrowDepth = width / 10
     if shape in {"diamond", "snp", "A", "C", "G", "T"}:
         xVals = [aleft, midPt, aright, midPt]
         yVals = [height / 2, height,
@@ -557,6 +562,41 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
     elif shape in {"box"}:
         xVals = [aleft, aleft, aright, aright]
         yVals = [0, height, height, 0]
+    elif shape in {"PromoterRight", "PromoterLeft"}:
+
+        # 0  α  β  γ        δ
+        # |  |  |  |        |
+        #                      _ f
+        #  _____|\             _ e
+        # |       \
+        # |        >           - d
+        # |   __  /            _ c
+        # |  |  |/             _ b
+        # |  |
+        # |  |______________   _ a
+        # |                 |
+        # |_________________|  _ 0
+        α = 1; β = 4; γ = 6; δ = 20
+        a = 2; b = 5; c = 7; d = 8; e = 9; f = 11
+        coords = [(0,0), (0,e), (β, e), (β, f), (γ ,d),
+                  (β, b), (β, c), (α, c),
+                  (α, a), (δ, a), (δ, 0)]
+        xVals = [aleft + x * width / δ for x, _ in coords]
+        if shape == "PromoterLeft":
+            # Pointing left, so flip all the x-values.
+            xVals = [aright - x * width / δ for x, _ in coords]
+        yVals = [y * height / f for _, y in coords]
+
+    elif shape in {"ORFLeft"}:
+        xVals = [aleft + arrowDepth, aleft, aleft + arrowDepth,
+                 aright, aright]
+        yVals = [0, height / 2, height,
+                 height, 0]
+    elif shape in {"ORFRight"}:
+        xVals = [aleft, aleft,
+                 aright - arrowDepth, aright, aright - arrowDepth]
+        yVals = [0, height,
+                 height, height / 2, 0]
     else:
         raise ValueError(f"Annotation shape {shape} is not allowed.")
     return xVals, yVals
@@ -586,7 +626,7 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
     for annot in sorted(annotations, key=lambda x: x["start"]):
         aleft = annot["start"]
         aright = annot["end"]
-        shape = annot["shape"]
+        shape = annot.get("shape", "box")
         if aright < genomeStartX or aleft > genomeEndX:
             continue
         # No directly abutting annotations - at least 1 base.
@@ -613,7 +653,7 @@ def addAnnotations(axAnnot: AXES_T, annotations: list[dict], boxHeight: float,
         xVals, yVals = _getAnnotationShape(shape, aleft, aright, height)
         yVals = [y + bottom for y in yVals]
         axAnnot.fill(xVals, yVals, label=annot["name"],
-                     color=parseSpec(annot["color"]))
+                     color=parseSpec(annot["color"]), linestyle="None")
         if not mini:
             axAnnot.text((aleft + aright) / 2, bottom + height / 2, annot["name"],
                          fontstyle="italic", fontsize=fontSize, fontfamily=FONT_FAMILY,
@@ -696,7 +736,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
                         [xEnd - xlen * 0.02, xEnd], "k-", lw=2.0)
     if not mini:
         axPisa.set_ylabel("Output base coordinate", fontsize=fontSizeAxLabel,
-                          fontfamily=FONT_FAMILY, labelpad=-5)
+                          fontfamily=FONT_FAMILY, labelpad=0)
     numYTicks = 4 if mini else 10
     addResizeCallbacks(axPisa, "both", numYTicks, numYTicks, fontSizeTicks)
     axPisa.set_ylim(extent[2], extent[3])
@@ -715,7 +755,7 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
 
 
 def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
-                 colorBlocks: list[tuple[int, int, COLOR_SPEC_T]],
+                 colorBlocks: list[tuple[int, int, COLOR_SPEC_T, COLOR_SPEC_T]],
                  genomeStart: int,
                  lineWidth: float, trim: int, ax: AXES_T,
                  cmap: mplcolors.Colormap = bprcolors.pisaClip,
@@ -726,11 +766,15 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     :param minValue: PISA values less than this will not be plotted at all.
     :param colorSpan: Values higher than this will be clipped.
     :param colorBlocks: Regions of the plot that override the color of the lines.
-        These are tuples of (start, end, (r, g, b)).
+        These are tuples of (start, end, (r, g, b), (r, g, b)).
         If the origin of a line overlaps with a ColorBlock, then its color is set
-        to the rgb color in the block.
+        to the first color if the value is positive, and to the second color if its
+        value is negative. No gradient is applied, but do keep in mind that lower
+        values are made transparent, so some gradient will be apparent in the result.
     :type colorBlocks: list[tuple[int, int,
-        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`]]
+        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`,
+        :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>`
+        ]]
     :param genomeStart: The genomic coordinate of the left side of similarityMat.
     :param lineWidth: The thickness of the drawn lines. For large figures,
         thicker lines avoid Moiré patterns.
@@ -747,13 +791,34 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         Rasterizing can make large pisa graphs much easier to work with downstream, but
         it makes them uneditable.
     """
+    colorMapBlocks = []
+    for cb in colorBlocks:
+        # Originially colorBlocks only had one color, and the same one was used for both
+        # positive and negative values. If I get a three-component tuple, duplicate
+        # the color for backward compatibility.
+        start = cb[0]
+        end = cb[1]
+        if len(cb) == 3:
+            posColor = bprcolors.parseSpec(cb[2])
+            negColor = posColor
+            midColor = posColor
+            logUtils.warning("Got an old-style color block with only three values."
+                "As of BPReveal 5.2.1, color-blocks should have two colors, not just one.")
+        else:
+            posColor = bprcolors.parseSpec(cb[2])
+            midColor = [1, 1, 1]
+            negColor = bprcolors.parseSpec(cb[3])
+        blockCmap = mplcolors.LinearSegmentedColormap.from_list(
+            "block_gradient", [negColor, midColor, posColor], N=256)
+        zeroedBlockCmap = bprcolors.getGraphCmap(minValue, colorSpan, blockCmap)
+        colorMapBlocks.append((start, end, zeroedBlockCmap))
+
     plotMat = np.array(similarityMat)
     # convert into dB
     plotMat *= math.log2(math.e)
     colorSpan *= math.log2(math.e)
     minValue *= math.log2(math.e)
     zeroedCmap = bprcolors.getGraphCmap(minValue, colorSpan, cmap)
-    maxAlpha = [0.]
 
     def addLine(xLower: int, xUpper: int, value: float) -> bool | tuple[float, PathPatch]:
         if abs(value) < minValue:
@@ -779,14 +844,12 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         normα = abs(value / colorSpan)
 
         color = zeroedCmap(normValue, alpha=normα)
-        for colorBlock in colorBlocks:
-            start, end, colorSpec = colorBlock
-            r, g, b = parseSpec(colorSpec)[:3]
+        for colorBlock in colorMapBlocks:
+            start, end, blockCmap = colorBlock
             if start <= xLower < end:
                 # Convert the alpha so that lines totally fade
                 # by the point you reach minValue.
-                maxAlpha[0] = max(normα, maxAlpha[0])
-                color = (r, g, b, normα)
+                color = blockCmap(normValue, alpha=normα)
                 break
 
         curPatch = patches.PathPatch(path, facecolor="none", lw=lineWidth,
@@ -958,12 +1021,13 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     # Get the actual width of the graph so that it matches pisa plots.
     # These numbers should match _getPisaAxes.
     graphXWeight = 40
-    profileXWeight = 6
-    cbarSpaceXWeight = 2 if mini else 1
-    cbarXWeight = 3 if mini else 1
-    totalXWeight = graphXWeight + profileXWeight + cbarXWeight + cbarSpaceXWeight
+    # profileXWeight = 6
+    cbarSpaceXWeight = 4 if mini else 1
+    cbarXWeight = 2 if mini else 1
+    totalXWeight = graphXWeight + cbarXWeight + cbarSpaceXWeight
     graphWidth = width * graphXWeight / totalXWeight
     cbarWidth = width * cbarXWeight / totalXWeight
+    # Now work out the y positions.
     graphλ = 8
     profileλ = 1
     seqλ = 1
@@ -1021,7 +1085,8 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
 def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
                            colors: list[DNA_COLOR_SPEC_T], sequence: str,
                            genomeWindowStart: int,
-                           fontSizeTicks: int, fontSizeAxLabel: int, mini: bool) -> None:
+                           fontSizeTicks: int, fontSizeAxLabel: int,
+                           dataRange: tuple[float, float] | None, mini: bool) -> None:
     """Plot a profile on a vertical axes.
 
     :param profile: The values that should be plotted. This will be an ndarray.
@@ -1034,6 +1099,9 @@ def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
         in the right place.
     :param fontSizeTicks: How big do you want the tick labels, in points?
     :param fontSizeAxLabel: How big do you want the word "Profile" on your axes?
+    :param dataRange: The minimum and maximum values displayed on the axis.
+        Normally, you can leave this as ``None``, but setting the range manually
+        is handy for animations.
     :param mini: If True, then all ticks are removed and the axis is not labeled.
     """
     plotProfile = list(profile)
@@ -1054,13 +1122,16 @@ def addVerticalProfilePlot(profile: PRED_AR_T, axProfile: AXES_T,
                              fontfamily=FONT_FAMILY)
         axProfile.set_xlabel("Profile", fontsize=fontSizeAxLabel, fontfamily=FONT_FAMILY)
     axProfile.xaxis.set_tick_params(width=0.4)
+    if dataRange is not None:
+        axProfile.set_xlim(dataRange)
 
 
 def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], sequence: str,
                              genomeStartX: int, genomeEndX: int, axSeq: AXES_T,
                              axGraph: AXES_T | None, fontSizeTicks: int, fontSizeAxLabel: int,
                              showSequence: bool, labelXAxis: bool,
-                             yAxisLabel: str, mini: bool) -> None:
+                             yAxisLabel: str, dataRange: tuple[float, float] | None,
+                             mini: bool) -> None:
     """Draw a profile on a horizontal axes.
 
     :param values: The values to plot.
@@ -1079,6 +1150,9 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
     :param labelXAxis: If True, then put ticks and tick labels on the x-axis, and also
         remove any labels from axGraph, if axGraph is not None.
     :param yAxisLabel: Text to display on the left side of the axis.
+    :param dataRange: The minimum and maximum values displayed on the axis.
+        Normally, you can leave this as ``None``, but setting the range manually
+        is handy for animations.
     :param mini: If True, use fewer x-ticks and don't show a label on the x-axis.
         Note that even if ``labelXAxis`` is ``True``, the string ``Input base coordinate``
         will not be shown if ``mini`` is ``True``.
@@ -1118,4 +1192,6 @@ def addHorizontalProfilePlot(values: PRED_AR_T, colors: list[DNA_COLOR_SPEC_T], 
         axSeq.xaxis.set_tick_params(labelbottom=False, width=0.4)
     axSeq.set_ylabel(yAxisLabel, fontsize=fontSizeAxLabel,
                      fontfamily=FONT_FAMILY, rotation=0, loc="bottom", labelpad=40)
+    if dataRange is not None:
+        axSeq.set_ylim(dataRange)
 # Copyright 2022-2025 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

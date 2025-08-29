@@ -46,7 +46,7 @@
         "input-slice-width": <integer>,
         "output-slice-width": <integer>,
         "genome-window-start": <integer>,
-        "genome-window-chrom": <integer>,
+        "genome-window-chrom": <string>,
     }
 
 <sequence-source-section> ::=
@@ -58,6 +58,7 @@
     {
         <profile-source>,
        «"show-sequence": <boolean>,»
+       «"data-range": [<number>, <number>],»
         <profile-color-section>
     }
 
@@ -97,12 +98,15 @@
         "name": <string>,
        «"shape": <annotation-shape-type>,»
         <annotation-position>
+       «"force-color-positive" : <color-spec>,
+        "force-color-negative" : <color-spec>,»
         "color": <color-spec>
     }
 
 <annotation-shape-type> ::=
     "diamond" | "wedge" | "box" | "indel" | "snp" | "A" | "C"
-  | "G" | "T" | "d" | "Ǎ" | "Č" | "Ǧ" | "Ť"
+  | "G" | "T" | "d" | "Ǎ" | "Č" | "Ǧ" | "Ť" | "ORFLeft"
+  | "ORFRight" | "PromoterLeft" | "PromoterRight"
 
 <annotation-position> ::=
     <empty>
