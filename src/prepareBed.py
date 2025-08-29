@@ -102,6 +102,12 @@ num-threads
     How many threads should be used for loading counts information?
     I recommend setting this to as many threads as your machine has.
 
+blacklist
+    (Optional.) A bed file that gives regions that should not be seen by the
+    model. These could be low-complexity regions that don't map well, or
+    repetitive regions that have insanely high counts, or promoter regions that
+    you aren't interested in.
+
 Additional information
 ----------------------
 
@@ -137,6 +143,8 @@ The ``remove-overlaps`` field became mandatory in BPReveal 3.0.0.
 
 The ``negative-set-quantile`` and ``negative-set-include-fraction`` fields were introduced in
 BPReveal 5.2.1
+
+The ``blacklist`` feature was also added in 5.2.1.
 
 API
 ---
@@ -516,6 +524,12 @@ def validateRegions(config: dict, regions: pybedtools.BedTool,
     logUtils.info(f"    Resized sequences. {unfilteredBigRegions.count()} remain.")
     bigRegionsList = list(unfilteredBigRegions.filter(sequenceChecker, genome).saveas())
     logUtils.info(f"    Filtered for weird nucleotides. {len(bigRegionsList)} remain.")
+    if "blacklist" in config:
+        bigRegionsBed = pybedtools.BedTool(bigRegionsList)
+        blacklist = pybedtools.BedTool(config["blacklist"])
+        subtracted = bigRegionsBed.subtract(blacklist, A=True).saveas()
+        bigRegionsList = list(subtracted)
+        logUtils.info(f"    Filtered for blacklist entries. {len(bigRegionsList)} remain.")
     # Now, we have the possible regions. Get their counts values.
     validRegions = np.ones((len(bigRegionsList),))
     # Note: The bigwigLists correspond to the heads in here.

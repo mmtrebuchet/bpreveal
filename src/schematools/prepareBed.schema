@@ -95,6 +95,7 @@
         "resize-mode": {"type": "string", "enum": ["none", "center", "start"]},
         "remove-overlaps": {"type": "boolean"},
         "overlap-max-distance": {"type": "integer"},
+        "blacklist": {"type": "string"},
         "num-threads" : {"type" : "integer"},
         "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },

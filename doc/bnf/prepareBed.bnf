@@ -9,7 +9,8 @@
         <output-file-name-section>,
         "resize-mode" : <resize-mode>,
         <overlap-section>
-       «"num-threads" <integer>,»
+       «"num-threads" : <integer>,»
+       «"blacklist" : <file-name>,»
         <verbosity-section>
     }
 
