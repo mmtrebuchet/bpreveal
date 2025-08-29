@@ -31,7 +31,14 @@
         "verbosity": {"$ref": "/schema/base#/definitions/verbosity"}
     },
     "required": ["input-length", "output-length", "heads", "head-id",
-        "profile-task-ids", "profile-h5", "counts-h5", "num-shuffles", "verbosity"],
+        "num-shuffles", "verbosity"],
+    "anyOf": [
+        {
+            "required": ["profile-h5", "profile-task-ids"]
+        },
+        {
+            "required": ["counts-h5"]
+        }],
     "oneOf": [
         {
             "required": ["genome", "bed-file"],

@@ -7,8 +7,8 @@
         "heads" : <integer>,
         "head-id" : <integer>
         "profile-task-ids" : [<list-of-integer>],
-        "profile-h5" : <file-name>,
-        "counts-h5" : <file-name>,
+        «"profile-h5" : <file-name>,»
+        «"counts-h5" : <file-name>,»
         "num-shuffles" : <integer>,
         <kmer-size-section>
         <verbosity-section>

@@ -279,24 +279,40 @@ def interpretFlat(config: dict) -> None:
         logUtils.debug("Configuration specifies a fasta file.")
         generator = interpretUtils.FastaGenerator(config["fasta-file"])
         logUtils.info(f"Created a reader for fasta file {config["fasta-file"]}")
-
-    profileWriter = interpretUtils.FlatH5Saver(
-        outputFname=config["profile-h5"], numSamples=generator.numRegions,
-        inputLength=config["input-length"], genome=genomeFname,
-        useTqdm=logUtils.getVerbosity() <= logUtils.INFO,
-        config=str(config))
-    countsWriter = interpretUtils.FlatH5Saver(
-        outputFname=config["counts-h5"], numSamples=generator.numRegions,
-        inputLength=config["input-length"], genome=genomeFname,
-        useTqdm=False,
-        config=str(config))
+    writers = []
+    metrics = []
+    if "profile-h5" in config:
+        logUtils.debug(f"Initializing profile saver for {config["profile-h5"]}.")
+        profileWriter = interpretUtils.FlatH5Saver(
+            outputFname=config["profile-h5"], numSamples=generator.numRegions,
+            inputLength=config["input-length"], genome=genomeFname,
+            useTqdm=logUtils.getVerbosity() <= logUtils.INFO,
+            config=str(config))
+        writers.append(profileWriter)
+        profileMetricFun = profileMetric(config["head-id"], config["profile-task-ids"])
+        metrics.append(profileMetricFun)
+    if "counts-h5" in config:
+        logUtils.debug(f"Initializing counts saver for {config["profile-h5"]}.")
+        countsWriter = interpretUtils.FlatH5Saver(
+            outputFname=config["counts-h5"], numSamples=generator.numRegions,
+            inputLength=config["input-length"], genome=genomeFname,
+            useTqdm=False,
+            config=str(config))
+        writers.append(countsWriter)
+        countsMetricFun = countsMetric(config["heads"], config["head-id"])
+        metrics.append(countsMetricFun)
+    if len(metrics) != 2:
+        logUtils.warning(f"Initialized {len(metrics)} metrics instead of the expected two.")
+        logUtils.warning("Did you forget to include both profile-h5 and counts-h5 in your")
+        logUtils.warning("configuration file?")
+        logUtils.warning("interpretFlat will only run one metric.")
+        logUtils.warning("This was added in 5.2.1 and will no longer be a warning in 5.3.0.")
+    assert len(metrics) > 0, "You must specify at least one of profile-h5 or counts-h5."
     # If you want to use a custom metric, you could add that here.
     # Remember that numThreads must be divisible by the number of metrics.
-    profileMetricFun = profileMetric(config["head-id"], config["profile-task-ids"])
-    countsMetricFun = countsMetric(config["heads"], config["head-id"])
     batcher = interpretUtils.InterpRunner(
-        modelFname=config["model-file"], metrics=[profileMetricFun, countsMetricFun],
-        batchSize=10, generator=generator, savers=[profileWriter, countsWriter],
+        modelFname=config["model-file"], metrics=metrics,
+        batchSize=10, generator=generator, savers=writers,
         numShuffles=config["num-shuffles"], kmerSize=kmerSize, numThreads=2,
         backend="shap",
         useHypotheticalContribs=True)
@@ -305,11 +321,12 @@ def interpretFlat(config: dict) -> None:
     # Finishing touch - if someone gave coordinate information, load that.
     if "coordinates" in config:
         for ftype in ("profile-h5", "counts-h5"):
-            with h5py.File(config[ftype], "r+") as h5fp, \
-                 pysam.FastaFile(config["coordinates"]["genome"]) as genome:
-                bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
-                predictUtils.addCoordsInfo(regions=bedFp, outFile=h5fp,
-                                           genome=genome, stopName="coords_end")
+            if ftype in config:
+                with h5py.File(config[ftype], "r+") as h5fp, \
+                        pysam.FastaFile(config["coordinates"]["genome"]) as genome:
+                    bedFp = pybedtools.BedTool(config["coordinates"]["bed-file"])
+                    predictUtils.addCoordsInfo(regions=bedFp, outFile=h5fp,
+                                               genome=genome, stopName="coords_end")
     logUtils.info("interpretFlat complete, exiting.")
 
 
