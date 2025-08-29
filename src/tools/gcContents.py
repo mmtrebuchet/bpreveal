@@ -19,7 +19,6 @@ import matplotlib
 from bpreveal import logUtils
 
 
-matplotlib.use("TkAgg")
 
 
 def getGc(region: pybedtools.Interval, genome: pysam.FastaFile) -> int:
@@ -196,6 +195,7 @@ def runMain() -> None:
     correctedBiasAr = np.array(correctedBias)
     correctedBiasAr /= np.max(correctedBiasAr)
     if args.plot:
+        matplotlib.use("TkAgg")
         plt.plot(cv, label="correction factors")
         plt.plot(correctedBiasAr, label="corrected bias dist.")
         plt.legend()

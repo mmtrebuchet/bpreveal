@@ -46,7 +46,7 @@ filesInternalApi = ["disableTensorflowLogging.py", "constants.py", "crashQueue.p
 
 filesToolsMinor = ["lossWeights.py", "revcompTools.py", "shiftBigwigs.py",
                    "tileGenome.py", "bestMotifsOnly.py", "shiftPisa.py",
-                   "filterProc.py"
+                   "filterProc.py", "gcContents.py"
                    ]
 
 filesToolsMajor = ["addNoise.py"]
