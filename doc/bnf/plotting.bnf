@@ -107,6 +107,7 @@
     "diamond" | "wedge" | "box" | "indel" | "snp" | "A" | "C"
   | "G" | "T" | "d" | "Ǎ" | "Č" | "Ǧ" | "Ť" | "ORFLeft"
   | "ORFRight" | "PromoterLeft" | "PromoterRight"
+  | "trapezoid,up,<number>" | "trapezoid,down,<number>"
 
 <annotation-position> ::=
     <empty>

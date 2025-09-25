@@ -41,9 +41,12 @@ ENHANCEMENTS:
       parameters to custom annotations. BPReveal will construct a gradient from
       the negative color, to white, and then to the positive color and use that gradient
       for drawing the lines.
-    * Added four new shapes for annotations: ``ORFLeft``, ``ORFRight``, ``PromoterLeft``,
+    * Added six new shapes for annotations: ``ORFLeft``, ``ORFRight``, ``PromoterLeft``,
       and ``PromoterRight`` that will show the direction of an ORF and draw the classic
       promoter arrows.
+      There are also shapes for trapezoids, useful for making very thin motifs visible
+      in wide output windows. They are specified as ``trapezoid,up,<number>`` or
+      ``trapezoid,down,<number>``.
 
 BUG FIXES:
     * Fixed a crash when interpreting from a fasta but not providing a coordinates
@@ -55,7 +58,8 @@ BUG FIXES:
       manually, you don't have to specify the shape, it will default to ``box``.
     * The annotation shapes previously had thick lines drawn around them, which caused
       them to be the wrong size. The offending lines have been removed. Your annotation boxes
-      will look thinner, because they always should have been that thin.
+      will look thinner, because they always should have been that thin. If they're too thin
+      for your taste, consider using the new trapezoid shape!
 
 
 BPReveal 5.2.0, 2025-05-27

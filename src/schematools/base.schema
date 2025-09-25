@@ -185,9 +185,12 @@
                             "top": {"$ref": "#/definitions/fraction"},
                             "shape": {
                                 "type": "string",
-                                "enum": ["diamond", "wedge", "box", "indel", "snp",
-                                         "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť", "r", "ř",
-                                         "ORFLeft", "ORFRight", "PromoterLeft", "PromoterRight"]
+                                "anyOf": [
+                                    {"enum": ["diamond", "wedge", "box", "indel", "snp",
+                                             "A", "C", "G", "T", "d", "Ǎ", "Č", "Ǧ", "Ť", "r", "ř",
+                                             "ORFLeft", "ORFRight", "PromoterLeft", "PromoterRight"]},
+                                    {"pattern": "trapezoid,(up|down),[0-9]+"}
+                                ]
                             },
                             "force-color-positive": {"$ref": "#/definitions/color-spec"},
                             "force-color-negative": {"$ref": "#/definitions/color-spec"}

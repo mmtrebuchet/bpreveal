@@ -262,7 +262,7 @@ def buildConfig(oldConfig: dict) -> dict:
                 "name-colors": <dict[str, COLOR_SPEC_T]>,
                 "custom": [<list of {"start": <integer>, "end": <integer>,
                                      "name": <string>, "color": <COLOR_SPEC_T>,
-                                     "shape": "box"}>]
+                                     "shape": <string>}>]
             },
             "figure": {
                 "grid-mode": <string, default "on">,
@@ -548,6 +548,10 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
     :param height: The height of the shape.
     :raises ValueError: If the given ``shape`` is not a valid one.
     :return: Two lists, the first giving X coordinates and the second giving Y coordinates.
+
+    Note that for trapezoid shapes, the width is given in data space, so if your x-axis
+    is 1000 bp long, you might want your trapezoid to flare by 10 bp or so. This would be
+    ``trapezoid,up,10``.
     """
     midPt = (aleft + aright) / 2
     width = aright - aleft
@@ -597,6 +601,19 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
                  aright - arrowDepth, aright, aright - arrowDepth]
         yVals = [0, height,
                  height, height / 2, 0]
+    elif shape.startswith("trapezoid"):
+        _, direction, padding = shape.split(',')
+        direction = direction.strip()
+        padding = int(padding.strip())
+        if direction == "down":
+            xVals = [aleft, aleft - padding, aright + padding, aright]
+        elif direction == "up":
+            xVals = [aleft - padding, aleft, aright, aright + padding]
+        else:
+            assert False, "Trapezoids must be given as 'trapezoid,up,123' or "\
+                "'trapezoid,down,123'"
+        yVals = [0, height, height, 0]
+
     else:
         raise ValueError(f"Annotation shape {shape} is not allowed.")
     return xVals, yVals

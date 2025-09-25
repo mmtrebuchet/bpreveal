@@ -76,7 +76,7 @@ checkPackage pyBigWig
 checkPackage pysam
 
 # Modisco-lite isn't in conda as of 2024-02-01.
-runAndCheck ${PIP_BIN} install --no-input modisco-lite
+runAndCheck ${PIP_BIN} install --no-input modisco
 
 # 1. Install jupyter lab.
 if [ "$INSTALL_JUPYTER" = true ] ; then

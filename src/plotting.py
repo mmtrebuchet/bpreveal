@@ -169,6 +169,12 @@ things like motifs and genes.
         ``diamond``, ``wedge``, ``indel``, ``snp``, one of the letters
         ``ACGTdǍČǦŤ``, or ``box``. ``indel`` or one of ``dǍČǦŤ`` create a wedge,
         ``snp`` or one of ``ACGT`` create a diamond. The default is ``box``.
+        You can also specify ``trapezoid,up,<number>`` or ``trapezoid,down,<number>``.
+        When drawn, the trapezoid will have its thin end between ``start`` and ``stop``,
+        but will bulge out by ``<number>`` bases on the other side. This is useful
+        if your annotated features are small and the axis for your plot covers
+        a large range. I like upward-facing (i.e., narrow end on top) trapezoids
+        on PISA plots.
 
     ``bottom`` and ``top``
         (Optional) Explicitly set the bottom and top coordinate of the annotation box.

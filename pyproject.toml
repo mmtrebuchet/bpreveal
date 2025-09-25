@@ -1,7 +1,7 @@
 [project]
 name = "bpreveal"
 authors = [ {name = "Charles McAnany, Ph.D.", email="bpreveal@charlesmcanany.com"} ]
-version = "5.2.0rc3"
+version = "5.2.1rc1"
 description = "BPReveal is a suite of tools for deep learning on genomics data."
 license = "GPL-2.0-or-later"
 license-files = ["COPYING"]
@@ -12,7 +12,7 @@ dependencies = [
     "jsonschema>=4.23.0",
     "matplotlib>=3.10.1",
     "meson>=1.7.2",
-    "modisco-lite>=2.3.2",
+    "modisco-lite>=2.4.0",
     "numpy<2.1",
     "pybedtools>=0.12.0",
     "pybigwig>=0.3.24",
