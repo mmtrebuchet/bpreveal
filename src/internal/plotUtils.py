@@ -580,9 +580,17 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
         # |  |______________   _ a
         # |                 |
         # |_________________|  _ 0
-        α = 1; β = 4; γ = 6; δ = 20
-        a = 2; b = 5; c = 7; d = 8; e = 9; f = 11
-        coords = [(0,0), (0,e), (β, e), (β, f), (γ ,d),
+        α = 1
+        β = 4
+        γ = 6
+        δ = 20
+        a = 2
+        b = 5
+        c = 7
+        d = 8
+        e = 9
+        f = 11
+        coords = [(0, 0), (0, e), (β, e), (β, f), (γ, d),
                   (β, b), (β, c), (α, c),
                   (α, a), (δ, a), (δ, 0)]
         xVals = [aleft + x * width / δ for x, _ in coords]
@@ -602,7 +610,7 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
         yVals = [0, height,
                  height, height / 2, 0]
     elif shape.startswith("trapezoid"):
-        _, direction, padding = shape.split(',')
+        _, direction, padding = shape.split(",")
         direction = direction.strip()
         padding = int(padding.strip())
         if direction == "down":
@@ -610,8 +618,9 @@ def _getAnnotationShape(shape: str, aleft: float, aright: float,
         elif direction == "up":
             xVals = [aleft - padding, aleft, aright, aright + padding]
         else:
-            assert False, "Trapezoids must be given as 'trapezoid,up,123' or "\
-                "'trapezoid,down,123'"
+            raise ValueError(f"Annotation shape {shape} is not allowed. "
+                             "Trapezoids must be given as 'trapezoid,up,123' or "
+                             "'trapezoid,down,123'")
         yVals = [0, height, height, 0]
 
     else:
@@ -771,6 +780,49 @@ def addPisaPlot(shearMat: IMPORTANCE_AR_T, colorSpan: float, axPisa: AXES_T,
     return smap
 
 
+def _buildColorMap(colorBlocks: list[tuple[int, int, COLOR_SPEC_T, COLOR_SPEC_T]],
+                   minValue: float, colorSpan: float) \
+        -> list[tuple[int, int, mplcolors.LinearSegmentedColormap]]:
+    """Build colormaps for special ranges of bases.
+
+    :param colorBlocks: A list of tuples of (start, stop, posColor, negColor)
+    :param minValue: Values less than this will not be represented in the PISA graph.
+        Their color is white.
+    :param colorSpan: Values greater than this will be clipped to posColor (or negColor if negative)
+    :return: A list of blocks of (start, stop, colorMap).
+
+    Let's say you have a motif from bases 1234 to 1240, and you want it to be
+    green (positive values) or purple (negative values). Your color block would
+    look like (1234, 1240, {"tol": 3}, {"tol": 7}) If you want positive and
+    negative values to have the same color, just specify the same color twice.
+    The resulting color map will go from posColor to white to negColor.
+
+    """
+    colorMapBlocks = []
+    for cb in colorBlocks:
+        # Originially colorBlocks only had one color, and the same one was used for both
+        # positive and negative values. If I get a three-component tuple, duplicate
+        # the color for backward compatibility.
+        start = cb[0]
+        end = cb[1]
+        if len(cb) == 3:
+            posColor = bprcolors.parseSpec(cb[2])
+            negColor = posColor
+            midColor = posColor
+            logUtils.warning("Got an old-style color block with only three values."
+                             "As of BPReveal 5.2.1, color-blocks should have two colors, "
+                             "not just one.")
+        else:
+            posColor = bprcolors.parseSpec(cb[2])
+            midColor = [1, 1, 1]
+            negColor = bprcolors.parseSpec(cb[3])
+        blockCmap = mplcolors.LinearSegmentedColormap.from_list(
+            "block_gradient", [negColor, midColor, posColor], N=256)
+        zeroedBlockCmap = bprcolors.getGraphCmap(minValue, colorSpan, blockCmap)
+        colorMapBlocks.append((start, end, zeroedBlockCmap))
+    return colorMapBlocks
+
+
 def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: float,
                  colorBlocks: list[tuple[int, int, COLOR_SPEC_T, COLOR_SPEC_T]],
                  genomeStart: int,
@@ -808,28 +860,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
         Rasterizing can make large pisa graphs much easier to work with downstream, but
         it makes them uneditable.
     """
-    colorMapBlocks = []
-    for cb in colorBlocks:
-        # Originially colorBlocks only had one color, and the same one was used for both
-        # positive and negative values. If I get a three-component tuple, duplicate
-        # the color for backward compatibility.
-        start = cb[0]
-        end = cb[1]
-        if len(cb) == 3:
-            posColor = bprcolors.parseSpec(cb[2])
-            negColor = posColor
-            midColor = posColor
-            logUtils.warning("Got an old-style color block with only three values."
-                "As of BPReveal 5.2.1, color-blocks should have two colors, not just one.")
-        else:
-            posColor = bprcolors.parseSpec(cb[2])
-            midColor = [1, 1, 1]
-            negColor = bprcolors.parseSpec(cb[3])
-        blockCmap = mplcolors.LinearSegmentedColormap.from_list(
-            "block_gradient", [negColor, midColor, posColor], N=256)
-        zeroedBlockCmap = bprcolors.getGraphCmap(minValue, colorSpan, blockCmap)
-        colorMapBlocks.append((start, end, zeroedBlockCmap))
-
+    colorMapBlocks = _buildColorMap(colorBlocks, minValue, colorSpan)
     plotMat = np.array(similarityMat)
     # convert into dB
     plotMat *= math.log2(math.e)
@@ -1038,7 +1069,6 @@ def getPisaGraphAxes(fig: matplotlib.figure.Figure, left: float, bottom: float, 
     # Get the actual width of the graph so that it matches pisa plots.
     # These numbers should match _getPisaAxes.
     graphXWeight = 40
-    # profileXWeight = 6
     cbarSpaceXWeight = 4 if mini else 1
     cbarXWeight = 2 if mini else 1
     totalXWeight = graphXWeight + cbarXWeight + cbarSpaceXWeight
