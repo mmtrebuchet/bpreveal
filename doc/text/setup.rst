@@ -12,7 +12,7 @@ environment, or you can install the dependencies yourself with conda or pip.
 python >= 3.12
     This project uses features that were introduced in Python 3.11 heavily, so
     earlier Python versions will not work.
-tfmodisco-lite
+tfmodisco
     Used to identify motifs. (You may need to install cmake to build the wheel for
     modiscolite.)
 pyBigWig
@@ -22,7 +22,7 @@ pysam
 pyBedTools
     Used to read in region files. You will also need to make sure you have
     BedTools installed to use pyBedTools.
-tensorflow 2.16
+tensorflow
     Does the heavy work of machine learning. Tensorflow 2.16 added a bunch of crummy
     backwards-incompatible behavior and some of the internal API had to be restructured,
     this was done in BPReveal 4.2.0.
@@ -90,11 +90,7 @@ skip this because the script takes care of this part.
 
     conda develop /path/to/bpreveal/pkg
 
-4. Set Tensorflow to use its old internal Keras version::
-
-    export TF_USE_LEGACY_KERAS=1
-
-5. (Optional) Build the documentation in the ``doc/`` directory::
+4. (Optional) Build the documentation in the ``doc/`` directory::
 
     cd /path/to/bpreveal/doc && make html latexpdf
 
