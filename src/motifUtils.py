@@ -540,6 +540,8 @@ class Pattern:
     def seqletInfoIterator(self) -> Iterable[dict]:
         """Make an iterator to go over the seqlets.
 
+        :return: An iterable that gives you all of the seqlets.
+
         An iterator (meaning you can use it as the range in a for loop)
         that goes over every seqlet and returns a dictionary of information about it.
         This is useful when you want to write those seqlets to a file.
@@ -580,6 +582,9 @@ class Pattern:
     def loadSeqletCoordinates(self, contribH5fp: h5py.File, modiscoWindow: int) -> None:
         """Read in seqlet coordinates saved in the contribution hdf5.
 
+        :param contribH5fp: The h5py file that was used to run modisco.
+        :param modiscoWindow: How wide of a window was Modisco run with?
+
         If modiscoWindow is 0, store invalid data. In BPReveal 6.0.0, a modiscoWindow
         value of 0 will trigger an assertion failure. For now, it issues an error log.
 
@@ -609,6 +614,8 @@ class Pattern:
 
     def getScanningInfo(self) -> dict:
         """Get what you need to know to scan CWMs.
+
+        :return: A dict with the following fields
 
         metacluster-name
             Will be assigned as `pos_patterns` or `neg_patterns` to represent
@@ -651,6 +658,8 @@ class Pattern:
     def seqletSeqMatches(self) -> list[MOTIF_FLOAT_T]:
         """Returns the contribution match for each seqlet.
 
+        :return: A list of sequence match scores
+
         This is only present for backwards compatibility and returns a warning.
         """
         logUtils.warning(
@@ -664,6 +673,8 @@ class Pattern:
     def seqletContribMatches(self) -> list[MOTIF_FLOAT_T]:
         """Returns the contribution match for each seqlet.
 
+        :return: A list of Jaccard similarities
+
         This is only present for backwards compatibility and returns a warning.
         """
         logUtils.warning(
@@ -676,6 +687,8 @@ class Pattern:
     @property
     def seqletContribMagnitudes(self) -> list[MOTIF_FLOAT_T]:
         """Returns the contribution magnitude for each seqlet.
+
+        :return: A list of contribution scores
 
         This is only present for backwards compatibility and returns a warning.
         """
@@ -810,6 +823,7 @@ def makePatternObjects(patternSpec: list[dict] | str, modiscoH5Fname: str,
         pattern spec doesn't specify its own.
     :param quantileContribMagnitude: The default contribution magnitude cutoff to use
         if a pattern spec doesn't specify its own.
+    :return: A list of Patterns
 
     If patternSpec is a list, it may have one of two forms::
 
@@ -1031,16 +1045,17 @@ class MiniPattern:
              ) -> list[tuple[int, Literal["+", "-"], float, float, float]]:
         """Given a sequence and a contribution track, identify places where this pattern matches.
 
-        sequence is a (length, NUM_BASES) one-hot encoded
-        DNA fragment, and scores is the actual (not hypothetical) contribution score
-        data from that region. Scores is (length, NUM_BASES) in shape, but all of the
-        bases that are not present should have zero contribution score.
-        Returns a list of hits. A hit is a tuple with five elements.
-        First, an integer giving the offset in the sequence where the hit starts.
-        Second, the strand on which the hit was found.
-        Third, the contribution magnitude of the pattern at that position.
-        Fourth, the contribution match score of the importance scores at that position.
-        Finally, the sequence match score against the pattern at that position.
+        :param sequence: A (length, NUM_BASES) one-hot encoded
+            DNA fragment
+        :param scores: The actual (not hypothetical) contribution score
+            data from that region. Scores is (length, NUM_BASES) in shape, but all of the
+            bases that are not present should have zero contribution score.
+        :return: A list of hits. A hit is a tuple with five elements.
+            First, an integer giving the offset in the sequence where the hit starts.
+            Second, the strand on which the hit was found.
+            Third, the contribution magnitude of the pattern at that position.
+            Fourth, the contribution match score of the importance scores at that position.
+            Finally, the sequence match score against the pattern at that position.
 
         """
         hitsPos = self._scanOneWay(sequence, scores, self.cwm, self.pssm, "+")
@@ -1100,6 +1115,8 @@ class Hit:
     def toDict(self) -> dict:
         """Converts the class to a dictionary that's easier to use with tsv writers.
 
+        :return: A dict as described below.
+
         chrom
             Chromosome belonging to hit coordinate
         start
@@ -1152,19 +1169,24 @@ class RegionScanner:
         self.miniPatterns = [MiniPattern(x) for x in patternConfig]
         self.contribFp = h5py.File(contribFname, "r")
         self.chromIdxToName = {}
+        # pylint: disable=no-member
         for i, name in enumerate(self.contribFp["chrom_names"].asstr()):
             self.chromIdxToName[i] = name
+        # pylint: enable=no-member
 
     def scanIndex(self, idx: int) -> dict[tuple[str, str], list[MOTIF_FLOAT_AR_T]]:
         """Scan a single locus.
+
+        :param idx: The index into the hdf5 file.
+        :return: A dict, where the keys are (patternName, patternShortName) tuples,
+            and the values are (in order) contribMatch, contribMagnitude, seqMatch,
+            reverseContribMatch, reverseContribMagnitude, reverseSeqMatch
+
 
         Given an index into the hdf5 contribution file, extract the sequence
         and contribution scores there and run a scan.
         idx is an integer ranging from 0 to the number of entries in the hdf5 file
         (minus one, of course, since zero-based indexing).
-        Returns a dict, where the keys are (patternName, patternShortName) tuples,
-        and the values are (in order) contribMatch, contribMagnitude, seqMatch,
-        reverseContribMatch, reverseContribMagnitude, reverseSeqMatch
         """
         # Get all the data for this index.
         oneHotSequence = np.array(self.contribFp["input_seqs"][idx])
@@ -1180,6 +1202,12 @@ class RegionScanner:
 
     def findRegions(self, chrom: str, start: int, end: int) -> list[tuple[int, int, int, int]]:
         """I don't know the index, but I know the chromosome and position I want scanned.
+
+        :param chrom: The chromosome you want scanned.
+        :param start: The coordinate to start at.
+        :param end: The coordinate to stop scanning at.
+
+        :return: A list of hits, in the form (chromIdx, motifStart, motifEnd, motifMid)
 
         Given a region, find where in the importance hdf5 that region
         would be found, and then scan it.
@@ -1207,16 +1235,16 @@ class PatternScanner:
                  patternConfig: list[dict]) -> None:
         """A tool to run the actual scans.
 
-        hitQueue is a Multiprocessing Queue where found hits should be put().
+        :param hitQueue" A Multiprocessing Queue where found hits should be put().
 
         (A Hit put in this queue should be an instance of the Hit class defined
         above.)
-        The contribFname is the name of the contribution hdf5 file that will
+        :param contribFname: The name of the contribution hdf5 file that will
         be scanned. Even though this thread will only scan part of the file,
         each thread needs to open a copy of it to extract data, so each thread
         gets the name of the whole file.
 
-        patternConfig is the dictionary/json generated by the quantile script.
+        :param patternConfig: The dictionary/json generated by the quantile script.
         It contains the cwm and pssm of each pattern, as well as the cutoffs for
         hits.
         """
@@ -1226,11 +1254,15 @@ class PatternScanner:
         self.firstHit = True
         self.firstIndex = True
         self.chromIdxToName = {}
+        # pylint: disable=no-member
         for i, name in enumerate(self.contribFp["chrom_names"].asstr()):
             self.chromIdxToName[i] = name
+        # pylint: enable=no-member
 
     def scanIndex(self, idx: int) -> None:
         """Scan a single locus.
+
+        :param idx: The index into the hdf5 file.
 
         Given an index into the hdf5 contribution file, extract the sequence
         and contribution scores there and run a scan.
@@ -1322,6 +1354,8 @@ def writerThread(hitQueue: CrashQueue, scannerThreads: int, tsvFname: str) -> No
         down the queue when it's done, and the writer needs to know how many of these
         special values to expect before it knows that all the scanners have finished.
     :param tsvFname: The name of the tsv file that should be written.
+    :raise queue.Empty: If the writer has been hanging out for a long time without seeing
+        any hits.
     """
     threadsRemaining = scannerThreads
     logUtils.debug("Starting writer.")

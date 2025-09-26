@@ -126,6 +126,11 @@ def tileSegments(inputLength: int, outputLength: int,
     logUtils.debug(f"Calculated {padding=}")
 
     def shrinkSegment(s: pybedtools.Interval) -> pybedtools.Interval:
+        """Shrink the segment if possible.
+
+        :param s: The region that should be shrunk.
+        :return: The new interval, or False if the segment would be too small.
+        """
         newEnd = s.end - padding
         newStart = s.start + padding
         if newEnd - newStart < outputLength:
@@ -190,6 +195,7 @@ def resize(interval: pybedtools.Interval, mode: str, width: int,
     :param mode: One of ``"none"``, ``"center"``, or ``"start"``.
     :param width: How long the returned Interval will be.
     :param genome: A FastaFile (the pysam object, not a string)
+    :raise ValueError: if you provide an invalid resize mode.
     :return: A newly-allocated Interval of the correct size, or ``False``
         if resizing would run off the edge of a chromosome.
 

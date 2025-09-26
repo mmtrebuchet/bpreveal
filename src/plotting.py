@@ -730,7 +730,15 @@ def plotModiscoPattern(pattern: motifUtils.Pattern,  # pylint: disable=too-many-
 
     yvals = np.arange(len(pattern.seqlets), 0, -1)
 
-    def plotStat(stat, axPos, name, rightTicks):  # noqa
+    def plotStat(stat: np.ndarray, axPos: float, name: str, rightTicks: bool) -> AXES_T:
+        """Plot a given statistic.
+
+        :param stat: The values to be plotted.
+        :param axPos: The position of the axes.
+        :param name: The name of the statistic, for labeling the axis
+        :param rightTicks: Should ticks be on the right side?
+        :return: An Axes with the data plotted in it.
+        """
         stat = np.array(stat)
         axCurStat = fig.add_axes((0.3 + axPos * 0.2, 0.1 + HIST_HEIGHT + PAD,
                                   0.2 - PAD, 0.8 - HIST_HEIGHT))
@@ -901,6 +909,12 @@ def deleteTick(ax: AXES_T, which: Literal["x"] | Literal["y"] | Literal["both"],
 
     """
     def prune(ticks: Iterable, labels: Iterable) -> tuple[list, list[str]]:
+        """Delete the offending tick and return new ones.
+
+        :param ticks: The ticks that are ready to be drawn.
+        :param labels: The labels for the ticks.
+        :return: A tuple containing the new ticks and labels.
+        """
         # We get numpy arrays in and want to do
         # concatenation with +, so we have to listify.
         ticks = list(ticks)
@@ -929,6 +943,7 @@ def deleteTick(ax: AXES_T, which: Literal["x"] | Literal["y"] | Literal["both"],
         ax.set_yticklabels(newYLabels)
 
 
+# pylint: disable=missing-param-doc,missing-return-doc
 def plotPisaWithFiles(pisaDats: str,  # pylint: disable=too-many-positional-arguments
                       cutMiddle: int, cutLengthX: int, cutLengthY: int, receptiveField: int,
                       genomeWindowStart: int,
@@ -972,6 +987,7 @@ def plotPisaWithFiles(pisaDats: str,  # pylint: disable=too-many-positional-argu
     logUtils.warning(str(cfg))
     return cfg
 
+# pylint: enable=missing-param-doc,missing-return-doc
 
 
 

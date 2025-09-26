@@ -27,7 +27,11 @@ enable-all-extensions=yes
 # run arbitrary code.
 extension-pkg-allow-list=bpreveal.internal.libushuffle,
                          bpreveal.internal.libjaccard,
-                         bpreveal.internal.libslide
+                         bpreveal.internal.libslide,
+                         pyBigWig,
+                         pybedtools.cbedtools,
+                         pysam,
+                         h5py
 
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
@@ -65,7 +69,7 @@ ignore-patterns=^\.#
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis). It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=tensorflow,keras,pysam,pyBigWig,pybedtools,h5py
+ignored-modules=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
@@ -109,7 +113,7 @@ persistent=yes
 
 # Minimum Python version to use for version dependent checks. Will default to
 # the version used to run pylint.
-py-version=3.11
+py-version=3.12
 
 # Discover python modules and packages in the file system subtree.
 recursive=yes
@@ -388,7 +392,7 @@ single-line-if-stmt=no
 
 # List of modules that can be imported at any level, not just the top level
 # one.
-allow-any-import-level=
+allow-any-import-level=keras,tensorflow,keras.ops,bpreveal.internal.disableTensorflowLogging,tf_keras,bpreveal.internal.shap
 
 # Allow explicit reexports by alias from a package __init__.
 allow-reexport-from-package=no
@@ -493,6 +497,29 @@ notes=FIXME,
 
 # Regular expression of note tags to take in consideration.
 notes-rgx=
+
+
+[PARAMETER_DOCUMENTATION]
+
+# Whether to accept totally missing parameter documentation in the docstring of
+# a function that has parameters.
+accept-no-param-doc=no
+
+# Whether to accept totally missing raises documentation in the docstring of a
+# function that raises an exception.
+accept-no-raise-doc=no
+
+# Whether to accept totally missing return documentation in the docstring of a
+# function that returns a statement.
+accept-no-return-doc=no
+
+# Whether to accept totally missing yields documentation in the docstring of a
+# generator.
+accept-no-yields-doc=no
+
+# If the docstring type cannot be guessed the specified docstring type will be
+# used.
+default-docstring-type=default
 
 
 [REFACTORING]

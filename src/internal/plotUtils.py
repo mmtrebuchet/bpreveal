@@ -88,6 +88,13 @@ def plotLogo(values: PRED_AR_T, width: float, ax: AXES_T,
         ax.add_patch(patch)
 
     def getColor(pos: int, base: str) -> RGB_T:
+        """Get the color to draw this letter in.
+
+        :param pos: Which position in the color array is this?
+        :param base: Which base is being drawn?
+        :raise ValueError: If the color spec is not valid.
+        :return: A parsed color, ready for plotting.
+        """
         match colors:
             case list():
                 # Colors is indexed by position.
@@ -181,7 +188,11 @@ def getCoordinateTicks(start: int, end: int, numTicks: int,
 
 
 def replaceThousands(labelList: list[str]) -> list[str]:
-    """If every label ends with ``,000``, replace the last four letters with ``k``."""
+    """If every label ends with ``,000``, replace the last four letters with ``k``.
+
+    :param labelList: The tick labels.
+    :return: A prettier list of labels.
+    """
     allThousands = True
     for lbl in labelList[1:-1]:
         if lbl[-4:] != ",000":
@@ -199,7 +210,11 @@ def replaceThousands(labelList: list[str]) -> list[str]:
 
 
 def massageTickLabels(labelList: list[str]) -> list[str]:
-    """Remove identical leading digits from labels."""
+    """Remove identical leading digits from labels.
+
+    :param labelList: The tick labels, possibly with leading zeros.
+    :return: A prettier set of labels.
+    """
     labelsThousands = replaceThousands(labelList)
     for pos in range(len(labelsThousands) - 2, 0, -1):
         prevLabel = labelsThousands[pos - 1]
@@ -225,6 +240,7 @@ def buildConfig(oldConfig: dict) -> dict:
     :param oldConfig: The original configuration dictionary. All entries from this
         original dict are copied, so you can mutate the returned dict without
         messing with the original data.
+    :return: A new config with all of its fields filled out.
 
     This loads in profile and pisa data from files and expands the color specs.
 
@@ -373,7 +389,14 @@ def buildConfig(oldConfig: dict) -> dict:
 
 
 def loadFromBigwig(bwFname: str, start: int, chrom: str, length: int) -> PRED_AR_T:
-    """Read in the given region from a bigwig file."""
+    """Read in the given region from a bigwig file.
+
+    :param bwFname: The name of the bigwig file to read
+    :param start: The starting coordinate
+    :param chrom: The chromosome to read from
+    :param length: How long of a profile do you want?
+    :return: The values from the bigwig.
+    """
     impFp = pyBigWig.open(bwFname)
     impScores = np.nan_to_num(impFp.values(chrom, start, start + length))
     impFp.close()
@@ -381,7 +404,13 @@ def loadFromBigwig(bwFname: str, start: int, chrom: str, length: int) -> PRED_AR
 
 
 def normalizeProfileSection(oldConfig: dict, newConfig: dict, group: str) -> None:
-    """Take a raw config dict and populate any defaults and load up bigwig data."""
+    """Take a raw config dict and populate any defaults and load up bigwig data.
+
+    :param oldConfig: The raw config dict.
+    :param newConfig: The config file that the data should be loaded into.
+    :param group: Either "importance" or "predictions", depending on which data
+        are being used.
+    """
     # Do we need to load bigwig data?
     newConfig[group]["show-sequence"] = oldConfig[group].get("show-sequence", False)
     if "bigwig-name" in oldConfig[group]:
@@ -446,7 +475,14 @@ def normalizeProfileColor(colorSpec: DNA_COLOR_SPEC_T | COLOR_SPEC_T |  # noqa
 
 def loadSequence(genomeFastaFname: str, genomeWindowStart: int,
                  genomeWindowChrom: str, length: int) -> str:
-    """Read a sequence in from a fasta. Uppercases the resulting string."""
+    """Read a sequence in from a fasta. Uppercases the resulting string.
+
+    :param genomeFastaFname: The name of the fasta file.
+    :param genomeWindowStart: The start position for reading the sequence
+    :param genomeWindowChrom: The chromosome to read from.
+    :param length: How long of a sequence should be read?
+    :return: The resulting sequence
+    """
     with pysam.FastaFile(genomeFastaFname) as genome:
         seq = genome.fetch(genomeWindowChrom, genomeWindowStart, genomeWindowStart + length)
     return seq.upper()
@@ -859,6 +895,7 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     :param rasterize: Should the lines be rendered down to a pixel-based image?
         Rasterizing can make large pisa graphs much easier to work with downstream, but
         it makes them uneditable.
+    :return: The colormap used to make the graph. This is used for the colorbar.
     """
     colorMapBlocks = _buildColorMap(colorBlocks, minValue, colorSpan)
     plotMat = np.array(similarityMat)
@@ -869,6 +906,13 @@ def addPisaGraph(similarityMat: IMPORTANCE_AR_T, minValue: float, colorSpan: flo
     zeroedCmap = bprcolors.getGraphCmap(minValue, colorSpan, cmap)
 
     def addLine(xLower: int, xUpper: int, value: float) -> bool | tuple[float, PathPatch]:
+        """Draw a spline between two points.
+
+        :param xLower: The start point on the bottom.
+        :param xUpper: The end point on the top
+        :param value: The score used to calculate the color.
+        :return: either False or a tuple with the colormap position and the patch.
+        """
         if abs(value) < minValue:
             return False
         if value > colorSpan:

@@ -34,11 +34,17 @@ class CrashQueue:
         self.timeout = timeout
 
     def empty(self) -> bool:
-        """Is the queue currently empty?"""
+        """Is the queue currently empty?
+
+        :return: True if the queue is currently empty.
+        """
         return self.q.empty()
 
     def full(self) -> bool:
-        """Is the queue currently full?"""
+        """Is the queue currently full?
+
+        :return: True if the queue is full.
+        """
         return self.q.full()
 
     def put(self, obj: Any, timeout: float | None = None) -> None:
@@ -48,6 +54,7 @@ class CrashQueue:
         :param timeout: The maximum time to wait, in seconds. If this expires,
             then the queue gets cancel_join_thread called on it and the queue.Full
             exception is raised.
+        :raise queue.Full: If this queue has waited too long.
         """
         if timeout is None:
             timeout = self.timeout

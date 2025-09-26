@@ -10,7 +10,7 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.2.1, DATEDATEDATE
+BPReveal 5.2.1, 2025-09-26
 
 NEW FEATURES:
     * Added an option to prepareBed to let you include a few regions that fall
@@ -47,6 +47,7 @@ ENHANCEMENTS:
       There are also shapes for trapezoids, useful for making very thin motifs visible
       in wide output windows. They are specified as ``trapezoid,up,<number>`` or
       ``trapezoid,down,<number>``.
+    * Made pylint bossier, this resulted in a lot of new annotations in the documentation.
 
 BUG FIXES:
     * Fixed a crash when interpreting from a fasta but not providing a coordinates

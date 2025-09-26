@@ -402,7 +402,10 @@ class Screen:
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Command line arguments, all optional."""
+    """Command line arguments, all optional.
+
+    :return: An ArgumentParser, ready to parse_args()
+    """
     parser = argparse.ArgumentParser(
         description="Takes the logs from training and shows them with a little TUI.")
     parser.add_argument("--no-exit", action="store_true",
@@ -428,7 +431,11 @@ def getParser() -> argparse.ArgumentParser:
 
 
 def runScreen(stdscr: Any, args: argparse.Namespace) -> None:
-    """Called by the wrapper, this constructs the screen and feeds it with stdin."""
+    """Called by the wrapper, this constructs the screen and feeds it with stdin.
+
+    :param stdscr: The screen that will be drawn upon.
+    :param args: Other values that will be needed to run the program.
+    """
     curses.curs_set(0)
     printer = Screen(stdscr, args.noDebug, 1, 0, 3, args.messageHeight)
     if args.noExit:

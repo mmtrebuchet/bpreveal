@@ -474,6 +474,7 @@ class Organism:
         :param checkCorruptors: A function that returns True if a corruptor
             list is valid, and False otherwise.
         :type checkCorruptors: Callable[[list[:py:data:`~CORRUPTOR_T`]], bool]
+        :raise ValueError: if a new organism can't be formed after 100 tries.
         :return: A newly-allocated Organism that is a blend of both parents.
 
         This is also something you may wish to override in a subclass.
@@ -878,6 +879,12 @@ def removeCorruptors(corruptorList: list[CANDIDATE_CORRUPTOR_T],
 
     """
     def removeLetters(original: str, forbidden: str) -> str:
+        """Remove any forbidden letters from the string.
+
+        :param original: The string to delete offending letters from.
+        :param forbidden: A list of letters to delete.
+        :return: A new string with the offending letters removed.
+        """
         return "".join([x for x in original if x not in forbidden])
     ret = []
     for c in corruptorList:

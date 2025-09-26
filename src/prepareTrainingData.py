@@ -107,7 +107,11 @@ from bpreveal.internal import interpreter
 
 
 def revcompSeq(oneHotSeq: ONEHOT_AR_T) -> ONEHOT_AR_T:
-    """Reverse-complement the given sequence."""
+    """Reverse-complement the given sequence.
+
+    :param oneHotSeq: The input sequence.
+    :return: The sequence, but reverse-complemented.
+    """
     # Since the order of the one-hot encoding is ACGT, if we flip the array
     # up-down, we complement the sequence, and if we flip it left-right, we
     # reverse it. So reverse complement of the one hot sequence is just:
@@ -195,6 +199,7 @@ def prepareTrainingData(config: dict) -> None:
     """Main method, load the config and then generate training data hdf5 files.
 
     :param config: The configuration json.
+    :raise ValueError: If you try to use auto revcomp with more than two tasks.
     """
     regions = pybedtools.BedTool(config["regions"])
     outputLength = config["output-length"]

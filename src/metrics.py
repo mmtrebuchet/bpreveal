@@ -317,6 +317,11 @@ def receiveThread(numRegions: int, outputQueue: CrashQueue,
         predictedCounts[regionID] = predictedCount
     if skipZeroes:
         def norm(vector: NDArray) -> NDArray:
+            """Get rid of problematic values in the vector.
+
+            :param vector: The array possibly containing inf and nan
+            :return: Just the values that are finite numbers
+            """
             return vector[np.isfinite(vector)]
         mnlls = norm(mnlls)
         jsds = norm(jsds)
@@ -406,7 +411,10 @@ def runMetrics(reference: str, predicted: str, regions: str, threads: int, apply
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Generate the argument parser."""
+    """Generate the argument parser.
+
+    :return: An ArgumentParser, ready to call parse_args()
+    """
     parser = argparse.ArgumentParser(description="Take two bigwig-format files and calculate "
                                                  "an assortment of metrics on their contents.")
     parser.add_argument(

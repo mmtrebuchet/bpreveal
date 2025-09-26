@@ -166,7 +166,10 @@ from bpreveal.internal import interpreter
 
 
 def trainSoloModel(config: dict) -> None:
-    """Build and train a model."""
+    """Build and train a model.
+
+    :param config: The configuration dictionary, per the spec.
+    """
     logUtils.setVerbosity(config["verbosity"])
     logUtils.debug("Initializing")
     inputLength = config["settings"]["architecture"]["input-length"]

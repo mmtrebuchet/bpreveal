@@ -161,8 +161,8 @@ def applyCorrection(inBed: pybedtools.BedTool, correctionFactors: np.ndarray,
     return pybedtools.BedTool(ret)
 
 
-def runMain() -> None:
-    """Run the program."""
+def getParser() -> argparse.ArgumentParser:
+    """Build an arg parser (but don't parse args)."""
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--peaks", help="A bed file of peaks that will be used for training.")
@@ -178,6 +178,12 @@ def runMain() -> None:
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--plot", action="store_true",
                     help="Show some pretty plots.")
+    return ap
+
+
+def runMain() -> None:
+    """Run the program."""
+    ap = getParser()
     args = ap.parse_args()
     if args.verbose:
         logUtils.setVerbosity("INFO")

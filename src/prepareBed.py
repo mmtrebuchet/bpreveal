@@ -286,6 +286,7 @@ def loadRegions(config: dict) -> tuple[pybedtools.BedTool, pybedtools.BedTool,
     """Given a configuration (see the specification), return four PyBedTools BedTool objects.
 
     :param config: A JSON object satisfying the prepareBed specification.
+    :raise ValueError: if you provide an invalid config.
     :return: Four BedTools:
 
         1. The first will consist of the training regions,
@@ -312,7 +313,7 @@ def loadRegions(config: dict) -> tuple[pybedtools.BedTool, pybedtools.BedTool,
             trainRegions, testRegions, valRegions, rejectRegions = \
                 loadRegionsByRegex(trainString, testString, valString, regionFnames)
         case _:
-            raise ValueError(f"Config invalid: {config['splits']}")
+            raise ValueError(f"Config invalid: {config["splits"]}")
 
     logUtils.info(f"Training regions: {len(trainRegions)}")
     logUtils.info(f"Validation regions: {len(valRegions)}")
@@ -332,6 +333,7 @@ def removeOverlaps(config: dict, regions: pybedtools.BedTool,
     :param config: Straight from the JSON.
     :param regions: A BedTool (or list of Intervals)
     :param genome: A FastaFile (not string) giving the genome.
+    :return: Two BedTools. The first is the set of surviving regions, the second is the rejects.
 
     Takes in the list of regions, resizes each to the minimum size, and if there are overlaps,
     randomly chooses one of the overlapping regions.
@@ -343,8 +345,11 @@ def removeOverlaps(config: dict, regions: pybedtools.BedTool,
     # The algorithm here requires that the regions be sorted.
     sortedRegions = sortBed(resizedRegions)
     piles = []
-    curPile = [sortedRegions[0]]
+    curPile = []
     for r in sortedRegions:
+        if len(curPile) == 0:
+            curPile.append(r)
+            continue
         if curPile[0].chrom == r.chrom and curPile[0].end > r.start:
             # We have an overlap.
             curPile.append(r)
@@ -404,7 +409,7 @@ def filterByMaxCounts(config: dict, bigRegionsList: list[pybedtools.Interval],
             maxCounts = headSpec["max-counts"]
         else:
             maxCounts = np.quantile(bigCounts, [headSpec["max-quantile"]])[0]
-        logUtils.debug(f"    Max counts: {maxCounts}, file {headSpec['bigwig-names']}")
+        logUtils.debug(f"    Max counts: {maxCounts}, file {headSpec["bigwig-names"]}")
         numReject = 0
         for regionIdx in range(len(bigRegionsList)):
             if bigCounts[regionIdx] > maxCounts:
@@ -466,7 +471,7 @@ def filterByMinCounts(config: dict,  # pylint: disable=redundant-returns-doc
         else:
             minCounts = np.quantile(smallCounts, [headSpec["min-quantile"]])[0]
         negativeSetCounts = np.quantile(smallCounts, [headSpec["negative-set-quantile"]])[0]
-        logUtils.debug(f"    Min counts: {minCounts}, file {headSpec['bigwig-names']}")
+        logUtils.debug(f"    Min counts: {minCounts}, file {headSpec["bigwig-names"]}")
         logUtils.debug(f"    Negative set counts: {negativeSetCounts}")
         numReject = 0
         for regionIdx in range(len(bigRegionsList)):
@@ -572,7 +577,10 @@ def validateRegions(config: dict, regions: pybedtools.BedTool,
 
 
 def rewriteOldBigwigsFormat(config: dict) -> None:
-    """If the config has a bigwigs section, rewrite it to the new style."""
+    """If the config has a bigwigs section, rewrite it to the new style.
+
+    :param config: An old-style config dict.
+    """
     logUtils.error("You are using a deprecated JSON format for prepareBed.py")
     logUtils.error("This will result in an error in BPReveal 6.0")
     logUtils.error("Instead of providing individual bigwig names with a \"bigwigs\"")

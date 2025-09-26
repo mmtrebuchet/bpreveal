@@ -5,7 +5,10 @@ import argparse
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Command line arguments for the length_calc script."""
+    """Command line arguments for the length_calc script.
+
+    :return: An ArgumentParser, ready to parse_args()
+    """
     parser = argparse.ArgumentParser(description="Calculates the input sequence "
         "length required to run BPReveal for a given configuration and output length. "
         "The required length is written to stdout.")
@@ -69,7 +72,7 @@ def getParser() -> argparse.ArgumentParser:
 
 
 def getLengthDifference(numDilLayers: int, initialConvolutionWidths: list[int],
-                        profileKernelSize: int, verbose: bool):
+                        profileKernelSize: int, verbose: bool) -> int:
     """Determine the padding on each size of the output.
 
     Given a BPNet architecture, calculate how much longer the input sequence will be than
@@ -124,7 +127,7 @@ def getLengthDifference(numDilLayers: int, initialConvolutionWidths: list[int],
 
 
 def getOutputLength(seqLen: int, numDilLayers: int, initialConvolutionWidths: list[int],
-                    profileKernelSize: int, verbose: bool):
+                    profileKernelSize: int, verbose: bool) -> int:
     """Determine how long the output will be.
 
     Given a BPNet architecture and a length of the input sequence, calculate the length of the
@@ -148,7 +151,7 @@ def getOutputLength(seqLen: int, numDilLayers: int, initialConvolutionWidths: li
 
 
 def getInputLength(outPredLen: int, numDilLayers: int, initialConvolutionWidths: list[int],
-                   profileKernelSize: int, verbose: bool):
+                   profileKernelSize: int, verbose: bool) -> int:
     """Given an output length, calculate input length.
 
     Given a BPNet architecture and a length of the output profile, calculate the length
@@ -170,7 +173,10 @@ def getInputLength(outPredLen: int, numDilLayers: int, initialConvolutionWidths:
 
 
 def main():
-    """Run the calculation."""
+    """Run the calculation.
+
+    :raise ValueError: If you provide invalid inputs.
+    """
     parser = getParser()
     args = parser.parse_args()
     if args.conv1KernelSize is not None:

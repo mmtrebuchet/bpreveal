@@ -21,12 +21,15 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
     """Given a string sequence, perform a shuffle that maintains the kmer distribution.
 
     This is adapted from ushuffle.
-    ``sequence`` should be a string in ASCII, but it should theoretically work
-    on multi-byte encoded utf-8 characters so long as the kmerSize is at least
-    as long as the longest byte sequence for a character in the input.
-    (Please don't rely on this random fact!)
+    :param sequence: should be a string in ASCII, but it should theoretically work
+        on multi-byte encoded utf-8 characters so long as the kmerSize is at least
+        as long as the longest byte sequence for a character in the input.
+        (Please don't rely on this random fact!)
+    :param kmerSize: The size of kmers that should have their distribution preserved.
+    :param numShuffles: How many shuffled versions of the input do you want?
+    :param seed: Seed for the random number generator.
 
-    Returns a list of shuffled strings.
+    :return: a list of shuffled strings.
     """
     ar = np.frombuffer(sequence.encode("utf-8"), dtype=np.int8)
     with _SHUFFLE_LOCK:
@@ -43,7 +46,15 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
                seed: int | None = None) -> ONEHOT_AR_T:
     """Given a one-hot sequence, perform a shuffle that maintains the kmer distribution.
 
-    ``sequence`` should have shape ``(length, alphabetLength)``. For DNA, ``alphabetLength == 4``.
+    :param sequence: The sequence to shuffle.
+    :param kmerSize: The size of kmers that should have their distribution preserved.
+
+    :param numShuffles: How many shuffled versions of the input do you want?
+    :param seed: Seed for the random number generator.
+
+    :return: an array of shape ``(numShuffles, length, alphabetLength)``
+
+    Sequence should have shape ``(length, alphabetLength)``. For DNA, ``alphabetLength == 4``.
     It is an error to have an alphabet length of more than 8. Internally,
     this function packs the bits at each position into a character, and the
     resulting string is shuffled and then unpacked. For this reason, it is
@@ -59,7 +70,6 @@ def shuffleOHE(sequence: ONEHOT_AR_T, kmerSize: int, numShuffles: int = 1,
         4   0 0 0 0
 
     This is adapted from ushuffle.
-    Returns an array of shape ``(numShuffles, length, alphabetLength)``
     """
     assert sequence.shape[1] <= 8, "Cannot ushuffle a one-hot encoded sequence with "\
                                    "an alphabet of more than 8 characters."

@@ -19,7 +19,7 @@ export BPREVEAL_DIR=/n/projects/cm2363/bpreveal
 # -p if you're specifying a path, -n if you're specifying a name.
 # CHANGE the environment name to your own preference.
 export ENV_FLAG=-n
-export ENV_NAME=bpreveal-teak
+export ENV_NAME=bpreveal-testing
 
 # CHANGE this to conda if you don't have mamba installed.
 # (I recommend using mamba; it's way faster.)

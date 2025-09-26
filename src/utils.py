@@ -31,6 +31,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
         ending in ``.model`` for models trained before BPReveal 5.0.0, or a file ending in
         ``.keras`` for models trained with BPReveal 5.0.0 or later.
     :return: A Keras ``Model`` object.
+    :rtype: keras.Model
 
     For pre-5.0.0 models, the returned model does NOT support additional training,
     since it uses a dummy loss. New-style models remember their losses and so you can
@@ -60,7 +61,7 @@ def loadModel(modelFname: str):  # noqa: ANN201
                 "BPReveal 5.0.0, models are given the extension '.keras' because keras "
                 "3.0 requires it. I will attempt to load the old-style model, but be "
                 "prepared for some janky behavior and possible bugs.")
-            import tf_keras  # pylint: disable=import-outside-toplevel
+            import tf_keras
             ret = tf_keras.models.load_model(
                 filepath=modelFname,
                 custom_objects={"multinomialNll": multinomialNll,
@@ -105,10 +106,10 @@ def setMemoryGrowth() -> None:
 
     If a GPU is not found, this function will emit a warning and do nothing else.
     """
-    # pylint: disable=import-outside-toplevel, unused-import
+    # pylint: disable=unused-import
     import bpreveal.internal.disableTensorflowLogging  # noqa
     import tensorflow as tf
-    # pylint: enable=import-outside-toplevel, unused-import
+    # pylint: enable=unused-import
     gpus = tf.config.list_physical_devices("GPU")
     try:
         tf.config.experimental.set_memory_growth(device=gpus[0], enable=True)
@@ -272,10 +273,10 @@ def limitMemoryUsage(fraction: float, offset: float) -> float:
     assert total * fraction < free, f"Attempting to request more memory ({total * fraction}) "\
         f"than is free ({free})!"
 
-    # pylint: disable=import-outside-toplevel, unused-import
+    # pylint: disable=unused-import
     import bpreveal.internal.disableTensorflowLogging  # noqa
     import tensorflow as tf
-    # pylint: enable=import-outside-toplevel, unused-import
+    # pylint: enable=unused-import
     gpus = tf.config.list_physical_devices("GPU")
     logUtils.debug(f"Available devices: {gpus}")
     useMem = int(total * fraction - offset)
@@ -302,7 +303,7 @@ def loadChromSizes(*, chromSizesFname: str | None = None,
         (Using this makes this function an identity function.)
     :param bw: An opened bigwig file.
     :param fasta: An opened genome fasta.
-
+    :raise ValueError: If you called the function incorrectly.
     :return: {"chr1": 1234567, "chr2": 43212567, ...}
 
     **Example:**
@@ -525,6 +526,7 @@ def oneHotDecode(oneHotSequence: np.ndarray, alphabet: str = "ACGT") -> str:
     :param oneHotSequence: An array of shape ``(n, NUM_BASES)``. It may have any type
         that can be converted into a ``uint8``.
     :param alphabet: The order in which the bases are encoded.
+    :return: Your sequence as a string.
 
     Given an array representing a one-hot encoded sequence, convert it back
     to a string. The input shall have shape ``(sequenceLength, NUM_BASES)``,
@@ -901,9 +903,7 @@ class BatchPredictor:
         This will load your model, and get ready to make predictions.
         """
         logUtils.debug(f"Creating batch predictor for model {modelFname}.")
-        # pylint: disable=import-outside-toplevel
         import bpreveal.internal.disableTensorflowLogging as disableTfLogging
-        # pylint: enable=import-outside-toplevel
         if quiet:
             self.suppress = disableTfLogging.SuppressStderr
         else:
@@ -1114,6 +1114,7 @@ class BatchPredictor:
         the same order as they were submitted.
 
         :return: A two-tuple.
+        :raise queue.Empty: if you try to get an output when the batcher is empty.
         :rtype: ``tuple[list[LOGIT_AR_T, LOGIT_T], typing.Any]``
 
         * The first element will be a list of length ``numHeads * 2``, representing the
@@ -1173,6 +1174,7 @@ class BatchPredictor:
         the same order as they were submitted.
 
         :return: A two-tuple.
+        :raise queue.Empty: if you try to get an output when the batcher is empty.
         :rtype: ``tuple[list[PRED_AR_T], typing.Any]``
 
         * The first element will be a list of length ``numHeads``, representing the
@@ -1367,7 +1369,10 @@ class ThreadedBatchPredictor:
             self.stop()
 
     def stop(self) -> None:
-        """Shut down the processor thread."""
+        """Shut down the processor thread.
+
+        :raise ValueError: If you try to stop a predictor that hasn't started any batchers.
+        """
         if self.running:
             if logUtils is not None:  # logUtils may be None if stop() is called from __del__.
                 logUtils.debug("Shutting down threaded batcher.")
@@ -1457,6 +1462,7 @@ class ThreadedBatchPredictor:
         """Get a single output.
 
         :return: The model's predictions.
+        :raise queue.Empty: if you try to get an output when the batcher is empty.
         :rtype: ``tuple[list[LOGIT_AR_T, LOGCOUNT_T], typing.Any]``
 
         Same semantics and blocking behavior as
@@ -1479,6 +1485,7 @@ class ThreadedBatchPredictor:
         """Get a single output, but in profile space instead of logits.
 
         :return: The model's predictions.
+        :raise queue.Empty: if you try to get an output when the batcher is empty.
         :rtype: ``tuple[list[PRED_AR_T], typing.Any]``
 
         Same semantics and blocking behavior as

@@ -356,10 +356,12 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
                               inputFilterWidth=inputFilterWidth,
                               outputFilterWidth=outputFilterWidth,
                               headList=headList, modelName="residual")
+    # pylint: disable=no-member
     inputLayer = residualModel.inputs
 
     assert len(inputLayer) == 1, "Input layer of Keras model is >1. Cannot crop."  # type: ignore
     cropDiff = residualModel.inputs[0].shape[1] - biasModel.inputs[0].shape[1]  # type: ignore
+    # pylint: enable=no-member
     assert cropDiff % 2 == 0, "Cropping returns an odd number: "\
                               "redo your model input sizes to be even numbers."
     cropFlankSize = int(cropDiff / 2)
@@ -380,6 +382,7 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
     combinedProfileHeads = []
     combinedCountsHeads = []
     numHeads = len(headList)
+    # pylint: disable=no-member
     for i, head in enumerate(headList):
         # Just straight-up add the logit tensors.
         headName = head["head-name"]
@@ -399,10 +402,12 @@ def combinedModel(inputLength: int, outputLength: int, numFilters: int,
             # "negative peak set" is meaningless, like in MNase.
             # I use an identity layer so that I can rename it so there's not a spooky
             # 'solo' loss component in a combined model.
+            # pylint: disable=no-member
             addCounts = klayers.Identity(name=f"combined_logcounts_{headName}")\
                 (residualModel.outputs[i + numHeads])  # type: ignore  # noqa
         combinedProfileHeads.append(addProfile)
         combinedCountsHeads.append(addCounts)
+    # pylint: enable=no-member
     combModel = kmodels.Model(inputs=inputLayer,
                               outputs=combinedProfileHeads + combinedCountsHeads,
                               name="combined_model")

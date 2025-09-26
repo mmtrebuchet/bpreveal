@@ -192,6 +192,7 @@ def parseSpec(  # pylint: disable=too-many-return-statements
 
     :param colorSpec: The color specification.
     :type colorSpec: :py:data:`COLOR_SPEC_T<bpreveal.internal.constants.COLOR_SPEC_T>` | str
+    :raise ValueError: if you provided an invalid spec.
     :return: An rgb triple (or rgba quadruple).
 
     Based on the shape of colorSpec, this function interprets it differently.

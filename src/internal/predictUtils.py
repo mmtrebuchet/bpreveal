@@ -183,7 +183,10 @@ class H5Writer:
         logUtils.debug("Initialized datasets.")
 
     def addEntry(self, batcherOut: tuple) -> None:
-        """Add a single output from the Batcher."""
+        """Add a single output from the Batcher.
+
+        :param batcherOut: The result from one call to the batcher.
+        """
         # Give this exactly the output from the batcher, and it will queue the data
         # to be written to the hdf5 on the next commit.
 

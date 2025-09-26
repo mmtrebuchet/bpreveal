@@ -154,36 +154,67 @@ def getLogger() -> _logging.Logger:
 
 
 def log(level: int | str, msg: str, *args, **kwargs) -> None:
-    """Log message at the given level."""
+    """Log message at the given level.
+
+    :param level: The log level to use.
+    :param msg: The string to log.
+    :param args: Further arguments to the logger.
+    :param kwargs: Keyword arguments to the logger.
+    """
     if isinstance(level, str):
         level = _LEVEL_MAP[level]
     getLogger().log(level, msg, *args, **kwargs)
 
 
 def debug(msg: str, *args, **kwargs) -> None:
-    """For nitty-gritty details."""
+    """For nitty-gritty details.
+
+    :param msg: The string to log.
+    :param args: Further arguments to the logger.
+    :param kwargs: Keyword arguments to the logger.
+    """
     logger = getLogger()
     logger.debug(msg, *args, **kwargs)
 
 
 def error(msg: str, *args, **kwargs) -> None:
-    """Something went horribly wrong."""
+    """Something went horribly wrong.
+
+    :param msg: The string to log.
+    :param args: Further arguments to the logger.
+    :param kwargs: Keyword arguments to the logger.
+    """
     getLogger().error(msg, *args, **kwargs)
 
 
 def critical(msg: str, *args, **kwargs) -> None:
-    """The world is ending. This is not used by BPReveal."""
+    """The world is ending. This is not used by BPReveal.
+
+    :param msg: The string to log.
+    :param args: Further arguments to the logger.
+    :param kwargs: Keyword arguments to the logger.
+    """
     getLogger().critical(msg, *args, **kwargs)
 
 
 def info(msg: str, *args, **kwargs) -> None:
-    """Normal progress messages."""
+    """Normal progress messages.
+
+    :param msg: The string to log.
+    :param args: Further arguments to the logger.
+    :param kwargs: Keyword arguments to the logger.
+    """
     logger = getLogger()
     logger.info(msg, *args, **kwargs)
 
 
 def warning(msg: str, *args, **kwargs) -> None:
-    """Something the user should pay attention to."""
+    """Something the user should pay attention to.
+
+    :param msg: The string to log.
+    :param args: Further arguments to the logger.
+    :param kwargs: Keyword arguments to the logger.
+    """
     getLogger().warning(msg, *args, **kwargs)
 
 
@@ -227,7 +258,13 @@ def logFirstN(level: int, msg: str, n: int, *args: list) -> None:
 
 
 def logIf(level: str | int, msg: str, condition: bool, *args: list) -> None:
-    """Log 'msg % args' at level 'level' only if condition is fulfilled."""
+    """Log 'msg % args' at level 'level' only if condition is fulfilled.
+
+    :param level: The log level.
+    :param msg: The message to log.
+    :param condition: A boolean. If True, the message will be logged.
+    :param args: Other arguments to pass to the logger.
+    """
     if condition:
         log(level, msg, *args)
 
@@ -241,7 +278,10 @@ def _getFileAndLine() -> tuple[str, int]:
 
 
 def getVerbosity() -> int:
-    """Return how much logging output will be produced."""
+    """Return how much logging output will be produced.
+
+    :return: The current verbosity setting.
+    """
     return getLogger().getEffectiveLevel()
 
 
@@ -293,6 +333,7 @@ def wrapTqdm(iterable: Iterable | int, logLevel: str | int = _logging.INFO,
     :param iterable: The thing to be wrapped, or the number to be counted to.
     :param logLevel: The log level at which you'd like the tqdm to print progress.
     :param tqdmKwargs: Additional keyword arguments passed to tqdm.
+    :raise TypeError: If you provide an invalid log level.
     :return: Either a tqdm that will do logging, or an iterable that won't log.
     :rtype: A tqdm-like object supporting either iteration or ``.update()``.
 
@@ -321,12 +362,12 @@ def wrapTqdm(iterable: Iterable | int, logLevel: str | int = _logging.INFO,
 
     if isinstance(iterable, int):
         if getLogger().isEnabledFor(logLevelInternal):
-            return tqdm.tqdm(total=iterable, **tqdmKwargs)
-        return tqdm.tqdm(total=iterable, **tqdmKwargs, disable=True)
+            return tqdm.tqdm(total=iterable, **tqdmKwargs)  # type: ignore
+        return tqdm.tqdm(total=iterable, **tqdmKwargs, disable=True)  # type: ignore
     if isinstance(iterable, Iterable):
         iterableOut: Iterable = iterable
         if getLogger().isEnabledFor(logLevelInternal):
-            return tqdm.tqdm(iterableOut, **tqdmKwargs)
-        return tqdm.tqdm(iterableOut, **tqdmKwargs, disable=True)
+            return tqdm.tqdm(iterableOut, **tqdmKwargs)  # type: ignore
+        return tqdm.tqdm(iterableOut, **tqdmKwargs, disable=True)  # type: ignore
     raise TypeError("Your iterable is not valid with tqdm.")
 # Copyright 2022-2025 Charles McAnany. This file is part of BPReveal. BPReveal is free software: You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. BPReveal is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with BPReveal. If not, see <https://www.gnu.org/licenses/>.  # noqa

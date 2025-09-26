@@ -56,6 +56,12 @@ def weightedMse(weightTensor: tf.Variable) -> Callable:
 
     @register_keras_serializable(package="bpreveal", name="reweightableMse")
     def reweightableMse(yTrue: tf.Tensor, yPred: tf.Tensor) -> float:
+        """The mse loss, ready to save with your model.
+
+        :param yTrue: The actual observed logcounts
+        :param yPred: The predicted logcounts
+        :return: The mean squared error between yTrue and yPred
+        """
         squaredDiff = ops.square(yTrue - yPred)
         mse = ops.mean(squaredDiff, axis=-1)
         scaledMse = mse * weightTensor

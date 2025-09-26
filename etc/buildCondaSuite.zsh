@@ -47,8 +47,7 @@ runAndCheck conda activate ${ENV_NAME}
 
 #Make sure we have activated an environment with the right python.
 runAndCheck python3 --version \| grep -q "${PYTHON_VERSION}"
-# numba requires an older numpy version, so lock to 2.0.
-runAndCheck ${CONDA_BIN} install --yes -c conda-forge "numpy\<2.1"
+runAndCheck ${CONDA_BIN} install --yes -c conda-forge "numpy"
 # Tensorflow expressly advises against installing with conda.
 ${PIP_BIN} install 'tensorflow[and-cuda]'
 check Installing tensorflow

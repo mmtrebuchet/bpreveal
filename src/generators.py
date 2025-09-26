@@ -33,6 +33,7 @@ class H5BatchGenerator(keras.utils.Sequence):
                  outputLength: int, maxJitter: int, batchSize: int):
         """Create the generator and do the initial data load."""
         logUtils.info("Initial load of dataset for hdf5-based generator.")
+        super().__init__()
         self.headList = headList
         self.inputLength = inputLength
         self.outputLength = outputLength
@@ -48,7 +49,7 @@ class H5BatchGenerator(keras.utils.Sequence):
         # and are named "head_N", where N is 0,1,2, etc.
         self.fullData = []
         for i, curHead in enumerate(headList):
-            logUtils.debug(f"Loading data for {curHead['head-name']}")
+            logUtils.debug(f"Loading data for {curHead["head-name"]}")
             self.fullData.append(np.array(dataH5[f"head_{i}"],
                                           dtype=PRED_T))
         self.loadData()
@@ -72,7 +73,7 @@ class H5BatchGenerator(keras.utils.Sequence):
             sumCounts = np.sum(self.fullData[i][:, self.maxJitter:-self.maxJitter, :])
             mean = sumCounts / self.numRegions
             head["INTERNAL_mean-counts"] = mean
-            logUtils.debug(f"For head {head['head-name']}, mean counts is {mean}")
+            logUtils.debug(f"For head {head["head-name"]}, mean counts is {mean}")
 
     def __len__(self) -> int:
         """How many *batches* of data are there in this Generator?"""

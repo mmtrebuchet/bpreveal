@@ -139,7 +139,12 @@ from bpreveal.internal import interpreter
 
 
 def getReader(config: dict) -> predictUtils.BedReader | predictUtils.FastaReader:
-    """Loads the reader appropriate for the configuration."""
+    """Loads the reader appropriate for the configuration.
+
+    :param config: The whole configuration dictionary
+    :raise ValueError: If a reader could not be built.
+    :return: A Reader, ready to get queries.
+    """
     if "bed-file" in config:
         # We're reading from a bed.
         inputLength = config["settings"]["architecture"]["input-length"]
@@ -159,7 +164,13 @@ def getReader(config: dict) -> predictUtils.BedReader | predictUtils.FastaReader
 
 
 def getWriter(config: dict, numPredictions: int) -> predictUtils.H5Writer:
-    """Creates a writer appropriate for the configuration."""
+    """Creates a writer appropriate for the configuration.
+
+    :param config: The whole config dict.
+    :param numPredictions: The total number of predictions that will be made.
+    :raise ValueError: If a writer could not be built.
+    :return: A writer, ready to save results to disk.
+    """
     outFname = config["settings"]["output-h5"]
     numHeads = config["settings"]["heads"]
     if "bed-file" in config:
@@ -215,7 +226,7 @@ def makePredictions(config: dict) -> None:
     logUtils.info("Entering prediction loop.")
     # Now we just iterate over the reader and submit to our batcher.
     with batcher:
-        pbar = wrapTqdm(reader.numPredictions, smoothing=0.1)
+        pbar = wrapTqdm(reader.numPredictions, smoothing=0.1)  # type: ignore
         for _ in range(reader.numPredictions):
             batcher.submitString(reader.curSequence, reader.curLabel)
             reader.pop()

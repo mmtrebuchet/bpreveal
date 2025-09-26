@@ -55,7 +55,10 @@ from bpreveal import colors
 
 
 def makePisaFigure(cfg: dict) -> None:
-    """Actually make the plot(s)."""
+    """Actually make the plot(s).
+
+    :param cfg: The configuration dictionary for all the figures
+    """
     startTime = time.perf_counter()
     colors.loadFonts()
     logUtils.setVerbosity(cfg.get("verbosity", "WARNING"))

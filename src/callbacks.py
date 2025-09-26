@@ -78,17 +78,26 @@ class FixLossCallback(Callback):
 
     def on_epoch_end(self, _: int,
                      logs: dict | None = None) -> None:
-        """Update the logs."""
+        """Update the logs.
+
+        :param logs: The logs from the current epoch
+        """
         assert logs is not None, "Cannot work with empty logs!"
         self.correctLosses(logs)
 
     def on_train_batch_end(self, _: int, logs: dict | None = None) -> None:
-        """Update the logs."""
+        """Update the logs.
+
+        :param logs: The logs from the current batch
+        """
         assert logs is not None, "Cannot use empty logs!"
         self.correctLosses(logs)
 
     def on_test_batch_end(self, _: int, logs: dict | None = None) -> None:
-        """Update the logs."""
+        """Update the logs.
+
+        :param logs: The logs from the current batch
+        """
         assert logs is not None, "Cannot use empty logs!"
         self.correctLosses(logs)
 
@@ -173,7 +182,7 @@ class ApplyAdaptiveCountsLoss(Callback):
                     λ = head["counts-loss-weight"]
                     logUtils.debug(
                         "An initial counts-loss-weight was provided.")
-                    logUtils.debug(f"Setting λ = {λ} for head {head['head-name']}")
+                    logUtils.debug(f"Setting λ = {λ} for head {head["head-name"]}")
                     head["INTERNAL_λ-variable"].assign(λ)
                 else:
                     # Get the desired λ value. INTERNAL_mean-counts is added by the
@@ -182,8 +191,8 @@ class ApplyAdaptiveCountsLoss(Callback):
                         head["counts-loss-frac-target"]
                     # Now for a bit of magic - experimentation has determined this number.
                     λ = λ * 37.0
-                    logUtils.info(f"Estimated initial λ of {λ} for head {head['head-name']} "
-                                  f"based on ĉ of {head['INTERNAL_mean-counts']}")
+                    logUtils.info(f"Estimated initial λ of {λ} for head {head["head-name"]} "
+                                  f"based on ĉ of {head["INTERNAL_mean-counts"]}")
                     head["INTERNAL_λ-variable"].assign(λ)
 
     def getLosses(self, epoch: int, headName: str) -> tuple[float, float, float, float]:
@@ -191,6 +200,7 @@ class ApplyAdaptiveCountsLoss(Callback):
 
         :param epoch: The epoch for which you'd like losses.
         :param headName: The head for which you'd like losses.
+        :raise ValueError: If any of the loss terms were unrecognized.
         :return: A tuple with four losses: (profile, counts, val_profile, val_counts).
 
         What were the profile, counts, val_profile, and val_counts (in that order)
@@ -258,7 +268,7 @@ class ApplyAdaptiveCountsLoss(Callback):
             oldλ = self.λHistory[head["head-name"]][epoch]
             valTotalLoss += vcl * curλ / oldλ
         logUtils.debug(f"Calculated new loss of {valTotalLoss} on epoch {epoch}, "
-                       f"with original loss {logs['val_loss']}")
+                       f"with original loss {logs["val_loss"]}")
         return valTotalLoss
 
     def resetCallbacks(self) -> None:
@@ -365,21 +375,21 @@ class ApplyAdaptiveCountsLoss(Callback):
                         if epoch == 1:
                             logUtils.warning(f"A large λ change was detected on the first epoch. "
                                              "Consider changing the starting counts-loss-weight "
-                                             f"for head {head['head-name']} to a value near "
+                                             f"for head {head["head-name"]} to a value near "
                                              f"{correctedλ}")
                         else:
                             logUtils.error(f"A large λ change was detected on epoch {epoch}. "
                                            "This means your initial estimate was *way* wrong. "
                                            "Change counts-loss-weight for head "
-                                           f"{head['head-name']} to a value near {correctedλ} "
+                                           f"{head["head-name"]} to a value near {correctedλ} "
                                            "and re-start training.")
                 # With current loss weight, what is the loss fraction due to counts?
                 # (This doesn't enter our calculation, it's for logging.
                 scaledCurFrac = countsLoss / (profileLoss + countsLoss)
 
-                logUtils.debug(f"countsLoss: head {head['head-name']} λ₀ {curλ}, λ₁ {newλ} "
+                logUtils.debug(f"countsLoss: head {head["head-name"]} λ₀ {curλ}, λ₁ {newλ} "
                                f"(A=1: {correctedλ}). frac {scaledCurFrac}, "
-                               f"goal {head['counts-loss-frac-target']}. "
+                               f"goal {head["counts-loss-frac-target"]}. "
                                f"Raw counts loss {countsLossRaw} (scaled {countsLoss})."
                                f" Epoch {epoch}")
 
@@ -465,6 +475,8 @@ class DisplayCallback(Callback):
     def _calcPositions(self, initialLogs: dict) -> None:
         """Assign rows and columns to all log types.
 
+        :param initialLogs: The logs from the first batch
+
         Given the first set of logs from a training batch,
         work out where all of the logs need to be displayed in their window.
         """
@@ -532,7 +544,10 @@ class DisplayCallback(Callback):
         self.maxLen = max((len(x) for x in printOrderEpoch))
 
     def on_train_begin(self, logs: dict | None = None) -> None:
-        """Just loads in the total number of epochs."""
+        """Just loads in the total number of epochs.
+
+        :param logs: The logs for the current batch
+        """
         del logs
         params = self.params.get
         self.trainBeginTime = time.perf_counter()
@@ -542,7 +557,11 @@ class DisplayCallback(Callback):
 
     def on_epoch_begin(self, epoch: int,
                        logs: dict | None = None) -> None:
-        """Just sets the timers up, so you can check how long an epoch took at the end."""
+        """Just sets the timers up, so you can check how long an epoch took at the end.
+
+        :param epoch: The epoch number
+        :param logs: The logs for the current batch
+        """
         del logs
         self.epochNumber = epoch
         self.batchNumber = 0
@@ -576,7 +595,11 @@ class DisplayCallback(Callback):
 
     def on_epoch_end(self, epoch: int,
                      logs: dict | None = None) -> None:
-        """Writes out all the logs for this epoch and the last one at INFO logging level."""
+        """Writes out all the logs for this epoch and the last one at INFO logging level.
+
+        :param epoch: The epoch number
+        :param logs: The logs for the current batch
+        """
         del epoch
         if logs is None:
             logUtils.warning("Received empty logs at epoch end.")
@@ -610,7 +633,11 @@ class DisplayCallback(Callback):
 
     def on_train_batch_end(self, batch: int,
                            logs: dict | None = None) -> None:
-        """Write the loss info for the current batch at DEBUG level."""
+        """Write the loss info for the current batch at DEBUG level.
+
+        :param batch: The batch number
+        :param logs: The logs for the current batch
+        """
         logs = logs or {}
         self.firstBatchTime = min(time.perf_counter(), self.firstBatchTime)
         self.lastBatchTime = time.perf_counter()
@@ -630,7 +657,11 @@ class DisplayCallback(Callback):
 
     def on_test_batch_end(self, batch: int,
                           logs: dict | None = None) -> None:
-        """Just emit a counter with the batch number at DEBUG level."""
+        """Just emit a counter with the batch number at DEBUG level.
+
+        :param batch: The batch number
+        :param logs: The logs for the current batch
+        """
         del logs
         self.firstValBatchTime = min(time.perf_counter(), self.firstValBatchTime)
         self.lastValBatchTime = time.perf_counter()
@@ -663,7 +694,7 @@ class DisplayCallback(Callback):
             for _, col, text in line:
                 for i, c in enumerate(text):
                     outChrs[i + col] = c
-            writer(f"∬{row}∬1∬{win}∬{''.join(outChrs)}")
+            writer(f"∬{row}∬1∬{win}∬{"".join(outChrs)}")
 
     def _getλLines(self) -> list[list[tuple[int, int, str]]]:
         lines = []
@@ -677,7 +708,7 @@ class DisplayCallback(Callback):
         lines = []
         logs["Epoch"] = (self.epochNumber, self.numEpochs)
         logs["lr"] = backend.convert_to_numpy(self.model.optimizer.learning_rate)
-        logs["lr"] = f"{logs['lr']:10.7f}"
+        logs["lr"] = f"{logs["lr"]:10.7f}"
         for lk in logs.keys():
             if lk in self.ignoreMetrics:
                 continue

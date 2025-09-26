@@ -63,7 +63,10 @@ from bpreveal.internal import interpreter
 
 
 def trainCombinedModel(config: dict) -> None:
-    """Build and train a combined model."""
+    """Build and train a combined model.
+
+    :param config: A config dict, per the spec
+    """
     logUtils.setVerbosity(config["verbosity"])
     logUtils.debug("Initializing")
     inputLength = config["settings"]["architecture"]["input-length"]

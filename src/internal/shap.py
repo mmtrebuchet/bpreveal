@@ -14,13 +14,15 @@ from typing import Any
 import numpy as np
 from bpreveal.internal.constants import IMPORTANCE_AR_T, IMPORTANCE_T, \
     ONEHOT_AR_T, PRED_AR_T, PRED_T
-# pylint: disable=invalid-name,missing-function-docstring
-
+# pylint: disable=invalid-name,missing-function-docstring,missing-return-type-doc,missing-param-doc
+# pylint: disable=missing-type-doc,missing-return-doc,missing-any-param-doc
+# pylint: disable=no-name-in-module
 from tensorflow.python.eager import backprop as tf_backprop
 from tensorflow.python.eager import execute as tf_execute
 from tensorflow.python.framework import (
     ops as tf_ops,
 )
+# pylint: enable=no-name-in-module
 import tensorflow as tf
 
 def standard_combine_mult_and_diffref(mult, originalInput, backgroundData):
@@ -124,10 +126,10 @@ class ISMDeepExplainer:
         assert shuffleLength % 2 == 1, "shuffleWidth must be odd."
         assert len(model) == 2, "model must be an (input, output) pair"
         if useOldKeras:
-            import tf_keras  # pylint: disable=import-outside-toplevel
+            import tf_keras
             self.model = tf_keras.Model(model[0], model[1])
         else:
-            import keras  # pylint: disable=import-outside-toplevel
+            import keras
             self.model = keras.Model(model[0], model[1])
         self.batchSize = batchSize
         self.shuffler = shuffler
@@ -268,10 +270,10 @@ class TFDeepExplainer:
         assert len(model) == 2, \
             "When a tuple is passed it must be of the form (inputs, outputs)"
         if useOldKeras:
-            import tf_keras  # pylint: disable=import-outside-toplevel
+            import tf_keras
             self.model = tf_keras.Model(model[0], model[1])
         else:
-            import keras  # pylint: disable=import-outside-toplevel
+            import keras
             self.model = keras.Model(model[0], model[1])
 
         # check if we have multiple inputs

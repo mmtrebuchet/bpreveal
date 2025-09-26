@@ -79,7 +79,10 @@ from bpreveal.internal import interpreter
 
 
 def trainTransformationModel(config: dict) -> None:
-    """Build and train the transformation model."""
+    """Build and train the transformation model.
+
+    :param config: A configuration dictionary.
+    """
     logUtils.setVerbosity(config["verbosity"])
     logUtils.debug("Initializing")
     soloModel = utils.loadModel(config["settings"]["solo-model-file"])

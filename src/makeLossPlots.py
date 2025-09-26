@@ -15,7 +15,10 @@ plt.rcParams["font.size"] = 8
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Generate the argument parser."""
+    """Generate the argument parser.
+
+    :return: An ArgumentParser, ready to parse_args()
+    """
     parser = argparse.ArgumentParser(description="Takes in a model history file (json format) "
                                                  "and generates plots of all the components of "
                                                  "the loss during training.")
@@ -150,7 +153,13 @@ def main() -> None:
 
 
 def plotLosses(lossTypes: list[list[str]], history: dict, startFrom: int) -> Figure:
-    """Given all the loss data, plot them in a grid."""
+    """Given all the loss data, plot them in a grid.
+
+    :param lossTypes: The losses to plot. Each plot will contain one of the sublists.
+    :param history: The history dictionary, saved after the model trained.
+    :param startFrom: Instead of starting at epoch 0, start later by this many epochs
+    :return: A Figure with the data plotted on it.
+    """
     logUtils.info("Loss types: " + str(lossTypes))
     logUtils.info("History types: " + str(list(history.keys())))
     # First, how many plots are needed?

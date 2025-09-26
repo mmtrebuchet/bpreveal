@@ -11,8 +11,11 @@ import jsonschema
 from bpreveal.schema import schemaMap
 from bpreveal.internal import interpreter
 
-def getParser():
-    """Create the argument parser."""
+def getParser() -> argparse.ArgumentParser:
+    """Create the argument parser.
+
+    :return: An ArgumentParser, ready to parse_args()
+    """
     parser = argparse.ArgumentParser(description="Check to see if a json file has schema problems.")
     parser.add_argument("-s", "--schema-name",
         help="The name of the schema, like prepareBed. If omitted, check all schemas.",
@@ -22,7 +25,10 @@ def getParser():
 
 
 def main() -> int:
-    """Run the checks."""
+    """Run the checks.
+
+    :return: An error code if there were any problems, otherwise EXIT_SUCCESS
+    """
     args = getParser().parse_args()
     fnameByMatchedSchema = {}
     failedFnames = []

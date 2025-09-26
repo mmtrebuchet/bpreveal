@@ -188,6 +188,9 @@ class Saver:
     def add(self, result: Result) -> None:
         """Add the given Result to wherever you're saving them out.
 
+        :param result: The thing to save out.
+        :raise NotImplementedError: because this is abstract.
+
         Note that this will not be called with None at the end of the run,
         that is special-cased in the code that runs your saver. (That code will
         call done() when all of the results have been added.)
@@ -417,6 +420,7 @@ class FlatListSaver(Saver):
     def add(self, result: Result) -> None:  # type: ignore
         """Add the result to the internal list.
 
+        :param result: The result from shapping a region.
         This is called from the child process.
         """
         self._results.append(result)
@@ -1106,12 +1110,10 @@ class _IsmBatcher:
                  metric: Callable, memFrac: float,
                  shuffleLength: int, shuffler: Callable):
         logUtils.info("Initializing batcher.")
-        # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         from bpreveal.internal import shap
-        # pylint: enable=import-outside-toplevel
         self.batchSize = 1  # We use a single-sequence batch for this batcher,
         # because the ISMDeepExplainer does its own internal batching.
         self.outQueue = outQueue
@@ -1126,6 +1128,8 @@ class _IsmBatcher:
 
     def addSample(self, query: Query) -> None:
         """Add a query to the batch.
+
+        :param query: The query to enqueue.
 
         Runs the batch if it has enough work accumulated.
         """
@@ -1184,12 +1188,10 @@ class _ShapBatcher:
                  metric: Callable, numShuffles: int, kmerSize: int, memFrac: float,
                  useHypotheticalContribs: bool):
         logUtils.info("Initializing batcher.")
-        # pylint: disable=import-outside-toplevel
         utils.limitMemoryUsage(memFrac, 1024)
         self.model = utils.loadModel(modelFname)
         import bpreveal.internal.disableTensorflowLogging  # pylint: disable=unused-import # noqa
         from bpreveal.internal import shap
-        # pylint: enable=import-outside-toplevel
         if not isShappable(self.model):
             logUtils.error(f"The model you have provided ({modelFname}) is not shappable "
                            "because it contains LinearRegression layers. Re-train the "
@@ -1214,7 +1216,11 @@ class _ShapBatcher:
         logUtils.info("Batcher initialized, Explainer initialized. Ready for Queries to explain.")
 
     def generateShuffles(self, modelInputs: list) -> list:
-        """Take the input tensor and generate shuffled reference sequences."""
+        """Take the input tensor and generate shuffled reference sequences.
+
+        :param modelInputs: The inputs to the model. modelInputs[0] will be the OHE input sequence.
+        :return: A list of one item, that item is all of the shuffled sequences.
+        """
         if self.kmerSize == 1:
             rng = np.random.default_rng(seed=355687)
             shuffles = [rng.permutation(modelInputs[0], axis=0) for _ in range(self.numShuffles)]
@@ -1226,6 +1232,8 @@ class _ShapBatcher:
 
     def addSample(self, query: Query) -> None:
         """Add a query to the batch.
+
+        :param query: The query to add to the batcher.
 
         Runs the batch if it has enough work accumulated.
         """
@@ -1296,6 +1304,10 @@ def combineMultAndDiffref(mult: IMPORTANCE_AR_T, originalInput: ONEHOT_AR_T,
                           backgroundData: ONEHOT_AR_T) -> list:
     """Combine the shap multipliers and difference from reference to generate hypothetical scores.
 
+    :param mult: The shap multipliers.
+    :param originalInput: The one-hot encoded sequence being shapped.
+    :param backgroundData: The shuffled references.
+    :return: A list of hypothetical contributions.
     This is injected deep into shap and generates the hypothetical importance scores.
     """
     # This is copied from Zahoor's code.
@@ -1324,6 +1336,12 @@ def isShappable(model) -> bool:  # noqa: ANN001
     """
 
     def isShappableLayer(layer) -> bool:  # noqa: ANN001
+        """Determine if a given layer is shappable.
+
+        :param layer: The layer to check.
+        :type layer: keras.Layer.
+        :return: True if this layer can be used with DeepShap.
+        """
         if hasattr(layer, "layers"):
             for sublayer in layer.layers:
                 if not isShappableLayer(sublayer):

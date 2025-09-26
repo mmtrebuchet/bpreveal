@@ -196,16 +196,20 @@ def profileMetric(headID: int, taskIDs: list[int]) -> Callable:
         be passed into the depths of the interpretation system.
     """
     def metric(model: Any) -> Any:
+        """The metric to evaluate.
+
+        :param model: The BPReveal model to use.
+        :return: A scalar Tensor that can be shapped back.
+        """
         # Note that keras and tensorflow must be imported INSIDE the returned function so
         # that they haven't been imported when the interpretation machinery tries to start
         # up. This is dumb but it's how Tensorflow works.
-        # pylint: disable=import-outside-toplevel
         import keras
         import tensorflow as tf
         from keras import ops
-        # pylint: enable=import-outside-toplevel
 
-        class StopGradLayer(keras.Layer):
+        # pylint: disable=abstract-method,too-many-ancestors,arguments-differ
+        class StopGradLayer(keras.layers.Layer):
             """Because the Tensorflow 2.16 upgrade wasn't painful enough...
 
             This just wraps stop_gradient so that it can be called
@@ -213,8 +217,13 @@ def profileMetric(headID: int, taskIDs: list[int]) -> Callable:
             """
 
             def call(self, x: tf.Tensor) -> keras.KerasTensor:
-                """Actually stop the gradient."""
+                """Actually stop the gradient.
+
+                :param x: the input tensor that shouldn't be backpropped.
+                :return: A new tensor.
+                """
                 return ops.stop_gradient(x)
+        # pylint: enable=abstract-method,too-many-ancestors,arguments-differ
         # The profile logits for the given head. Has shape (batch-size, output-length, num-tasks)
         profileOutput = model.outputs[headID]
         # Select only the task IDs that were selected.

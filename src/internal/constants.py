@@ -213,7 +213,10 @@ def setTensorflowLoaded() -> None:
 
 
 def getTensorflowLoaded() -> bool:
-    """Returns true if this process has ever loaded tensorflow."""
+    """Returns true if this process has ever loaded tensorflow.
+
+    :return: True if tensorflow has been loaded.
+    """
     return GLOBAL_TENSORFLOW_LOADED
 
 

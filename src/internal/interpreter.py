@@ -90,7 +90,12 @@ class Closure:
                     argVal.env[aName] = aVal
 
     def run(self, argList: list[EVAL_RET_T]) -> EVAL_RET_T:
-        """Actually evaluate the body of the lambda."""
+        """Actually evaluate the body of the lambda.
+
+        :param argList: The arguments that will be passed to the lambda
+        :raise SyntaxError: If you provided an invalid input
+        :return: The result of calling the function.
+        """
         if len(argList) + len(self.defaults) > len(self.args.args):
             # We have defaults that are being overridden.
             if self.usingLetrec:
@@ -312,6 +317,7 @@ def evalAstRaw(t: ast.AST,  # pylint: disable=too-many-return-statements
 
     :param t: The parsed AST that should be evaluated
     :param env: The environment containing the variables used in the expression.
+    :raise SyntaxError: If you provided an invalid input
     :return: The value of the expression.
 
     You should probably call :py:func:`~evalAst` instead of this, since that function
@@ -366,6 +372,11 @@ def _buildFunctionDictionary() -> None:
     global _BUILTIN_DICT  # pylint: disable=global-variable-not-assigned  # noqa
 
     def toStar(f: Callable) -> Callable:
+        """Convert a function into one that is called on a list of arguments
+
+        :param f: The normal function
+        :return: A new function that is called on a list of arguments
+        """
         return lambda x: f(*x)
     _BUILTIN_DICT["exp"] = toStar(math.exp)
     _BUILTIN_DICT["log"] = toStar(math.log)
@@ -412,7 +423,13 @@ def evalAst(t: ast.AST, env: ENV_T | None = None, addFunctions: bool = True) -> 
 
 
 def evalString(expr: str, env: ENV_T | None = None, addFunctions: bool = True) -> EVAL_RET_T:
-    """Parses the given string and then runs evalAst on it."""
+    """Parses the given string and then runs evalAst on it.
+
+    :param expr: The expression to evaluate
+    :param env: The environment to use
+    :param addFunctions: Should the builtin functions be added?
+    :return: The result of evaluating that string
+    """
     if env is None:
         env = {}
     t = ast.parse(expr)
@@ -420,7 +437,13 @@ def evalString(expr: str, env: ENV_T | None = None, addFunctions: bool = True) -
 
 
 def evalFile(fname: str, env: ENV_T | None = None, addFunctions: bool = True) -> EVAL_RET_T:
-    """Read in the named file and evaluate it."""
+    """Read in the named file and evaluate it.
+
+    :param fname: The file to read
+    :param env: The environment to use
+    :param addFunctions: Should the builtin functions be added?
+    :return: The result of evaluating that file.
+    """
     if env is None:
         env = {}
     with open(fname, "r") as fp:

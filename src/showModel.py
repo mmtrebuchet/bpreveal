@@ -28,7 +28,11 @@ if __name__ == "__main__":
 
 
 def main(modelFname: str, pngFile: str | None) -> None:
-    """Read in the model named by modelFname, show it as text, and optionally save as a png."""
+    """Read in the model named by modelFname, show it as text, and optionally save as a png.
+
+    :param modelFname: The name of the Keras model on disk.
+    :param pngFile: The name of the file to write.
+    """
     model = utils.loadModel(modelFname)
     print(model.summary(expand_nested=True, show_trainable=True))  # noqa: T201
     if pngFile is not None:
@@ -38,7 +42,10 @@ def main(modelFname: str, pngFile: str | None) -> None:
 
 
 def getParser() -> argparse.ArgumentParser:
-    """Build the parser."""
+    """Build the parser.
+
+    :return: An ArgumentParser, ready to call parse_args()
+    """
     ap = argparse.ArgumentParser(description="Show a text description of your "
                                  "model and optionally save it to a png file.")
     ap.add_argument("--model", help="The name of the Keras model file to show.")
