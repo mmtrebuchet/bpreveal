@@ -421,6 +421,7 @@ class FlatListSaver(Saver):
         """Add the result to the internal list.
 
         :param result: The result from shapping a region.
+
         This is called from the child process.
         """
         self._results.append(result)
@@ -1308,6 +1309,7 @@ def combineMultAndDiffref(mult: IMPORTANCE_AR_T, originalInput: ONEHOT_AR_T,
     :param originalInput: The one-hot encoded sequence being shapped.
     :param backgroundData: The shuffled references.
     :return: A list of hypothetical contributions.
+
     This is injected deep into shap and generates the hypothetical importance scores.
     """
     # This is copied from Zahoor's code.

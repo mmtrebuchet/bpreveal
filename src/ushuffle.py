@@ -21,6 +21,7 @@ def shuffleString(sequence: str, kmerSize: int, numShuffles: int = 1,
     """Given a string sequence, perform a shuffle that maintains the kmer distribution.
 
     This is adapted from ushuffle.
+
     :param sequence: should be a string in ASCII, but it should theoretically work
         on multi-byte encoded utf-8 characters so long as the kmerSize is at least
         as long as the longest byte sequence for a character in the input.
