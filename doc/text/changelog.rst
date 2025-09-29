@@ -10,7 +10,16 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
+BPReveal 5.2.2, 2025-09-29
+''''''''''''''''''''''''''
+
+BUG FIXES:
+    * Removed a conda-based install of numpy that could cause version
+      incompatibilities.
+
+
 BPReveal 5.2.1, 2025-09-29
+''''''''''''''''''''''''''
 
 NEW FEATURES:
     * Added an option to prepareBed to let you include a few regions that fall
@@ -55,7 +64,7 @@ BUG FIXES:
     * Fixed a spacing issue on pisa graphs where the legend was placed too far to
       the right. This will cause pisa graphs to render a bit differently if they are
       regenerated.
-    * If you call py:func:`plotUtils.addAnnotations<bpreveal.internal.plotUtils.addAnnotations>`
+    * If you call :py:func:`plotUtils.addAnnotations<bpreveal.internal.plotUtils.addAnnotations>`
       manually, you don't have to specify the shape, it will default to ``box``.
     * The annotation shapes previously had thick lines drawn around them, which caused
       them to be the wrong size. The offending lines have been removed. Your annotation boxes

@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 BPREVEAL_PATH=..
-BPREVEAL_VERSION=5.2.1
+BPREVEAL_VERSION=5.2.2
 
 runAndCheck() {
     currentCommand=$@
