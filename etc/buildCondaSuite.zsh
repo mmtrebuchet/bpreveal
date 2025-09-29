@@ -47,7 +47,6 @@ runAndCheck conda activate ${ENV_NAME}
 
 #Make sure we have activated an environment with the right python.
 runAndCheck python3 --version \| grep -q "${PYTHON_VERSION}"
-runAndCheck ${CONDA_BIN} install --yes -c conda-forge "numpy"
 # Tensorflow expressly advises against installing with conda.
 ${PIP_BIN} install 'tensorflow[and-cuda]'
 check Installing tensorflow
