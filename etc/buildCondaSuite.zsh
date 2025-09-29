@@ -91,6 +91,8 @@ if [ "$INSTALL_DEVTOOLS" = true ] ; then
         coverage uv
     runAndCheck ${PIP_BIN} install --no-input flake8-bugbear flake8-mutable \
         flake8-print flake8-eradicate flake8-annotations flake8-pep585
+
+    runAndCheck ${CONDA_BIN} install --yes -c conda-forge auditwheel twine
 fi
 
 if [ "$INSTALL_MISC" = true ] ; then
