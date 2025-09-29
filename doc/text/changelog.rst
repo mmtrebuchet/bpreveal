@@ -10,7 +10,7 @@ BPReveal 5.x
 BPReveal 5.2.x
 ^^^^^^^^^^^^^^
 
-BPReveal 5.2.1, 2025-09-26
+BPReveal 5.2.1, 2025-09-29
 
 NEW FEATURES:
     * Added an option to prepareBed to let you include a few regions that fall

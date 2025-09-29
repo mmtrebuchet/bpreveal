@@ -372,7 +372,7 @@ def _buildFunctionDictionary() -> None:
     global _BUILTIN_DICT  # pylint: disable=global-variable-not-assigned  # noqa
 
     def toStar(f: Callable) -> Callable:
-        """Convert a function into one that is called on a list of arguments
+        """Convert a function into one that is called on a list of arguments.
 
         :param f: The normal function
         :return: A new function that is called on a list of arguments

@@ -1,7 +1,7 @@
 [project]
 name = "bpreveal"
 authors = [ {name = "Charles McAnany, Ph.D.", email="bpreveal@charlesmcanany.com"} ]
-version = "5.2.1rc1"
+version = "5.2.1"
 description = "BPReveal is a suite of tools for deep learning on genomics data."
 license = "GPL-2.0-or-later"
 license-files = ["COPYING"]
@@ -12,14 +12,14 @@ dependencies = [
     "jsonschema>=4.23.0",
     "matplotlib>=3.10.1",
     "meson>=1.7.2",
-    "modisco-lite>=2.4.0",
-    "numpy<2.1",
+    "modisco>=2.4.0",
+    "numpy>=2.0",
     "pybedtools>=0.12.0",
     "pybigwig>=0.3.24",
     "pysam>=0.23.0",
     "tensorflow-probability>=0.25.0",
-    "tensorflow[and-cuda]>=2.18.1",
-    "tf-keras>=2.18.0",
+    "tensorflow[and-cuda]>=2.20.0",
+    "tf-keras>=2.20.0",
     "tqdm>=4.67.1",
 ]
 
@@ -38,7 +38,7 @@ Homepage = "https://github.com/mmtrebuchet/bpreveal"
 
 
 [build-system]
-requires = ["meson-python", "numpy<2.1"]
+requires = ["meson-python", "numpy>=2.0"]
 build-backend = "mesonpy"
 
 [tool.setuptools]
